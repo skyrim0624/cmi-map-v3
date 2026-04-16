@@ -7,6 +7,7 @@ import { getCategoryColor, getCategoryIconUrl } from '@/types/types';
 interface LeafletMapProps {
   markers?: MapMarker[];
   onMarkerClick?: (marker: MapMarker) => void;
+  onMapClick?: () => void; // 点击地图空白区域的回调
   mode?: 'view' | 'mark'; // 查看模式或标记模式
   onCenterChange?: (lat: number, lng: number) => void;
   defaultCenter?: { lat: number; lng: number };
@@ -25,6 +26,7 @@ const CHIANG_MAI_BOUNDS: L.LatLngBoundsExpression = [
 export const LeafletMap = ({
   markers = [],
   onMarkerClick,
+  onMapClick,
   mode = 'view',
   onCenterChange,
   defaultCenter = CHIANG_MAI_CENTER,
@@ -79,8 +81,9 @@ export const LeafletMap = ({
 
     mapInstanceRef.current = map;
 
-    // 标记模式：添加地图点击事件（在 whenReady 之前添加）
+    // 添加地图点击事件
     if (mode === 'mark') {
+      // 标记模式：点击地图移动到点击位置
       console.log('标记模式：添加点击事件监听器');
       map.on('click', (e: L.LeafletMouseEvent) => {
         console.log('地图点击事件触发:', e.latlng);
@@ -88,6 +91,11 @@ export const LeafletMap = ({
           animate: true,
           duration: 0.5
         });
+      });
+    } else if (mode === 'view' && onMapClick) {
+      // 查看模式：点击地图空白区域关闭预览卡片
+      map.on('click', () => {
+        onMapClick();
       });
     }
 

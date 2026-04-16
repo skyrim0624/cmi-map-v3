@@ -61,6 +61,12 @@ export default function MapView() {
     }
   };
 
+  // 点击地图空白区域，关闭预览卡片
+  const handleMapClick = () => {
+    setSelectedMarker(null);
+    setSelectedRecommendations([]);
+  };
+
   return (
     <div className="relative w-full h-screen overflow-hidden">
       {/* 地图 - 全屏显示，z-index 最低 */}
@@ -68,6 +74,7 @@ export default function MapView() {
         <LeafletMap
           markers={markers}
           onMarkerClick={handleMarkerClick}
+          onMapClick={handleMapClick}
           mode="view"
           className="w-full h-full"
         />
