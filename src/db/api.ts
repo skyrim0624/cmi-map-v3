@@ -1,0 +1,254 @@
+import { supabase } from './supabase';
+import type { Recommendation, Category } from '@/types/types';
+import { compressImage } from '@/utils/imageCompression';
+
+/**
+ * 获取所有推荐
+ */
+export const getAllRecommendations = async (): Promise<Recommendation[]> => {
+  const { data, error } = await supabase
+    .from('recommendations')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('获取推荐失败:', error);
+    return [];
+  }
+
+  return Array.isArray(data) ? data : [];
+};
+
+/**
+ * 按分类获取推荐
+ */
+export const getRecommendationsByCategory = async (
+  category: Category
+): Promise<Recommendation[]> => {
+  const { data, error } = await supabase
+    .from('recommendations')
+    .select('*')
+    .eq('category', category)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('获取推荐失败:', error);
+    return [];
+  }
+
+  return Array.isArray(data) ? data : [];
+};
+
+/**
+ * 按用户名获取推荐
+ */
+export const getRecommendationsByUser = async (
+  userName: string
+): Promise<Recommendation[]> => {
+  const { data, error } = await supabase
+    .from('recommendations')
+    .select('*')
+    .eq('user_name', userName)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('获取用户推荐失败:', error);
+    return [];
+  }
+
+  return Array.isArray(data) ? data : [];
+};
+
+/**
+ * 按用户 ID 获取推荐
+ */
+export const getRecommendationsByUserId = async (
+  userId: string
+): Promise<Recommendation[]> => {
+  const { data, error } = await supabase
+    .from('recommendations')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('获取用户推荐失败:', error);
+    return [];
+  }
+
+  return Array.isArray(data) ? data : [];
+};
+
+/**
+ * 按地点名称获取推荐
+ */
+export const getRecommendationsByPlace = async (
+  placeName: string
+): Promise<Recommendation[]> => {
+  const { data, error } = await supabase
+    .from('recommendations')
+    .select('*')
+    .eq('place_name', placeName)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('获取地点推荐失败:', error);
+    return [];
+  }
+
+  return Array.isArray(data) ? data : [];
+};
+
+/**
+ * 上传图片到 Supabase Storage
+ */
+export const uploadImage = async (file: File): Promise<string | null> => {
+  try {
+    // 压缩图片
+    const compressedFile = await compressImage(file);
+    
+    // 生成文件名（使用时间戳和随机数）
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 15);
+    const ext = compressedFile.name.split('.').pop() || 'webp';
+    const fileName = `${timestamp}_${random}.${ext}`;
+    
+    // 上传到 Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('place-images')
+      .upload(fileName, compressedFile, {
+        contentType: compressedFile.type,
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      console.error('图片上传失败:', error);
+      return null;
+    }
+
+    // 获取公开 URL
+    const { data: urlData } = supabase.storage
+      .from('place-images')
+      .getPublicUrl(data.path);
+
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error('图片处理失败:', error);
+    return null;
+  }
+};
+
+/**
+ * 批量上传图片
+ */
+export const uploadImages = async (files: File[]): Promise<string[]> => {
+  const uploadPromises = files.map(file => uploadImage(file));
+  const results = await Promise.all(uploadPromises);
+  return results.filter((url): url is string => url !== null);
+};
+
+/**
+ * 创建推荐
+ */
+export const createRecommendation = async (
+  recommendation: Omit<Recommendation, 'id' | 'created_at'>
+): Promise<Recommendation | null> => {
+  const { data, error } = await supabase
+    .from('recommendations')
+    .insert([recommendation])
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    console.error('创建推荐失败:', error);
+    return null;
+  }
+
+  return data;
+};
+
+/**
+ * 删除推荐
+ */
+export const deleteRecommendation = async (id: string): Promise<boolean> => {
+  const { error } = await supabase
+    .from('recommendations')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('删除推荐失败:', error);
+    return false;
+  }
+
+  return true;
+};
+
+/**
+ * 获取推荐统计
+ */
+export const getRecommendationStats = async (userName: string) => {
+  const recommendations = await getRecommendationsByUser(userName);
+  
+  return {
+    total: recommendations.length,
+    byCategory: recommendations.reduce((acc, rec) => {
+      acc[rec.category] = (acc[rec.category] || 0) + 1;
+      return acc;
+    }, {} as Record<Category, number>)
+  };
+};
+
+/**
+ * 上传用户头像
+ */
+export const uploadAvatar = async (file: File, userId: string): Promise<string | null> => {
+  try {
+    // 压缩图片
+    const compressedFile = await compressImage(file);
+    
+    // 生成文件名：用户ID/时间戳.jpg
+    const fileName = `${userId}/${Date.now()}.jpg`;
+    
+    // 上传到 Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, compressedFile, {
+        contentType: 'image/jpeg',
+        upsert: true
+      });
+
+    if (error) {
+      console.error('上传头像失败:', error);
+      return null;
+    }
+
+    // 获取公开 URL
+    const { data: urlData } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(data.path);
+
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error('上传头像失败:', error);
+    return null;
+  }
+};
+
+/**
+ * 更新用户头像 URL
+ */
+export const updateUserAvatar = async (userId: string, avatarUrl: string): Promise<boolean> => {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ avatar_url: avatarUrl })
+    .eq('id', userId);
+
+  if (error) {
+    console.error('更新用户头像失败:', error);
+    return false;
+  }
+
+  return true;
+};

@@ -1,0 +1,252 @@
+/* stylelint-disable */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+    /* 日系极简手账风配色 */
+    --background: 40 20% 98%; /* 米白纸张质感 #F9F9F7 */
+    --foreground: 0 0% 17%; /* 深炭灰 #2C2C2C */
+    --card: 0 0% 100%; /* 纯白卡片 */
+    --card-foreground: 0 0% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 17%;
+    --primary: 260 30% 62%; /* 薰衣草紫 #9B8EC6 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 56%; /* 浅灰 #8E8E8E */
+    --secondary-foreground: 0 0% 17%;
+    --muted: 40 20% 95%; /* 极浅米色 */
+    --muted-foreground: 0 0% 56%;
+    --accent: 260 30% 92%; /* 极浅薰衣草紫 */
+    --accent-foreground: 0 0% 17%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 90%; /* 浅灰边框 */
+    --input: 0 0% 90%;
+    --ring: 260 30% 62%;
+    
+    /* 分类颜色 */
+    --category-food: 25 95% 60%; /* 橙色 */
+    --category-coffee: 30 40% 45%; /* 棕色 */
+    --category-outdoor: 120 40% 50%; /* 绿色 */
+    --category-photo: 340 80% 70%; /* 粉色 */
+    --category-graffiti: 270 50% 60%; /* 紫色 */
+    --category-market: 210 80% 60%; /* 蓝色 */
+    --category-relax: 180 50% 55%; /* 青色 */
+    --category-sport: 0 80% 60%; /* 红色 */
+    --category-treasure: 0 0% 60%; /* 灰色 */
+    
+    /* 阴影 */
+    --shadow-card: 0px 4px 12px rgba(0, 0, 0, 0.08);
+    --shadow-hover: 0px 6px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 95%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 260 30% 62%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 40%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 260 30% 20%;
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 95%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 260 30% 62%;
+    
+    /* 分类颜色（暗色模式） */
+    --category-food: 25 85% 55%;
+    --category-coffee: 30 35% 40%;
+    --category-outdoor: 120 35% 45%;
+    --category-photo: 340 70% 65%;
+    --category-graffiti: 270 45% 55%;
+    --category-market: 210 70% 55%;
+    --category-relax: 180 45% 50%;
+    --category-sport: 0 70% 55%;
+    --category-treasure: 0 0% 55%;
+    
+    --shadow-card: 0px 4px 12px rgba(0, 0, 0, 0.3);
+    --shadow-hover: 0px 6px 16px rgba(0, 0, 0, 0.4);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* 引用样式 - 推荐理由 */
+  .quote-text {
+    position: relative;
+    padding-left: 1.5rem;
+    font-size: 1.125rem;
+    line-height: 1.75;
+    color: hsl(var(--foreground));
+  }
+  
+  .quote-text::before {
+    content: '"';
+    position: absolute;
+    left: 0;
+    top: -0.25rem;
+    font-size: 2.5rem;
+    color: hsl(var(--muted-foreground));
+    opacity: 0.3;
+  }
+  
+  /* 卡片阴影 */
+  .card-shadow {
+    box-shadow: var(--shadow-card);
+  }
+  
+  .card-shadow-hover {
+    box-shadow: var(--shadow-hover);
+  }
+  
+  /* 滑入动画 */
+  .slide-up {
+    animation: slide-up 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  
+  @keyframes slide-up {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  /* 按压反馈 */
+  .press-feedback:active {
+    transform: scale(0.98);
+    opacity: 0.8;
+    transition: all 0.2s;
+  }
+  
+  /* 翻转动画 */
+  .flip-y {
+    animation: flip-y 0.4s ease-in-out;
+  }
+  
+  @keyframes flip-y {
+    0% {
+      transform: rotateY(0deg);
+    }
+    50% {
+      transform: rotateY(90deg);
+    }
+    100% {
+      transform: rotateY(0deg);
+    }
+  }
+  
+  /* Leaflet 地图样式优化 */
+  .leaflet-container {
+    z-index: 0 !important; /* 确保地图在最底层 */
+  }
+  
+  .leaflet-control-container {
+    position: absolute;
+    top: 80px !important; /* 避免被顶部标题栏遮挡 */
+    left: 10px;
+    z-index: 10 !important;
+  }
+  
+  .leaflet-control-zoom {
+    border: none !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  }
+  
+  .leaflet-control-zoom a {
+    background-color: white !important;
+    color: hsl(var(--foreground)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+  }
+  
+  .leaflet-control-zoom a:hover {
+    background-color: hsl(var(--accent)) !important;
+  }
+  
+  .leaflet-pane {
+    z-index: 1 !important;
+  }
+  
+  .leaflet-tile-pane {
+    z-index: 1 !important;
+  }
+  
+  .leaflet-overlay-pane {
+    z-index: 2 !important;
+  }
+  
+  .leaflet-marker-pane {
+    z-index: 3 !important;
+  }
+  
+  /* 手绘图标样式 */
+  .custom-marker-icon {
+    background: transparent !important;
+    border: none !important;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+  
+  .custom-marker-icon:hover {
+    transform: scale(1.1);
+  }
+  
+  /* 用户位置标记样式 */
+  .user-location-marker {
+    background: transparent !important;
+    border: none !important;
+    z-index: 1000 !important;
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.05);
+      opacity: 0.9;
+    }
+  }
+
+  /* 慢速弹跳动画 */
+  @keyframes bounce-slow {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+
+  .animate-bounce-slow {
+    animation: bounce-slow 2s ease-in-out infinite;
+  }
+}
