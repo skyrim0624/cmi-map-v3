@@ -93,7 +93,7 @@ export default function MapView() {
       </div>
 
       {/* 左下角切换按钮 */}
-      <div className="absolute bottom-24 left-6 z-20">
+      <div className="absolute bottom-32 left-6 z-20">
         <Button
           size="icon"
           className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg press-feedback"
@@ -104,7 +104,7 @@ export default function MapView() {
       </div>
 
       {/* 左下角用户头像/登录按钮 - 在编辑按钮下方 */}
-      <div className="absolute bottom-6 left-6 z-20">
+      <div className="absolute bottom-14 left-6 z-20">
         {user ? (
           <Button
             variant="ghost"
