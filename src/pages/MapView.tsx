@@ -111,7 +111,7 @@ export default function MapView() {
       </div>
 
       {/* 左下角用户头像/登录按钮 - 在编辑按钮下方 */}
-      <div className="absolute bottom-22 left-6 z-20">
+      <div className="absolute bottom-20 left-6 z-20">
         {user ? (
           <Button
             variant="ghost"
