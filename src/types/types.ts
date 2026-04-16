@@ -53,49 +53,49 @@ export const CATEGORIES: CategoryConfig[] = [
     name: '吃饭', 
     color: 'category-food', 
     icon: '🍜',
-    iconUrl: 'https://miaoda-site-img.cdn.bcebos.com/images/baidu_image_search_72779ef6-da24-48e9-b861-59072ca87ad3.jpg'
+    iconUrl: '/categories/1.png'
   },
   { 
     name: '咖啡', 
     color: 'category-coffee', 
     icon: '☕',
-    iconUrl: 'https://miaoda-site-img.cdn.bcebos.com/images/baidu_image_search_4d8a96e2-6558-4c03-90c1-3ee707258d80.jpg'
+    iconUrl: '/categories/2.png'
   },
   { 
     name: '户外', 
     color: 'category-outdoor', 
     icon: '🏔️',
-    iconUrl: 'https://miaoda-site-img.cdn.bcebos.com/images/baidu_image_search_69065ed5-c7b1-4107-b0ee-35e513fb15cc.jpg'
+    iconUrl: '/categories/3.png'
   },
   { 
     name: '拍照', 
     color: 'category-photo', 
     icon: '📸',
-    iconUrl: 'https://miaoda-site-img.cdn.bcebos.com/images/baidu_image_search_4191c531-49b0-4248-b274-66176698975e.jpg'
+    iconUrl: '/categories/4.png'
   },
   { 
     name: '市集', 
     color: 'category-market', 
     icon: '🛍️',
-    iconUrl: 'https://miaoda-site-img.cdn.bcebos.com/images/MiaoTu_c77cc748-cbce-47cf-9c76-d09df2320801.jpg'
+    iconUrl: '/categories/5.png'
   },
   { 
     name: '放松', 
     color: 'category-relax', 
     icon: '💆',
-    iconUrl: 'https://miaoda-site-img.cdn.bcebos.com/images/baidu_image_search_d3a24b89-2797-48d8-8c3f-0faf675f7fcb.jpg'
+    iconUrl: '/categories/6.png'
   },
   { 
     name: '运动', 
     color: 'category-sport', 
     icon: '🏃',
-    iconUrl: 'https://miaoda-site-img.cdn.bcebos.com/images/baidu_image_search_998523c8-9c29-4a8c-bcfd-b01491f48123.jpg'
+    iconUrl: '/categories/7.png'
   },
   { 
     name: '彩蛋', 
     color: 'category-treasure', 
     icon: '🥚',
-    iconUrl: 'https://miaoda-site-img.cdn.bcebos.com/images/baidu_image_search_42eafbe0-2007-4572-81f7-52c70425379f.jpg'
+    iconUrl: '/categories/8.png'
   }
 ];
 

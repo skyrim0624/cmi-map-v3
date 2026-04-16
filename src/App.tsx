@@ -14,21 +14,24 @@ const App: React.FC = () => {
       <AuthProvider>
         <RouteGuard>
           <IntersectObserver />
-          <div className="flex flex-col min-h-screen">
-            <main className="flex-grow">
-              <Routes>
-              {routes.map((route, index) => (
-                <Route
-                  key={index}
-                  path={route.path}
-                  element={route.element}
-                />
-              ))}
-              <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </main>
+          <div className="min-h-screen bg-neutral-100/50 dark:bg-neutral-900/50 flex justify-center">
+            <div className="flex flex-col w-full max-w-[480px] bg-background h-[100dvh] relative shadow-xl sm:border-x sm:border-border/40 [transform:translateZ(0)]">
+              <main className="flex-grow overflow-y-auto overflow-x-hidden">
+                <Routes>
+                {routes.map((route, index) => (
+                  <Route
+                    key={index}
+                    path={route.path}
+                    element={route.element}
+                  />
+                ))}
+                <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </main>
+              {/* Toaster is placed inside the restricted container if possible, but sonner handles its own viewport */}
+              <Toaster position="top-center" />
+            </div>
           </div>
-          <Toaster />
         </RouteGuard>
       </AuthProvider>
     </Router>

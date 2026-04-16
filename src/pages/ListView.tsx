@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getAllRecommendations, getRecommendationsByCategory } from '@/db/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Recommendation, Category } from '@/types/types';
-import { CATEGORIES, getCategoryIcon } from '@/types/types';
+import { CATEGORIES, getCategoryIconUrl } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ArrowLeft, LogIn } from 'lucide-react';
@@ -33,7 +33,7 @@ export default function ListView() {
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-background">
+    <div className="relative w-full h-full overflow-hidden bg-background">
       {/* 顶部标题栏 */}
       <div className="border-b border-border bg-background">
         <div className="flex items-center justify-between px-6 py-4">
@@ -57,21 +57,29 @@ export default function ListView() {
             <Button
               variant={selectedCategory === 'all' ? 'default' : 'outline'}
               size="sm"
-              className="rounded-full whitespace-nowrap press-feedback"
+              className="app-tag rounded-full whitespace-nowrap press-feedback relative"
               onClick={() => setSelectedCategory('all')}
+              data-state={selectedCategory === 'all' ? 'on' : 'off'}
             >
               全部
+              <svg className="app-tag-circle absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" style={{pointerEvents: 'none'}}>
+                <path d="M5,50 a45,45 0 1,0 90,0 a45,45 0 1,0 -90,0" vectorEffect="non-scaling-stroke" />
+              </svg>
             </Button>
             {CATEGORIES.map((cat) => (
               <Button
                 key={cat.name}
                 variant={selectedCategory === cat.name ? 'default' : 'outline'}
                 size="sm"
-                className="rounded-full whitespace-nowrap press-feedback"
+                className="app-tag rounded-full whitespace-nowrap press-feedback relative"
                 onClick={() => setSelectedCategory(cat.name)}
+                data-state={selectedCategory === cat.name ? 'on' : 'off'}
               >
-                <span className="mr-1">{cat.icon}</span>
+                <img src={cat.iconUrl} alt={cat.name} className="w-4 h-4 mr-1 object-contain" />
                 {cat.name}
+                <svg className="app-tag-circle absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" style={{pointerEvents: 'none'}}>
+                  <path d="M5,50 a45,45 0 1,0 90,0 a45,45 0 1,0 -90,0" vectorEffect="non-scaling-stroke" />
+                </svg>
               </Button>
             ))}
           </div>
@@ -89,7 +97,7 @@ export default function ListView() {
             recommendations.map((rec) => (
               <div
                 key={rec.id}
-                className="bg-card rounded-xl p-4 card-shadow cursor-pointer press-feedback"
+                className="app-list-card bg-card p-4 border-2 border-foreground cursor-pointer"
                 onClick={() => navigate(`/place/${encodeURIComponent(rec.place_name)}`)}
               >
                 <div className="flex gap-4">
@@ -102,8 +110,8 @@ export default function ListView() {
                         className="w-20 h-20 rounded-xl object-cover"
                       />
                     ) : (
-                      <div className="w-20 h-20 rounded-xl bg-accent flex items-center justify-center text-3xl">
-                        {getCategoryIcon(rec.category)}
+                      <div className="w-20 h-20 rounded-xl bg-accent flex items-center justify-center p-4">
+                        <img src={getCategoryIconUrl(rec.category)} alt={rec.category} className="w-full h-full object-contain opacity-60" />
                       </div>
                     )}
                   </div>

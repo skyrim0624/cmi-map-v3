@@ -4,10 +4,10 @@ import { LeafletMap } from '@/components/map/LeafletMap';
 import { getAllRecommendations } from '@/db/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Recommendation, MapMarker as MapMarkerType } from '@/types/types';
-import { getCategoryIcon } from '@/types/types';
+import { getCategoryIconUrl, CATEGORIES } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { List, Edit, LogIn } from 'lucide-react';
+import { List, LogIn, Plus } from 'lucide-react';
 
 export default function MapView() {
   const navigate = useNavigate();
@@ -16,6 +16,7 @@ export default function MapView() {
   const [markers, setMarkers] = useState<MapMarkerType[]>([]);
   const [selectedMarker, setSelectedMarker] = useState<MapMarkerType | null>(null);
   const [selectedRecommendations, setSelectedRecommendations] = useState<Recommendation[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string>('全部');
   
   const displayName = profile?.user_name || user?.email?.split('@')[0] || '游客';
 
@@ -67,12 +68,17 @@ export default function MapView() {
     setSelectedRecommendations([]);
   };
 
+  // 过滤当前需要显示的标记点
+  const displayedMarkers = activeCategory === '全部' 
+    ? markers 
+    : markers.filter(m => m.category === activeCategory);
+
   return (
     <div className="relative w-full h-screen overflow-hidden">
       {/* 地图 - 全屏显示，z-index 最低 */}
       <div className="absolute inset-0 z-0">
         <LeafletMap
-          markers={markers}
+          markers={displayedMarkers}
           onMarkerClick={handleMarkerClick}
           onMapClick={handleMapClick}
           mode="view"
@@ -81,8 +87,8 @@ export default function MapView() {
       </div>
 
       {/* 左上角应用名称 */}
-      <div className="absolute top-6 left-6 z-20">
-        <h1 className="text-2xl font-bold text-foreground bg-background/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg">
+      <div className="absolute top-6 left-6 z-20 flex items-center gap-3">
+        <h1 className="text-xl font-black text-foreground bg-background/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border border-border/50">
           CMI Map
         </h1>
       </div>
@@ -90,40 +96,78 @@ export default function MapView() {
       {/* 右上角列表按钮 */}
       <div className="absolute top-6 right-6 z-20">
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon"
           onClick={() => navigate('/list')}
-          className="press-feedback bg-background/80 backdrop-blur-sm shadow-lg hover:bg-background"
+          className="press-feedback bg-background/80 backdrop-blur-sm shadow-lg hover:bg-background border-border/50"
         >
           <List className="w-5 h-5" />
         </Button>
       </div>
 
-      {/* 左下角切换按钮 */}
-      <div className="absolute bottom-40 left-6 z-20">
-        <Button
-          size="icon"
-          className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg press-feedback"
-          onClick={() => navigate('/mark')}
-        >
-          <Edit className="w-6 h-6" />
-        </Button>
+      {/* 分类抽屉/标签过滤器 (Category Filtering) */}
+      <div className="absolute top-20 left-0 right-0 z-20 overflow-x-auto hide-scrollbar px-6">
+        <div className="flex items-center gap-3 pb-2 w-max">
+          <Button
+            size="sm"
+            className={`rounded-full shadow-md font-semibold press-feedback transition-transform ${
+              activeCategory === '全部' 
+                ? 'bg-primary text-primary-foreground border-2 border-transparent scale-105' 
+                : 'bg-background/80 hover:bg-background text-foreground backdrop-blur-sm border-2 border-border/50'
+            }`}
+            onClick={() => {
+              setActiveCategory('全部');
+              setSelectedMarker(null);
+            }}
+          >
+            全 部
+          </Button>
+          {CATEGORIES.map((cat) => (
+            <Button
+              key={cat.name}
+              size="sm"
+              className={`rounded-full shadow-md flex items-center gap-2 font-semibold press-feedback transition-transform ${
+                activeCategory === cat.name 
+                  ? 'bg-primary text-primary-foreground border-2 border-transparent scale-105' 
+                  : 'bg-background/80 hover:bg-background text-foreground backdrop-blur-sm border-2 border-border/50'
+              }`}
+              onClick={() => {
+                setActiveCategory(cat.name);
+                setSelectedMarker(null);
+              }}
+            >
+              <img src={cat.iconUrl} alt={cat.name} className="w-4 h-4 object-contain drop-shadow-sm" />
+              {cat.name}
+            </Button>
+          ))}
+        </div>
       </div>
 
-      {/* 左下角用户头像/登录按钮 - 在编辑按钮下方 */}
-      <div className="absolute bottom-20 left-6 z-20">
+      {/* 底部中间发帖按钮 (11. FAB Hard Press) */}
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20">
+        <button
+          className="app-fab flex items-center gap-2 bg-primary text-primary-foreground font-bold px-6 py-4 rounded-full border-2 border-foreground"
+          onClick={() => navigate('/mark')}
+        >
+          <Plus className="w-6 h-6" strokeWidth={3} />
+          <span>标记新地点</span>
+        </button>
+      </div>
+
+      {/* 左下角用户头像/登录按钮 - 与发帖按钮持平 */}
+      <div className="absolute bottom-10 left-6 z-20">
         {user ? (
           <Button
             variant="ghost"
             size="icon"
-            className="w-12 h-12 rounded-full p-0 press-feedback bg-background/80 backdrop-blur-sm shadow-lg hover:bg-background"
+            className="w-12 h-12 rounded-full p-0 press-feedback bg-background/80 backdrop-blur-sm shadow-lg hover:bg-background border border-border/50"
             onClick={() => navigate('/profile')}
           >
             <Avatar className="w-12 h-12">
               {profile?.avatar_url && (
                 <AvatarImage src={profile.avatar_url} alt={displayName} />
               )}
-              <AvatarFallback className="bg-primary text-primary-foreground">
+              <AvatarFallback className="bg-primary text-primary-foreground font-bold">
                 {displayName.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -132,7 +176,7 @@ export default function MapView() {
           <Button
             variant="default"
             size="sm"
-            className="rounded-full press-feedback shadow-lg"
+            className="rounded-full press-feedback shadow-lg border-2 border-foreground font-bold"
             onClick={() => navigate('/login')}
           >
             <LogIn className="w-4 h-4 mr-2" />
@@ -144,47 +188,53 @@ export default function MapView() {
       {/* 预览卡片 - z-index 最高 */}
       {selectedMarker && selectedRecommendations.length > 0 && (
         <div
-          className="absolute bottom-0 left-0 right-0 z-50 bg-card rounded-t-3xl p-6 card-shadow slide-up cursor-pointer press-feedback"
+          className="absolute bottom-0 left-0 right-0 z-50 bg-card rounded-t-3xl p-6 card-shadow slide-up cursor-pointer press-feedback border-t border-border/20"
           onClick={handleCardClick}
         >
-          <div className="space-y-3">
+          <div className="space-y-4">
             {/* 推荐理由 */}
-            <p className="quote-text text-lg leading-relaxed">
+            <p className="quote-text text-lg leading-relaxed text-foreground">
               {selectedRecommendations[0].reason}
             </p>
 
             {/* 地点名称和分类 */}
             <div className="flex items-center gap-2">
-              <span className="text-2xl">{getCategoryIcon(selectedMarker.category)}</span>
-              <span className="text-base font-semibold text-foreground">
+              <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center p-1.5 border border-border/50">
+                <img src={getCategoryIconUrl(selectedMarker.category)} alt="" className="w-full h-full object-contain" />
+              </div>
+              <span className="text-base font-black text-foreground">
                 {selectedMarker.place_name}
               </span>
             </div>
 
             {/* 推荐人 */}
-            <p className="text-sm text-muted-foreground">
-              —— {selectedRecommendations[0].user_name}
+            <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <span className="w-8 border-t border-muted-foreground/30"></span> 
+              {selectedRecommendations[0].user_name}
             </p>
 
             {/* 缩略图 */}
             {selectedRecommendations[0].images.length > 0 && (
-              <div className="flex gap-2 mt-3">
+              <div className="flex gap-2">
                 {selectedRecommendations[0].images.slice(0, 3).map((img, idx) => (
-                  <img
-                    key={idx}
-                    src={img}
-                    alt=""
-                    className="w-16 h-16 rounded-lg object-cover"
-                  />
+                  <div key={idx} className="w-16 h-16 rounded-lg overflow-hidden border border-border shadow-sm">
+                    <img
+                      src={img}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 ))}
               </div>
             )}
 
             {/* 多人推荐提示 */}
             {selectedRecommendations.length > 1 && (
-              <p className="text-xs text-muted-foreground">
-                还有 {selectedRecommendations.length - 1} 人推荐了这里
-              </p>
+              <div className="pt-2 border-t border-border/50">
+                <p className="text-xs font-semibold text-muted-foreground/80">
+                  还有 {selectedRecommendations.length - 1} 人推荐了这里
+                </p>
+              </div>
             )}
           </div>
         </div>
@@ -192,3 +242,4 @@ export default function MapView() {
     </div>
   );
 }
+

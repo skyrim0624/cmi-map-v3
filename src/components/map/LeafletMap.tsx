@@ -3,6 +3,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { MapMarker } from '@/types/types';
 import { getCategoryColor, getCategoryIconUrl } from '@/types/types';
+import 'leaflet.markercluster';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
 interface LeafletMapProps {
   markers?: MapMarker[];
@@ -36,6 +39,7 @@ export const LeafletMap = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const userLocationMarkerRef = useRef<L.Marker | null>(null);
+  const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null);
   const onCenterChangeRef = useRef(onCenterChange);
   const userHeadingRef = useRef<number>(0); // 用户朝向角度
 
@@ -124,28 +128,53 @@ export const LeafletMap = ({
                 ? 'https://miaoda-conversation-file.cdn.bcebos.com/user-aitwe90l6zuo/conv-az97tfv4utc0/20260416/file-azwq0xhr1hxc.png' // 录入模式：橙红色地图标记
                 : 'https://miaoda-conversation-file.cdn.bcebos.com/user-aitwe90l6zuo/conv-az97tfv4utc0/20260416/file-azw6hmx5ubr4.png'; // 查看模式：蓝色箭头
               
-              // 创建用户位置标记（带旋转）
+              // 创建用户位置标记（手工矢量+脉冲光环+指南针指向）
               const createUserIcon = (heading: number = 0) => {
                 return L.divIcon({
                   className: 'user-location-marker',
                   html: `
                     <div style="
-                      width: 56px;
-                      height: 56px;
+                      width: 64px;
+                      height: 64px;
                       position: relative;
-                      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
-                      transform: rotate(${heading}deg);
-                      transition: transform 0.3s ease-out;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
                     ">
-                      <img 
-                        src="${userIconUrl}" 
-                        alt="用户位置" 
-                        style="width: 100%; height: 100%; object-fit: contain;"
-                      />
+                      <!-- 底部高亮脉冲圈 -->
+                      <div style="
+                        position: absolute;
+                        width: 48px;
+                        height: 48px;
+                        background: hsl(var(--primary));
+                        border-radius: 50%;
+                        opacity: 0.3;
+                        animation: aura-pulse 2s infinite ease-out;
+                      "></div>
+                      
+                      <!-- 旋转的主干（带指南针和中心圆圈） -->
+                      <div style="
+                        position: relative;
+                        width: 40px;
+                        height: 40px;
+                        transform: rotate(${heading}deg);
+                        transition: transform 0.3s ease-out;
+                        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+                      ">
+                        <!-- 纯CSS/SVG手绘制品 -->
+                        <svg viewBox="0 0 100 100" width="100%" height="100%" overflow="visible">
+                          <!-- 外部不规则炭黑圈 -->
+                          <circle cx="50" cy="50" r="30" fill="hsl(var(--background))" stroke="hsl(var(--foreground))" stroke-width="6" stroke-dasharray="180" stroke-dashoffset="10"/>
+                          <!-- 中心亮色定位点 -->
+                          <circle cx="50" cy="50" r="14" fill="hsl(var(--destructive))" />
+                          <!-- 指向玩家朝向的三角锥形指示器 -->
+                          <path d="M50 0 L65 25 L35 25 Z" fill="hsl(var(--foreground))" stroke="hsl(var(--foreground))" stroke-width="4" stroke-linejoin="round" />
+                        </svg>
+                      </div>
                     </div>
                   `,
-                  iconSize: [56, 56],
-                  iconAnchor: [28, 28]
+                  iconSize: [64, 64],
+                  iconAnchor: [32, 32]
                 });
               };
 
@@ -210,12 +239,48 @@ export const LeafletMap = ({
     const map = mapInstanceRef.current;
 
     // 清除旧标记
-    markersRef.current.forEach(marker => marker.remove());
+    if (clusterGroupRef.current) {
+      clusterGroupRef.current.clearLayers();
+      map.removeLayer(clusterGroupRef.current);
+    }
+    
     markersRef.current = [];
+
+    // 初始化聚合组
+    const clusterGroup = L.markerClusterGroup({
+      showCoverageOnHover: false,
+      maxClusterRadius: 40,
+      spiderfyOnMaxZoom: true,
+      iconCreateFunction: function(cluster) {
+        return L.divIcon({
+          className: 'custom-cluster-icon',
+          html: `
+            <div style="
+              width: 48px;
+              height: 48px;
+              background: hsl(var(--foreground));
+              color: hsl(var(--background));
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-weight: 900;
+              font-size: 18px;
+              border: 3px solid hsl(var(--background));
+              box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+              font-family: 'Inter', sans-serif;
+            ">
+              ${cluster.getChildCount()}
+            </div>
+          `,
+          iconSize: [48, 48],
+          iconAnchor: [24, 24]
+        });
+      }
+    });
 
     // 添加新标记
     markers.forEach((markerData) => {
-      const categoryColor = getCategoryColor(markerData.category);
       const iconUrl = getCategoryIconUrl(markerData.category);
       
       // 创建手绘风格图标
@@ -223,39 +288,27 @@ export const LeafletMap = ({
         className: 'custom-marker-icon',
         html: `
           <div style="
-            width: 48px;
-            height: 48px;
+            width: 56px;
+            height: 56px;
             position: relative;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
           ">
-            <div style="
-              width: 100%;
-              height: 100%;
-              border-radius: 50%;
-              background: hsl(var(--${categoryColor}));
-              padding: 6px;
-              box-sizing: border-box;
-              border: 3px solid white;
-            ">
-              <img 
-                src="${iconUrl}" 
-                style="
-                  width: 100%;
-                  height: 100%;
-                  object-fit: cover;
-                  border-radius: 50%;
-                "
-                alt=""
-              />
-            </div>
+            <img 
+              src="${iconUrl}" 
+              style="
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+              "
+              alt=""
+            />
           </div>
         `,
-        iconSize: [48, 48],
-        iconAnchor: [24, 24]
+        iconSize: [56, 56],
+        iconAnchor: [28, 28]
       });
 
-      const marker = L.marker([markerData.latitude, markerData.longitude], { icon })
-        .addTo(map);
+      const marker = L.marker([markerData.latitude, markerData.longitude], { icon });
 
       // 添加点击事件
       if (onMarkerClick) {
@@ -264,8 +317,13 @@ export const LeafletMap = ({
         });
       }
 
+      clusterGroup.addLayer(marker);
       markersRef.current.push(marker);
     });
+
+    map.addLayer(clusterGroup);
+    clusterGroupRef.current = clusterGroup;
+
   }, [markers, mode, onMarkerClick]);
 
   return (
@@ -275,14 +333,15 @@ export const LeafletMap = ({
       {mode === 'mark' && (
         <div className="absolute top-[31%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[1000]">
           <div className="relative animate-bounce-slow">
-            {/* 橙红色地图定位图标 */}
+            {/* 橙红色手绘地图定位大头针 */}
             <img 
-              src="https://miaoda-conversation-file.cdn.bcebos.com/user-aitwe90l6zuo/conv-az97tfv4utc0/20260416/file-azvnxf4clcsg.png" 
+              src="/custom-pin.png" 
               alt="定位标记" 
               style={{
-                width: '48px',
-                height: '48px',
-                filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
+                width: '64px',
+                height: '64px',
+                filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))',
+                transform: 'translateY(-8px)'
               }}
             />
             {/* 底部阴影圆点 */}

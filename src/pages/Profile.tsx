@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getRecommendationsByUserId, deleteRecommendation, uploadAvatar, updateUserAvatar } from '@/db/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Recommendation } from '@/types/types';
-import { getCategoryIcon } from '@/types/types';
+import { getCategoryIconUrl } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowLeft, LogOut, Trash2, Camera } from 'lucide-react';
@@ -195,7 +195,7 @@ export default function Profile() {
           </div>
 
           {/* 统计数据 */}
-          <div className="bg-card rounded-xl p-6 card-shadow text-center">
+          <div className="bg-card border-2 border-foreground p-6 text-center shadow-[4px_4px_0_hsl(var(--foreground))]">
             <p className="text-3xl font-bold text-primary mb-2">
               {recommendations.length}
             </p>
@@ -226,7 +226,7 @@ export default function Profile() {
                 {recommendations.map((rec) => (
                   <div
                     key={rec.id}
-                    className="bg-card rounded-xl p-4 card-shadow"
+                    className="app-list-card bg-card p-4 border-2 border-foreground"
                   >
                     <div className="flex gap-4">
                       {/* 左侧图片或图标 */}
@@ -241,8 +241,8 @@ export default function Profile() {
                             className="w-20 h-20 rounded-xl object-cover"
                           />
                         ) : (
-                          <div className="w-20 h-20 rounded-xl bg-accent flex items-center justify-center text-3xl">
-                            {getCategoryIcon(rec.category)}
+                          <div className="w-20 h-20 rounded-xl bg-accent flex items-center justify-center p-4">
+                            <img src={getCategoryIconUrl(rec.category)} alt={rec.category} className="w-full h-full object-contain opacity-60" />
                           </div>
                         )}
                       </div>

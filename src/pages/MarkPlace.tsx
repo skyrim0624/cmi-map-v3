@@ -11,14 +11,60 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, Camera, ArrowLeft, LogIn, Mic, MicOff } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+
 import { isImageFile, formatFileSize } from '@/utils/imageCompression';
+
+const ScribbleSparks = ({ isListening }: { isListening: boolean }) => {
+  if (!isListening) return null;
+  
+  const sparks = Array.from({ length: 16 }).map((_, i) => {
+    const angle = (i / 16) * Math.PI * 2;
+    const distance = 35 + Math.random() * 55; 
+    const tx = Math.cos(angle) * distance;
+    const ty = Math.sin(angle) * distance;
+    const delay = Math.random() * 0.5;
+    const duration = 0.4 + Math.random() * 0.3;
+    // Hand-painted pigment colors
+    const colors = ['#FF2A2A', '#FFE600', '#00E84F', '#00B3FF', '#8700FF', '#FF00A2'];
+    const color = colors[i % colors.length];
+    
+    const shapeType = i % 3;
+    let path;
+    if (shapeType === 0) {
+      path = <path d="M12 2c0 4 3 7 7 8-4 .7-7 4-7 8-1-4-4-7-8-8 4-1 6-4 8-8z" />; // spark
+    } else if (shapeType === 1) {
+      path = <path d="M12 22C6.48 22 2 17.52 2 12S6.48 2 12 2s10 4.48 10 10-4.48 10-10 10zm-1-16c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z" />; // blob
+    } else {
+      path = <path strokeWidth="4" strokeLinecap="round" d="M12 4v16M4 12h16" />; // scribble cross
+    }
+    
+    return (
+      <svg 
+        key={i}
+        width="20" 
+        height="20" 
+        viewBox="0 0 24 24" 
+        fill={shapeType === 2 ? 'none' : color}
+        stroke={shapeType === 2 ? color : 'none'}
+        className="absolute top-1/2 left-1/2 -mt-[10px] -ml-[10px] pointer-events-none drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]"
+        style={{
+          '--tx': `${tx}px`,
+          '--ty': `${ty}px`,
+          '--rot': `${Math.random() * 360}deg`,
+          animation: `star-burst ${duration}s ease-out ${delay}s infinite`
+        } as React.CSSProperties}
+      >
+        {path}
+      </svg>
+    );
+  });
+
+  return (
+    <div className="absolute top-1/2 left-1/2 w-0 h-0 pointer-events-none z-0">
+      {sparks}
+    </div>
+  );
+};
 
 export default function MarkPlace() {
   const navigate = useNavigate();
@@ -282,27 +328,32 @@ export default function MarkPlace() {
         <div className="space-y-4">
           {/* 描述（合并地点名称和推荐理由） */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="description">描述一下这里吧</Label>
-              <Button
+            <div className="flex items-center justify-between pb-2">
+              <Label htmlFor="description" className="text-base font-bold text-foreground">描述一下这里吧</Label>
+              <button
                 type="button"
-                variant="ghost"
-                size="sm"
                 onClick={handleVoiceInput}
-                className={`press-feedback ${isListening ? 'text-destructive' : ''}`}
+                className={`relative overflow-visible z-10 press-feedback flex items-center gap-1.5 px-4 py-2 rounded-2xl font-bold transition-all border-[3px] border-foreground ${
+                  isListening 
+                    ? 'bg-[#FF2A2A] text-white shadow-[6px_6px_0_hsl(var(--foreground))] animate-sketch-wobble' 
+                    : 'bg-[#FFE600] text-foreground shadow-[3px_3px_0_hsl(var(--foreground))] hover:shadow-[5px_5px_0_hsl(var(--foreground))] hover:-translate-y-0.5'
+                }`}
               >
-                {isListening ? (
-                  <>
-                    <MicOff className="w-4 h-4 mr-1" />
-                    停止
-                  </>
-                ) : (
-                  <>
-                    <Mic className="w-4 h-4 mr-1" />
-                    语音
-                  </>
-                )}
-              </Button>
+                <ScribbleSparks isListening={isListening} />
+                <div className="relative z-10 flex items-center gap-1.5">
+                  {isListening ? (
+                    <>
+                      <MicOff className="w-5 h-5 drop-shadow-sm" />
+                      <span className="text-sm tracking-wide">录音中!!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-5 h-5 drop-shadow-sm" />
+                      <span className="text-sm tracking-wide">语音输入</span>
+                    </>
+                  )}
+                </div>
+              </button>
             </div>
             <Textarea
               id="description"
@@ -310,37 +361,40 @@ export default function MarkPlace() {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="例如：宁曼路的咖啡店&#10;这里的咖啡很好喝，环境也很舒适"
               rows={4}
-              className="text-base"
+              className="text-base app-input"
             />
-            <p className="text-xs text-muted-foreground">
-              💡 提示：第一行会作为地点名称，其余作为推荐理由
+            <p className="text-xs text-muted-foreground/80 mt-1 flex items-start gap-1">
+              <span className="text-base leading-none relative top-[-1px]">💡</span> 
+              <span>第一行会作为地点名称，其余作为推荐理由</span>
             </p>
           </div>
 
           {/* 分类选择 */}
-          <div className="space-y-2">
-            <Label htmlFor="category">分类</Label>
-            <Select value={category} onValueChange={(value) => setCategory(value as Category)}>
-              <SelectTrigger id="category">
-                <SelectValue placeholder="选择一个分类" />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((cat) => (
-                  <SelectItem key={cat.name} value={cat.name}>
-                    <span className="flex items-center gap-2">
-                      <span>{cat.icon}</span>
-                      <span>{cat.name}</span>
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-3 pt-2">
+            <Label className="text-base font-bold text-foreground">分类</Label>
+            <div className="flex flex-wrap gap-2.5 pb-1">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat.name}
+                  type="button"
+                  onClick={() => setCategory(cat.name)}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-full border-2 transition-all press-feedback ${
+                    category === cat.name
+                      ? 'border-primary bg-primary/10 text-primary font-bold scale-95'
+                      : 'border-transparent bg-neutral-100 text-muted-foreground hover:bg-neutral-200 hover:text-foreground'
+                  }`}
+                >
+                  <img src={cat.iconUrl} alt={cat.name} className={`w-5 h-5 object-contain transition-opacity ${category !== cat.name && category !== '' ? 'opacity-50' : 'opacity-100'}`} />
+                  <span className="text-sm">{cat.name}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* 照片上传 */}
-          <div className="space-y-2">
-            <Label>照片（可选，最多 3 张）</Label>
-            <div className="flex gap-2 flex-wrap">
+          <div className="space-y-3 pt-2">
+            <Label className="text-base font-bold text-foreground">照片 <span className="text-sm font-normal text-muted-foreground">（可选，最多 3 张）</span></Label>
+            <div className="flex gap-3 flex-wrap">
               {images.map((img, idx) => (
                 <div key={idx} className="relative">
                   <img

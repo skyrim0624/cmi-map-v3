@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getRecommendationsByPlace, deleteRecommendation } from '@/db/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Recommendation } from '@/types/types';
-import { getCategoryIcon, getCategoryColor } from '@/types/types';
+import { getCategoryIconUrl, getCategoryColor } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Trash2 } from 'lucide-react';
@@ -128,11 +128,11 @@ export default function PlaceDetail() {
               <Carousel className="w-full h-full">
                 <CarouselContent>
                   {allImages.map((img, idx) => (
-                    <CarouselItem key={idx}>
+                    <CarouselItem key={idx} className="relative aspect-[4/3]">
                       <img
                         src={img}
                         alt=""
-                        className="w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-cover"
                       />
                     </CarouselItem>
                   ))}
@@ -147,10 +147,13 @@ export default function PlaceDetail() {
             </div>
           ) : (
             <div
-              className="w-full aspect-[4/3] flex items-center justify-center text-6xl"
-              style={{ backgroundColor: `hsl(var(--${getCategoryColor(firstRec.category)}))` }}
+              className="w-full aspect-[4/3] flex items-center justify-center bg-accent"
             >
-              {getCategoryIcon(firstRec.category)}
+              <img 
+                src={getCategoryIconUrl(firstRec.category)} 
+                alt={firstRec.category} 
+                className="w-1/3 h-1/3 object-contain opacity-80" 
+              />
             </div>
           )}
 
@@ -160,7 +163,7 @@ export default function PlaceDetail() {
             <div className="space-y-3">
               <h1 className="text-2xl font-bold text-foreground">{placeName}</h1>
               <Badge variant="secondary" className="rounded-full">
-                <span className="mr-1">{getCategoryIcon(firstRec.category)}</span>
+                <img src={getCategoryIconUrl(firstRec.category)} alt="" className="w-4 h-4 mr-1 object-contain" />
                 {firstRec.category}
               </Badge>
             </div>
@@ -170,7 +173,7 @@ export default function PlaceDetail() {
               {recommendations.map((rec, idx) => (
                 <div
                   key={rec.id}
-                  className="bg-accent/30 rounded-xl p-5 space-y-3 relative"
+                  className="bg-card border border-border card-shadow rounded-xl p-5 space-y-3 relative"
                 >
                   {/* 删除按钮（仅对当前用户的推荐显示） */}
                   {user && rec.user_id === user.id && (
@@ -216,12 +219,13 @@ export default function PlaceDetail() {
 
       {/* 底部导航按钮 */}
       <div className="fixed bottom-0 left-0 right-0 p-6 bg-background border-t border-border">
-        <Button
-          className="w-full h-12 text-base font-semibold press-feedback"
+        <button
+          className="app-like w-full h-12 text-base font-semibold border-2 border-foreground bg-primary text-primary-foreground rounded-xl flex items-center justify-center"
           onClick={handleNavigate}
         >
           导航到这里
-        </Button>
+          <div className="splatter" />
+        </button>
       </div>
 
       {/* 删除确认对话框 */}

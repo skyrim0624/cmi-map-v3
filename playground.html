@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMI Map - UI Interactions Playground</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700;800&display=swap');
+
+    :root {
+      --bg: #F9F9F8;
+      --fg: #1D1D1F;
+      --accent-yellow: #FFDE59;
+      --accent-blue: #5CE1E6;
+      --accent-red: #FF5757;
+      --border-rough: 3px solid #1D1D1F;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', 'Noto Sans SC', sans-serif;
+      background-color: var(--bg);
+      color: var(--fg);
+      padding: 40px 20px 100px;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image: 
+        linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px),
+        linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .section-header {
+      margin: 60px 0 30px;
+      padding-bottom: 10px;
+      border-bottom: var(--border-rough);
+    }
+    .section-header h2 {
+      font-size: 2rem;
+      font-weight: 800;
+    }
+    .section-header p {
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 30px;
+    }
+
+    .card {
+      background: #FFF;
+      border: var(--border-rough);
+      border-radius: 8px;
+      padding: 30px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 220px;
+      position: relative;
+      text-align: center;
+      box-shadow: 4px 4px 0px var(--fg);
+    }
+
+    .card-title {
+      position: absolute;
+      top: -12px;
+      left: 15px;
+      background: var(--bg);
+      padding: 0 10px;
+      font-weight: 800;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      border: 2px solid var(--fg);
+      border-radius: 4px;
+      transform: rotate(-2deg);
+      z-index: 10;
+    }
+    
+    .card-desc {
+      font-size: 0.8rem;
+      color: #666;
+      margin-top: auto;
+      padding-top: 20px;
+      width: 100%;
+    }
+
+    /* =========================================
+       PART 1: Abstract Micro-Interactions 
+       ========================================= */
+
+    /* 1. Boiling */
+    .btn-boil {
+      background: var(--bg); border: var(--border-rough); padding: 12px 24px; font-weight: bold; cursor: pointer;
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px; box-shadow: 2px 2px 0 var(--fg);
+    }
+    .btn-boil:hover { animation: boil 0.3s infinite alternate; background: var(--accent-yellow); }
+    @keyframes boil {
+      0% { border-radius: 255px 15px 225px 15px/15px 225px 15px 255px; }
+      50% { border-radius: 15px 255px 15px 225px/225px 15px 255px 15px; }
+      100% { border-radius: 225px 15px 255px 15px/15px 255px 15px 225px; }
+    }
+
+    /* 2. Paper Lift */
+    .paper-lift {
+      width: 120px; height: 80px; border: 2px solid var(--fg); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+    }
+    .paper-lift:hover { transform: translateY(-8px) rotate(3deg) scale(1.05); box-shadow: -8px 12px 0px rgba(0,0,0,0.1), -1px 2px 0px var(--fg); }
+
+    /* 3. Marker */
+    .marker-text { font-size: 1.2rem; font-weight: bold; position: relative; cursor: pointer; z-index: 1; }
+    .marker-text::after {
+      content: ''; position: absolute; bottom: 2px; left: -5%; width: 0; height: 12px; background: var(--accent-blue); z-index: -1; transition: width 0.3s ease; transform: rotate(-1deg);
+    }
+    .marker-text:hover::after { width: 110%; }
+
+    /* 4. Stamp */
+    .stamp-btn {
+      width: 60px; height: 60px; border-radius: 50%; background: var(--accent-red); color: white; border: 3px solid var(--fg); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.5rem; cursor: pointer;
+    }
+    .card:hover .stamp-btn { animation: stamp 0.5s cubic-bezier(0.36, 1.83, 0.34, 1.05); }
+    @keyframes stamp { 0% { transform: scale(2) rotate(20deg); opacity: 0; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+
+    /* 5. Squiggly */
+    .squiggly-link {
+      font-size: 1.2rem; font-weight: bold; color: var(--fg); text-decoration: none; padding-bottom: 6px; cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 4'%3E%3Cpath fill='none' stroke='%231D1D1F' stroke-width='2' d='M0 3.5c5 0 5-3 10-3s5 3 10 3 5-3 10-3 5 3 10 3'/%3E%3C/svg%3E");
+      background-repeat: repeat-x; background-size: 20px 4px; background-position: 0 100%; transition: background-position 0.5s linear;
+    }
+    .squiggly-link:hover { background-position: 40px 100%; }
+
+    /* 6. Rubber Band */
+    .rubber-band { padding: 10px 20px; border: 2px solid var(--fg); border-radius: 30px; font-weight: bold; cursor: pointer; transition: transform 0.1s; }
+    .rubber-band:active { transform: scaleX(1.2) scaleY(0.7); background: var(--bg); }
+
+    /* 7. Jitter */
+    .jitter-trigger { padding: 8px 16px; border: 2px dashed var(--fg); cursor: help; font-weight: bold; }
+    .jitter-trigger:hover { animation: jitter 0.1s infinite; background: var(--accent-yellow); }
+    @keyframes jitter { 0% { transform: translate(1px, 1px) rotate(0deg); } 33% { transform: translate(-1px, 0px) rotate(1deg); } 66% { transform: translate(0px, -1px) rotate(-1deg); } 100% { transform: translate(-1px, 1px) rotate(0deg); } }
+
+    /* 8. Ink Reveal */
+    .ink-reveal {
+      font-size: 1.5rem; font-weight: 800; color: transparent; cursor: default;
+      background-image: linear-gradient(90deg, var(--fg) 50%, #ccc 50%); background-size: 200% 100%; background-position: 100% 0; background-clip: text; -webkit-background-clip: text; transition: background-position 0.6s cubic-bezier(0.77, 0, 0.175, 1);
+    }
+    .ink-reveal:hover { background-position: 0 0; }
+
+    /* 9. Torn Edge */
+    .torn-wrapper { width: 140px; height: 50px; position: relative; border: 2px solid var(--fg); cursor: pointer; overflow: hidden;}
+    .torn-panel { position: absolute; bottom: -100%; left: 0; width: 100%; height: 100%; background: var(--accent-yellow); transition: bottom 0.3s ease; clip-path: polygon(0 15%, 10% 0%, 20% 12%, 30% 2%, 40% 15%, 50% 5%, 60% 12%, 70% 0%, 80% 15%, 90% 5%, 100% 10%, 100% 100%, 0 100%); z-index: 0; }
+    .torn-wrapper:hover .torn-panel { bottom: 0; }
+    .torn-wrapper span { position: absolute; z-index: 1; top: 12px; left: 35px; font-weight:bold;}
+
+    /* 10. Hard Press */
+    .press-area { width: 100%; max-width:140px; padding:15px; border: 3px solid var(--fg); font-weight: 800; cursor: pointer; box-shadow: 6px 6px 0 var(--fg); transition: all 0.1s; background: white;}
+    .press-area:active { transform: translate(6px, 6px); box-shadow: 0px 0px 0 var(--fg); background: var(--accent-blue); }
+
+    /* =========================================
+       PART 2: Concrete App Validations 
+       ========================================= */
+
+    /* 11. [FAB] - Giant Primary Button */
+    .app-fab {
+      background: var(--accent-yellow); color: var(--fg); border: 4px solid var(--fg); padding: 16px 32px; border-radius: 50px; font-size: 1.2rem; font-weight: 800; box-shadow: 8px 8px 0 var(--fg); cursor: pointer; transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .app-fab:hover { transform: scale(1.05) rotate(-2deg); box-shadow: 12px 12px 0 var(--fg); }
+    .app-fab:active { transform: translate(8px, 8px) scale(0.95); box-shadow: 0px 0px 0 var(--fg); }
+
+    /* 12. [Nav] - Bottom Bar Squish */
+    .app-nav { display: flex; gap: 40px; background: white; padding: 15px 30px; border: var(--border-rough); border-radius: 100px; box-shadow: 4px 4px 0 var(--fg); }
+    .app-nav-item { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; font-weight: 800; font-size: 0.9rem; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .app-nav-item:hover { transform: translateY(-5px); color: var(--accent-red); }
+    .app-nav-item:active { transform: scaleX(1.3) scaleY(0.7); }
+    .app-nav-icon { width: 24px; height: 24px; border: 2px solid var(--fg); border-radius: 50%; }
+
+    /* 13. [List] - Location Card Peel */
+    .app-list-card {
+      width: 100%; border: var(--border-rough); padding: 20px; background: white; text-align: left; position: relative; cursor: pointer; transition: transform 0.2s;
+    }
+    .app-list-card::after {
+      content: ''; position: absolute; bottom: -3px; right: -3px; width: 0; height: 0;
+      border-style: solid; border-width: 0 0 0 0; border-color: transparent transparent var(--bg) transparent;
+      transition: all 0.3s ease; box-shadow: none; border-radius: 4px 0 0 0;
+    }
+    .app-list-card:hover { transform: translateY(-4px) rotate(1deg); }
+    .app-list-card:hover::after {
+      border-width: 0 0 30px 30px; border-color: transparent transparent var(--bg) transparent;
+      box-shadow: -3px -3px 0 rgba(0,0,0,0.8);
+      background-image: linear-gradient(-45deg, var(--accent-red) 50%, transparent 50%);
+    }
+
+    /* 14. [Map] - Map Pin Drop */
+    .app-pin-wrapper { position: relative; height: 100px; width: 40px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+    .app-pin { width: 30px; height: 30px; background: var(--accent-blue); border: var(--border-rough); border-radius: 50%; margin-bottom: 5px; transform-origin: bottom center; }
+    .app-shadow { width: 20px; height: 6px; background: rgba(0,0,0,0.5); border-radius: 50%; transition: width 0.3s, opacity 0.3s; opacity: 0.2; }
+    .card:hover .app-pin { animation: pinDrop 0.6s cubic-bezier(0.28, 0.84, 0.42, 1) forwards; }
+    .card:hover .app-shadow { animation: shadowPulse 0.6s forwards; }
+    @keyframes pinDrop {
+      0% { transform: translateY(-60px) scaleY(1.2); }
+      50% { transform: translateY(0px) scaleY(0.6) scaleX(1.3); }
+      75% { transform: translateY(-10px) scaleY(1.1); }
+      100% { transform: translateY(0px) scaleY(1) scaleX(1); }
+    }
+    @keyframes shadowPulse { 0% { transform: scale(0.5); opacity: 0; } 50% { transform: scale(1.5); opacity: 0.8; } 100% { transform: scale(1); opacity: 0.4; } }
+
+    /* 15. [Form] - Search Input Wiggle */
+    .app-input {
+      width: 100%; padding: 12px 16px; border: 2px solid var(--fg); border-radius: 6px; font-size: 1rem; font-family: inherit; font-weight: 600; outline: none; transition: all 0.2s; background: white;
+    }
+    .app-input:focus { border-width: 4px; box-shadow: 6px 6px 0 rgba(0,0,0,0.1); border-radius: 2px 10px 4px 8px; animation: jitter 0.2s 2; }
+
+    /* 16. [Tags] - SVG Pencil Circle */
+    .app-tag {
+      position: relative; padding: 6px 14px; font-weight: 800; cursor: pointer; color: #666; transition: color 0.3s;
+    }
+    .tag-circle { position: absolute; top: 0; left: 0; width: 100%; height: 100%; fill: none; stroke: var(--bg); stroke-width: 3; stroke-dasharray: 200; stroke-dashoffset: 200; transition: stroke-dashoffset 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+    .app-tag:hover { color: var(--fg); }
+    .app-tag:hover .tag-circle { stroke: var(--accent-red); stroke-dashoffset: 0; }
+
+    /* 17. [Photo] - Polaroid Photo Flip */
+    .app-polaroid {
+      background: white; padding: 10px 10px 30px; border: 1px solid #ddd; box-shadow: 2px 4px 10px rgba(0,0,0,0.1); transform: rotate(-3deg); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s; cursor: pointer;
+    }
+    .polaroid-img { width: 120px; height: 100px; background: #eee; border: var(--border-rough); }
+    .app-polaroid:hover { transform: scale(1.1) rotate(5deg) translateY(-10px); box-shadow: -8px 15px 20px rgba(0,0,0,0.2); z-index: 20; border: var(--border-rough); background: var(--accent-yellow); }
+
+    /* 18. [Action] - Scribble Delete */
+    .app-delete {
+      font-weight: 800; color: var(--fg); background: none; border: none; font-size: 1.1rem; cursor: pointer; position: relative; font-family: inherit;
+    }
+    .app-delete svg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120%; height: 120%; pointer-events: none; }
+    .scribble-path { fill: none; stroke: var(--accent-red); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset 0.3s ease-in-out; }
+    .app-delete:hover .scribble-path { stroke-dashoffset: 0; }
+    .app-delete:hover { color: #aaa; }
+
+    /* 19. [Modal] - Unfold Paper Map */
+    .app-fold {
+      background: white; border: var(--border-rough); padding: 15px; width: 100%; transform-style: preserve-3d; perspective: 1000px; transform-origin: top; cursor: pointer; box-shadow: 4px 4px 0 var(--fg); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      border-radius: 6px;
+    }
+    .app-fold-bottom {
+      background: #fafafa; border: var(--border-rough); border-top: none; padding: 15px; width: 100%; transform-origin: top; transform: rotateX(-90deg); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: none;
+    }
+    .card:hover .app-fold { transform: rotateX(10deg); box-shadow: 4px 10px 0 var(--fg); background: var(--accent-yellow); }
+    /* In actual app, the bottom fold drops down to reveal form */
+
+    /* 20. [Feedback] - Ink Splatter (Like) */
+    .app-like {
+      border: 3px solid var(--fg); border-radius: 50px; padding: 8px 20px; font-weight: bold; background: white; cursor: pointer; position: relative; transition: all 0.1s;
+    }
+    .app-like:active { transform: scale(0.9); }
+    .splatter {
+      position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; background: var(--fg); border-radius: 50%; transform: translate(-50%, -50%); opacity: 0; pointer-events: none;
+    }
+    .app-like:focus .splatter { animation: splash 0.5s ease-out; }
+    @keyframes splash {
+      0% { box-shadow: 0 0 0 var(--fg), 0 0 0 var(--accent-red), 0 0 0 var(--accent-blue); opacity: 1; }
+      100% { box-shadow: -30px -40px 0 var(--fg), 40px -20px 0 var(--accent-red), -20px 30px 0 var(--accent-blue), 30px 30px 0 var(--fg); opacity: 0; }
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="container">
+  
+  <div class="section-header" style="margin-top: 0;">
+    <h2>应用组件级交互 (App Context)</h2>
+    <p>将动效直接映射到 CMI Map 整个应用的各种真实操作对象中，展示完整的体感反馈。</p>
+  </div>
+
+  <div class="grid">
+    <!-- 11 -->
+    <div class="card">
+      <div class="card-title">11. 发起动作 (Primary FAB)</div>
+      <button class="app-fab">
+        <span style="font-size:1.5rem; line-height:0;">+</span> 标记地点
+      </button>
+      <div class="card-desc">页面右下角的主要按钮。粗黑描边+极高阴影。轻扫时霸气扭动，按压时沉重下坠到底。</div>
+    </div>
+
+    <!-- 12 -->
+    <div class="card">
+      <div class="card-title">12. 底栏导航 (Bottom Nav)</div>
+      <div class="app-nav">
+        <div class="app-nav-item">
+          <div class="app-nav-icon" style="background:var(--accent-red)"></div><span>地图</span>
+        </div>
+        <div class="app-nav-item">
+          <div class="app-nav-icon"></div><span>列表</span>
+        </div>
+      </div>
+      <div class="card-desc">切换底部 Tab 时，图标会展现橡皮筋般的横向挤压与纵向拉升回弹。</div>
+    </div>
+
+    <!-- 13 -->
+    <div class="card">
+      <div class="card-title">13. 列表卡片 (List Card)</div>
+      <div class="app-list-card">
+        <div style="font-weight:800; font-size:1.1rem; border-bottom: 2px solid var(--fg); padding-bottom:5px; margin-bottom:5px;">The Ironwood</div>
+        <div style="color:#666; font-size:0.8rem;">清迈最隐秘的自然氧吧...</div>
+      </div>
+      <div class="card-desc">ListView 中的地点卡片。鼠标探看时，右下角会被“揭起”一撇，透出底部的荧光色纸背。</div>
+    </div>
+
+    <!-- 14 -->
+    <div class="card">
+      <div class="card-title">14. 地图落针 (Map Marker)</div>
+      <div class="app-pin-wrapper">
+        <div class="app-pin"></div>
+        <div class="app-shadow"></div>
+      </div>
+      <div class="card-desc">地图上新增标记时重力坠落的动画：掉落、砸扁、高光弹跳然后站稳，阴影伴随扩散。</div>
+    </div>
+
+    <!-- 15 -->
+    <div class="card">
+      <div class="card-title">15. 搜索框 (Search Input)</div>
+      <input type="text" class="app-input" placeholder="输入搜索...">
+      <div class="card-desc">点击聚焦表单时，边框变得粗糙不平并瞬间剧烈抖动两下，提示正进入“手写模式”。</div>
+    </div>
+
+    <!-- 16 -->
+    <div class="card">
+      <div class="card-title">16. 分类标签 (Category Tag)</div>
+      <div style="display:flex;">
+        <div class="app-tag">
+          <svg class="tag-circle" viewBox="0 0 100 40"><path d="M 10 20 Q 20 0, 50 5 T 90 20 Q 80 40, 50 35 T 10 20" /></svg>
+          ☕️ 咖啡
+        </div>
+      </div>
+      <div class="card-desc">点击激活过滤标签时，一根水性笔瞬间在字旁甩拉出一个随性的不规则红色线圈。</div>
+    </div>
+
+    <!-- 17 -->
+    <div class="card">
+      <div class="card-title">17. 拍立得相册 (Photo Gallery)</div>
+      <div class="app-polaroid">
+        <div class="polaroid-img"></div>
+        <div style="margin-top:10px; font-weight:800; font-family:cursive;"># 清迈好天气</div>
+      </div>
+      <div class="card-desc">查看详情页照片时，照片犹如拍立得一般无序散落，悬停时会悬浮并发生3D倾斜。</div>
+    </div>
+
+    <!-- 18 -->
+    <div class="card">
+      <div class="card-title">18. 危险操作 (Destructive)</div>
+      <button class="app-delete">
+        删除此地点
+        <svg viewBox="0 0 100 40"><path class="scribble-path" d="M 5,20 L 95,5 L 15,35 L 85,30" /></svg>
+      </button>
+      <div class="card-desc">比如删除记录时，不用枯燥的红色，而是一段激烈狂草的红笔涂鸦划掉文字。</div>
+    </div>
+
+    <!-- 19 -->
+    <div class="card">
+      <div class="card-title">19. 对话框 (Modal Dialog)</div>
+      <div style="width:100%;">
+        <div class="app-fold">展开详情面板...</div>
+      </div>
+      <div class="card-desc">模拟折叠地图的物理动作，点击时像把折好的纸页掀开一层并抬起。</div>
+    </div>
+
+    <!-- 20 -->
+    <div class="card">
+      <div class="card-title">20. 点赞反馈 (Like/Save)</div>
+      <button class="app-like">
+        ❤ 收藏
+        <div class="splatter"></div>
+      </button>
+      <div class="card-desc">点击（或聚焦）收藏按钮时，四周“嘭”地炸开五颜六色的墨滴或颜料飞溅特效。</div>
+    </div>
+
+  </div>
+
+
+  <div class="section-header" style="margin-top: 80px;">
+    <h2>基础抽象微动效 (Base Micro-interactions)</h2>
+    <p>底层可复用的 10 种涂鸦感 UI 原子动画行为。</p>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">01. Boiling Button</div>
+      <button class="btn-boil">Hover Me</button>
+      <div class="card-desc">模拟传统动画中的"沸腾线"效果，Hover 时边框随机扭动。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">02. Paper Lift</div>
+      <div class="paper-lift">卡片</div>
+      <div class="card-desc">悬停时仿佛一张从桌面上被揭起的纸，阴影加深且微转。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">03. Marker Highlight</div>
+      <span class="marker-text">Hover 涂亮</span>
+      <div class="card-desc">用记号笔粗糙地划拉出背景色高亮，充满随意感。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">04. Stamp Pop-up</div>
+      <div style="height: 60px; display: flex; align-items:flex-end;">
+        <div class="stamp-btn">印</div>
+      </div>
+      <div class="card-desc">鼠标移入卡片时，印章以极大弹性砸下并盖印。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">05. Squiggly Link</div>
+      <a class="squiggly-link">随意的波浪线</a>
+      <div class="card-desc">悬停时，手绘波浪下划线顺畅地滑动循环。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">06. Rubber Band</div>
+      <div class="rubber-band">Click Me</div>
+      <div class="card-desc">点击时水平拉伸、垂直压缩，松手后橡皮筋回弹。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">07. Jitter Tooltip</div>
+      <div class="jitter-trigger">Hover Me</div>
+      <div class="card-desc">元素本身（或生成的提示框）极轻微随时抖动。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">08. Ink Reveal</div>
+      <div class="ink-reveal">Scratch Me</div>
+      <div class="card-desc">悬停犹如用墨笔或硬币爽快地横向刮开涂抹层。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">09. Torn Edge</div>
+      <div class="torn-wrapper">
+        <span>Hover</span>
+        <div class="torn-panel"></div>
+      </div>
+      <div class="card-desc">内部色块升起，并带有粗糙锯齿状的撕纸边缘。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">10. Hard Press</div>
+      <div class="press-area">Press</div>
+      <div class="card-desc">大块实心黑影，点击时完全按压归位实体反馈。</div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
