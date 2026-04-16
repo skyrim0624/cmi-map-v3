@@ -432,3 +432,74 @@ All colors MUST be HSL.
   .animate-sketch-wobble {
     animation: sketch-wobble 0.2s infinite;
   }
+
+  /* =========================================
+     Stardust Map Marker Styles
+     ========================================= */
+  .stardust-marker {
+    background: transparent !important;
+    border: none !important;
+  }
+
+  .stardust-wrapper {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* 展开态：手绘图标 */
+  .stardust-icon {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    background: #ffffff;
+    border-radius: 50%;
+    padding: 6px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    opacity: 1;
+    transform: scale(1);
+    transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 10;
+  }
+
+  .stardust-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+  }
+
+  /* 微缩态：星尘圆点 */
+  .stardust-dot {
+    width: 14px;
+    height: 14px;
+    background-color: var(--marker-color, #999);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--marker-color, #999), 0 0 0 2px rgba(255,255,255,0.8);
+    position: absolute;
+    z-index: 2;
+    
+    opacity: 0;
+    transform: scale(0);
+    transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  /* ======= 地图在大视野（Zoom Out）时的状态 ======= */
+  .map-zoomed-out .stardust-icon {
+    opacity: 0;
+    transform: scale(0);
+    pointer-events: none; /* 防止点击隐藏元素 */
+  }
+
+  .map-zoomed-out .stardust-dot {
+    opacity: 1;
+    transform: scale(1);
+  }
+

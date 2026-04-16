@@ -38,8 +38,8 @@ export const LeafletMap = ({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
-  const userLocationMarkerRef = useRef<L.Marker | null>(null);
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null);
+  const userLocationMarkerRef = useRef<L.Marker | null>(null);
   const onCenterChangeRef = useRef(onCenterChange);
   const userHeadingRef = useRef<number>(0); // 用户朝向角度
 
@@ -249,32 +249,77 @@ export const LeafletMap = ({
     // 初始化聚合组
     const clusterGroup = L.markerClusterGroup({
       showCoverageOnHover: false,
-      maxClusterRadius: 40,
+      maxClusterRadius: 50,
       spiderfyOnMaxZoom: true,
       iconCreateFunction: function(cluster) {
-        return L.divIcon({
-          className: 'custom-cluster-icon',
-          html: `
+        const children = cluster.getAllChildMarkers();
+        const count = children.length;
+        
+        // 最多展示 3 个叠放的贴纸
+        const displayMarkers = children.slice(0, Math.min(3, count));
+        
+        let htmlContent = '<div style="position: relative; width: 64px; height: 64px;">';
+        
+        const transforms = [
+          'translate(0px, 0px) rotate(-8deg)',
+          'translate(12px, -6px) rotate(14deg)',
+          'translate(-4px, 12px) rotate(-12deg)'
+        ];
+        
+        displayMarkers.forEach((m, idx) => {
+          const url = (m as any).iconUrl || ''; 
+          htmlContent += `
             <div style="
-              width: 48px;
-              height: 48px;
-              background: hsl(var(--foreground));
-              color: hsl(var(--background));
+              position: absolute;
+              top: 8px; left: 8px;
+              width: 48px; height: 48px;
+              transform: ${transforms[idx]};
+              z-index: ${idx + 1};
+              background: #ffffff;
               border-radius: 50%;
+              padding: 5px;
+              box-shadow: 0 3px 6px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
               display: flex;
               align-items: center;
               justify-content: center;
-              font-weight: 900;
-              font-size: 18px;
-              border: 3px solid hsl(var(--background));
-              box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-              font-family: 'Inter', sans-serif;
+              transition: transform 0.2s ease;
             ">
-              ${cluster.getChildCount()}
+              <img src="${url}" style="width:100%; height:100%; object-fit:contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));" />
             </div>
-          `,
-          iconSize: [48, 48],
-          iconAnchor: [24, 24]
+          `;
+        });
+
+        // 如果还有未显示的地点，贴一个和纸胶带的角标
+        if (count > displayMarkers.length) {
+           const remaining = count - displayMarkers.length;
+           htmlContent += `
+             <div style="
+               position: absolute;
+               bottom: 2px; right: -4px;
+               z-index: 10;
+               background: #e2e8ce;
+               color: #4a5d23;
+               font-family: 'Inter', sans-serif;
+               font-weight: 800;
+               font-size: 13px;
+               padding: 2px 7px;
+               transform: rotate(-6deg);
+               box-shadow: 1px 2px 4px rgba(0,0,0,0.15);
+               border: 1px dashed rgba(74, 93, 35, 0.2);
+               border-radius: 2px;
+               backdrop-filter: blur(2px);
+             ">
+               +${remaining}
+             </div>
+           `;
+        }
+        htmlContent += '</div>';
+        
+        return L.divIcon({
+          html: htmlContent,
+          className: 'scrapbook-cluster-icon bg-transparent border-none',
+          iconSize: [64, 64],
+          iconAnchor: [32, 32]
         });
       }
     });
@@ -283,15 +328,20 @@ export const LeafletMap = ({
     markers.forEach((markerData) => {
       const iconUrl = getCategoryIconUrl(markerData.category);
       
-      // 创建手绘风格图标
       const icon = L.divIcon({
-        className: 'custom-marker-icon',
+        className: 'custom-marker-icon bg-transparent border-none',
         html: `
           <div style="
             width: 56px;
             height: 56px;
             position: relative;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+            background: #ffffff;
+            border-radius: 50%;
+            padding: 6px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
           ">
             <img 
               src="${iconUrl}" 
@@ -299,6 +349,7 @@ export const LeafletMap = ({
                 width: 100%;
                 height: 100%;
                 object-fit: contain;
+                filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
               "
               alt=""
             />
@@ -309,6 +360,7 @@ export const LeafletMap = ({
       });
 
       const marker = L.marker([markerData.latitude, markerData.longitude], { icon });
+      (marker as any).iconUrl = iconUrl;
 
       // 添加点击事件
       if (onMarkerClick) {
