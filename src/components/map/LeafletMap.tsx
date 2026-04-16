@@ -113,7 +113,7 @@ export const LeafletMap = ({
               
               // 根据模式选择用户位置图标
               const userIconUrl = mode === 'mark' 
-                ? 'https://miaoda-conversation-file.cdn.bcebos.com/user-aitwe90l6zuo/conv-az97tfv4utc0/20260416/file-azwlu3kp7ev4.png' // 录入模式：橙红色地图标记
+                ? 'https://miaoda-conversation-file.cdn.bcebos.com/user-aitwe90l6zuo/conv-az97tfv4utc0/20260416/file-azwq0xhr1hxc.png' // 录入模式：橙红色地图标记
                 : 'https://miaoda-conversation-file.cdn.bcebos.com/user-aitwe90l6zuo/conv-az97tfv4utc0/20260416/file-azw6hmx5ubr4.png'; // 查看模式：蓝色箭头
               
               // 创建用户位置标记（带旋转）
