@@ -111,7 +111,12 @@ export const LeafletMap = ({
               const userLat = position.coords.latitude;
               const userLng = position.coords.longitude;
               
-              // 创建用户位置的蓝色箭头标记（带旋转）
+              // 根据模式选择用户位置图标
+              const userIconUrl = mode === 'mark' 
+                ? 'https://miaoda-conversation-file.cdn.bcebos.com/user-aitwe90l6zuo/conv-az97tfv4utc0/20260416/file-azwlu3kp7ev4.png' // 录入模式：橙红色地图标记
+                : 'https://miaoda-conversation-file.cdn.bcebos.com/user-aitwe90l6zuo/conv-az97tfv4utc0/20260416/file-azw6hmx5ubr4.png'; // 查看模式：蓝色箭头
+              
+              // 创建用户位置标记（带旋转）
               const createUserIcon = (heading: number = 0) => {
                 return L.divIcon({
                   className: 'user-location-marker',
@@ -125,7 +130,7 @@ export const LeafletMap = ({
                       transition: transform 0.3s ease-out;
                     ">
                       <img 
-                        src="https://miaoda-conversation-file.cdn.bcebos.com/user-aitwe90l6zuo/conv-az97tfv4utc0/20260416/file-azw6hmx5ubr4.png" 
+                        src="${userIconUrl}" 
                         alt="用户位置" 
                         style="width: 100%; height: 100%; object-fit: contain;"
                       />
