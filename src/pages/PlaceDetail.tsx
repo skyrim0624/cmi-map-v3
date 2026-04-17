@@ -86,6 +86,19 @@ export default function PlaceDetail() {
     );
   };
 
+  const handleGrab = () => {
+    if (recommendations.length === 0) return;
+    const { latitude, longitude, place_name } = recommendations[0];
+    const dropOffName = encodeURIComponent(place_name);
+    window.open(`grab://open?screenType=RIDE&dropOffLatitude=${latitude}&dropOffLongitude=${longitude}&dropOffName=${dropOffName}`, '_self');
+  };
+
+  const handleBolt = () => {
+    if (recommendations.length === 0) return;
+    const { latitude, longitude } = recommendations[0];
+    window.open(`https://m.bolt.eu/ride/request?destination_lat=${latitude}&destination_lng=${longitude}`, '_blank');
+  };
+
   if (loading) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-background">
@@ -121,7 +134,7 @@ export default function PlaceDetail() {
       </div>
 
       <ScrollArea className="h-screen">
-        <div className="pb-24">
+        <div className="pb-40">
           {/* 照片轮播 */}
           {allImages.length > 0 ? (
             <div className="w-full aspect-[4/3] bg-muted">
@@ -218,14 +231,37 @@ export default function PlaceDetail() {
       </ScrollArea>
 
       {/* 底部导航按钮 */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-background border-t border-border">
-        <button
-          className="app-like w-full h-12 text-base font-semibold border-2 border-foreground bg-primary text-primary-foreground rounded-xl flex items-center justify-center"
-          onClick={handleNavigate}
-        >
-          导航到这里
-          <div className="splatter" />
-        </button>
+      <div className="fixed bottom-0 left-0 right-0 px-5 py-4 bg-background/95 backdrop-blur-md border-t border-border/30">
+        <div className="flex items-center gap-2">
+          {/* Google Maps - 主按钮 */}
+          <button
+            className="flex-[2] h-11 flex items-center justify-center gap-2 rounded-full bg-foreground text-background font-bold text-sm press-feedback transition-all hover:opacity-90 active:scale-95"
+            onClick={handleNavigate}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="3 11 22 2 13 21 11 13 3 11" />
+            </svg>
+            导航
+          </button>
+
+          {/* Grab */}
+          <button
+            className="flex-1 h-11 flex items-center justify-center gap-1.5 rounded-full border-2 border-foreground/15 bg-card font-semibold text-sm press-feedback transition-all hover:border-[#00B14F] hover:bg-[#00B14F]/5 active:scale-95"
+            onClick={handleGrab}
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-[#00B14F] flex-shrink-0" />
+            Grab
+          </button>
+          
+          {/* Bolt */}
+          <button
+            className="flex-1 h-11 flex items-center justify-center gap-1.5 rounded-full border-2 border-foreground/15 bg-card font-semibold text-sm press-feedback transition-all hover:border-[#26D686] hover:bg-[#26D686]/5 active:scale-95"
+            onClick={handleBolt}
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-[#26D686] flex-shrink-0" />
+            Bolt
+          </button>
+        </div>
       </div>
 
       {/* 删除确认对话框 */}

@@ -41,6 +41,9 @@ All colors MUST be HSL.
     --category-relax: 180 50% 55%; /* 青色 */
     --category-sport: 0 80% 60%; /* 红色 */
     --category-treasure: 0 0% 60%; /* 灰色 */
+    --category-bar: 35 80% 55%; /* 琥珀金 */
+    --category-wellness: 170 50% 55%; /* 青绿色 */
+    --category-utility: 210 30% 55%; /* 石板蓝 */
     
     /* 阴影 */
     --shadow-card: 0px 4px 12px rgba(0, 0, 0, 0.08);
@@ -78,6 +81,9 @@ All colors MUST be HSL.
     --category-relax: 180 45% 50%;
     --category-sport: 0 70% 55%;
     --category-treasure: 0 0% 55%;
+    --category-bar: 35 70% 50%;
+    --category-wellness: 170 45% 50%;
+    --category-utility: 210 25% 50%;
     
     --shadow-card: 0px 4px 12px rgba(0, 0, 0, 0.3);
     --shadow-hover: 0px 6px 16px rgba(0, 0, 0, 0.4);

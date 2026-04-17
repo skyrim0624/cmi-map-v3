@@ -1,5 +1,5 @@
 // 分类类型
-export type Category = '吃饭' | '咖啡' | '户外' | '拍照' | '市集' | '放松' | '运动' | '彩蛋';
+export type Category = '吃饭' | '咖啡' | '户外' | '拍照' | '市集' | '放松' | '运动' | '彩蛋' | '酒吧' | '身心' | '生活';
 
 // 用户角色类型
 export type UserRole = 'user' | 'admin';
@@ -96,6 +96,24 @@ export const CATEGORIES: CategoryConfig[] = [
     color: 'category-treasure', 
     icon: '🥚',
     iconUrl: '/categories/8.png'
+  },
+  { 
+    name: '酒吧', 
+    color: 'category-bar', 
+    icon: '🍸',
+    iconUrl: '/categories/9.png'
+  },
+  { 
+    name: '身心', 
+    color: 'category-wellness', 
+    icon: '🧘',
+    iconUrl: '/categories/10.png'
+  },
+  { 
+    name: '生活', 
+    color: 'category-utility', 
+    icon: '🔧',
+    iconUrl: '/categories/11.png'
   }
 ];
 

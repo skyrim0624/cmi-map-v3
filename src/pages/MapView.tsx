@@ -74,7 +74,7 @@ export default function MapView() {
     : markers.filter(m => m.category === activeCategory);
 
   return (
-    <div className="relative w-full h-screen overflow-hidden">
+    <div className="relative w-full h-[100dvh] overflow-hidden">
       {/* 地图 - 全屏显示，z-index 最低 */}
       <div className="absolute inset-0 z-0">
         <LeafletMap
@@ -87,14 +87,14 @@ export default function MapView() {
       </div>
 
       {/* 左上角应用名称 */}
-      <div className="absolute top-6 left-6 z-20 flex items-center gap-3">
+      <div className="absolute top-[calc(env(safe-area-inset-top)+12px)] left-4 md:left-6 z-20 flex items-center gap-3">
         <h1 className="text-xl font-black text-foreground bg-background/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border border-border/50">
           CMI Map
         </h1>
       </div>
 
       {/* 右上角列表按钮 */}
-      <div className="absolute top-6 right-6 z-20">
+      <div className="absolute top-[calc(env(safe-area-inset-top)+12px)] right-4 md:right-6 z-20">
         <Button
           variant="outline"
           size="icon"
@@ -106,7 +106,7 @@ export default function MapView() {
       </div>
 
       {/* 分类抽屉/标签过滤器 (Category Filtering) */}
-      <div className="absolute top-20 left-0 right-0 z-20 overflow-x-auto hide-scrollbar px-6">
+      <div className="absolute top-[calc(env(safe-area-inset-top)+64px)] left-0 right-0 z-20 overflow-x-auto hide-scrollbar px-4 md:px-6">
         <div className="flex items-center gap-3 pb-2 w-max">
           <Button
             size="sm"
@@ -144,7 +144,7 @@ export default function MapView() {
       </div>
 
       {/* 底部中间发帖按钮 (11. FAB Hard Press) */}
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20">
+      <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+24px)] left-1/2 -translate-x-1/2 z-20">
         <button
           className="app-fab flex items-center gap-2 bg-primary text-primary-foreground font-bold px-6 py-4 rounded-full border-2 border-foreground"
           onClick={() => navigate('/mark')}
@@ -155,7 +155,7 @@ export default function MapView() {
       </div>
 
       {/* 左下角用户头像/登录按钮 - 与发帖按钮持平 */}
-      <div className="absolute bottom-10 left-6 z-20">
+      <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+24px)] left-4 md:left-6 z-20">
         {user ? (
           <Button
             variant="ghost"
