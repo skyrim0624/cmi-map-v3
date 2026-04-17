@@ -9,6 +9,7 @@ export const getAllRecommendations = async (): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
     .select('*')
+    .neq('user_name', '张紫姀') // 暂时屏蔽张紫姀的历史批量录入
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -28,6 +29,7 @@ export const getRecommendationsByCategory = async (
   const { data, error } = await supabase
     .from('recommendations')
     .select('*')
+    .neq('user_name', '张紫姀') // 暂时屏蔽张紫姀的历史批量录入
     .eq('category', category)
     .order('created_at', { ascending: false });
 
