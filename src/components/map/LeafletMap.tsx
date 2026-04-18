@@ -84,7 +84,7 @@ export const LeafletMap = ({
         background: #ffffff !important;
       }
       .leaflet-tile-pane {
-        filter: brightness(1.3) saturate(0.4);
+        filter: brightness(1.08) saturate(0.5);
       }
     `;
     document.head.appendChild(style);
