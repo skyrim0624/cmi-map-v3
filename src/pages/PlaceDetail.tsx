@@ -168,17 +168,40 @@ export default function PlaceDetail() {
     );
   };
 
-  const handleGrab = () => {
+  const handleGrab = async () => {
     if (recommendations.length === 0) return;
     const { latitude, longitude, place_name } = recommendations[0];
-    const dropOffName = encodeURIComponent(place_name);
-    window.open(`grab://open?screenType=RIDE&dropOffLatitude=${latitude}&dropOffLongitude=${longitude}&dropOffName=${dropOffName}`, '_self');
+
+    // 先把地点名复制到剪贴板，方便在 Grab 里粘贴搜索
+    try {
+      await navigator.clipboard.writeText(place_name);
+      toast.success('已复制地点名称', { description: '打开 Grab 后粘贴到搜索框即可 📋' });
+    } catch {
+      // 剪贴板 API 不可用时回退至不复制，仍然跳转
+      toast('正在跳转 Grab…');
+    }
+
+    // 短暂延迟让用户看到提示，再跳转
+    setTimeout(() => {
+      const dropOffName = encodeURIComponent(place_name);
+      window.open(`grab://open?screenType=RIDE&dropOffLatitude=${latitude}&dropOffLongitude=${longitude}&dropOffName=${dropOffName}`, '_self');
+    }, 600);
   };
 
-  const handleBolt = () => {
+  const handleBolt = async () => {
     if (recommendations.length === 0) return;
-    const { latitude, longitude } = recommendations[0];
-    window.open(`https://m.bolt.eu/ride/request?destination_lat=${latitude}&destination_lng=${longitude}`, '_blank');
+    const { latitude, longitude, place_name } = recommendations[0];
+
+    try {
+      await navigator.clipboard.writeText(place_name);
+      toast.success('已复制地点名称', { description: '打开 Bolt 后粘贴到搜索框即可 📋' });
+    } catch {
+      toast('正在跳转 Bolt…');
+    }
+
+    setTimeout(() => {
+      window.open(`https://m.bolt.eu/ride/request?destination_lat=${latitude}&destination_lng=${longitude}`, '_blank');
+    }, 600);
   };
 
   if (loading) {
