@@ -7,7 +7,6 @@ import { getCategoryIconUrl } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Navigation, MapPin, Share2, Flame, Bookmark } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading';
-import dayjs from 'dayjs';
 
 export default function PlaceDetail() {
   const { placeName } = useParams<{ placeName: string }>();
@@ -223,7 +222,7 @@ export default function PlaceDetail() {
                   <div>
                     <div className="text-sm font-bold text-stone-700">游民向导</div>
                     <div className="text-[10px] text-stone-400 font-medium">
-                      {dayjs(rec.created_at).format('YYYY年MM月DD日')}
+                      {new Date(rec.created_at || Date.now()).toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" })}
                     </div>
                   </div>
                 </div>
