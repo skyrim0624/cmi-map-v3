@@ -385,7 +385,7 @@ export default function MarkPlace() {
       {stage !== 'camera' && photoURL && (
         <div className="w-full max-w-lg min-h-screen relative p-4 pt-14 pb-24 flex flex-col items-center">
           
-          <div className={`relative w-full aspect-[4/5] bg-white p-3 pb-14 rounded-sm shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${stage === 'analyzing' ? 'scale-95 rotate-1' : 'scale-100 rotate-[-1deg]'}`}>
+          <div className={`relative w-full aspect-[3/4] bg-white p-3 rounded-sm shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${stage === 'analyzing' ? 'scale-95 rotate-1' : 'scale-100 rotate-[-1deg]'}`}>
             <div className="w-full h-full relative overflow-hidden bg-stone-200 rounded-sm">
               <img src={photoURL} className="w-full h-full object-cover" alt="Captured" />
               
@@ -402,20 +402,21 @@ export default function MarkPlace() {
                   </div>
                 </div>
               )}
-            </div>
 
-            <div className={`absolute bottom-4 left-4 right-4 flex items-center justify-between transition-all duration-700 delay-300 bg-white/60 backdrop-blur-md px-2 py-1.5 rounded-2xl ${locationName && stage !== 'map_fallback' ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0 pointer-events-none'}`}>
-              <div className="flex items-center gap-2 overflow-hidden">
-                <div className="p-1.5 bg-primary/10 rounded-full text-primary shrink-0 animate-bounce">
-                  <MapPin className="w-4 h-4 fill-primary/20" />
+              {/* 定位条 — 浮在照片内部底部 */}
+              <div className={`absolute bottom-0 left-0 right-0 flex items-center justify-between transition-all duration-700 delay-300 bg-black/40 backdrop-blur-md px-3 py-2 ${locationName && stage !== 'map_fallback' ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0 pointer-events-none'}`}>
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <div className="p-1 bg-white/20 rounded-full text-white shrink-0">
+                    <MapPin className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="font-medium text-xs leading-tight truncate text-white/90">
+                    {locationName || '...'}
+                  </span>
                 </div>
-                <span className="font-medium text-sm leading-tight truncate px-1 text-stone-700" style={{ fontFamily: "'Nanum Pen Script', 'Caveat', cursive" }}>
-                  {locationName || '...'}
-                </span>
+                <button onClick={() => setStage('map_fallback')} className="shrink-0 p-1 rounded-full text-white/60 hover:text-white hover:bg-white/20 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+                </button>
               </div>
-              <button onClick={() => setStage('map_fallback')} className="shrink-0 p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-200 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
-              </button>
             </div>
 
             {stage !== 'map_fallback' && (description || isListening) && (
