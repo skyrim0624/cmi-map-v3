@@ -383,10 +383,11 @@ export default function MarkPlace() {
 
       {/* STAGE 2 - 5: Content Flow */}
       {stage !== 'camera' && photoURL && (
-        <div className="w-full max-w-lg min-h-screen relative p-4 pt-14 pb-24 flex flex-col items-center">
+        <div className="w-full h-[100dvh] flex flex-col relative">
           
-          <div className={`relative w-full aspect-[3/4] bg-white p-3 rounded-sm shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${stage === 'analyzing' ? 'scale-95 rotate-1' : 'scale-100 rotate-[-1deg]'}`}>
-            <div className="w-full h-full relative overflow-hidden bg-stone-200 rounded-sm">
+          {/* 上半部分：照片区域 - 约 45% 屏高 */}
+          <div className="relative flex-shrink-0" style={{ height: '45dvh' }}>
+            <div className={`w-full h-full relative overflow-hidden transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${stage === 'analyzing' ? 'scale-[0.97]' : 'scale-100'}`}>
               <img src={photoURL} className="w-full h-full object-cover" alt="Captured" />
               
               {stage === 'analyzing' && !scanned && (
@@ -403,81 +404,83 @@ export default function MarkPlace() {
                 </div>
               )}
 
-              {/* 定位条 — 浮在照片内部底部 */}
-              <div className={`absolute bottom-0 left-0 right-0 flex items-center justify-between transition-all duration-700 delay-300 bg-black/40 backdrop-blur-md px-3 py-2 ${locationName && stage !== 'map_fallback' ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0 pointer-events-none'}`}>
+              {/* 定位条 — 照片底部暗色玻璃条 */}
+              <div className={`absolute bottom-0 left-0 right-0 flex items-center justify-between transition-all duration-700 delay-300 bg-black/50 backdrop-blur-md px-4 py-2.5 ${locationName && stage !== 'map_fallback' ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'}`}>
                 <div className="flex items-center gap-2 overflow-hidden">
                   <div className="p-1 bg-white/20 rounded-full text-white shrink-0">
                     <MapPin className="w-3.5 h-3.5" />
                   </div>
-                  <span className="font-medium text-xs leading-tight truncate text-white/90">
+                  <span className="font-medium text-sm leading-tight truncate text-white/90">
                     {locationName || '...'}
                   </span>
                 </div>
-                <button onClick={() => setStage('map_fallback')} className="shrink-0 p-1 rounded-full text-white/60 hover:text-white hover:bg-white/20 transition-colors">
+                <button onClick={() => setStage('map_fallback')} className="shrink-0 p-1.5 rounded-full text-white/60 hover:text-white hover:bg-white/20 transition-colors">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
                 </button>
               </div>
-            </div>
 
+              {/* 印章动画 */}
+              {stage === 'done' && (
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[-8deg] pointer-events-none z-50 animate-[stamp_0.6s_cubic-bezier(0.175,0.885,0.32,1.275)_forwards]">
+                  <div className="relative flex items-center justify-center w-40 h-40 border-[3px] border-[#da2222] border-dashed rounded-full mix-blend-multiply opacity-[0.85] shadow-sm bg-[#da2222]/[0.02]">
+                    <div className="absolute inset-1.5 border-2 border-[#da2222] rounded-full opacity-70" />
+                    <div className="flex flex-col items-center justify-center transform -translate-y-0.5">
+                      <span className="text-[11px] font-bold tracking-[0.2em] text-[#da2222] opacity-90 mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>CMI MAP</span>
+                      <div className="border-y-[3px] border-[#da2222] py-2 px-1 bg-white/60 backdrop-blur-[1px] w-36 text-center transform rotate-[-4deg]">
+                        <span className="text-[1.65rem] leading-none font-black tracking-widest text-[#da2222] opacity-90" style={{ fontFamily: "'Times New Roman', serif" }}>RECORDED</span>
+                      </div>
+                      <span className="text-[10px] font-bold tracking-[0.15em] text-[#da2222] mt-1.5 opacity-80" style={{ fontFamily: "'Inter', sans-serif" }}>
+                        {new Date().toLocaleDateString('en-GB').replace(/\//g, '.')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 下半部分：控件区域 - 占据剩余空间 */}
+          <div className="flex-1 flex flex-col items-center justify-center px-6 pb-safe bg-stone-50 relative overflow-y-auto">
+            
+            {/* 描述文字便签 */}
             {stage !== 'map_fallback' && (description || isListening) && (
-              <div className="absolute -bottom-8 -right-6 w-4/5 transform rotate-3 z-20">
-                <div className="bg-[#fff9e6] p-4 text-stone-800 text-[17px] leading-relaxed shadow-sm border border-[#f0e6d2]"
-                     style={{ fontFamily: "'Varela Round', 'Nunito', 'PingFang SC', 'Microsoft YaHei', ui-rounded, sans-serif", fontWeight: 500, letterSpacing: "0.02em", borderRadius: '255px 15px 225px 15px/15px 225px 15px 255px' }}>
+              <div className="w-full max-w-sm mt-4 mb-2">
+                <div className="bg-[#fff9e6] p-3 text-stone-800 text-[15px] leading-relaxed shadow-sm border border-[#f0e6d2] rounded-lg"
+                     style={{ fontFamily: "'Varela Round', 'Nunito', 'PingFang SC', 'Microsoft YaHei', ui-rounded, sans-serif", fontWeight: 500, letterSpacing: "0.02em" }}>
                   {description}
                   {isListening && <span className="inline-block w-2.5 h-5 bg-stone-400 animate-pulse ml-1 align-middle" />}
                 </div>
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-6 bg-white/40 backdrop-blur-sm -rotate-2 border border-white/20 shadow-sm" />
               </div>
             )}
-            
-            {stage === 'done' && (
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[-8deg] pointer-events-none z-50 animate-[stamp_0.6s_cubic-bezier(0.175,0.885,0.32,1.275)_forwards]">
-                <div className="relative flex items-center justify-center w-40 h-40 border-[3px] border-[#da2222] border-dashed rounded-full mix-blend-multiply opacity-[0.85] shadow-sm bg-[#da2222]/[0.02]">
-                  <div className="absolute inset-1.5 border-2 border-[#da2222] rounded-full opacity-70" />
-                  <div className="flex flex-col items-center justify-center transform -translate-y-0.5">
-                    <span className="text-[11px] font-bold tracking-[0.2em] text-[#da2222] opacity-90 mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>CMI MAP</span>
-                    <div className="border-y-[3px] border-[#da2222] py-2 px-1 bg-white/60 backdrop-blur-[1px] w-36 text-center transform rotate-[-4deg]">
-                      <span className="text-[1.65rem] leading-none font-black tracking-widest text-[#da2222] opacity-90" style={{ fontFamily: "'Times New Roman', serif" }}>RECORDED</span>
-                    </div>
-                    <span className="text-[10px] font-bold tracking-[0.15em] text-[#da2222] mt-1.5 opacity-80" style={{ fontFamily: "'Inter', sans-serif" }}>
-                      {new Date().toLocaleDateString('en-GB').replace(/\//g, '.')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
 
-          <div className="fixed bottom-0 left-0 right-0 p-4 pt-3 bg-gradient-to-t from-stone-100 via-stone-100 to-transparent flex flex-col items-center pb-safe">
-            
             {stage === 'map_fallback' && (
-               <div className="w-full flex flex-col gap-3 pb-6 animate-in slide-in-from-bottom-10 fade-in">
-                 <div className="text-center mb-4">
+               <div className="w-full flex flex-col gap-3 py-4 animate-in slide-in-from-bottom-10 fade-in">
+                 <div className="text-center mb-2">
                    <p className="text-stone-700 font-bold mb-1">手动选择地标</p>
                    <p className="text-stone-500 text-xs">拖动地图以微调推荐点</p>
                  </div>
-                 <div className="w-full h-80 bg-stone-300 rounded-2xl relative overflow-hidden flex items-center justify-center mb-2 shadow-inner pointer-events-auto">
+                 <div className="w-full h-64 bg-stone-300 rounded-2xl relative overflow-hidden flex items-center justify-center mb-2 shadow-inner pointer-events-auto">
                    <LeafletMap mode="mark" onCenterChange={(lat, lng) => setCenter({lat, lng})} className="w-full h-full border-none outline-none" />
                  </div>
-                 <button onClick={handleMapConfirm} className="w-full h-14 bg-foreground text-background font-bold rounded-2xl flex items-center justify-center shadow-lg hover:scale-[1.02] transition-transform">
+                 <button onClick={handleMapConfirm} className="w-full h-12 bg-foreground text-background font-bold rounded-2xl flex items-center justify-center shadow-lg hover:scale-[1.02] transition-transform">
                    确认位置，去说故事
                  </button>
                </div>
             )}
 
             {stage === 'voice' && (
-              <div className="w-full flex flex-col items-center gap-4 pb-4 animate-in slide-in-from-bottom-10 fade-in duration-500">
-                <p className="text-stone-500 font-medium tracking-widest uppercase text-xs">
+              <div className="w-full flex flex-col items-center gap-5 py-4 animate-in slide-in-from-bottom-10 fade-in duration-500">
+                <p className="text-stone-400 font-medium tracking-widest uppercase text-xs">
                   {description ? 'Want to say more?' : 'Tap to whisper a memory'}
                 </p>
-                <div className="flex gap-4 items-center">
-                  <button onClick={handleVoiceInput} className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 ${isListening ? 'bg-primary text-white scale-110 shadow-xl shadow-primary/30' : 'bg-white text-stone-800 shadow-lg hover:scale-105 active:scale-95'}`}>
+                <div className="flex gap-5 items-center">
+                  <button onClick={handleVoiceInput} className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${isListening ? 'bg-primary text-white scale-110 shadow-xl shadow-primary/30' : 'bg-white text-stone-800 shadow-lg hover:scale-105 active:scale-95'}`}>
                     <ScribbleSparks active={isListening} />
-                    {isListening ? <MicOff className="w-8 h-8 animate-pulse" /> : <Mic className="w-8 h-8" />}
+                    {isListening ? <MicOff className="w-7 h-7 animate-pulse" /> : <Mic className="w-7 h-7" />}
                   </button>
                   
                   {description && !isListening && (
-                    <button onClick={() => setStage('category')} className="w-14 h-14 rounded-full bg-white text-primary flex items-center justify-center shadow-md animate-in slide-in-from-right-4 hover:scale-105 active:scale-95 transition-all">
+                    <button onClick={() => setStage('category')} className="w-12 h-12 rounded-full bg-white text-primary flex items-center justify-center shadow-md animate-in slide-in-from-right-4 hover:scale-105 active:scale-95 transition-all">
                       <Check className="w-6 h-6" strokeWidth={3} />
                     </button>
                   )}
@@ -486,15 +489,15 @@ export default function MarkPlace() {
             )}
 
             {stage === 'category' && (
-              <div className="w-full flex flex-col items-center gap-4 pb-6 animate-in slide-in-from-bottom-10 fade-in">
-                <p className="text-stone-600 font-bold mb-2">最后一步，给这段记忆贴个标签</p>
-                <div className="flex flex-wrap justify-center gap-3 w-full max-w-sm">
+              <div className="w-full flex flex-col items-center gap-3 py-4 animate-in slide-in-from-bottom-10 fade-in">
+                <p className="text-stone-600 font-bold mb-1">最后一步，给这段记忆贴个标签</p>
+                <div className="flex flex-wrap justify-center gap-2.5 w-full max-w-sm">
                   {CATEGORIES.map((cat) => (
                     <button
                       key={cat.name}
                       onClick={() => setSelectedCat(cat.name)}
                       disabled={uploading}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-full border shadow-sm transition-all text-stone-600 font-medium ${selectedCat === cat.name ? 'bg-primary/10 border-primary text-primary scale-105 ring-2 ring-primary/20' : 'bg-white border-stone-200 hover:scale-105 active:scale-95'}`}
+                      className={`flex items-center gap-2 px-3.5 py-2 rounded-full border shadow-sm transition-all text-stone-600 font-medium text-sm ${selectedCat === cat.name ? 'bg-primary/10 border-primary text-primary scale-105 ring-2 ring-primary/20' : 'bg-white border-stone-200 hover:scale-105 active:scale-95'}`}
                     >
                       <img src={cat.iconUrl} alt={cat.name} className="w-5 h-5 object-contain" />
                       <span>{cat.name}</span>
@@ -504,13 +507,13 @@ export default function MarkPlace() {
                 {selectedCat && !uploading && (
                   <button 
                     onClick={() => handleSubmitFinal(selectedCat)}
-                    className="mt-6 w-full max-w-[200px] h-12 bg-primary text-white font-bold rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all animate-in zoom-in-95 flex items-center justify-center gap-2"
+                    className="mt-4 w-full max-w-[200px] h-12 bg-primary text-white font-bold rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all animate-in zoom-in-95 flex items-center justify-center gap-2"
                   >
                     <span>发布印戳</span>
                   </button>
                 )}
                 {uploading && (
-                  <div className="mt-6 flex flex-col items-center gap-2 text-stone-500">
+                  <div className="mt-4 flex flex-col items-center gap-2 text-stone-500">
                     <Loader2 className="w-6 h-6 animate-spin text-primary" />
                     <span className="text-sm font-medium">打包回忆中，请稍候...</span>
                   </div>
