@@ -385,8 +385,8 @@ export default function MarkPlace() {
       {stage !== 'camera' && photoURL && (
         <div className="w-full h-[100dvh] flex flex-col relative">
           
-          {/* 上半部分：照片区域 - 约 45% 屏高 */}
-          <div className="relative flex-shrink-0" style={{ height: '45dvh' }}>
+          {/* 上半部分：照片区域 - 约 55% 屏高 */}
+          <div className="relative flex-shrink-0 transition-all duration-500" style={{ height: '55dvh' }}>
             <div className={`w-full h-full relative overflow-hidden transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${stage === 'analyzing' ? 'scale-[0.97]' : 'scale-100'}`}>
               <img src={photoURL} className="w-full h-full object-cover" alt="Captured" />
               
