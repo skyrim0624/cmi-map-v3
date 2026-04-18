@@ -326,7 +326,6 @@ export const toggleUpvote = async (recommendationId: string, userId: string): Pr
     return { success: false, isUpvoted: false };
   }
 };
-import { supabase } from './supabase';
 
 export async function toggleWishlist(recommendationId: string, userId: string): Promise<boolean> {
   try {
