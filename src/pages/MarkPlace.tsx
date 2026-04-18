@@ -52,9 +52,14 @@ export default function MarkPlace() {
 
   const [sourceType, setSourceType] = useState<'live' | 'exif' | null>(null);
 
+  const [selectedCat, setSelectedCat] = useState<Category | ''>('');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // 初始化 Web Speech API
   useEffect(() => {
@@ -90,6 +95,68 @@ export default function MarkPlace() {
       }
     };
   }, []);
+
+  // 初始化 WebRTC 相机
+  useEffect(() => {
+    if (stage === 'camera') {
+      const startCamera = async () => {
+        try {
+          const mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+          });
+          streamRef.current = mediaStream;
+          if (videoRef.current) {
+            videoRef.current.srcObject = mediaStream;
+          }
+        } catch (err) {
+          console.error("相机权限获取失败:", err);
+        }
+      };
+      startCamera();
+    } else {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+    }
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+    };
+  }, [stage]);
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current && streamRef.current && videoRef.current.readyState === 4) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+            const url = URL.createObjectURL(file);
+            setImages([file]);
+            setFlash(true);
+            fetchCurrentLocation();
+            setTimeout(() => {
+              setSourceType('live');
+              setPhotoURL(url);
+              setStage('analyzing');
+              setFlash(false);
+            }, 300);
+          }
+        }, 'image/jpeg', 0.8);
+      }
+    } else {
+      // Fallback
+      fileInputRef.current?.click();
+    }
+  };
 
   // 未登录保护
   useEffect(() => {
@@ -263,8 +330,10 @@ export default function MarkPlace() {
 
       {/* STAGE 1: 取景框 */}
       {stage === 'camera' && (
-        <div className="w-full h-screen flex flex-col relative text-stone-700">
+        <div className="w-full h-screen flex flex-col relative text-stone-700 bg-stone-900">
           <div className="flex-1 relative overflow-hidden bg-black/10 border-[16px] sm:border-[24px] border-stone-100 rounded-[2.5rem] m-2 shadow-[inset_0_4px_12px_rgba(0,0,0,0.1)] backdrop-blur-[1px]">
+            <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover -z-10" />
+            <canvas ref={canvasRef} className="hidden" />
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 pointer-events-none">
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 border-[3px] border-primary/40 rounded-full border-dashed" />
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-primary/60 rounded-full" />
@@ -290,7 +359,7 @@ export default function MarkPlace() {
               <input type="file" accept="image/*" className="hidden" onChange={(e) => handleCapture(e, 'exif')} ref={uploadInputRef} />
               <div className="w-12 h-12" />
               <button 
-                onClick={() => fileInputRef.current?.click()}
+                onClick={capturePhoto}
                 className="relative w-[88px] h-[88px] sm:w-[96px] sm:h-[96px] rounded-full flex flex-col items-center justify-center group active:scale-[0.92] transition-transform duration-200 outline-none shrink-0"
               >
                 <div className="absolute inset-0 rounded-full border-4 border-stone-100 shadow-[0_8px_20px_rgba(0,0,0,0.06),inset_0_4px_8px_rgba(0,0,0,0.02)] transition-shadow bg-[#fdfdfc]"></div>
@@ -422,19 +491,27 @@ export default function MarkPlace() {
                   {CATEGORIES.map((cat) => (
                     <button
                       key={cat.name}
-                      onClick={() => handleSubmitFinal(cat.name)}
+                      onClick={() => setSelectedCat(cat.name)}
                       disabled={uploading}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white border border-stone-200 shadow-sm hover:scale-105 active:scale-95 transition-all text-stone-600 font-medium"
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-full border shadow-sm transition-all text-stone-600 font-medium ${selectedCat === cat.name ? 'bg-primary/10 border-primary text-primary scale-105 ring-2 ring-primary/20' : 'bg-white border-stone-200 hover:scale-105 active:scale-95'}`}
                     >
                       <img src={cat.iconUrl} alt={cat.name} className="w-5 h-5 object-contain" />
                       <span>{cat.name}</span>
                     </button>
                   ))}
                 </div>
+                {selectedCat && !uploading && (
+                  <button 
+                    onClick={() => handleSubmitFinal(selectedCat)}
+                    className="mt-6 w-full max-w-[200px] h-12 bg-primary text-white font-bold rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all animate-in zoom-in-95 flex items-center justify-center gap-2"
+                  >
+                    <span>发布印戳</span>
+                  </button>
+                )}
                 {uploading && (
-                  <div className="mt-4 flex items-center gap-2 text-stone-500">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>打包回忆中，请稍候...</span>
+                  <div className="mt-6 flex flex-col items-center gap-2 text-stone-500">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    <span className="text-sm font-medium">打包回忆中，请稍候...</span>
                   </div>
                 )}
               </div>
