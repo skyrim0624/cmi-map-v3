@@ -8,7 +8,7 @@ import { compressImage } from '@/utils/imageCompression';
 export const getAllRecommendations = async (): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
-    .select('*')
+    .select('*, upvotes(user_id)')
     .neq('user_name', '张紫姀') // 暂时屏蔽张紫姀的历史批量录入
     .order('created_at', { ascending: false });
 
@@ -28,7 +28,7 @@ export const getRecommendationsByCategory = async (
 ): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
-    .select('*')
+    .select('*, upvotes(user_id)')
     .neq('user_name', '张紫姀') // 暂时屏蔽张紫姀的历史批量录入
     .eq('category', category)
     .order('created_at', { ascending: false });
@@ -49,7 +49,7 @@ export const getRecommendationsByUser = async (
 ): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
-    .select('*')
+    .select('*, upvotes(user_id)')
     .eq('user_name', userName)
     .order('created_at', { ascending: false });
 
@@ -69,7 +69,7 @@ export const getRecommendationsByUserId = async (
 ): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
-    .select('*')
+    .select('*, upvotes(user_id)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -89,7 +89,7 @@ export const getRecommendationsByPlace = async (
 ): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
-    .select('*')
+    .select('*, upvotes(user_id)')
     .eq('place_name', placeName)
     .order('created_at', { ascending: false });
 
