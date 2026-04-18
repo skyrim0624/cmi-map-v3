@@ -199,8 +199,25 @@ export default function PlaceDetail() {
       toast('正在跳转 Bolt…');
     }
 
+    // 先尝试 deep link 拉起 Bolt App
     setTimeout(() => {
-      window.open(`https://m.bolt.eu/ride/request?destination_lat=${latitude}&destination_lng=${longitude}`, '_blank');
+      const webFallback = `https://m.bolt.eu/ride/request?destination_lat=${latitude}&destination_lng=${longitude}`;
+
+      // 用 visibilitychange 检测 App 是否被拉起
+      let didLeave = false;
+      const onVisChange = () => { didLeave = true; };
+      document.addEventListener('visibilitychange', onVisChange);
+
+      // 尝试 deep link
+      window.location.href = `bolt://ride?destination_lat=${latitude}&destination_lng=${longitude}`;
+
+      // 1.5 秒后如果页面还在前台，说明 App 没装，fallback 到网页
+      setTimeout(() => {
+        document.removeEventListener('visibilitychange', onVisChange);
+        if (!didLeave) {
+          window.open(webFallback, '_blank');
+        }
+      }, 1500);
     }, 600);
   };
 
