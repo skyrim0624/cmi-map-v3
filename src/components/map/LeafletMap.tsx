@@ -56,12 +56,18 @@ export const LeafletMap = ({
     const map = L.map(mapRef.current, {
       center: [defaultCenter.lat, defaultCenter.lng],
       zoom: 13,
-      minZoom: 11,  // 最小缩放级别，防止缩得太小
-      maxZoom: 18,  // 最大缩放级别
-      zoomControl: false, // 隐藏缩放控制按钮
-      attributionControl: false, // 隐藏版权信息
-      maxBounds: CHIANG_MAI_BOUNDS, // 限制地图边界
-      maxBoundsViscosity: 1.0 // 边界粘性，1.0 表示完全不能拖出边界
+      minZoom: 11,
+      maxZoom: 18,
+      zoomControl: false,
+      attributionControl: false,
+      maxBounds: CHIANG_MAI_BOUNDS,
+      maxBoundsViscosity: 1.0,
+      // 移动端缩放性能优化
+      preferCanvas: true,         // 用 Canvas 替代 SVG 渲染矢量图形
+      zoomSnap: 0.5,              // 缩放步长更大，减少中间帧
+      zoomAnimation: true,
+      markerZoomAnimation: false, // 禁用 marker 跟随缩放的补间动画
+      fadeAnimation: false,       // 禁用瓦片淡入，减少合成层
     });
 
     // 使用自定义样式的 OpenStreetMap 瓦片 - 更白的风格
@@ -78,7 +84,7 @@ export const LeafletMap = ({
         background: #ffffff !important;
       }
       .leaflet-tile-pane {
-        opacity: 0.6;
+        filter: brightness(1.3) saturate(0.4);
       }
     `;
     document.head.appendChild(style);
@@ -256,8 +262,10 @@ export const LeafletMap = ({
     const clusterGroup = L.markerClusterGroup({
       showCoverageOnHover: false,
       maxClusterRadius: 50,
-      zoomToBoundsOnClick: false, // 禁止点击后放大地图
+      zoomToBoundsOnClick: false,
       spiderfyOnMaxZoom: true,
+      animate: false,              // 禁用聚合/散开动画，大幅降低缩放开销
+      disableClusteringAtZoom: 17, // zoom 17+ 不再聚合，减少 DOM 操作
       
       iconCreateFunction: function(cluster) {
         const children = cluster.getAllChildMarkers();
@@ -290,7 +298,6 @@ export const LeafletMap = ({
               display: flex;
               align-items: center;
               justify-content: center;
-              transition: transform 0.2s ease;
             ">
               <img src="${url}" style="width:100%; height:100%; object-fit:contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));" />
             </div>
@@ -315,7 +322,6 @@ export const LeafletMap = ({
                box-shadow: 1px 2px 4px rgba(0,0,0,0.15);
                border: 1px dashed rgba(74, 93, 35, 0.2);
                border-radius: 2px;
-               backdrop-filter: blur(2px);
              ">
                +${remaining}
              </div>
@@ -363,8 +369,6 @@ export const LeafletMap = ({
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s ease;
-            ${isHotspot ? 'animation: pulse-ring 2s infinite;' : ''}
           ">
             <img 
               src="${iconUrl}" 
@@ -372,9 +376,9 @@ export const LeafletMap = ({
                 width: 100%;
                 height: 100%;
                 object-fit: contain;
-                filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
               "
               alt=""
+              loading="lazy"
             />
             ${isHotspot ? `
               <div style="
@@ -422,7 +426,7 @@ export const LeafletMap = ({
 
   return (
     <div className={`relative w-full h-full ${className}`}>
-      <div ref={mapRef} className="w-full h-full rounded-[0px]" style={{ minHeight: '100%' }} />
+      <div ref={mapRef} className="w-full h-full rounded-[0px]" style={{ minHeight: '100%', touchAction: 'manipulation', willChange: 'transform' }} />
       {/* 标记模式：显示中心定位大头针 - 放在上半部分地图的中心（黄金分割点） */}
       {mode === 'mark' && (
         <div className="absolute top-[31%] left-1/2 -translate-x-1/2 -translate-y-full pointer-events-none z-[1000]">

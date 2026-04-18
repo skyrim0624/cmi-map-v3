@@ -171,57 +171,66 @@ All colors MUST be HSL.
   
   /* Leaflet 地图样式优化 */
   .leaflet-container {
-    z-index: 0 !important; /* 确保地图在最底层 */
+    z-index: 0 !important;
+    -webkit-tap-highlight-color: transparent;
   }
-  
+
   .leaflet-control-container {
     position: absolute;
-    top: 80px !important; /* 避免被顶部标题栏遮挡 */
+    top: 80px !important;
     left: 10px;
     z-index: 10 !important;
   }
-  
+
   .leaflet-control-zoom {
     border: none !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
   }
-  
+
   .leaflet-control-zoom a {
     background-color: white !important;
     color: hsl(var(--foreground)) !important;
     border: 1px solid hsl(var(--border)) !important;
   }
-  
+
   .leaflet-control-zoom a:hover {
     background-color: hsl(var(--accent)) !important;
   }
-  
+
   .leaflet-pane {
     z-index: 1 !important;
   }
-  
+
   .leaflet-tile-pane {
     z-index: 1 !important;
+    /* GPU 性能：让瓦片层作为独立合成层 */
+    will-change: transform;
   }
-  
+
   .leaflet-overlay-pane {
     z-index: 2 !important;
   }
-  
+
   .leaflet-marker-pane {
     z-index: 3 !important;
+    /* 防止 marker 层在缩放时触发整页 reflow */
+    contain: layout style;
   }
-  
+
   /* 手绘图标样式 */
   .custom-marker-icon {
     background: transparent !important;
     border: none !important;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    contain: layout style;
   }
-  
-  .custom-marker-icon:hover {
-    transform: scale(1.1);
+
+  /* 仅桌面端启用 hover 效果 */
+  @media (hover: hover) {
+    .custom-marker-icon:hover {
+      transform: scale(1.1);
+      transition: transform 0.2s ease;
+    }
   }
   
   /* 用户位置标记样式 */
