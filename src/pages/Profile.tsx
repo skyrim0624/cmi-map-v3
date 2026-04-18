@@ -5,14 +5,15 @@ import { LogOut, ArrowLeft, Camera, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAllRecommendations } from '@/db/api';
-import type { Recommendation } from '@/types/types';
-import { getCategoryIconUrl } from '@/types/types';
+import type { Recommendation, Category } from '@/types/types';
+import { getCategoryIconUrl, CATEGORIES } from '@/types/types';
 
 export default function Profile() {
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
   
   const [activeTab, setActiveTab] = useState<'my_pins' | 'wishlist'>('my_pins');
+  const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
   const [myRecommendations, setMyRecommendations] = useState<Recommendation[]>([]);
   const [myWishlists, setMyWishlists] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,25 +81,35 @@ export default function Profile() {
         {items.map((rec) => (
           <div 
             key={rec.id} 
-            className="bg-[#fdfbf7] p-4 rounded-xl border border-stone-200/50 shadow-sm flex items-start gap-4 active:scale-[0.98] transition-transform cursor-pointer"
+            className="app-list-card bg-card p-4 border-2 border-foreground cursor-pointer"
             onClick={() => navigate(`/place/${encodeURIComponent(rec.place_name)}`)}
           >
-             {rec.images && rec.images.length > 0 ? (
-                <img src={rec.images[0]} alt="thumbnail" className="w-16 h-16 object-cover rounded-lg border border-stone-100" />
-             ) : (
-                <div className="w-16 h-16 bg-stone-100 rounded-lg flex items-center justify-center border border-stone-200/50">
-                  <img src={getCategoryIconUrl(rec.category)} alt="cat" className="w-6 h-6 opacity-60" />
-                </div>
-             )}
-             
-             <div className="flex-1 min-w-0">
-               <div className="flex items-center gap-1.5 mb-1">
-                 <h3 className="font-bold text-stone-800 truncate">{rec.place_name}</h3>
-                 <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider shrink-0">
-                   {rec.category}
-                 </span>
+             <div className="flex gap-4">
+               {rec.images && rec.images.length > 0 ? (
+                  <div className="flex-shrink-0">
+                    <img src={rec.images[0]} alt="thumbnail" className="w-20 h-20 object-cover rounded-xl" />
+                  </div>
+               ) : (
+                  <div className="flex-shrink-0 w-20 h-20 bg-accent rounded-xl flex items-center justify-center p-4">
+                    <img src={getCategoryIconUrl(rec.category)} alt="cat" className="w-full h-full object-contain opacity-60" />
+                  </div>
+               )}
+               
+               <div className="flex-1 min-w-0 space-y-2">
+                 <p className="text-base leading-relaxed text-foreground line-clamp-2">
+                   "{rec.reason}"
+                 </p>
+                 <div className="flex justify-between items-center mt-2">
+                   <p className="text-sm text-muted-foreground line-clamp-1">
+                     📍 {rec.place_name} —— {rec.user_name}
+                   </p>
+                   {rec.upvotes && rec.upvotes.length > 0 && (
+                     <div className="flex items-center gap-1 text-primary text-sm font-medium bg-primary/10 px-2 py-0.5 rounded-full shrink-0 ml-2">
+                       🔥 {rec.upvotes.length}
+                     </div>
+                   )}
+                 </div>
                </div>
-               <p className="text-sm text-stone-500 line-clamp-2 leading-snug">{rec.reason}</p>
              </div>
           </div>
         ))}
@@ -171,17 +182,51 @@ export default function Profile() {
           </button>
         </div>
 
+        {/* 分类筛选 */}
+        <div className="mb-6 -mx-4 px-4 overflow-x-auto hide-scrollbar">
+          <div className="flex gap-2 min-w-max pb-2">
+            <Button
+              variant={selectedCategory === 'all' ? 'default' : 'outline'}
+              size="sm"
+              className="app-tag rounded-full whitespace-nowrap press-feedback relative"
+              onClick={() => setSelectedCategory('all')}
+              data-state={selectedCategory === 'all' ? 'on' : 'off'}
+            >
+              全部
+              <svg className="app-tag-circle absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" style={{pointerEvents: 'none'}}>
+                <path d="M5,50 a45,45 0 1,0 90,0 a45,45 0 1,0 -90,0" vectorEffect="non-scaling-stroke" />
+              </svg>
+            </Button>
+            {CATEGORIES.map((cat) => (
+              <Button
+                key={cat.name}
+                variant={selectedCategory === cat.name ? 'default' : 'outline'}
+                size="sm"
+                className="app-tag rounded-full whitespace-nowrap press-feedback relative"
+                onClick={() => setSelectedCategory(cat.name)}
+                data-state={selectedCategory === cat.name ? 'on' : 'off'}
+              >
+                <img src={cat.iconUrl} alt={cat.name} className="w-4 h-4 mr-1 object-contain" />
+                {cat.name}
+                <svg className="app-tag-circle absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" style={{pointerEvents: 'none'}}>
+                  <path d="M5,50 a45,45 0 1,0 90,0 a45,45 0 1,0 -90,0" vectorEffect="non-scaling-stroke" />
+                </svg>
+              </Button>
+            ))}
+          </div>
+        </div>
+
         {/* 贴纸簿容器 */}
         <div className="pb-12">
           {activeTab === 'my_pins' && renderList(
-            myRecommendations, 
+            myRecommendations.filter(r => selectedCategory === 'all' || r.category === selectedCategory), 
             "手账本里还没有你的专属印记", 
             "去标记一个心动坐标", 
             "/mark"
           )}
           
           {activeTab === 'wishlist' && renderList(
-            myWishlists,
+            myWishlists.filter(r => selectedCategory === 'all' || r.category === selectedCategory),
             "你的愿望清单空空如也",
             "回地图上逛逛，种点草",
             "/"
