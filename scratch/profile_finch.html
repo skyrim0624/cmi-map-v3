@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CMI Map · Profile Playground (Finch Style)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #e8e4de;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 32px 16px;
+  }
+
+  /* === Phone shell === */
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: #f7f5f0;
+    border-radius: 44px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.04);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* === Color tokens === */
+  :root {
+    --bg: #f7f5f0;
+    --card: #fffdf8;
+    --card-warm: #faf3e8;
+    --fg: #2c2c2c;
+    --muted: #9c9590;
+    --primary: #9b8ec6;
+    --primary-light: #ede9fe;
+    --border: #e0dbd4;
+    --accent-gold: #c9a96e;
+    --accent-green: #6b9f78;
+    --accent-rose: #e8727a;
+    --radius: 20px;
+  }
+
+  /* === Top bar === */
+  .topbar {
+    padding: 52px 20px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .topbar-btn {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--fg);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .topbar-btn:hover { background: rgba(0,0,0,0.05); }
+
+  /* === Scroll area === */
+  .scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 16px 32px;
+  }
+
+  /* ============================================
+     PROFILE CARD — Finch / Animal Crossing style
+     ============================================ */
+  .profile-card {
+    background: var(--card-warm);
+    border: 2.5px solid var(--fg);
+    border-radius: var(--radius);
+    box-shadow: 4px 5px 0 rgba(0,0,0,0.15);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  /* -- Top half: avatar + name -- */
+  .profile-card-header {
+    display: flex;
+    gap: 16px;
+    padding: 20px 20px 16px;
+    position: relative;
+  }
+
+  /* Decorative swirl in top-right */
+  .profile-card-header::after {
+    content: '';
+    position: absolute;
+    top: 12px; right: 16px;
+    width: 56px; height: 56px;
+    border: 2px solid rgba(0,0,0,0.06);
+    border-radius: 50%;
+    border-top-color: transparent;
+    border-left-color: transparent;
+    transform: rotate(-25deg);
+  }
+
+  .avatar-zone {
+    position: relative;
+    flex-shrink: 0;
+  }
+  .avatar {
+    width: 88px; height: 88px;
+    border-radius: 18px;
+    border: 2.5px solid var(--fg);
+    object-fit: cover;
+    background: #e8e0d8;
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.12);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px;
+  }
+  .camera-badge {
+    position: absolute;
+    bottom: -4px; right: -4px;
+    width: 28px; height: 28px;
+    background: var(--primary);
+    border: 2px solid var(--bg);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    color: white;
+    box-shadow: 1px 2px 0 rgba(0,0,0,0.15);
+    cursor: pointer;
+  }
+
+  .name-zone {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+  }
+  .display-name {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--fg);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .edit-pen {
+    font-size: 14px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .edit-pen:hover { color: var(--fg); }
+
+  .user-title {
+    font-size: 13px;
+    color: var(--accent-gold);
+    font-weight: 700;
+  }
+  .adventures-count {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+    margin-top: 2px;
+  }
+
+  /* -- Separator -- */
+  .card-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0 20px;
+  }
+
+  /* -- Attribute rows (key-value) -- */
+  .attr-list {
+    padding: 14px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .attr-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .attr-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    width: 72px;
+    flex-shrink: 0;
+  }
+  .attr-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--fg);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* -- Bottom stats bar -- */
+  .stats-bar {
+    display: flex;
+    border-top: 2.5px solid var(--fg);
+  }
+  .stat-cell {
+    flex: 1;
+    text-align: center;
+    padding: 12px 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .stat-cell:not(:last-child) {
+    border-right: 2.5px solid var(--fg);
+  }
+  .stat-cell:hover { background: rgba(0,0,0,0.03); }
+  .stat-cell .num {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--fg);
+  }
+  .stat-cell .label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+
+  /* ============================================
+     TAB BAR (inside card or below)
+     ============================================ */
+  .tab-section {
+    background: var(--card);
+    border: 2.5px solid var(--fg);
+    border-radius: var(--radius);
+    box-shadow: 4px 5px 0 rgba(0,0,0,0.15);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .tab-bar {
+    display: flex;
+    border-bottom: 2px solid var(--border);
+  }
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 14px 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    cursor: pointer;
+    position: relative;
+    transition: color 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .tab:hover { color: var(--fg); }
+  .tab.active {
+    color: var(--fg);
+  }
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 16px; right: 16px;
+    height: 3px;
+    background: var(--fg);
+    border-radius: 2px;
+  }
+
+  /* -- Category pills inside tab section -- */
+  .pills-row {
+    display: flex;
+    gap: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--border);
+  }
+  .pills-row::-webkit-scrollbar { display: none; }
+  .pill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    border: 2px solid var(--border);
+    background: var(--card);
+    color: var(--fg);
+    cursor: pointer;
+    display: flex; align-items: center; gap: 5px;
+    transition: all 0.15s;
+  }
+  .pill:hover { border-color: var(--fg); }
+  .pill.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--fg);
+  }
+
+  /* -- Content area -- */
+  .tab-content {
+    padding: 16px;
+    min-height: 200px;
+  }
+
+  /* -- Empty state -- */
+  .empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    text-align: center;
+    gap: 14px;
+  }
+  .empty-icon {
+    font-size: 48px;
+    line-height: 1;
+  }
+  .empty-text {
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .cta-btn {
+    padding: 12px 24px;
+    background: var(--primary);
+    color: white;
+    border-radius: 24px;
+    font-weight: 800;
+    font-size: 14px;
+    border: 2.5px solid var(--fg);
+    box-shadow: 3px 4px 0 rgba(0,0,0,0.18);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .cta-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 4px 5px 0 rgba(0,0,0,0.2);
+  }
+  .cta-btn:active {
+    transform: translate(2px, 3px);
+    box-shadow: 0 0 0 rgba(0,0,0,0.15);
+  }
+
+  /* -- Recommendation card (inside list) -- */
+  .rec-card {
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    background: var(--card-warm);
+    border: 2px solid var(--fg);
+    border-radius: 14px;
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .rec-card:hover {
+    transform: translateY(-2px) rotate(0.5deg);
+    box-shadow: 4px 6px 0 rgba(0,0,0,0.12);
+  }
+  .rec-card + .rec-card { margin-top: 12px; }
+
+  .rec-thumb {
+    width: 64px; height: 64px;
+    border-radius: 12px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--primary-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+  .rec-info { flex: 1; min-width: 0; }
+  .rec-quote {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--fg);
+    font-weight: 500;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .rec-meta {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .heat-badge {
+    background: rgba(155, 142, 198, 0.15);
+    color: var(--primary);
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+
+  /* ============================================
+     ACHIEVEMENT STREAK CARD
+     ============================================ */
+  .streak-card {
+    background: linear-gradient(135deg, #fef9ef, #fdf3e0);
+    border: 2.5px solid var(--fg);
+    border-radius: var(--radius);
+    box-shadow: 4px 5px 0 rgba(0,0,0,0.15);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .streak-card:hover { transform: translateY(-1px); }
+  .streak-icon { font-size: 36px; flex-shrink: 0; }
+  .streak-info { flex: 1; }
+  .streak-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: var(--fg);
+  }
+  .streak-title span {
+    color: var(--accent-gold);
+  }
+  .streak-desc {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  .streak-arrow {
+    font-size: 18px;
+    color: var(--muted);
+  }
+
+  /* ============================================
+     BADGE GRID
+     ============================================ */
+  .badge-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding: 16px;
+  }
+  .badge-item {
+    text-align: center;
+  }
+  .badge-icon-wrap {
+    width: 56px; height: 56px;
+    margin: 0 auto 6px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    border: 2px solid var(--border);
+    background: var(--card);
+    transition: transform 0.15s;
+  }
+  .badge-icon-wrap.unlocked {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(155,142,198,0.25);
+  }
+  .badge-icon-wrap.locked {
+    opacity: 0.35;
+    filter: grayscale(1);
+  }
+  .badge-icon-wrap:hover { transform: scale(1.08); }
+  .badge-name {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted);
+    line-height: 1.2;
+  }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <!-- Top bar -->
+  <div class="topbar">
+    <button class="topbar-btn">←</button>
+    <button class="topbar-btn" title="退出登录" style="font-size:16px;">⎋</button>
+  </div>
+
+  <div class="scroll-area">
+    <!-- ======== PROFILE CARD ======== -->
+    <div class="profile-card">
+      <div class="profile-card-header">
+        <div class="avatar-zone">
+          <div class="avatar">🐱</div>
+          <div class="camera-badge">📷</div>
+        </div>
+        <div class="name-zone">
+          <div class="display-name">子扬 <span class="edit-pen">✎</span></div>
+          <div class="user-title">Lv.1 · 初入清迈</div>
+          <div class="adventures-count">加入 3 天</div>
+        </div>
+      </div>
+
+      <div class="card-divider"></div>
+
+      <div class="attr-list">
+        <div class="attr-row">
+          <span class="attr-label">已贡献</span>
+          <span class="attr-value">0 个地点</span>
+        </div>
+        <div class="attr-row">
+          <span class="attr-label">想去的</span>
+          <span class="attr-value">1 个地点 💜</span>
+        </div>
+        <div class="attr-row">
+          <span class="attr-label">成就</span>
+          <span class="attr-value">1 枚徽章 🌱</span>
+        </div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat-cell">
+          <div class="num">0</div>
+          <div class="label">贡献</div>
+        </div>
+        <div class="stat-cell">
+          <div class="num">1</div>
+          <div class="label">想去</div>
+        </div>
+        <div class="stat-cell">
+          <div class="num">1</div>
+          <div class="label">成就</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== STREAK / ACHIEVEMENT HIGHLIGHT ======== -->
+    <div class="streak-card">
+      <div class="streak-icon">🌱</div>
+      <div class="streak-info">
+        <div class="streak-title">解锁了 <span>「初来乍到」</span></div>
+        <div class="streak-desc">完成注册，欢迎来到清迈社区！</div>
+      </div>
+      <div class="streak-arrow">›</div>
+    </div>
+
+    <!-- ======== TAB SECTION ======== -->
+    <div class="tab-section">
+      <div class="tab-bar">
+        <div class="tab active">我贡献的</div>
+        <div class="tab">我想去的</div>
+        <div class="tab">成就墙</div>
+      </div>
+
+      <!-- Category pills -->
+      <div class="pills-row">
+        <span class="pill active">🎲 全部</span>
+        <span class="pill">🍜 吃饭</span>
+        <span class="pill">☕ 咖啡</span>
+        <span class="pill">🌿 户外</span>
+        <span class="pill">📸 拍照</span>
+        <span class="pill">🛍️ 市集</span>
+        <span class="pill">🍸 马杀鸡</span>
+      </div>
+
+      <!-- Empty state for "我贡献的" -->
+      <div class="tab-content">
+        <div class="empty">
+          <div class="empty-icon">📝</div>
+          <div class="empty-text">手账本里还没有你的专属印记</div>
+          <button class="cta-btn">去标记一个心动坐标</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== EXAMPLE: "我想去的" with data ======== -->
+    <div style="padding:4px 0 8px;">
+      <div style="font-size:13px;font-weight:800;color:var(--muted);margin-bottom:10px;letter-spacing:0.5px;">💜 我想去的（下面是有数据时的样子）</div>
+      <div class="rec-card">
+        <div class="rec-thumb">☕</div>
+        <div class="rec-info">
+          <div class="rec-quote">"很安静的小巷子咖啡馆，下午三点的阳光打在木桌上，适合发呆一个下午"</div>
+          <div class="rec-meta">
+            <span>📍 Ristr8to Lab</span>
+            <span>—— 小明</span>
+            <span class="heat-badge">🔥 3</span>
+          </div>
+        </div>
+      </div>
+      <div class="rec-card">
+        <div class="rec-thumb">⛰️</div>
+        <div class="rec-info">
+          <div class="rec-quote">"日落时分从这里看整个清迈，比素贴山人少太多了"</div>
+          <div class="rec-meta">
+            <span>📍 素贴山</span>
+            <span>—— 阿强</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== EXAMPLE: Badge Grid ======== -->
+    <div style="padding:4px 0 8px;">
+      <div style="font-size:13px;font-weight:800;color:var(--muted);margin-bottom:10px;letter-spacing:0.5px;">🏆 成就墙（切到成就 Tab 时的样子）</div>
+      <div style="background:var(--card);border:2.5px solid var(--fg);border-radius:var(--radius);box-shadow:4px 5px 0 rgba(0,0,0,0.15);overflow:hidden;">
+        <div class="badge-grid">
+          <div class="badge-item">
+            <div class="badge-icon-wrap unlocked">🌱</div>
+            <div class="badge-name">初来乍到</div>
+          </div>
+          <div class="badge-item">
+            <div class="badge-icon-wrap locked">📍</div>
+            <div class="badge-name">第一笔</div>
+          </div>
+          <div class="badge-item">
+            <div class="badge-icon-wrap locked">☕</div>
+            <div class="badge-name">咖啡达人</div>
+          </div>
+          <div class="badge-item">
+            <div class="badge-icon-wrap locked">🗺️</div>
+            <div class="badge-name">探索者</div>
+          </div>
+          <div class="badge-item">
+            <div class="badge-icon-wrap locked">🔥</div>
+            <div class="badge-name">热心人</div>
+          </div>
+          <div class="badge-item">
+            <div class="badge-icon-wrap locked">📸</div>
+            <div class="badge-name">摄影师</div>
+          </div>
+          <div class="badge-item">
+            <div class="badge-icon-wrap locked">🍜</div>
+            <div class="badge-name">老饕</div>
+          </div>
+          <div class="badge-item">
+            <div class="badge-icon-wrap locked">⭐</div>
+            <div class="badge-name">传奇</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end scroll-area -->
+</div><!-- end phone -->
+
+</body>
+</html>

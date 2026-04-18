@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllRecommendations, getRecommendationsByCategory } from '@/db/api';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Recommendation, Category } from '@/types/types';
+import type { Recommendation, Category, PlacedSticker, Sticker } from '@/types/types';
 import { CATEGORIES, getCategoryIconUrl } from '@/types/types';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowLeft, LogIn } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -32,6 +32,29 @@ export default function ListView() {
     }
   };
 
+  const getTopStickers = (placedStickers: PlacedSticker[] | undefined, topN: number = 3) => {
+    if (!placedStickers || placedStickers.length === 0) return [];
+    
+    // 兼容 Supabase 连表返回可能为单对象或数组的情况
+    const stickersArray = Array.isArray(placedStickers) ? placedStickers : [placedStickers];
+    
+    const counts: Record<string, { count: number; sticker: Sticker }> = {};
+    for (const ps of stickersArray) {
+      if (!ps.sticker) continue;
+      // 兼容某些 Supabase 连表查询把单个对象嵌套在数组或字段中的写法
+      const s = Array.isArray(ps.sticker) ? ps.sticker[0] : ps.sticker;
+      if (!s) continue;
+
+      if (!counts[ps.sticker_id]) {
+        counts[ps.sticker_id] = { count: 0, sticker: s };
+      }
+      counts[ps.sticker_id].count++;
+    }
+    return Object.values(counts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, topN);
+  };
+
   return (
     <div className="relative w-full h-full overflow-hidden bg-background">
       {/* 顶部标题栏 */}
@@ -52,38 +75,32 @@ export default function ListView() {
         </div>
 
         {/* 分类筛选 */}
-        <ScrollArea className="w-full">
-          <div className="flex gap-2 px-6 py-3 overflow-x-auto">
+        <div className="w-full overflow-x-auto hide-scrollbar">
+          <div className="flex gap-2 px-6 py-3 w-max">
             <Button
               variant={selectedCategory === 'all' ? 'default' : 'outline'}
               size="sm"
-              className="app-tag rounded-full whitespace-nowrap press-feedback relative"
+              className="rounded-full whitespace-nowrap press-feedback relative"
               onClick={() => setSelectedCategory('all')}
               data-state={selectedCategory === 'all' ? 'on' : 'off'}
             >
               全部
-              <svg className="app-tag-circle absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" style={{pointerEvents: 'none'}}>
-                <path d="M5,50 a45,45 0 1,0 90,0 a45,45 0 1,0 -90,0" vectorEffect="non-scaling-stroke" />
-              </svg>
             </Button>
             {CATEGORIES.map((cat) => (
               <Button
                 key={cat.name}
                 variant={selectedCategory === cat.name ? 'default' : 'outline'}
                 size="sm"
-                className="app-tag rounded-full whitespace-nowrap press-feedback relative"
+                className="rounded-full whitespace-nowrap press-feedback relative flex items-center"
                 onClick={() => setSelectedCategory(cat.name)}
                 data-state={selectedCategory === cat.name ? 'on' : 'off'}
               >
                 <img src={cat.iconUrl} alt={cat.name} className="w-4 h-4 mr-1 object-contain" />
                 {cat.name}
-                <svg className="app-tag-circle absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" style={{pointerEvents: 'none'}}>
-                  <path d="M5,50 a45,45 0 1,0 90,0 a45,45 0 1,0 -90,0" vectorEffect="non-scaling-stroke" />
-                </svg>
               </Button>
             ))}
           </div>
-        </ScrollArea>
+        </div>
       </div>
 
       {/* 推荐列表 */}
@@ -124,15 +141,29 @@ export default function ListView() {
                     </p>
 
                     {/* 地点名称和推荐人 */}
-                    <div className="flex justify-between items-center mt-2">
-                      <p className="text-sm text-muted-foreground line-clamp-1">
-                        📍 {rec.place_name} —— {rec.user_name}
+                    <div className="flex justify-between items-center mt-2 flex-wrap gap-2">
+                      <p className="text-sm text-muted-foreground line-clamp-1 flex-1 min-w-0 flex items-center pr-2">
+                        📍 {rec.place_name} 
+                        <span className="mx-1 text-muted-foreground/30">|</span> 
+                        <span className="truncate">{rec.user_name}</span>
                       </p>
-                      {rec.upvotes && rec.upvotes.length > 0 && (
-                        <div className="flex items-center gap-1 text-primary text-sm font-medium bg-primary/10 px-2 py-0.5 rounded-full shrink-0 ml-2">
-                          🔥 +{rec.upvotes.length}
-                        </div>
-                      )}
+                      
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {/* 聚合排序前3的贴纸印章 */}
+                        {getTopStickers(rec.placed_stickers).map((ts) => (
+                          <div key={ts.sticker.id} className="flex items-center bg-accent/40 rounded-full px-1.5 py-0.5 border border-border/50 backdrop-blur-sm px-2">
+                            <img src={ts.sticker.icon_url} alt="" className="w-3.5 h-3.5 object-contain mr-1 filter saturate-[0.8]" style={{ mixBlendMode: 'multiply' }} />
+                            <span className="text-[10px] font-bold text-muted-foreground ml-0.5">{ts.count}</span>
+                          </div>
+                        ))}
+
+                        {/* 点赞数 */}
+                        {rec.upvotes && rec.upvotes.length > 0 && (
+                          <div className="flex items-center text-primary text-[11px] font-medium bg-primary/10 px-2 py-0.5 rounded-full ml-1">
+                            🔥 {rec.upvotes.length}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -152,6 +183,9 @@ export default function ListView() {
             onClick={() => navigate('/profile')}
           >
             <Avatar className="w-12 h-12">
+              {profile?.avatar_url && (
+                <AvatarImage src={profile.avatar_url} alt={displayName} />
+              )}
               <AvatarFallback className="bg-primary text-primary-foreground">
                 {displayName.charAt(0).toUpperCase()}
               </AvatarFallback>

@@ -29,6 +29,7 @@ export interface Recommendation {
   created_at: string;
   upvotes?: { user_id: string }[];
   wishlists?: { user_id: string }[];
+  placed_stickers?: PlacedSticker[];
 }
 
 // 地图标记点类型
@@ -39,6 +40,28 @@ export interface MapMarker {
   latitude: number;
   longitude: number;
   recommendations: Recommendation[];
+}
+
+// 贴纸数据类型
+export interface Sticker {
+  id: string;
+  name: string;
+  icon_url: string;
+  is_native: boolean;
+  created_at: string;
+}
+
+// 已放置贴纸类型
+export interface PlacedSticker {
+  id: string;
+  recommendation_id: string;
+  user_id: string;
+  sticker_id: string;
+  x_ratio: number;
+  y_ratio: number;
+  rotation: number;
+  created_at: string;
+  sticker?: Sticker; // Joined relation from stickers table
 }
 
 // 分类配置

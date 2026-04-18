@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Recommendation, Category } from '@/types/types';
+import type { Recommendation, Category, Sticker, PlacedSticker } from '@/types/types';
 import { compressImage } from '@/utils/imageCompression';
 
 /**
@@ -8,7 +8,7 @@ import { compressImage } from '@/utils/imageCompression';
 export const getAllRecommendations = async (): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
-    .select('*, upvotes(user_id), wishlists(user_id)')
+    .select('*, upvotes(user_id), wishlists(user_id), placed_stickers(*, sticker:stickers(*))')
     .neq('user_name', '张紫姀') // 暂时屏蔽张紫姀的历史批量录入
     .order('created_at', { ascending: false });
 
@@ -28,7 +28,7 @@ export const getRecommendationsByCategory = async (
 ): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
-    .select('*, upvotes(user_id), wishlists(user_id)')
+    .select('*, upvotes(user_id), wishlists(user_id), placed_stickers(*, sticker:stickers(*))')
     .neq('user_name', '张紫姀') // 暂时屏蔽张紫姀的历史批量录入
     .eq('category', category)
     .order('created_at', { ascending: false });
@@ -49,7 +49,7 @@ export const getRecommendationsByUser = async (
 ): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
-    .select('*, upvotes(user_id), wishlists(user_id)')
+    .select('*, upvotes(user_id), wishlists(user_id), placed_stickers(*, sticker:stickers(*))')
     .eq('user_name', userName)
     .order('created_at', { ascending: false });
 
@@ -69,7 +69,7 @@ export const getRecommendationsByUserId = async (
 ): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
-    .select('*, upvotes(user_id), wishlists(user_id)')
+    .select('*, upvotes(user_id), wishlists(user_id), placed_stickers(*, sticker:stickers(*))')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -89,7 +89,7 @@ export const getRecommendationsByPlace = async (
 ): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
-    .select('*, upvotes(user_id), wishlists(user_id)')
+    .select('*, upvotes(user_id), wishlists(user_id), placed_stickers(*, sticker:stickers(*))')
     .eq('place_name', placeName)
     .order('created_at', { ascending: false });
 
@@ -356,3 +356,53 @@ export async function toggleWishlist(recommendationId: string, userId: string): 
     throw error;
   }
 }
+
+/**
+ * 获取可用贴纸库
+ */
+export const getAvailableStickers = async (): Promise<Sticker[]> => {
+  const { data, error } = await supabase
+    .from('stickers')
+    .select('*')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('获取贴纸失败:', error);
+    return [];
+  }
+  return data || [];
+};
+
+/**
+ * 获取地标被贴的贴纸
+ */
+export const getPlacedStickers = async (recommendationId: string): Promise<PlacedSticker[]> => {
+  const { data, error } = await supabase
+    .from('placed_stickers')
+    .select('*, sticker:stickers(*)')
+    .eq('recommendation_id', recommendationId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('获取已放置贴纸失败:', error);
+    return [];
+  }
+  return data || [];
+};
+
+/**
+ * 张贴贴纸
+ */
+export const placeSticker = async (stickerData: Omit<PlacedSticker, 'id' | 'created_at' | 'sticker'>): Promise<PlacedSticker | null> => {
+  const { data, error } = await supabase
+    .from('placed_stickers')
+    .insert([stickerData])
+    .select('*, sticker:stickers(*)')
+    .single();
+
+  if (error) {
+    console.error('放置贴纸失败:', error);
+    return null;
+  }
+  return data;
+};

@@ -352,6 +352,45 @@ export const LeafletMap = ({
         return sum + (rec.upvotes?.length || 0);
       }, 0) || 0;
       
+      // 收集并统计该地点所有的贴纸
+      const stickerCounts: Record<string, { count: number; sticker: any }> = {};
+      markerData.recommendations?.forEach((rec) => {
+        if (!rec.placed_stickers) return;
+        const psArray = Array.isArray(rec.placed_stickers) ? rec.placed_stickers : [rec.placed_stickers];
+        psArray.forEach((ps) => {
+          if (!ps.sticker) return;
+          const s = Array.isArray(ps.sticker) ? ps.sticker[0] : ps.sticker;
+          if (!s) return;
+          if (!stickerCounts[ps.sticker_id]) {
+            stickerCounts[ps.sticker_id] = { count: 0, sticker: s };
+          }
+          stickerCounts[ps.sticker_id].count++;
+        });
+      });
+      const topStickers = Object.values(stickerCounts)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 3);
+      
+      const stickersHtml = topStickers.map((ts, idx) => `
+        <div style="
+          position: absolute;
+          bottom: ${-4 + (idx * 2)}px;
+          left: ${-8 + (idx * 16)}px;
+          background: rgba(255, 255, 255, 0.95);
+          border: 1px solid rgba(0,0,0,0.1);
+          border-radius: 12px;
+          padding: 1px 4px;
+          display: flex;
+          align-items: center;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+          z-index: ${20 - idx};
+          transform: rotate(${idx % 2 === 0 ? '-5deg' : '5deg'});
+        ">
+          <img src="${ts.sticker.icon_url}" style="width: 14px; height: 14px; object-fit: contain; filter: saturate(0.8);" />
+          <span style="font-size: 10px; font-weight: bold; color: #666; margin-left: 2px;">${ts.count}</span>
+        </div>
+      `).join('');
+
       const isHotspot = totalUpvotes > 0;
       const sizeStr = isHotspot ? '64px' : '56px';
       
@@ -399,6 +438,7 @@ export const LeafletMap = ({
                 +${totalUpvotes} 🔥
               </div>
             ` : ''}
+            ${stickersHtml}
           </div>
         `,
         iconSize: isHotspot ? [64, 64] : [56, 56],

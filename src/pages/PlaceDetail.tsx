@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getRecommendationsByPlace, deleteRecommendation, toggleUpvote, toggleWishlist } from '@/db/api';
+import { getRecommendationsByPlace, deleteRecommendation, toggleUpvote, toggleWishlist, getAvailableStickers, getPlacedStickers, placeSticker } from '@/db/api';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Recommendation } from '@/types/types';
+import type { Recommendation, Sticker, PlacedSticker } from '@/types/types';
 import { getCategoryIconUrl, getCategoryColor } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Trash2, Heart, Bookmark } from 'lucide-react';
+import { ArrowLeft, Trash2, Heart, Bookmark, Sticker as StickerIcon } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import {
@@ -38,6 +38,13 @@ export default function PlaceDetail() {
   const [localUpvotes, setLocalUpvotes] = useState<Record<string, { count: number, isUpvoted: boolean }>>({});
   const [localWishlists, setLocalWishlists] = useState<Record<string, boolean>>({});
 
+  // 贴纸状态
+  const [availableStickers, setAvailableStickers] = useState<Sticker[]>([]);
+  const [placedStickers, setPlacedStickers] = useState<Record<string, PlacedSticker[]>>({});
+  const [activeStickerId, setActiveStickerId] = useState<string | null>(null); 
+  const [activeRecIdForSticker, setActiveRecIdForSticker] = useState<string | null>(null);
+  const [showStickerDrawer, setShowStickerDrawer] = useState(false);
+
   useEffect(() => {
     if (placeName) {
       loadRecommendations();
@@ -64,8 +71,21 @@ export default function PlaceDetail() {
     setLocalUpvotes(upvotesState);
     setLocalWishlists(wishlistsState);
     
+    // 加载此地点的所有贴纸
+    const stickersData: Record<string, PlacedSticker[]> = {};
+    await Promise.all(data.map(async (rec) => {
+      stickersData[rec.id] = await getPlacedStickers(rec.id);
+    }));
+    setPlacedStickers(stickersData);
+
     setRecommendations(data);
     setLoading(false);
+
+    // 预加载贴纸库
+    if (availableStickers.length === 0) {
+      const stickers = await getAvailableStickers();
+      setAvailableStickers(stickers);
+    }
   };
 
   const handleUpvote = async (recId: string) => {
@@ -166,6 +186,57 @@ export default function PlaceDetail() {
       `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`,
       '_blank'
     );
+  };
+
+  const handleCardClick = async (e: React.MouseEvent<HTMLDivElement>, recId: string) => {
+    if (activeStickerId && activeRecIdForSticker === recId) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const x_ratio = (x / rect.width) * 100;
+      const y_ratio = (y / rect.height) * 100;
+      // 轻微随机旋转，更有随意感
+      const rotation = Math.random() * 40 - 20;
+
+      const stickerToPlace = availableStickers.find(s => s.id === activeStickerId);
+      if (!stickerToPlace || !user) return;
+
+      const optimisticSticker: PlacedSticker = {
+        id: Math.random().toString(),
+        recommendation_id: recId,
+        user_id: user.id,
+        sticker_id: activeStickerId,
+        x_ratio,
+        y_ratio,
+        rotation,
+        created_at: new Date().toISOString(),
+        sticker: stickerToPlace
+      };
+
+      // 乐观更新 UI
+      setPlacedStickers(prev => ({
+        ...prev,
+        [recId]: [...(prev[recId] || []), optimisticSticker]
+      }));
+
+      // 重置交互状态
+      setActiveStickerId(null);
+      setActiveRecIdForSticker(null);
+
+      // 发起请求
+      const result = await placeSticker({
+        recommendation_id: recId,
+        user_id: user.id,
+        sticker_id: activeStickerId,
+        x_ratio,
+        y_ratio,
+        rotation
+      });
+
+      if (!result) {
+        toast.error('印章可能没有盖稳，请刷新重试');
+      }
+    }
   };
 
   const handleGrab = async () => {
@@ -308,8 +379,28 @@ export default function PlaceDetail() {
               {recommendations.map((rec, idx) => (
                 <div
                   key={rec.id}
-                  className="bg-card border border-border card-shadow rounded-xl p-5 space-y-3 relative"
+                  className={`bg-card border border-border card-shadow rounded-xl p-5 space-y-3 relative overflow-hidden transition-all duration-300 ${
+                    activeStickerId && activeRecIdForSticker === rec.id 
+                      ? 'ring-4 ring-primary ring-offset-2 scale-[1.02] cursor-crosshair' 
+                      : ''
+                  }`}
+                  onClick={(e) => handleCardClick(e, rec.id)}
                 >
+                  {/* 已贴贴纸渲染层 */}
+                  {placedStickers[rec.id]?.map((ps) => (
+                    <div
+                      key={ps.id}
+                      className="absolute w-24 h-24 pointer-events-none z-10 animate-in zoom-in-50 duration-300 drop-shadow-sm"
+                      style={{
+                        left: `${ps.x_ratio}%`,
+                        top: `${ps.y_ratio}%`,
+                        transform: `translate(-50%, -50%) rotate(${ps.rotation}deg)`,
+                        mixBlendMode: 'multiply' // 核心：实现盖章正片叠底的透底效果
+                      }}
+                    >
+                      <img src={ps.sticker?.icon_url} alt="" className="w-full h-full object-contain filter saturate-[0.8] contrast-[1.1]" />
+                    </div>
+                  ))}
                   {/* 删除按钮（仅对当前用户的推荐显示） */}
                   {user && rec.user_id === user.id && (
                     <Button
@@ -346,13 +437,35 @@ export default function PlaceDetail() {
                     </div>
                   )}
 
-                  {/* 帖子底部操作栏：点赞、种草 */}
-                  <div className="pt-2 flex justify-end gap-2">
+                  {/* 帖子底部操作栏：点赞、贴纸、种草 */}
+                  <div className="pt-2 flex justify-end gap-2 relative z-20">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className={`rounded-full px-3 press-feedback ${localUpvotes[rec.id]?.isUpvoted ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`}
-                      onClick={() => handleUpvote(rec.id)}
+                      className="rounded-full px-3 press-feedback text-muted-foreground hover:bg-accent"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!user) {
+                          toast('登录后才能盖戳哦', { description: '注册只需要一个邮箱 ✉️' });
+                          navigate('/login', { state: { from: `/place/${placeName}` } });
+                          return;
+                        }
+                        setActiveRecIdForSticker(rec.id);
+                        setShowStickerDrawer(true);
+                      }}
+                    >
+                      <StickerIcon className="w-4 h-4 mr-1.5" />
+                      <span className="font-medium text-sm">盖戳</span>
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`rounded-full px-3 press-feedback ${localUpvotes[rec.id]?.isUpvoted ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:bg-accent'}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleUpvote(rec.id);
+                      }}
                     >
                       <Heart 
                         className={`w-4 h-4 mr-1.5 ${localUpvotes[rec.id]?.isUpvoted ? 'fill-primary' : ''}`} 
@@ -363,7 +476,10 @@ export default function PlaceDetail() {
                     </Button>
                     
                     <button 
-                      onClick={() => handleToggleWishlist(rec.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleWishlist(rec.id);
+                      }}
                       className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 active:scale-90 ${
                         localWishlists[rec.id]
                           ? 'bg-[#ffebee] text-[#f43f5e] shadow-[0_0_15px_rgba(244,63,94,0.2)]' 
@@ -437,6 +553,43 @@ export default function PlaceDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 贴纸选择抽屉 */}
+      {showStickerDrawer && (
+        <div className="fixed inset-0 z-[100] flex flex-col justify-end">
+          <div 
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" 
+            onClick={() => {
+              setShowStickerDrawer(false);
+              setActiveRecIdForSticker(null);
+            }} 
+          />
+          <div className="bg-background w-full rounded-t-3xl p-6 pb-12 relative shadow-2xl animate-in slide-in-from-bottom-full duration-300 max-w-md mx-auto">
+            <h3 className="font-bold text-lg mb-6 text-center text-foreground font-sketch flex items-center justify-center gap-2">
+              <StickerIcon className="w-5 h-5 text-primary" />
+              选择一个图章，然后盖在卡片上吧
+            </h3>
+            <div className="grid grid-cols-4 gap-4">
+              {availableStickers.map(sticker => (
+                <button
+                  key={sticker.id}
+                  className="flex flex-col items-center gap-2 press-feedback"
+                  onClick={() => {
+                    setActiveStickerId(sticker.id);
+                    setShowStickerDrawer(false);
+                    toast.success('图章已沾墨水 🥳', { description: '现在点击手账卡片的任意位置，把它盖上去吧！', duration: 4000 });
+                  }}
+                >
+                  <div className="w-[4.5rem] h-[4.5rem] bg-accent/50 rounded-2xl flex items-center justify-center border-2 border-border/60 card-shadow transition-transform hover:scale-110 active:scale-95">
+                    <img src={sticker.icon_url} className="w-12 h-12 object-contain filter saturate-[0.8] contrast-[1.1]" style={{ mixBlendMode: 'multiply' }} />
+                  </div>
+                  <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">{sticker.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

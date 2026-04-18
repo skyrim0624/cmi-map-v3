@@ -5,7 +5,7 @@ import { LogOut, ArrowLeft, Camera, Pencil, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAllRecommendations, uploadAvatar, updateUserAvatar, updateUserName } from '@/db/api';
-import type { Recommendation, Category } from '@/types/types';
+import type { Recommendation, Category, Sticker, PlacedSticker } from '@/types/types';
 import { getCategoryIconUrl, CATEGORIES } from '@/types/types';
 import { checkBadgesUnlocked } from '@/lib/badgeUtils';
 import BadgeWall from '@/components/BadgeWall';
@@ -140,6 +140,24 @@ export default function Profile() {
       ? <div className={`absolute bottom-0 left-3 right-3 h-[2.5px] bg-${color} rounded-full`} />
       : null;
 
+  const getTopStickers = (placedStickers: PlacedSticker[] | undefined, topN: number = 3) => {
+    if (!placedStickers || placedStickers.length === 0) return [];
+    const stickersArray = Array.isArray(placedStickers) ? placedStickers : [placedStickers];
+    const counts: Record<string, { count: number; sticker: Sticker }> = {};
+    for (const ps of stickersArray) {
+      if (!ps.sticker) continue;
+      const s = Array.isArray(ps.sticker) ? ps.sticker[0] : ps.sticker;
+      if (!s) continue;
+      if (!counts[ps.sticker_id]) {
+        counts[ps.sticker_id] = { count: 0, sticker: s };
+      }
+      counts[ps.sticker_id].count++;
+    }
+    return Object.values(counts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, topN);
+  };
+
   // 列表渲染
   const renderList = (items: Recommendation[], emptyMsg: string, emptyAction: string, emptyRoute: string) => {
     if (loading) {
@@ -176,15 +194,25 @@ export default function Profile() {
             )}
             <div className="flex-1 min-w-0 space-y-1.5">
               <p className="text-sm leading-relaxed line-clamp-2">"{rec.reason}"</p>
-              <div className="flex justify-between items-center">
-                <p className="text-xs text-muted-foreground line-clamp-1">
-                  📍 {rec.place_name} —— {rec.user_name}
+              <div className="flex justify-between items-center flex-wrap gap-2">
+                <p className="text-xs text-muted-foreground line-clamp-1 flex-1 min-w-0 pr-2">
+                  📍 {rec.place_name} <span className="mx-0.5 opacity-50">|</span> {rec.user_name}
                 </p>
-                {rec.upvotes && rec.upvotes.length > 0 && (
-                  <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full shrink-0 ml-2">
-                    🔥 {rec.upvotes.length}
-                  </span>
-                )}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {/* 聚合排序前3的贴纸印章 */}
+                  {getTopStickers(rec.placed_stickers).map((ts) => (
+                    <div key={ts.sticker.id} className="flex items-center bg-accent/40 rounded-full px-1.5 py-0.5 border border-border/50 backdrop-blur-sm">
+                      <img src={ts.sticker.icon_url} alt="" className="w-3 h-3 object-contain mr-1 filter saturate-[0.8]" style={{ mixBlendMode: 'multiply' }} />
+                      <span className="text-[9px] font-bold text-muted-foreground ml-0.5">{ts.count}</span>
+                    </div>
+                  ))}
+                  {/* 点赞数 */}
+                  {rec.upvotes && rec.upvotes.length > 0 && (
+                    <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full ml-1">
+                      🔥 {rec.upvotes.length}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
