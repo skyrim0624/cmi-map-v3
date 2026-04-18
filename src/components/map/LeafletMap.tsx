@@ -87,14 +87,14 @@ export const LeafletMap = ({
 
     // 添加地图点击事件
     if (mode === 'mark') {
-      // 标记模式：点击地图移动到点击位置
+      // 标记模式：点击地图移动到点击位置（目标位置在视口靠上 31% 的位置）
       console.log('标记模式：添加点击事件监听器');
       map.on('click', (e: L.LeafletMouseEvent) => {
         console.log('地图点击事件触发:', e.latlng);
-        map.setView(e.latlng, map.getZoom(), {
-          animate: true,
-          duration: 0.5
-        });
+        const mapSize = map.getSize();
+        const targetPoint = L.point(mapSize.x / 2, mapSize.y * 0.31);
+        const offset = e.containerPoint.subtract(targetPoint);
+        map.panBy(offset, { animate: true, duration: 0.5 });
       });
     } else if (mode === 'view' && onMapClick) {
       // 查看模式：点击地图空白区域关闭预览卡片
@@ -105,12 +105,18 @@ export const LeafletMap = ({
 
     // 等待地图完全加载
     map.whenReady(() => {
-      // 标记模式：监听地图移动
+      // 标记模式：监听地图移动与设置初始偏移
       if (mode === 'mark') {
+        const mapSize = map.getSize();
+        // 初始移动：把默认的物理中心（50%）拉到视觉中心（31%）上
+        map.panBy(L.point(0, mapSize.y * 0.19), { animate: false });
+        
         map.on('moveend', () => {
-          const center = map.getCenter();
+          const currentMapSize = map.getSize();
+          const targetPoint = L.point(currentMapSize.x / 2, currentMapSize.y * 0.31);
+          const customCenter = map.containerPointToLatLng(targetPoint);
           if (onCenterChangeRef.current) {
-            onCenterChangeRef.current(center.lat, center.lng);
+            onCenterChangeRef.current(customCenter.lat, customCenter.lng);
           }
         });
       }
@@ -328,20 +334,30 @@ export const LeafletMap = ({
     markers.forEach((markerData) => {
       const iconUrl = getCategoryIconUrl(markerData.category);
       
+      // 计算该地点所有推荐的总点赞数
+      const totalUpvotes = markerData.recommendations?.reduce((sum, rec) => {
+        return sum + (rec.upvotes?.length || 0);
+      }, 0) || 0;
+      
+      const isHotspot = totalUpvotes > 0;
+      const sizeStr = isHotspot ? '64px' : '56px';
+      
       const icon = L.divIcon({
         className: 'custom-marker-icon bg-transparent border-none',
         html: `
           <div style="
-            width: 56px;
-            height: 56px;
+            width: ${sizeStr};
+            height: ${sizeStr};
             position: relative;
             background: #ffffff;
             border-radius: 50%;
-            padding: 6px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
+            padding: ${isHotspot ? '8px' : '6px'};
+            box-shadow: ${isHotspot ? '0 0 0 4px rgba(255,165,0,0.3), 0 6px 12px rgba(0,0,0,0.2)' : '0 4px 8px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)'};
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: all 0.3s ease;
+            ${isHotspot ? 'animation: pulse-ring 2s infinite;' : ''}
           ">
             <img 
               src="${iconUrl}" 
@@ -353,10 +369,29 @@ export const LeafletMap = ({
               "
               alt=""
             />
+            ${isHotspot ? `
+              <div style="
+                position: absolute;
+                top: -4px;
+                right: -4px;
+                background: #ff5e00;
+                color: #fff;
+                font-family: 'Inter', sans-serif;
+                font-weight: bold;
+                font-size: 11px;
+                padding: 1px 5px;
+                border-radius: 8px;
+                border: 2px solid white;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                transform: rotate(10deg);
+              ">
+                +${totalUpvotes} 🔥
+              </div>
+            ` : ''}
           </div>
         `,
-        iconSize: [56, 56],
-        iconAnchor: [28, 28]
+        iconSize: isHotspot ? [64, 64] : [56, 56],
+        iconAnchor: isHotspot ? [32, 32] : [28, 28]
       });
 
       const marker = L.marker([markerData.latitude, markerData.longitude], { icon });
@@ -383,7 +418,7 @@ export const LeafletMap = ({
       <div ref={mapRef} className="w-full h-full rounded-[0px]" style={{ minHeight: '100%' }} />
       {/* 标记模式：显示中心定位大头针 - 放在上半部分地图的中心（黄金分割点） */}
       {mode === 'mark' && (
-        <div className="absolute top-[31%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[1000]">
+        <div className="absolute top-[31%] left-1/2 -translate-x-1/2 -translate-y-full pointer-events-none z-[1000]">
           <div className="relative animate-bounce-slow">
             {/* 橙红色手绘地图定位大头针 */}
             <img 
@@ -392,13 +427,12 @@ export const LeafletMap = ({
               style={{
                 width: '64px',
                 height: '64px',
-                filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))',
-                transform: 'translateY(-8px)'
+                filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
               }}
             />
             {/* 底部阴影圆点 */}
             <div 
-              className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-1.5 bg-black/40 rounded-full blur-sm"
+              className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-2 bg-black/40 rounded-full blur-[2px]"
             />
           </div>
         </div>

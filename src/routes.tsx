@@ -2,6 +2,7 @@ import MapView from './pages/MapView';
 import ListView from './pages/ListView';
 import PlaceDetail from './pages/PlaceDetail';
 import MarkPlace from './pages/MarkPlace';
+import PlaygroundMarkPlace from './pages/PlaygroundMarkPlace';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import type { ReactNode } from 'react';
@@ -44,6 +45,11 @@ export const routes: RouteConfig[] = [
     name: '标记地点',
     path: '/mark',
     element: <MarkPlace />,
+  },
+  {
+    name: '录入实验场',
+    path: '/playground/mark',
+    element: <PlaygroundMarkPlace />,
   },
   {
     name: '个人页面',

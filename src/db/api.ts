@@ -254,3 +254,54 @@ export const updateUserAvatar = async (userId: string, avatarUrl: string): Promi
 
   return true;
 };
+
+/**
+ * 更新用户名
+ */
+export const updateUserName = async (userId: string, userName: string): Promise<boolean> => {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ user_name: userName })
+    .eq('id', userId);
+
+  if (error) {
+    console.error('更新用户名失败:', error);
+    return false;
+  }
+
+  return true;
+};
+
+/**
+ * 切换点赞状态
+ */
+export const toggleUpvote = async (recommendationId: string, userId: string): Promise<{ success: boolean; isUpvoted: boolean }> => {
+  try {
+    const { data: existingLike } = await supabase
+      .from('upvotes')
+      .select('*')
+      .eq('recommendation_id', recommendationId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existingLike) {
+      const { error } = await supabase
+        .from('upvotes')
+        .delete()
+        .eq('id', existingLike.id);
+        
+      if (error) throw error;
+      return { success: true, isUpvoted: false };
+    } else {
+      const { error } = await supabase
+        .from('upvotes')
+        .insert({ recommendation_id: recommendationId, user_id: userId });
+        
+      if (error) throw error;
+      return { success: true, isUpvoted: true };
+    }
+  } catch (error) {
+    console.error('切换点赞状态失败:', error);
+    return { success: false, isUpvoted: false };
+  }
+};

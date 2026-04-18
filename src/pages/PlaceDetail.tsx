@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getRecommendationsByPlace, deleteRecommendation } from '@/db/api';
+import { getRecommendationsByPlace, deleteRecommendation, toggleUpvote } from '@/db/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Recommendation } from '@/types/types';
 import { getCategoryIconUrl, getCategoryColor } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Heart } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import {
@@ -35,6 +35,7 @@ export default function PlaceDetail() {
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedRecommendation, setSelectedRecommendation] = useState<Recommendation | null>(null);
+  const [localUpvotes, setLocalUpvotes] = useState<Record<string, { count: number, isUpvoted: boolean }>>({});
 
   useEffect(() => {
     if (placeName) {
@@ -46,8 +47,58 @@ export default function PlaceDetail() {
     if (!placeName) return;
     setLoading(true);
     const data = await getRecommendationsByPlace(decodeURIComponent(placeName));
+    
+    // 初始化点赞状态
+    const upvotesState: Record<string, { count: number, isUpvoted: boolean }> = {};
+    data.forEach(rec => {
+      const upvotes = rec.upvotes || [];
+      upvotesState[rec.id] = {
+        count: upvotes.length,
+        isUpvoted: user ? upvotes.some(u => u.user_id === user.id) : false
+      };
+    });
+    setLocalUpvotes(upvotesState);
+    
     setRecommendations(data);
     setLoading(false);
+  };
+
+  const handleUpvote = async (recId: string) => {
+    if (!user) {
+      toast.error('请先登录后再点赞');
+      navigate('/profile');
+      return;
+    }
+
+    // 乐观更新（前端先变状态，再去后台请求）
+    setLocalUpvotes(prev => {
+      const current = prev[recId];
+      if (!current) return prev;
+      return {
+        ...prev,
+        [recId]: {
+          count: current.isUpvoted ? current.count - 1 : current.count + 1,
+          isUpvoted: !current.isUpvoted
+        }
+      };
+    });
+
+    const { success, isUpvoted } = await toggleUpvote(recId, user.id);
+    
+    if (!success) {
+      toast.error('点赞失败');
+      // 如果失败，回退状态
+      setLocalUpvotes(prev => {
+        const current = prev[recId];
+        return {
+          ...prev,
+          [recId]: {
+            count: current.isUpvoted ? current.count - 1 : current.count + 1,
+            isUpvoted: !current.isUpvoted
+          }
+        };
+      });
+    }
   };
 
   const handleDeleteClick = (recommendation: Recommendation) => {
@@ -223,6 +274,23 @@ export default function PlaceDetail() {
                       ))}
                     </div>
                   )}
+
+                  {/* 帖子底部操作栏：点赞等 */}
+                  <div className="pt-2 flex justify-end">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`rounded-full px-3 press-feedback ${localUpvotes[rec.id]?.isUpvoted ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`}
+                      onClick={() => handleUpvote(rec.id)}
+                    >
+                      <Heart 
+                        className={`w-4 h-4 mr-1.5 ${localUpvotes[rec.id]?.isUpvoted ? 'fill-primary' : ''}`} 
+                      />
+                      <span className="font-medium text-sm">
+                        {localUpvotes[rec.id]?.count > 0 ? localUpvotes[rec.id].count : '+1'}
+                      </span>
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

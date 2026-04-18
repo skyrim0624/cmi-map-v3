@@ -1,5 +1,5 @@
 // 分类类型
-export type Category = '吃饭' | '咖啡' | '户外' | '拍照' | '市集' | '放松' | '运动' | '彩蛋' | '酒吧' | '身心' | '生活';
+export type Category = '吃饭' | '咖啡' | '户外' | '拍照' | '市集' | '马杀鸡' | '运动' | '酒吧' | '身心' | '生存指南' | '彩蛋';
 
 // 用户角色类型
 export type UserRole = 'user' | 'admin';
@@ -27,6 +27,7 @@ export interface Recommendation {
   longitude: number;
   images: string[];
   created_at: string;
+  upvotes?: { user_id: string }[];
 }
 
 // 地图标记点类型
@@ -80,7 +81,7 @@ export const CATEGORIES: CategoryConfig[] = [
     iconUrl: '/categories/5.png'
   },
   { 
-    name: '放松', 
+    name: '马杀鸡', 
     color: 'category-relax', 
     icon: '💆',
     iconUrl: '/categories/6.png'
@@ -90,12 +91,6 @@ export const CATEGORIES: CategoryConfig[] = [
     color: 'category-sport', 
     icon: '🏃',
     iconUrl: '/categories/7.png'
-  },
-  { 
-    name: '彩蛋', 
-    color: 'category-treasure', 
-    icon: '🥚',
-    iconUrl: '/categories/8.png'
   },
   { 
     name: '酒吧', 
@@ -110,10 +105,16 @@ export const CATEGORIES: CategoryConfig[] = [
     iconUrl: '/categories/10.png'
   },
   { 
-    name: '生活', 
+    name: '生存指南', 
     color: 'category-utility', 
     icon: '🔧',
     iconUrl: '/categories/11.png'
+  },
+  { 
+    name: '彩蛋', 
+    color: 'category-treasure', 
+    icon: '🥚',
+    iconUrl: '/categories/8.png'
   }
 ];
 

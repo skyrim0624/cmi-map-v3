@@ -124,9 +124,16 @@ export default function ListView() {
                     </p>
 
                     {/* 地点名称和推荐人 */}
-                    <p className="text-sm text-muted-foreground">
-                      📍 {rec.place_name} —— {rec.user_name}
-                    </p>
+                    <div className="flex justify-between items-center mt-2">
+                      <p className="text-sm text-muted-foreground line-clamp-1">
+                        📍 {rec.place_name} —— {rec.user_name}
+                      </p>
+                      {rec.upvotes && rec.upvotes.length > 0 && (
+                        <div className="flex items-center gap-1 text-primary text-sm font-medium bg-primary/10 px-2 py-0.5 rounded-full shrink-0 ml-2">
+                          🔥 +{rec.upvotes.length}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

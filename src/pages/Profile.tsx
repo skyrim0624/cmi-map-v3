@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getRecommendationsByUserId, deleteRecommendation, uploadAvatar, updateUserAvatar } from '@/db/api';
+import { getRecommendationsByUserId, deleteRecommendation, uploadAvatar, updateUserAvatar, updateUserName } from '@/db/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Recommendation } from '@/types/types';
 import { getCategoryIconUrl } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, LogOut, Trash2, Camera } from 'lucide-react';
+import { ArrowLeft, LogOut, Trash2, Camera, Pencil, Check, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import {
@@ -28,6 +28,9 @@ export default function Profile() {
   const [uploading, setUploading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedRecommendation, setSelectedRecommendation] = useState<Recommendation | null>(null);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [savingName, setSavingName] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -75,6 +78,31 @@ export default function Profile() {
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleEditNameClick = () => {
+    setNewName(displayName);
+    setIsEditingName(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingName(false);
+  };
+
+  const handleSaveName = async () => {
+    if (!newName.trim() || !user) return;
+    setSavingName(true);
+    const success = await updateUserName(user.id, newName.trim());
+    if (success) {
+      toast.success('昵称修改成功');
+      if (refreshProfile) {
+        await refreshProfile();
+      }
+      setIsEditingName(false);
+    } else {
+      toast.error('修改失败，请重试');
+    }
+    setSavingName(false);
   };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -188,10 +216,49 @@ export default function Profile() {
                 onChange={handleAvatarChange}
               />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
-            {user?.email && (
-              <p className="text-sm text-muted-foreground">{user.email}</p>
-            )}
+            
+            <div className="flex items-center gap-2 mt-2">
+              {isEditingName ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    className="text-2xl font-bold text-center text-foreground bg-transparent border-b-2 border-foreground focus:outline-none w-40"
+                    autoFocus
+                    disabled={savingName}
+                  />
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="w-8 h-8 rounded-full text-green-600 press-feedback" 
+                    onClick={handleSaveName}
+                    disabled={savingName}
+                  >
+                    <Check className="w-5 h-5" />
+                  </Button>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="w-8 h-8 rounded-full text-red-500 press-feedback" 
+                    onClick={handleCancelEdit}
+                    disabled={savingName}
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 pt-1 pb-1">
+                  <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
+                  <button 
+                    onClick={handleEditNameClick}
+                    className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* 统计数据 */}
