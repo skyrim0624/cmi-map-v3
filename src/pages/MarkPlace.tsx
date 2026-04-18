@@ -383,9 +383,9 @@ export default function MarkPlace() {
 
       {/* STAGE 2 - 5: Content Flow */}
       {stage !== 'camera' && photoURL && (
-        <div className="w-full max-w-lg min-h-screen relative p-6 pt-24 pb-32 flex flex-col items-center">
+        <div className="w-full max-w-lg min-h-screen relative p-4 pt-14 pb-24 flex flex-col items-center">
           
-          <div className={`relative w-full aspect-[4/5] bg-white p-3 pb-16 rounded-sm shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${stage === 'analyzing' ? 'scale-95 rotate-1' : 'scale-100 rotate-[-1deg]'}`}>
+          <div className={`relative w-full aspect-[4/5] bg-white p-3 pb-14 rounded-sm shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${stage === 'analyzing' ? 'scale-95 rotate-1' : 'scale-100 rotate-[-1deg]'}`}>
             <div className="w-full h-full relative overflow-hidden bg-stone-200 rounded-sm">
               <img src={photoURL} className="w-full h-full object-cover" alt="Captured" />
               
@@ -447,7 +447,7 @@ export default function MarkPlace() {
             )}
           </div>
 
-          <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-stone-100 via-stone-100 to-transparent flex flex-col items-center pb-safe">
+          <div className="fixed bottom-0 left-0 right-0 p-4 pt-3 bg-gradient-to-t from-stone-100 via-stone-100 to-transparent flex flex-col items-center pb-safe">
             
             {stage === 'map_fallback' && (
                <div className="w-full flex flex-col gap-3 pb-6 animate-in slide-in-from-bottom-10 fade-in">
@@ -465,7 +465,7 @@ export default function MarkPlace() {
             )}
 
             {stage === 'voice' && (
-              <div className="w-full flex flex-col items-center gap-6 pb-6 animate-in slide-in-from-bottom-10 fade-in duration-500">
+              <div className="w-full flex flex-col items-center gap-4 pb-4 animate-in slide-in-from-bottom-10 fade-in duration-500">
                 <p className="text-stone-500 font-medium tracking-widest uppercase text-xs">
                   {description ? 'Want to say more?' : 'Tap to whisper a memory'}
                 </p>
