@@ -1,32 +1,64 @@
 # CMI Map 在清迈，跟着社区走
 
-CMI Map 是一个由清迈数字游民社区（CMI）共建的本地探索指南。这是一个主张「手绘波普风、原始生命力、反精英主义」的 Neo-Brutalist 极简地图应用。从找一家能专心敲代码的咖啡馆，到发现隐藏在街角的便宜泰餐，这里记录着数字游民最真实的足迹与偏好。
+CMI Map 是一个由清迈数字游民社区（CMI）共建的本地探索指南。主张「手绘波普风、原始生命力、反精英主义」的 Neo-Brutalist 极简地图应用。从找一家能专心敲代码的咖啡馆，到发现隐藏在街角的便宜泰餐，这里记录着数字游民最真实的足迹与偏好。
+
+🔗 **线上地址**：[cmti.uk](https://cmti.uk)
 
 ## 特色设计与审美（Sketchbook UI）
 
-- **极简与高饱和**：抛弃了平滑渐变与现代高科技感，采用了生硬的高对比纯色搭配（霓虹粉、警示红、颜料黄）以及粗糙的线条边框设定。
-- **手账感互动**：语音录入时不仅有强烈的涂鸦感震动动画，还会像颜料瓶炸裂一样迸发出五彩斑斓的不规则符号（涂鸦十字、斑块、粗糙火星）。
-- **情绪化与非功利**：打破干瘪的分页表单，转而用生动的波普涂鸦、非对称设计来表达在清迈探索的随性。
-
-## 技术栈与开发故事
-
-本项目最初作为 CMI AI Jam 孵化项目进行，借由低代码与 AI 生成式工具的协作快速搭建了雏形：
-- **前端**：React 18 + TypeScript + Vite + Tailwind CSS
-- **地图渲染**：Leaflet + React Leaflet
-- **后端 / 数据库**：Supabase + PostgreSQL
-- **部署**：Cloudflare Pages
+- **极简与高饱和**：抛弃平滑渐变与高科技感，采用「手绘粗描边 + 硬阴影」的 Sticker 审美，搭配手绘分类图标。
+- **手账感互动**：点赞有墨水飞溅、卡片有翻角 Peel 动效、FAB 按钮有弹性硬按压反馈。
+- **情绪化与非功利**：用波普涂鸦、非对称设计来表达在清迈探索的随性。
 
 ## 功能模块
 
-- **共创探索地图 (`/`)**：根据分类展示各种奇妙发现（美食、拍照、运动、涂鸦等）。点击可展开手绘胶囊弹窗查看大家推荐的理由。
-- **足迹流 / 瀑布流 (`/list`)**：一个手账风格的 Timeline，用来浏览最新提交的社区地点与推荐图文。
-- **打点记录 (`/mark-place` / `/mark-recommend`)**：一键拍照、长按语音输入吐槽或感悟，让分享不只是一串冰冷的数据，而是带有温度的日记。
+| 模块 | 路径 | 登录要求 | 说明 |
+|------|------|---------|------|
+| 共创探索地图 | `/` | ❌ 无需登录 | 分类标记点展示，支持 Stardust 星尘缩放切换 |
+| 足迹流 | `/list` | ❌ 无需登录 | 手账风格瀑布流，浏览社区推荐图文 |
+| 地点详情 | `/place/:name` | ❌ 无需登录 | 推荐理由卡片 + Google 导航 / Grab / Bolt 一键打车 |
+| 打点记录 | `/mark` | ✅ 需登录 | 拍照 + 语音输入，标记你的心动坐标 |
+| 个人主页 | `/profile` | ✅ 需登录 | 紧凑横排头部、我的贡献 / 想去清单 / 成就墙 |
+| 🏆 成就系统 | `/profile` → 成就 Tab | ✅ 需登录 | 36 枚手绘徽章，分为品类鉴赏家、地图探索、社区影响力三大系列 |
+
+> **设计理念**：浏览地点和列表不需要登录——允许用户把它当作一个简单的「导航推荐工具」。只有添加推荐、点赞、收藏等互动操作才需要登录。
+
+## 技术栈
+
+- **前端**：React 18 + TypeScript + Vite + Tailwind CSS
+- **地图渲染**：Leaflet + React Leaflet
+- **后端 / 数据库**：Supabase (PostgreSQL + Auth + Storage)
+- **部署**：Cloudflare Pages（推送自动部署）
 
 ## 如何本地运行
 
 ```bash
+# 安装依赖
 pnpm install
+
+# 启动开发服务器
 pnpm exec vite dev
 ```
+
+需要在项目根目录配置 `.env` 文件：
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+## 项目结构
+
+```
+src/
+├── components/       # 通用组件（RouteGuard、BadgeWall、LeafletMap 等）
+├── contexts/         # AuthContext 认证上下文
+├── db/               # Supabase API 交互层
+├── lib/              # 工具函数（badgeUtils 等）
+├── pages/            # 页面组件（MapView、ListView、PlaceDetail、Profile 等）
+├── types/            # 类型定义（Recommendation、Category、Badge 等）
+└── routes.tsx        # 路由配置（含 public 标记）
+```
+
+---
 
 感谢每一位 CMI 成员用脚丈量清迈，用好奇心填满这本「清迈漫游手账」。
