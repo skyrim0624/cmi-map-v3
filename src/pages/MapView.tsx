@@ -8,6 +8,7 @@ import { getCategoryIconUrl, CATEGORIES } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { List, LogIn, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function MapView() {
   const navigate = useNavigate();
@@ -147,7 +148,14 @@ export default function MapView() {
       <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+24px)] left-1/2 -translate-x-1/2 z-20">
         <button
           className="app-fab flex items-center gap-2 bg-primary text-primary-foreground font-bold px-6 py-4 rounded-full border-2 border-foreground"
-          onClick={() => navigate('/mark')}
+          onClick={() => {
+            if (!user) {
+              toast('登录后才能标记地点哦', { description: '注册只需要一个邮箱 ✉️' });
+              navigate('/login', { state: { from: '/mark' } });
+              return;
+            }
+            navigate('/mark');
+          }}
         >
           <Plus className="w-6 h-6" strokeWidth={3} />
           <span>标记新地点</span>

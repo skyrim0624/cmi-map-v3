@@ -70,8 +70,8 @@ export default function PlaceDetail() {
 
   const handleUpvote = async (recId: string) => {
     if (!user) {
-      toast.error('请先登录后再点赞');
-      navigate('/profile');
+      toast('登录后才能点赞哦', { description: '注册只需要一个邮箱 ✉️' });
+      navigate('/login', { state: { from: `/place/${placeName}` } });
       return;
     }
 
@@ -108,8 +108,8 @@ export default function PlaceDetail() {
 
   const handleToggleWishlist = async (recId: string) => {
     if (!user) {
-      toast.error('请先登录后标记想去');
-      navigate('/login');
+      toast('登录后才能收藏地点哦', { description: '注册只需要一个邮箱 ✉️' });
+      navigate('/login', { state: { from: `/place/${placeName}` } });
       return;
     }
     
