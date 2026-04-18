@@ -256,7 +256,9 @@ export const LeafletMap = ({
     const clusterGroup = L.markerClusterGroup({
       showCoverageOnHover: false,
       maxClusterRadius: 50,
+      zoomToBoundsOnClick: false, // 禁止点击后放大地图
       spiderfyOnMaxZoom: true,
+      
       iconCreateFunction: function(cluster) {
         const children = cluster.getAllChildMarkers();
         const count = children.length;
@@ -328,6 +330,11 @@ export const LeafletMap = ({
           iconAnchor: [32, 32]
         });
       }
+    });
+
+    // 绑定点击事件，实现点位散开
+    clusterGroup.on('clusterclick', function (a) {
+      a.layer.spiderfy();
     });
 
     // 添加新标记

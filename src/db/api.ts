@@ -8,7 +8,7 @@ import { compressImage } from '@/utils/imageCompression';
 export const getAllRecommendations = async (): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
-    .select('*, upvotes(user_id)')
+    .select('*, upvotes(user_id), wishlists(user_id)')
     .neq('user_name', '张紫姀') // 暂时屏蔽张紫姀的历史批量录入
     .order('created_at', { ascending: false });
 
@@ -28,7 +28,7 @@ export const getRecommendationsByCategory = async (
 ): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
-    .select('*, upvotes(user_id)')
+    .select('*, upvotes(user_id), wishlists(user_id)')
     .neq('user_name', '张紫姀') // 暂时屏蔽张紫姀的历史批量录入
     .eq('category', category)
     .order('created_at', { ascending: false });
@@ -49,7 +49,7 @@ export const getRecommendationsByUser = async (
 ): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
-    .select('*, upvotes(user_id)')
+    .select('*, upvotes(user_id), wishlists(user_id)')
     .eq('user_name', userName)
     .order('created_at', { ascending: false });
 
@@ -69,7 +69,7 @@ export const getRecommendationsByUserId = async (
 ): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
-    .select('*, upvotes(user_id)')
+    .select('*, upvotes(user_id), wishlists(user_id)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -89,7 +89,7 @@ export const getRecommendationsByPlace = async (
 ): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
-    .select('*, upvotes(user_id)')
+    .select('*, upvotes(user_id), wishlists(user_id)')
     .eq('place_name', placeName)
     .order('created_at', { ascending: false });
 
@@ -239,13 +239,35 @@ export const uploadAvatar = async (file: File, userId: string): Promise<string |
 };
 
 /**
- * 更新用户头像 URL
+ * 确保用户 profile 存在（登录时调用，不存在则自动创建）
+ */
+export const ensureProfile = async (userId: string, fallbackName?: string): Promise<boolean> => {
+  const { data } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (data) return true; // 已存在
+
+  const { error } = await supabase
+    .from('profiles')
+    .insert({ id: userId, user_name: fallbackName || '新用户' });
+
+  if (error) {
+    console.error('创建用户 profile 失败:', error);
+    return false;
+  }
+  return true;
+};
+
+/**
+ * 更新用户头像 URL（upsert：不存在则创建）
  */
 export const updateUserAvatar = async (userId: string, avatarUrl: string): Promise<boolean> => {
   const { error } = await supabase
     .from('profiles')
-    .update({ avatar_url: avatarUrl })
-    .eq('id', userId);
+    .upsert({ id: userId, avatar_url: avatarUrl }, { onConflict: 'id' });
 
   if (error) {
     console.error('更新用户头像失败:', error);
@@ -256,13 +278,12 @@ export const updateUserAvatar = async (userId: string, avatarUrl: string): Promi
 };
 
 /**
- * 更新用户名
+ * 更新用户名（upsert：不存在则创建）
  */
 export const updateUserName = async (userId: string, userName: string): Promise<boolean> => {
   const { error } = await supabase
     .from('profiles')
-    .update({ user_name: userName })
-    .eq('id', userId);
+    .upsert({ id: userId, user_name: userName }, { onConflict: 'id' });
 
   if (error) {
     console.error('更新用户名失败:', error);
@@ -305,3 +326,34 @@ export const toggleUpvote = async (recommendationId: string, userId: string): Pr
     return { success: false, isUpvoted: false };
   }
 };
+import { supabase } from './supabase';
+
+export async function toggleWishlist(recommendationId: string, userId: string): Promise<boolean> {
+  try {
+    const { data: existingWishlist } = await supabase
+      .from('wishlists')
+      .select('*')
+      .eq('recommendation_id', recommendationId)
+      .eq('user_id', userId)
+      .single();
+
+    if (existingWishlist) {
+      const { error } = await supabase
+        .from('wishlists')
+        .delete()
+        .eq('recommendation_id', recommendationId)
+        .eq('user_id', userId);
+      if (error) throw error;
+      return false; // Removed
+    } else {
+      const { error } = await supabase
+        .from('wishlists')
+        .insert([{ recommendation_id: recommendationId, user_id: userId }]);
+      if (error) throw error;
+      return true; // Added
+    }
+  } catch (error) {
+    console.error('Error toggling wishlist:', error);
+    throw error;
+  }
+}

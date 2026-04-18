@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-// @ts-ignore
 import { supabase } from '@/db/supabase';
+import { ensureProfile } from '@/db/api';
 import type { User } from '@supabase/supabase-js';
 // @ts-ignore
 import type { Profile } from '@/types/types';
@@ -54,7 +54,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(({ data: { session } }) => {
         setUser(session?.user ?? null);
         if (session?.user) {
-          getProfile(session.user.id).then(setProfile);
+          // 登录时确保 profile 行存在，再拉取
+          ensureProfile(session.user.id, session.user.email?.split('@')[0])
+            .then(() => getProfile(session.user!.id))
+            .then(setProfile);
         }
       })
       // @ts-ignore
@@ -70,7 +73,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        getProfile(session.user.id).then(setProfile);
+        ensureProfile(session.user.id, session.user.email?.split('@')[0])
+          .then(() => getProfile(session.user!.id))
+          .then(setProfile);
       } else {
         setProfile(null);
       }

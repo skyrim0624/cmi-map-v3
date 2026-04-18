@@ -3,6 +3,7 @@ import ListView from './pages/ListView';
 import PlaceDetail from './pages/PlaceDetail';
 import MarkPlace from './pages/MarkPlace';
 import PlaygroundMarkPlace from './pages/PlaygroundMarkPlace';
+import PlaygroundWishlist from './pages/PlaygroundWishlist';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import type { ReactNode } from 'react';
@@ -50,6 +51,11 @@ export const routes: RouteConfig[] = [
     name: '录入实验场',
     path: '/playground/mark',
     element: <PlaygroundMarkPlace />,
+  },
+  {
+    name: '心愿实验场',
+    path: '/playground/wishlist',
+    element: <PlaygroundWishlist />,
   },
   {
     name: '个人页面',

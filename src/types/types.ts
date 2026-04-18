@@ -28,6 +28,7 @@ export interface Recommendation {
   images: string[];
   created_at: string;
   upvotes?: { user_id: string }[];
+  wishlists?: { user_id: string }[];
 }
 
 // 地图标记点类型

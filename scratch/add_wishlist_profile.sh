@@ -1,3 +1,4 @@
+cat << 'INNER_EOF' > scratch/ProfilePatch.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -192,3 +193,5 @@ export default function Profile() {
     </div>
   );
 }
+INNER_EOF
+cp scratch/ProfilePatch.tsx src/pages/Profile.tsx

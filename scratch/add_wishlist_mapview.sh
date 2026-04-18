@@ -1,3 +1,5 @@
+# Modify MapView to support wishlist filtering
+cat << 'INNER_EOF' > scratch/MapViewPatch.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LeafletMap } from '@/components/map/LeafletMap';
@@ -7,7 +9,7 @@ import type { Recommendation, MapMarker as MapMarkerType } from '@/types/types';
 import { getCategoryIconUrl, CATEGORIES } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { List, LogIn, Plus } from 'lucide-react';
+import { List, LogIn, Plus, Bookmark } from 'lucide-react';
 
 export default function MapView() {
   const navigate = useNavigate();
@@ -17,6 +19,7 @@ export default function MapView() {
   const [selectedMarker, setSelectedMarker] = useState<MapMarkerType | null>(null);
   const [selectedRecommendations, setSelectedRecommendations] = useState<Recommendation[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('全部');
+  const [showWishlistOnly, setShowWishlistOnly] = useState<boolean>(false);
   
   const displayName = profile?.user_name || user?.email?.split('@')[0] || '游客';
 
@@ -69,9 +72,20 @@ export default function MapView() {
   };
 
   // 过滤当前需要显示的标记点
-  const displayedMarkers = activeCategory === '全部' 
-    ? markers 
-    : markers.filter(m => m.category === activeCategory);
+  const displayedMarkers = markers.filter(m => {
+    // 类别过滤
+    const categoryMatch = activeCategory === '全部' || m.category === activeCategory;
+    
+    // 心愿过滤
+    let wishlistMatch = true;
+    if (showWishlistOnly && user) {
+      wishlistMatch = m.recommendations.some(rec => 
+        rec.wishlists && rec.wishlists.some(w => w.user_id === user.id)
+      );
+    }
+    
+    return categoryMatch && wishlistMatch;
+  });
 
   return (
     <div className="relative w-full h-[100dvh] overflow-hidden">
@@ -154,8 +168,22 @@ export default function MapView() {
         </button>
       </div>
 
-      {/* 左下角用户头像/登录按钮 - 与发帖按钮持平 */}
-      <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+24px)] left-4 md:left-6 z-20">
+      {/* 左下角用户空间：头像与心愿单合一 */}
+      <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+24px)] left-4 md:left-6 z-20 flex flex-col gap-3">
+        {user && (
+          <button
+            onClick={() => {
+              setShowWishlistOnly(!showWishlistOnly);
+              setSelectedMarker(null);
+            }}
+            className={`w-12 h-12 flex items-center justify-center rounded-full press-feedback transition-all shadow-[3px_4px_0px_rgba(0,0,0,0.25)] hover:shadow-[2px_3px_0px_rgba(0,0,0,0.25)] hover:translate-y-[1px] border-2 border-foreground ${
+              showWishlistOnly ? 'bg-[#ffebee] text-[#f43f5e]' : 'bg-background text-stone-600'
+            }`}
+          >
+            <Bookmark className={`w-5 h-5 ${showWishlistOnly ? 'fill-current' : ''}`} strokeWidth={2} />
+          </button>
+        )}
+        
         {user ? (
           <Button
             variant="ghost"
@@ -165,9 +193,9 @@ export default function MapView() {
           >
             <Avatar className="w-full h-full">
               {profile?.avatar_url && (
-                <AvatarImage src={profile.avatar_url} alt={displayName} />
+                <AvatarImage src={profile.avatar_url} alt={displayName} className="object-cover" />
               )}
-              <AvatarFallback className="bg-primary text-primary-foreground font-bold">
+              <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">
                 {displayName.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -176,7 +204,7 @@ export default function MapView() {
           <Button
             variant="default"
             size="sm"
-            className="rounded-full press-feedback shadow-lg border-2 border-foreground font-bold"
+            className="rounded-full press-feedback shadow-lg h-12 px-6"
             onClick={() => navigate('/login')}
           >
             <LogIn className="w-4 h-4 mr-2" />
@@ -185,61 +213,68 @@ export default function MapView() {
         )}
       </div>
 
-      {/* 预览卡片 - z-index 最高 */}
-      {selectedMarker && selectedRecommendations.length > 0 && (
-        <div
-          className="absolute bottom-0 left-0 right-0 z-50 bg-card rounded-t-3xl p-6 card-shadow slide-up cursor-pointer press-feedback border-t border-border/20"
+      {/* 底部信息预览卡片 */}
+      {selectedMarker && (
+        <div 
+          className="absolute bottom-[calc(env(safe-area-inset-bottom)+100px)] left-4 right-4 md:left-auto md:right-6 md:w-96 z-20 card-shadow cursor-pointer slide-up"
           onClick={handleCardClick}
         >
-          <div className="space-y-4">
-            {/* 推荐理由 */}
-            <p className="quote-text text-lg leading-relaxed text-foreground">
-              {selectedRecommendations[0].reason}
-            </p>
-
-            {/* 地点名称和分类 */}
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center p-1.5 border border-border/50">
-                <img src={getCategoryIconUrl(selectedMarker.category)} alt="" className="w-full h-full object-contain" />
-              </div>
-              <span className="text-base font-black text-foreground">
-                {selectedMarker.place_name}
-              </span>
-            </div>
-
-            {/* 推荐人 */}
-            <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <span className="w-8 border-t border-muted-foreground/30"></span> 
-              {selectedRecommendations[0].user_name}
-            </p>
-
-            {/* 缩略图 */}
-            {selectedRecommendations[0].images.length > 0 && (
-              <div className="flex gap-2">
-                {selectedRecommendations[0].images.slice(0, 3).map((img, idx) => (
-                  <div key={idx} className="w-16 h-16 rounded-lg overflow-hidden border border-border shadow-sm">
+          <div className="bg-card rounded-2xl p-4 overflow-hidden relative">
+            <div className="flex items-start gap-4">
+              <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0 bg-muted">
+                {selectedRecommendations[0]?.images?.[0] ? (
+                  <img
+                    src={selectedRecommendations[0].images[0]}
+                    alt={selectedMarker.place_name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-secondary/30">
                     <img
-                      src={img}
-                      alt=""
-                      className="w-full h-full object-cover"
+                      src={getCategoryIconUrl(selectedMarker.category)}
+                      alt={selectedMarker.category}
+                      className="w-8 h-8 opacity-50"
                     />
                   </div>
-                ))}
+                )}
               </div>
-            )}
-
-            {/* 多人推荐提示 */}
-            {selectedRecommendations.length > 1 && (
-              <div className="pt-2 border-t border-border/50">
-                <p className="text-xs font-semibold text-muted-foreground/80">
-                  还有 {selectedRecommendations.length - 1} 人推荐了这里
+              <div className="flex-1 min-w-0 py-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <img
+                    src={getCategoryIconUrl(selectedMarker.category)}
+                    alt={selectedMarker.category}
+                    className="w-4 h-4"
+                  />
+                  <h3 className="font-bold text-base truncate pr-2">
+                    {selectedMarker.place_name}
+                  </h3>
+                </div>
+                <p className="text-sm text-muted-foreground line-clamp-2 pr-2 mb-2">
+                  {selectedRecommendations[0]?.reason}
                 </p>
+                
+                {/* 社交信息行 */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">
+                      {selectedRecommendations.length}
+                    </span>
+                    <span>条推荐</span>
+                  </div>
+                  
+                  {user && selectedRecommendations.some(r => r.wishlists?.some(w => w.user_id === user.id)) && (
+                    <div className="flex items-center gap-1 bg-[#ffebee]/50 text-[#f43f5e] px-1.5 py-0.5 rounded text-xs font-medium border border-[#ffebee]">
+                      <Bookmark className="w-3 h-3 fill-current" /> 想去
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
     </div>
   );
 }
-
+INNER_EOF
+cp scratch/MapViewPatch.tsx src/pages/MapView.tsx

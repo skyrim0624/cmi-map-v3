@@ -1,3 +1,4 @@
+cat << 'INNER_EOF' > scratch/PlaceDetailPatch.tsx
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getRecommendationsByPlaceName, toggleUpvote, toggleWishlist } from '@/db/api';
@@ -269,3 +270,5 @@ export default function PlaceDetail() {
     </div>
   );
 }
+INNER_EOF
+cp scratch/PlaceDetailPatch.tsx src/pages/PlaceDetail.tsx
