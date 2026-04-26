@@ -194,11 +194,14 @@ export default function Profile() {
             )}
             <div className="flex-1 min-w-0 space-y-1.5">
               <p className="text-sm leading-relaxed line-clamp-2">"{rec.reason}"</p>
-              <div className="flex justify-between items-center flex-wrap gap-2">
-                <p className="text-xs text-muted-foreground line-clamp-1 flex-1 min-w-0 pr-2">
-                  📍 {rec.place_name} <span className="mx-0.5 opacity-50">|</span> {rec.user_name}
+              <div className="space-y-1.5">
+                <p className="text-xs text-muted-foreground truncate whitespace-nowrap">
+                  <span className="mr-1">📍</span>
+                  <span>{rec.place_name}</span>
+                  <span className="mx-0.5 opacity-50">|</span>
+                  <span>{rec.user_name}</span>
                 </p>
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                   {/* 聚合排序前3的贴纸印章 */}
                   {getTopStickers(rec.placed_stickers).map((ts) => (
                     <div key={ts.sticker.id} className="flex items-center bg-accent/40 rounded-full px-1.5 py-0.5 border border-border/50 backdrop-blur-sm">

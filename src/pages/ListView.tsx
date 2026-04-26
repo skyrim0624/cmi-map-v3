@@ -140,18 +140,19 @@ export default function ListView() {
                       "{rec.reason}"
                     </p>
 
-                    {/* 地点名称和推荐人 */}
-                    <div className="flex justify-between items-center mt-2 flex-wrap gap-2">
-                      <p className="text-sm text-muted-foreground line-clamp-1 flex-1 min-w-0 flex items-center pr-2">
-                        📍 {rec.place_name} 
-                        <span className="mx-1 text-muted-foreground/30">|</span> 
-                        <span className="truncate">{rec.user_name}</span>
+                    {/* 地点名称、推荐人和互动计数 */}
+                    <div className="mt-2 space-y-2">
+                      <p className="text-sm text-muted-foreground truncate whitespace-nowrap">
+                        <span className="mr-1">📍</span>
+                        <span>{rec.place_name}</span>
+                        <span className="mx-1 text-muted-foreground/30">|</span>
+                        <span>{rec.user_name}</span>
                       </p>
                       
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                         {/* 聚合排序前3的贴纸印章 */}
                         {getTopStickers(rec.placed_stickers).map((ts) => (
-                          <div key={ts.sticker.id} className="flex items-center bg-accent/40 rounded-full px-1.5 py-0.5 border border-border/50 backdrop-blur-sm px-2">
+                          <div key={ts.sticker.id} className="flex items-center bg-accent/40 rounded-full px-2 py-0.5 border border-border/50 backdrop-blur-sm">
                             <img src={ts.sticker.icon_url} alt="" className="w-3.5 h-3.5 object-contain mr-1 filter saturate-[0.8]" style={{ mixBlendMode: 'multiply' }} />
                             <span className="text-[10px] font-bold text-muted-foreground ml-0.5">{ts.count}</span>
                           </div>
