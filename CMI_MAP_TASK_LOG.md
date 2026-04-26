@@ -69,6 +69,8 @@
 - 定位原因：列表容器移动端横向 padding 较大，卡片 hover 翘角/旋转效果在手机浏览器中仍参与布局视觉边界，叠加内容区未完全限制宽度。
 - 修复方案：`ListView` 列表容器改为移动端安全宽度；列表卡片与右侧内容增加 `max-width`、`min-width: 0` 和溢出控制；桌面端纸张翘角/hover 效果仅在鼠标设备上启用。
 - 已通过 `pnpm exec tsgo -p tsconfig.check.json`、`pnpm build`、`pnpm lint`。
+- 已提交并推送：`ec84c1d Fix mobile list card overflow`。
+- 已部署 Cloudflare Pages：`https://8d6ccfa2.cmi-map.pages.dev`，自定义域名 `https://cmti.uk` 返回 200。
 
 ## 验证记录
 
