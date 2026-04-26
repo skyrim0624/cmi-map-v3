@@ -71,6 +71,9 @@
 - 已通过 `pnpm exec tsgo -p tsconfig.check.json`、`pnpm build`、`pnpm lint`。
 - 已提交并推送：`ec84c1d Fix mobile list card overflow`。
 - 已部署 Cloudflare Pages：`https://8d6ccfa2.cmi-map.pages.dev`，自定义域名 `https://cmti.uk` 返回 200。
+- 线上移动端截图复验后发现仍有横向撑宽；进一步定位为 Radix `ScrollArea` 的内部包装在长内容下扩大列表宽度。
+- 二次修复：列表页改用普通纵向滚动容器，并显式禁止横向滚动，保留卡片内部宽度保护。
+- 本地生产包手机宽度截图复验通过：卡片右边框完整显示，长文案在卡片内截断。
 
 ## 验证记录
 

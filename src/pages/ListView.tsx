@@ -7,7 +7,6 @@ import { CATEGORIES, getCategoryIconUrl } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowLeft, LogIn } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function ListView() {
   const navigate = useNavigate();
@@ -104,7 +103,7 @@ export default function ListView() {
       </div>
 
       {/* 推荐列表 */}
-      <ScrollArea className="h-[calc(100vh-180px)]">
+      <div className="h-[calc(100vh-180px)] w-full overflow-y-auto overflow-x-hidden">
         <div className="w-full max-w-full space-y-4 px-4 py-6">
           {recommendations.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
@@ -172,7 +171,7 @@ export default function ListView() {
             ))
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* 底部中央用户头像/登录按钮 */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
