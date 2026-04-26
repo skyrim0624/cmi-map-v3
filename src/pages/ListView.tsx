@@ -105,7 +105,7 @@ export default function ListView() {
 
       {/* 推荐列表 */}
       <ScrollArea className="h-[calc(100vh-180px)]">
-        <div className="p-6 space-y-4">
+        <div className="w-full max-w-full space-y-4 px-4 py-6">
           {recommendations.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               暂无推荐
@@ -114,10 +114,10 @@ export default function ListView() {
             recommendations.map((rec) => (
               <div
                 key={rec.id}
-                className="app-list-card bg-card p-4 border-2 border-foreground cursor-pointer"
+                className="app-list-card w-full max-w-full overflow-hidden bg-card p-4 border-2 border-foreground cursor-pointer"
                 onClick={() => navigate(`/place/${encodeURIComponent(rec.place_name)}`)}
               >
-                <div className="flex gap-4">
+                <div className="flex min-w-0 gap-4">
                   {/* 左侧图片或图标 */}
                   <div className="flex-shrink-0">
                     {rec.images.length > 0 ? (
@@ -134,9 +134,9 @@ export default function ListView() {
                   </div>
 
                   {/* 右侧内容 */}
-                  <div className="flex-1 min-w-0 space-y-2">
+                  <div className="min-w-0 flex-1 space-y-2 overflow-hidden">
                     {/* 推荐理由 */}
-                    <p className="text-base leading-relaxed text-foreground line-clamp-2">
+                    <p className="text-base leading-relaxed text-foreground line-clamp-2 break-words">
                       "{rec.reason}"
                     </p>
 
