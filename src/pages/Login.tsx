@@ -15,6 +15,7 @@ export default function Login() {
   
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
+  const [userName, setUserName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -35,6 +36,11 @@ export default function Login() {
     }
 
     if (!isLogin) {
+      if (!userName.trim()) {
+        toast.error('请输入昵称');
+        return;
+      }
+
       if (password !== confirmPassword) {
         toast.error('两次输入的密码不一致');
         return;
@@ -63,7 +69,7 @@ export default function Login() {
         navigate(from, { replace: true });
       } else {
         // 注册
-        const { error } = await signUpWithEmail(email, password);
+        const { error } = await signUpWithEmail(email, password, userName.trim());
         if (error) {
           toast.error(`注册失败: ${error.message}`);
           return;
@@ -110,6 +116,21 @@ export default function Login() {
                 disabled={loading}
               />
             </div>
+
+            {!isLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="userName">昵称</Label>
+                <Input
+                  id="userName"
+                  type="text"
+                  placeholder="你希望社区怎么称呼你"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  disabled={loading}
+                  maxLength={24}
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="password">密码</Label>
@@ -170,6 +191,7 @@ export default function Login() {
                 type="button"
                 onClick={() => {
                   setIsLogin(!isLogin);
+                  setUserName('');
                   setConfirmPassword('');
                   setAgreedToTerms(false);
                 }}

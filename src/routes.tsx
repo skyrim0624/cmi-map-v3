@@ -1,12 +1,13 @@
-import MapView from './pages/MapView';
-import ListView from './pages/ListView';
-import PlaceDetail from './pages/PlaceDetail';
-import MarkPlace from './pages/MarkPlace';
-import PlaygroundMarkPlace from './pages/PlaygroundMarkPlace';
-import PlaygroundWishlist from './pages/PlaygroundWishlist';
-import Profile from './pages/Profile';
-import Login from './pages/Login';
-import type { ReactNode } from 'react';
+import { lazy, type ReactNode } from 'react';
+
+const MapView = lazy(() => import('./pages/MapView'));
+const ListView = lazy(() => import('./pages/ListView'));
+const PlaceDetail = lazy(() => import('./pages/PlaceDetail'));
+const MarkPlace = lazy(() => import('./pages/MarkPlace'));
+const PlaygroundMarkPlace = lazy(() => import('./pages/PlaygroundMarkPlace'));
+const PlaygroundWishlist = lazy(() => import('./pages/PlaygroundWishlist'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Login = lazy(() => import('./pages/Login'));
 
 export interface RouteConfig {
   name: string;

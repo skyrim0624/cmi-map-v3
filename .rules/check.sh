@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if ! command -v ast-grep >/dev/null 2>&1; then
+    echo "ast-grep not found; skipping custom AST rule scan."
+    exit 0
+fi
+
 ast-grep scan -r .rules/SelectItem.yml
 
 ast-grep scan -r .rules/contrast.yml

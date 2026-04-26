@@ -50,5 +50,17 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("leaflet")) return "map-vendor";
+          if (id.includes("@supabase")) return "supabase-vendor";
+          if (id.includes("@radix-ui")) return "radix-vendor";
+          if (id.includes("lucide-react")) return "icons-vendor";
+          return "vendor";
+        },
+      },
+    },
   },
 });

@@ -41,6 +41,8 @@ export const LeafletMap = ({
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null);
   const userLocationMarkerRef = useRef<L.Marker | null>(null);
   const onCenterChangeRef = useRef(onCenterChange);
+  const orientationHandlerRef = useRef<((event: DeviceOrientationEvent) => void) | null>(null);
+  const markerIconUrlsRef = useRef(new WeakMap<L.Marker, string>());
   const userHeadingRef = useRef<number>(0); // 用户朝向角度
 
   // 更新回调引用
@@ -94,9 +96,7 @@ export const LeafletMap = ({
     // 添加地图点击事件
     if (mode === 'mark') {
       // 标记模式：点击地图移动到点击位置（目标位置在视口靠上 31% 的位置）
-      console.log('标记模式：添加点击事件监听器');
       map.on('click', (e: L.LeafletMouseEvent) => {
-        console.log('地图点击事件触发:', e.latlng);
         const mapSize = map.getSize();
         const targetPoint = L.point(mapSize.x / 2, mapSize.y * 0.31);
         const offset = e.containerPoint.subtract(targetPoint);
@@ -210,7 +210,8 @@ export const LeafletMap = ({
               };
 
               if (typeof DeviceOrientationEvent !== 'undefined') {
-                window.addEventListener('deviceorientationabsolute', handleOrientation as any);
+                orientationHandlerRef.current = handleOrientation;
+                window.addEventListener('deviceorientationabsolute' as keyof WindowEventMap, handleOrientation as EventListener);
                 window.addEventListener('deviceorientation', handleOrientation);
               }
 
@@ -219,11 +220,11 @@ export const LeafletMap = ({
                 map.setView([userLat, userLng], 15);
               }
             } catch (error) {
-              console.log('设置用户位置标记失败', error);
+              console.debug('设置用户位置标记失败', error);
             }
           },
           (error) => {
-            console.log('无法获取位置，使用默认位置', error);
+            console.debug('无法获取位置，使用默认位置', error);
           }
         );
       }
@@ -231,9 +232,10 @@ export const LeafletMap = ({
 
     return () => {
       // 清理设备方向监听器
-      if (typeof DeviceOrientationEvent !== 'undefined') {
-        window.removeEventListener('deviceorientationabsolute', () => {});
-        window.removeEventListener('deviceorientation', () => {});
+      if (typeof DeviceOrientationEvent !== 'undefined' && orientationHandlerRef.current) {
+        window.removeEventListener('deviceorientationabsolute' as keyof WindowEventMap, orientationHandlerRef.current as EventListener);
+        window.removeEventListener('deviceorientation', orientationHandlerRef.current);
+        orientationHandlerRef.current = null;
       }
       
       if (userLocationMarkerRef.current) {
@@ -283,7 +285,7 @@ export const LeafletMap = ({
         ];
         
         displayMarkers.forEach((m, idx) => {
-          const url = (m as any).iconUrl || ''; 
+          const url = markerIconUrlsRef.current.get(m) || ''; 
           htmlContent += `
             <div style="
               position: absolute;
@@ -446,7 +448,7 @@ export const LeafletMap = ({
       });
 
       const marker = L.marker([markerData.latitude, markerData.longitude], { icon });
-      (marker as any).iconUrl = iconUrl;
+      markerIconUrlsRef.current.set(marker, iconUrl);
 
       // 添加点击事件
       if (onMarkerClick) {

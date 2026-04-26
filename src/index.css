@@ -151,6 +151,14 @@ All colors MUST be HSL.
     opacity: 0.8;
     transition: all 0.2s;
   }
+
+  .duration-400 {
+    transition-duration: 400ms;
+  }
+
+  .ease-soft-out {
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
   
   /* 翻转动画 */
   .flip-y {

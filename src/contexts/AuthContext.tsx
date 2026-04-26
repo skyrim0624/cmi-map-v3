@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { supabase } from '@/db/supabase';
 import { ensureProfile } from '@/db/api';
 import type { User } from '@supabase/supabase-js';
-// @ts-ignore
 import type { Profile } from '@/types/types';
 import { toast } from 'sonner';
 
@@ -24,12 +23,17 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUpWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUpWithEmail: (email: string, password: string, userName?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const getFallbackName = (user: User) =>
+  typeof user.user_metadata?.user_name === 'string' && user.user_metadata.user_name.trim()
+    ? user.user_metadata.user_name.trim()
+    : user.email?.split('@')[0];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -50,31 +54,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase
       .auth
       .getSession()
-      // @ts-ignore
       .then(({ data: { session } }) => {
         setUser(session?.user ?? null);
         if (session?.user) {
           // 登录时确保 profile 行存在，再拉取
-          ensureProfile(session.user.id, session.user.email?.split('@')[0])
-            .then(() => getProfile(session.user!.id))
+          const fallbackName = getFallbackName(session.user);
+          ensureProfile(session.user.id, fallbackName, session.user.email)
+            .then(() => getProfile(session.user.id))
             .then(setProfile);
         }
       })
-      // @ts-ignore
-      .catch(error => {
+      .catch((error: Error) => {
         toast.error(`获取用户信息失败: ${error.message}`);
       })
       .finally(() => {
         setLoading(false);
       });
 
-    // @ts-ignore
     // In this function, do NOT use any await calls. Use `.then()` instead to avoid deadlocks.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        ensureProfile(session.user.id, session.user.email?.split('@')[0])
-          .then(() => getProfile(session.user!.id))
+        const fallbackName = getFallbackName(session.user);
+        ensureProfile(session.user.id, fallbackName, session.user.email)
+          .then(() => getProfile(session.user.id))
           .then(setProfile);
       } else {
         setProfile(null);
@@ -98,11 +101,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUpWithEmail = async (email: string, password: string) => {
+  const signUpWithEmail = async (email: string, password: string, userName?: string) => {
     try {
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            user_name: userName,
+          },
+        },
       });
 
       if (error) throw error;

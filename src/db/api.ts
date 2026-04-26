@@ -241,7 +241,7 @@ export const uploadAvatar = async (file: File, userId: string): Promise<string |
 /**
  * 确保用户 profile 存在（登录时调用，不存在则自动创建）
  */
-export const ensureProfile = async (userId: string, fallbackName?: string): Promise<boolean> => {
+export const ensureProfile = async (userId: string, fallbackName?: string, email?: string): Promise<boolean> => {
   const { data } = await supabase
     .from('profiles')
     .select('id')
@@ -252,7 +252,7 @@ export const ensureProfile = async (userId: string, fallbackName?: string): Prom
 
   const { error } = await supabase
     .from('profiles')
-    .insert({ id: userId, user_name: fallbackName || '新用户' });
+    .insert({ id: userId, user_name: fallbackName || '新用户', email: email ?? null });
 
   if (error) {
     console.error('创建用户 profile 失败:', error);
@@ -334,7 +334,7 @@ export async function toggleWishlist(recommendationId: string, userId: string): 
       .select('*')
       .eq('recommendation_id', recommendationId)
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (existingWishlist) {
       const { error } = await supabase

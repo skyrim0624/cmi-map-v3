@@ -500,7 +500,7 @@ export default function PlaceDetail() {
       </ScrollArea>
 
       {/* 底部导航按钮 */}
-      <div className="fixed bottom-0 left-0 right-0 px-5 py-4 bg-background/95 backdrop-blur-md border-t border-border/30">
+      <div className="absolute bottom-0 left-0 right-0 z-50 px-5 py-4 bg-background/95 backdrop-blur-md border-t border-border/30">
         <div className="flex items-center gap-2">
           {/* Google Maps - 主按钮 */}
           <button
@@ -556,7 +556,7 @@ export default function PlaceDetail() {
 
       {/* 贴纸选择抽屉 */}
       {showStickerDrawer && (
-        <div className="fixed inset-0 z-[100] flex flex-col justify-end">
+        <div className="absolute inset-0 z-[100] flex flex-col justify-end">
           <div 
             className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" 
             onClick={() => {

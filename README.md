@@ -17,7 +17,7 @@ CMI Map 是一个由清迈数字游民社区（CMI）共建的本地探索指南
 | 共创探索地图 | `/` | ❌ 无需登录 | 分类标记点展示，支持 Stardust 星尘缩放切换 |
 | 足迹流 | `/list` | ❌ 无需登录 | 手账风格瀑布流，浏览社区推荐图文 |
 | 地点详情 | `/place/:name` | ❌ 无需登录 | 推荐理由卡片 + Google 导航 / Grab / Bolt 一键打车 |
-| 打点记录 | `/mark` | ✅ 需登录 | 拍照 + 语音输入，标记你的心动坐标 |
+| 打点记录 | `/mark` | ✅ 需登录 | 拍照 / 相册 / 快速文字推荐，支持语音或文字输入与手动校准坐标 |
 | 个人主页 | `/profile` | ✅ 需登录 | 紧凑横排头部、我的贡献 / 想去清单 / 成就墙 |
 | 🏆 成就系统 | `/profile` → 成就 Tab | ✅ 需登录 | 36 枚手绘徽章，分为品类鉴赏家、地图探索、社区影响力三大系列 |
 
@@ -37,7 +37,13 @@ CMI Map 是一个由清迈数字游民社区（CMI）共建的本地探索指南
 pnpm install
 
 # 启动开发服务器
-pnpm exec vite dev
+pnpm dev
+
+# 生产构建
+pnpm build
+
+# 类型、Biome、样式和构建检查
+pnpm lint
 ```
 
 需要在项目根目录配置 `.env` 文件：
@@ -45,6 +51,8 @@ pnpm exec vite dev
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
+
+数据库迁移放在 `supabase/migrations/`。新环境需要应用这些迁移来创建 `profiles`、`recommendations`、`upvotes`、`wishlists` 和贴纸相关表。当前权限策略允许公开浏览地点，登录用户只能写入自己的资料、推荐、点赞和收藏，管理员角色通过 `profiles.role = 'admin'` 控制。
 
 ## 项目结构
 

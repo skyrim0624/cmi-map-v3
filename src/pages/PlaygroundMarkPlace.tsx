@@ -126,7 +126,7 @@ export default function PlaygroundMarkPlace() {
       </div>
 
       {/* 白屏闪光 */}
-      <div className={`absolute inset-0 bg-white z-[100] transition-opacity duration-[400ms] pointer-events-none ${flash ? 'opacity-100' : 'opacity-0'}`} />
+      <div className={`absolute inset-0 bg-white z-[100] transition-opacity duration-400 pointer-events-none ${flash ? 'opacity-100' : 'opacity-0'}`} />
 
       {/* STAGE 1: 取景框 */}
       {stage === 'camera' && (
@@ -228,7 +228,7 @@ export default function PlaygroundMarkPlace() {
           {/* 拍立得照片本体 */}
           <div className={`
             relative w-full aspect-[4/5] bg-white p-3 pb-16 rounded-sm shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] 
-            transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]
+            transition-all duration-1000 ease-soft-out
             ${stage === 'analyzing' ? 'scale-95 rotate-1' : 'scale-100 rotate-[-1deg]'}
           `}>
             {/* 相片遮罩区 */}

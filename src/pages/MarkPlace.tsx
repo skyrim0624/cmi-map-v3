@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Camera, MapPin, Mic, MicOff, Check, ArrowLeft, Loader2, LogIn } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { MapPin, Mic, MicOff, Check, ArrowLeft, Loader2, PencilLine } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { LeafletMap } from '@/components/map/LeafletMap';
 import { createRecommendation, uploadImages } from '@/db/api';
@@ -43,7 +43,6 @@ export default function MarkPlace() {
   const [locationName, setLocationName] = useState<string>('');
   const [center, setCenter] = useState({ lat: 18.7883, lng: 98.9853 });
   const [description, setDescription] = useState<string>('');
-  const [category, setCategory] = useState<Category | ''>('');
   const [uploading, setUploading] = useState(false);
   
   const [flash, setFlash] = useState(false);
@@ -110,6 +109,7 @@ export default function MarkPlace() {
           }
         } catch (err) {
           console.error("相机权限获取失败:", err);
+          toast('相机打不开，可以从相册选择照片');
         }
       };
       startCamera();
@@ -199,8 +199,7 @@ export default function MarkPlace() {
       if (source === 'live') {
         fetchCurrentLocation();
       } else {
-        // EXIF mock or future implementation
-        setLocationName('相册记忆 (EXIF)');
+        setLocationName('相册照片 (默认坐标)');
       }
 
       setTimeout(() => {
@@ -212,16 +211,25 @@ export default function MarkPlace() {
     }
   };
 
+  const startQuickTextFlow = () => {
+    setImages([]);
+    setPhotoURL(null);
+    setSourceType(null);
+    setDescription('');
+    setLocationName('手动选点');
+    setStage('map_fallback');
+  };
+
   // 2. 定位分析动画
   useEffect(() => {
     if (stage === 'analyzing') {
       const timer1 = setTimeout(() => setScanned(true), 1500);
       const timer2 = setTimeout(() => {
-        setStage('voice');
+        setStage(sourceType === 'exif' ? 'map_fallback' : 'voice');
       }, 3000);
       return () => { clearTimeout(timer1); clearTimeout(timer2); };
     }
-  }, [stage]);
+  }, [stage, sourceType]);
 
   // 3. 语音对话控制
   const handleVoiceInput = () => {
@@ -245,7 +253,6 @@ export default function MarkPlace() {
       toast.error('还是随意写/说一点推荐理由吧！');
       return;
     }
-    setCategory(selectedCategory);
     setStage('done');
     setUploading(true);
 
@@ -326,7 +333,7 @@ export default function MarkPlace() {
            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}>
       </div>
 
-      <div className={`absolute inset-0 bg-white z-[100] transition-opacity duration-[400ms] pointer-events-none ${flash ? 'opacity-100' : 'opacity-0'}`} />
+      <div className={`absolute inset-0 bg-white z-[100] transition-opacity duration-400 pointer-events-none ${flash ? 'opacity-100' : 'opacity-0'}`} />
 
       {/* STAGE 1: 取景框 */}
       {stage === 'camera' && (
@@ -357,7 +364,13 @@ export default function MarkPlace() {
             <div className="flex items-center gap-6 mt-4 z-10 w-full justify-center px-8">
               <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleCapture(e, 'live')} ref={fileInputRef} />
               <input type="file" accept="image/*" className="hidden" onChange={(e) => handleCapture(e, 'exif')} ref={uploadInputRef} />
-              <div className="w-12 h-12" />
+              <button
+                onClick={startQuickTextFlow}
+                className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 shadow-inner hover:bg-stone-200 transition-colors active:scale-95"
+                aria-label="快速文字推荐"
+              >
+                <PencilLine className="w-5 h-5" />
+              </button>
               <button 
                 onClick={capturePhoto}
                 className="relative w-[88px] h-[88px] sm:w-[96px] sm:h-[96px] rounded-full flex flex-col items-center justify-center group active:scale-[0.92] transition-transform duration-200 outline-none shrink-0"
@@ -377,17 +390,23 @@ export default function MarkPlace() {
             <span className="mt-5 text-stone-400 font-bold tracking-[0.2em] text-xs uppercase opacity-80" style={{ fontFamily: "'Inter', sans-serif" }}>
               Push to capture
             </span>
+            <button
+              onClick={startQuickTextFlow}
+              className="mt-2 text-xs font-bold text-stone-500 underline underline-offset-4 active:scale-95"
+            >
+              不拍照，直接文字推荐
+            </button>
           </div>
         </div>
       )}
 
       {/* STAGE 2 - 5: Content Flow */}
-      {stage !== 'camera' && photoURL && (
+      {stage !== 'camera' && (
         <div className="w-full h-[100dvh] flex flex-col relative">
           
           {/* 上半部分：照片区域 - 约 55% 屏高 */}
-          <div className="relative flex-shrink-0 transition-all duration-500" style={{ height: '55dvh' }}>
-            <div className={`w-full h-full relative overflow-hidden transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${stage === 'analyzing' ? 'scale-[0.97]' : 'scale-100'}`}>
+          {photoURL && <div className="relative flex-shrink-0 transition-all duration-500" style={{ height: '55dvh' }}>
+            <div className={`w-full h-full relative overflow-hidden transition-all duration-1000 ease-soft-out ${stage === 'analyzing' ? 'scale-[0.97]' : 'scale-100'}`}>
               <img src={photoURL} className="w-full h-full object-cover" alt="Captured" />
               
               {stage === 'analyzing' && !scanned && (
@@ -437,10 +456,22 @@ export default function MarkPlace() {
                 </div>
               )}
             </div>
-          </div>
+          </div>}
 
           {/* 下半部分：控件区域 - 占据剩余空间 */}
           <div className="flex-1 flex flex-col items-center justify-center px-6 pb-safe bg-stone-50 relative overflow-y-auto">
+            {!photoURL && stage === 'done' && (
+              <div className="flex flex-col items-center justify-center gap-4 text-center">
+                <div className="relative flex items-center justify-center w-36 h-36 border-[3px] border-[#da2222] border-dashed rounded-full mix-blend-multiply opacity-[0.85] bg-[#da2222]/[0.02] rotate-[-8deg]">
+                  <div className="absolute inset-1.5 border-2 border-[#da2222] rounded-full opacity-70" />
+                  <div className="flex flex-col items-center">
+                    <span className="text-[11px] font-bold tracking-[0.2em] text-[#da2222] opacity-90 mb-1">CMI MAP</span>
+                    <span className="text-2xl font-black tracking-widest text-[#da2222] opacity-90">RECORDED</span>
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-stone-500">正在把你的推荐印到地图上...</p>
+              </div>
+            )}
             
             {/* 描述文字便签 */}
             {stage !== 'map_fallback' && (description || isListening) && (
@@ -463,7 +494,7 @@ export default function MarkPlace() {
                    <LeafletMap mode="mark" onCenterChange={(lat, lng) => setCenter({lat, lng})} className="w-full h-full border-none outline-none" />
                  </div>
                  <button onClick={handleMapConfirm} className="w-full h-12 bg-foreground text-background font-bold rounded-2xl flex items-center justify-center shadow-lg hover:scale-[1.02] transition-transform">
-                   确认位置，去说故事
+                   确认位置，去写推荐
                  </button>
                </div>
             )}
@@ -485,6 +516,13 @@ export default function MarkPlace() {
                     </button>
                   )}
                 </div>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="写下地点名和推荐理由，比如：Fern Forest，树很多很安静，适合上午写东西"
+                  className="w-full max-w-sm min-h-24 resize-none rounded-2xl border border-stone-200 bg-white/90 px-4 py-3 text-[15px] leading-relaxed text-stone-800 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                  maxLength={240}
+                />
               </div>
             )}
 
