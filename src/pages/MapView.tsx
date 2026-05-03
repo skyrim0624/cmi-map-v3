@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LeafletMap } from '@/components/map/LeafletMap';
 import { getAllRecommendations } from '@/db/api';
@@ -7,8 +7,15 @@ import type { Recommendation, MapMarker as MapMarkerType } from '@/types/types';
 import { getCategoryIconUrl, CATEGORIES } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { List, LogIn, Plus } from 'lucide-react';
+import { Footprints, List, LogIn, Plus, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { getPersonMapPath, getPlacePath } from '@/lib/paths';
+
+const getTodayIndex = (length: number) => {
+  if (length <= 0) return 0;
+  const dateKey = Number(new Date().toISOString().slice(0, 10).replace(/-/g, ''));
+  return dateKey % length;
+};
 
 export default function MapView() {
   const navigate = useNavigate();
@@ -20,6 +27,17 @@ export default function MapView() {
   const [activeCategory, setActiveCategory] = useState<string>('全部');
   
   const displayName = profile?.user_name || user?.email?.split('@')[0] || '游客';
+
+  const storyRecommendations = useMemo(
+    () => recommendations.filter(rec => rec.reason.trim().length >= 16),
+    [recommendations]
+  );
+
+  const todayPick = storyRecommendations.length > 0
+    ? storyRecommendations[getTodayIndex(storyRecommendations.length)]
+    : recommendations[0];
+
+  const latestTrace = recommendations[0] || null;
 
   // 加载推荐数据
   useEffect(() => {
@@ -59,7 +77,7 @@ export default function MapView() {
   // 点击预览卡片，进入详情页
   const handleCardClick = () => {
     if (selectedMarker) {
-      navigate(`/place/${encodeURIComponent(selectedMarker.place_name)}`);
+      navigate(getPlacePath(selectedMarker.place_name));
     }
   };
 
@@ -144,6 +162,45 @@ export default function MapView() {
         </div>
       </div>
 
+      {/* 轻探索入口：让地图每天多一点未知感 */}
+      {!selectedMarker && (todayPick || latestTrace) && (
+        <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+104px)] left-4 right-4 z-20 grid grid-cols-2 gap-2">
+          {todayPick && (
+            <button
+              type="button"
+              className="min-w-0 rounded-2xl border-2 border-foreground bg-card/95 p-3 text-left shadow-[3px_4px_0_rgba(0,0,0,0.16)] backdrop-blur-sm transition-transform active:scale-[0.98]"
+              onClick={() => navigate(getPlacePath(todayPick.place_name))}
+            >
+              <div className="mb-1 flex items-center gap-1.5 text-xs font-black text-primary">
+                <Sparkles className="h-4 w-4 shrink-0" />
+                今天去哪
+              </div>
+              <p className="truncate text-sm font-black text-foreground">{todayPick.place_name}</p>
+              <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-snug text-muted-foreground">
+                {todayPick.reason}
+              </p>
+            </button>
+          )}
+
+          {latestTrace && (
+            <button
+              type="button"
+              className="min-w-0 rounded-2xl border border-border/70 bg-background/95 p-3 text-left shadow-lg backdrop-blur-sm transition-transform active:scale-[0.98]"
+              onClick={() => navigate(getPersonMapPath(latestTrace.user_name))}
+            >
+              <div className="mb-1 flex items-center gap-1.5 text-xs font-black text-primary">
+                <Footprints className="h-4 w-4 shrink-0" />
+                最近痕迹
+              </div>
+              <p className="truncate text-sm font-black text-foreground">{latestTrace.user_name}</p>
+              <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-snug text-muted-foreground">
+                刚在 {latestTrace.place_name} 留下一笔
+              </p>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* 底部中间发帖按钮 (11. FAB Hard Press) */}
       <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+24px)] left-1/2 -translate-x-1/2 z-20">
         <button
@@ -218,7 +275,16 @@ export default function MapView() {
             {/* 推荐人 */}
             <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <span className="w-8 border-t border-muted-foreground/30"></span> 
-              {selectedRecommendations[0].user_name}
+              <button
+                type="button"
+                className="font-semibold text-primary underline-offset-4 hover:underline"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate(getPersonMapPath(selectedRecommendations[0].user_name));
+                }}
+              >
+                {selectedRecommendations[0].user_name} 的清迈地图
+              </button>
             </p>
 
             {/* 缩略图 */}
@@ -250,4 +316,3 @@ export default function MapView() {
     </div>
   );
 }
-

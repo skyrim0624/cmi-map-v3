@@ -4,6 +4,7 @@ const MapView = lazy(() => import('./pages/MapView'));
 const ListView = lazy(() => import('./pages/ListView'));
 const PlaceDetail = lazy(() => import('./pages/PlaceDetail'));
 const MarkPlace = lazy(() => import('./pages/MarkPlace'));
+const PersonMap = lazy(() => import('./pages/PersonMap'));
 const PlaygroundMarkPlace = lazy(() => import('./pages/PlaygroundMarkPlace'));
 const PlaygroundWishlist = lazy(() => import('./pages/PlaygroundWishlist'));
 const Profile = lazy(() => import('./pages/Profile'));
@@ -41,6 +42,12 @@ export const routes: RouteConfig[] = [
     name: '地点详情',
     path: '/place/:placeName',
     element: <PlaceDetail />,
+    public: true,
+  },
+  {
+    name: '推荐人地图',
+    path: '/people/:userName',
+    element: <PersonMap />,
     public: true,
   },
   {

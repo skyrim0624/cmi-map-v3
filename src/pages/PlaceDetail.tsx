@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { getPersonMapPath } from '@/lib/paths';
 
 export default function PlaceDetail() {
   const { placeName } = useParams<{ placeName: string }>();
@@ -419,9 +420,16 @@ export default function PlaceDetail() {
                   </p>
 
                   {/* 推荐人 */}
-                  <p className="text-sm text-muted-foreground">
-                    —— {rec.user_name}
-                  </p>
+                  <button
+                    type="button"
+                    className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      navigate(getPersonMapPath(rec.user_name));
+                    }}
+                  >
+                    —— {rec.user_name} 的清迈地图
+                  </button>
 
                   {/* 该推荐的照片 */}
                   {rec.images.length > 0 && (

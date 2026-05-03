@@ -7,6 +7,7 @@ import { CATEGORIES, getCategoryIconUrl } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowLeft, LogIn } from 'lucide-react';
+import { getPersonMapPath, getPlacePath } from '@/lib/paths';
 
 export default function ListView() {
   const navigate = useNavigate();
@@ -114,7 +115,7 @@ export default function ListView() {
               <div
                 key={rec.id}
                 className="app-list-card w-full max-w-full overflow-hidden bg-card p-4 border-2 border-foreground cursor-pointer"
-                onClick={() => navigate(`/place/${encodeURIComponent(rec.place_name)}`)}
+                onClick={() => navigate(getPlacePath(rec.place_name))}
               >
                 <div className="flex min-w-0 gap-4">
                   {/* 左侧图片或图标 */}
@@ -145,7 +146,16 @@ export default function ListView() {
                         <span className="mr-1">📍</span>
                         <span>{rec.place_name}</span>
                         <span className="mx-1 text-muted-foreground/30">|</span>
-                        <span>{rec.user_name}</span>
+                        <button
+                          type="button"
+                          className="font-semibold text-primary underline-offset-4 hover:underline"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            navigate(getPersonMapPath(rec.user_name));
+                          }}
+                        >
+                          {rec.user_name}
+                        </button>
                       </p>
                       
                       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
