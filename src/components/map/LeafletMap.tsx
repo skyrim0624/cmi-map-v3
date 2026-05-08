@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { MapMarker } from '@/types/types';
-import { getCategoryIconUrl } from '@/types/types';
+import { getMapMarkerVisual, renderClusterIconHtml, renderMarkerBadgeHtml, type MapMarkerVisual } from '@/lib/map-marker-visual';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -42,7 +42,7 @@ export const LeafletMap = ({
   const userLocationMarkerRef = useRef<L.Marker | null>(null);
   const onCenterChangeRef = useRef(onCenterChange);
   const orientationHandlerRef = useRef<((event: DeviceOrientationEvent) => void) | null>(null);
-  const markerIconUrlsRef = useRef(new WeakMap<L.Marker, string>());
+  const markerVisualsRef = useRef(new WeakMap<L.Marker, MapMarkerVisual>());
   const userHeadingRef = useRef<number>(0); // 用户朝向角度
 
   // 更新回调引用
@@ -263,7 +263,7 @@ export const LeafletMap = ({
     // 初始化聚合组
     const clusterGroup = L.markerClusterGroup({
       showCoverageOnHover: false,
-      maxClusterRadius: 50,
+      maxClusterRadius: 58,
       zoomToBoundsOnClick: false,
       spiderfyOnMaxZoom: true,
       animate: false,              // 禁用聚合/散开动画，大幅降低缩放开销
@@ -273,69 +273,17 @@ export const LeafletMap = ({
         const children = cluster.getAllChildMarkers();
         const count = children.length;
         
-        // 最多展示 3 个叠放的贴纸
+        // 最多展示 3 个叠放的类型印章，数量用“处”表达，避免被误读成点赞或评分。
         const displayMarkers = children.slice(0, Math.min(3, count));
-        
-        let htmlContent = '<div style="position: relative; width: 64px; height: 64px;">';
-        
-        const transforms = [
-          'translate(0px, 0px) rotate(-8deg)',
-          'translate(12px, -6px) rotate(14deg)',
-          'translate(-4px, 12px) rotate(-12deg)'
-        ];
-        
-        displayMarkers.forEach((m, idx) => {
-          const url = markerIconUrlsRef.current.get(m) || ''; 
-          htmlContent += `
-            <div style="
-              position: absolute;
-              top: 8px; left: 8px;
-              width: 48px; height: 48px;
-              transform: ${transforms[idx]};
-              z-index: ${idx + 1};
-              background: #ffffff;
-              border-radius: 50%;
-              padding: 5px;
-              box-shadow: 0 3px 6px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            ">
-              <img src="${url}" style="width:100%; height:100%; object-fit:contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));" />
-            </div>
-          `;
-        });
-
-        // 如果还有未显示的地点，贴一个和纸胶带的角标
-        if (count > displayMarkers.length) {
-           const remaining = count - displayMarkers.length;
-           htmlContent += `
-             <div style="
-               position: absolute;
-               bottom: 2px; right: -4px;
-               z-index: 10;
-               background: #e2e8ce;
-               color: #4a5d23;
-               font-family: 'Inter', sans-serif;
-               font-weight: 800;
-               font-size: 13px;
-               padding: 2px 7px;
-               transform: rotate(-6deg);
-               box-shadow: 1px 2px 4px rgba(0,0,0,0.15);
-               border: 1px dashed rgba(74, 93, 35, 0.2);
-               border-radius: 2px;
-             ">
-               +${remaining}
-             </div>
-           `;
-        }
-        htmlContent += '</div>';
+        const visuals = displayMarkers
+          .map(marker => markerVisualsRef.current.get(marker))
+          .filter((visual): visual is MapMarkerVisual => Boolean(visual));
         
         return L.divIcon({
-          html: htmlContent,
+          html: renderClusterIconHtml(visuals, count),
           className: 'scrapbook-cluster-icon bg-transparent border-none',
-          iconSize: [64, 64],
-          iconAnchor: [32, 32]
+          iconSize: [68, 48],
+          iconAnchor: [34, 43]
         });
       }
     });
@@ -347,7 +295,7 @@ export const LeafletMap = ({
 
     // 添加新标记
     markers.forEach((markerData) => {
-      const iconUrl = getCategoryIconUrl(markerData.category);
+      const markerVisual = getMapMarkerVisual(markerData);
       
       // 计算该地点所有推荐的总点赞数
       const totalUpvotes = markerData.recommendations?.reduce((sum, rec) => {
@@ -394,57 +342,47 @@ export const LeafletMap = ({
       `).join('');
 
       const isHotspot = totalUpvotes > 0;
-      const sizeStr = isHotspot ? '64px' : '56px';
+      const rootWidth = isHotspot ? 92 : 88;
+      const rootHeight = isHotspot ? 62 : 58;
       
       const icon = L.divIcon({
         className: 'custom-marker-icon bg-transparent border-none',
         html: `
           <div style="
-            width: ${sizeStr};
-            height: ${sizeStr};
+            width: ${rootWidth}px;
+            height: ${rootHeight}px;
             position: relative;
-            background: #ffffff;
-            border-radius: 50%;
-            padding: ${isHotspot ? '8px' : '6px'};
-            box-shadow: ${isHotspot ? '0 0 0 4px rgba(255,165,0,0.3), 0 6px 12px rgba(0,0,0,0.2)' : '0 4px 8px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)'};
-            display: flex;
-            align-items: center;
-            justify-content: center;
           ">
-            <img 
-              src="${iconUrl}" 
-              style="width: 100%; height: 100%; object-fit: contain;" 
-              alt="" 
-              loading="lazy" 
-            />
+            ${renderMarkerBadgeHtml(markerVisual, isHotspot)}
             ${isHotspot ? `
               <div style="
                 position: absolute;
-                top: -4px;
-                right: -4px;
-                background: #ff5e00;
+                top: -2px;
+                right: 1px;
+                background: #f0533f;
                 color: #fff;
-                font-family: 'Inter', sans-serif;
-                font-weight: bold;
-                font-size: 11px;
-                padding: 1px 5px;
-                border-radius: 8px;
+                font-family: 'Inter','PingFang SC','Noto Sans SC',sans-serif;
+                font-weight: 950;
+                font-size: 10px;
+                line-height: 1;
+                padding: 4px 6px;
+                border-radius: 999px;
                 border: 2px solid white;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                transform: rotate(10deg);
+                box-shadow: 0 5px 10px rgba(240,83,63,0.25);
+                transform: rotate(5deg);
               ">
-                +${totalUpvotes} 🔥
+                热 ${totalUpvotes}
               </div>
             ` : ''}
             ${stickersHtml}
           </div>
         `,
-        iconSize: isHotspot ? [64, 64] : [56, 56],
-        iconAnchor: isHotspot ? [32, 32] : [28, 28]
+        iconSize: isHotspot ? [92, 62] : [88, 58],
+        iconAnchor: isHotspot ? [46, 54] : [44, 50]
       });
 
       const marker = L.marker([markerData.latitude, markerData.longitude], { icon });
-      markerIconUrlsRef.current.set(marker, iconUrl);
+      markerVisualsRef.current.set(marker, markerVisual);
 
       // 添加点击事件
       if (onMarkerClick) {
