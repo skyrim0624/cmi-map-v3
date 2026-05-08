@@ -36,7 +36,7 @@ export type MapMarkerVisual = {
   isCommunity: boolean;
 };
 
-const ICON_BASE_PATH = '/map-icons/color';
+const ICON_BASE_PATH = '/map-icons/negative';
 
 const TONES: Record<MarkerTone, Pick<MapMarkerVisual, 'accent' | 'shadow'>> = {
   food: {
@@ -185,8 +185,8 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
           width:7px;
           height:7px;
           border-radius:999px;
-          background:${visual.accent};
-          border:1.5px solid #fff;
+          background:#fffdf2;
+          border:1.5px solid ${visual.accent};
           box-shadow:0 2px 4px ${visual.shadow};
         "></div>
       ` : ''}
@@ -198,9 +198,9 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
       width:12px;
       height:12px;
       transform:translateX(-50%) rotate(45deg);
-      background:rgba(250,246,235,0.98);
-      border-right:1.5px solid rgba(70,61,52,0.12);
-      border-bottom:1.5px solid rgba(70,61,52,0.12);
+      background:${visual.accent};
+      border-right:1.5px solid rgba(255,255,255,0.28);
+      border-bottom:1.5px solid rgba(255,255,255,0.28);
       box-shadow:4px 4px 7px ${visual.shadow};
     "></div>
   `;
