@@ -282,8 +282,8 @@ export const LeafletMap = ({
         return L.divIcon({
           html: renderClusterIconHtml(visuals, count),
           className: 'scrapbook-cluster-icon bg-transparent border-none',
-          iconSize: [70, 58],
-          iconAnchor: [35, 54]
+          iconSize: [72, 62],
+          iconAnchor: [36, 58]
         });
       }
     });
@@ -342,8 +342,8 @@ export const LeafletMap = ({
       `).join('');
 
       const isHotspot = totalUpvotes > 0;
-      const rootWidth = isHotspot ? 68 : 62;
-      const rootHeight = isHotspot ? 70 : 66;
+      const rootWidth = isHotspot ? 72 : 68;
+      const rootHeight = isHotspot ? 72 : 68;
       
       const icon = L.divIcon({
         className: 'custom-marker-icon bg-transparent border-none',
@@ -377,8 +377,8 @@ export const LeafletMap = ({
             ${stickersHtml}
           </div>
         `,
-        iconSize: isHotspot ? [68, 70] : [62, 66],
-        iconAnchor: isHotspot ? [34, 63] : [31, 59]
+        iconSize: isHotspot ? [72, 72] : [68, 68],
+        iconAnchor: isHotspot ? [36, 64] : [34, 60]
       });
 
       const marker = L.marker([markerData.latitude, markerData.longitude], { icon });
