@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { MapMarker } from '@/types/types';
-import { getCategoryColor, getCategoryIconUrl } from '@/types/types';
+import { getCategoryIconUrl } from '@/types/types';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -413,13 +413,9 @@ export const LeafletMap = ({
           ">
             <img 
               src="${iconUrl}" 
-              style="
-                width: 100%;
-                height: 100%;
-                object-fit: contain;
-              "
-              alt=""
-              loading="lazy"
+              style="width: 100%; height: 100%; object-fit: contain;" 
+              alt="" 
+              loading="lazy" 
             />
             ${isHotspot ? `
               <div style="

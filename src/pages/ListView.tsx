@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowLeft, LogIn } from 'lucide-react';
 import { getPersonMapPath, getPlacePath } from '@/lib/paths';
+import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
 
 export default function ListView() {
   const navigate = useNavigate();
@@ -111,74 +112,108 @@ export default function ListView() {
               暂无推荐
             </div>
           ) : (
-            recommendations.map((rec) => (
-              <div
-                key={rec.id}
-                className="app-list-card w-full max-w-full overflow-hidden bg-card p-4 border-2 border-foreground cursor-pointer"
-                onClick={() => navigate(getPlacePath(rec.place_name))}
-              >
-                <div className="flex min-w-0 gap-4">
-                  {/* 左侧图片或图标 */}
-                  <div className="flex-shrink-0">
-                    {rec.images.length > 0 ? (
-                      <img
-                        src={rec.images[0]}
-                        alt={rec.place_name}
-                        className="w-20 h-20 rounded-xl object-cover"
-                      />
-                    ) : (
-                      <div className="w-20 h-20 rounded-xl bg-accent flex items-center justify-center p-4">
-                        <img src={getCategoryIconUrl(rec.category)} alt={rec.category} className="w-full h-full object-contain opacity-60" />
-                      </div>
-                    )}
-                  </div>
+            recommendations.map((rec) => {
+              const guide = getPlaceGuide(rec.place_name, rec.category);
+              const isCommunityGuide = isCommunityCuratedRecommendation(rec);
 
-                  {/* 右侧内容 */}
-                  <div className="min-w-0 flex-1 space-y-2 overflow-hidden">
-                    {/* 推荐理由 */}
-                    <p className="text-base leading-relaxed text-foreground line-clamp-2 break-words">
-                      "{rec.reason}"
-                    </p>
+              return (
+                <div
+                  key={rec.id}
+                  className="app-list-card w-full max-w-full overflow-hidden bg-card p-4 border-2 border-foreground cursor-pointer"
+                  onClick={() => navigate(getPlacePath(rec.place_name))}
+                >
+                  <div className="flex min-w-0 gap-4">
+                    {/* 左侧图片或图标 */}
+                    <div className="flex-shrink-0">
+                      {rec.images.length > 0 ? (
+                        <img
+                          src={rec.images[0]}
+                          alt={rec.place_name}
+                          className="w-20 h-20 rounded-xl object-cover"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 rounded-xl bg-accent flex items-center justify-center p-4">
+                          <img src={getCategoryIconUrl(rec.category)} alt={rec.category} className="w-full h-full object-contain opacity-60" />
+                        </div>
+                      )}
+                    </div>
 
-                    {/* 地点名称、推荐人和互动计数 */}
-                    <div className="mt-2 space-y-2">
-                      <p className="text-sm text-muted-foreground truncate whitespace-nowrap">
-                        <span className="mr-1">📍</span>
-                        <span>{rec.place_name}</span>
-                        <span className="mx-1 text-muted-foreground/30">|</span>
-                        <button
-                          type="button"
-                          className="font-semibold text-primary underline-offset-4 hover:underline"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            navigate(getPersonMapPath(rec.user_name));
-                          }}
-                        >
-                          {rec.user_name}
-                        </button>
-                      </p>
-                      
-                      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                        {/* 聚合排序前3的贴纸印章 */}
-                        {getTopStickers(rec.placed_stickers).map((ts) => (
-                          <div key={ts.sticker.id} className="flex items-center bg-accent/40 rounded-full px-2 py-0.5 border border-border/50 backdrop-blur-sm">
-                            <img src={ts.sticker.icon_url} alt="" className="w-3.5 h-3.5 object-contain mr-1 filter saturate-[0.8]" style={{ mixBlendMode: 'multiply' }} />
-                            <span className="text-[10px] font-bold text-muted-foreground ml-0.5">{ts.count}</span>
+                    {/* 右侧内容 */}
+                    <div className="min-w-0 flex-1 space-y-2 overflow-hidden">
+                      {isCommunityGuide ? (
+                        <div className="space-y-1.5">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-black text-primary">
+                              {guide.kind}
+                            </span>
+                            <span className="truncate text-xs font-semibold text-muted-foreground">
+                              {rec.place_name}
+                            </span>
                           </div>
-                        ))}
-
-                        {/* 点赞数 */}
-                        {rec.upvotes && rec.upvotes.length > 0 && (
-                          <div className="flex items-center text-primary text-[11px] font-medium bg-primary/10 px-2 py-0.5 rounded-full ml-1">
-                            🔥 {rec.upvotes.length}
+                          <h2 className="truncate text-lg font-black leading-tight text-foreground">
+                            {guide.title}
+                          </h2>
+                          <p className="line-clamp-3 break-words text-sm font-medium leading-relaxed text-foreground">
+                            {guide.summary}
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {guide.tags.slice(0, 3).map(tag => (
+                              <span key={tag} className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold text-accent-foreground">
+                                {tag}
+                              </span>
+                            ))}
                           </div>
-                        )}
+                        </div>
+                      ) : (
+                        <p className="text-base leading-relaxed text-foreground line-clamp-2 break-words">
+                          "{rec.reason}"
+                        </p>
+                      )}
+
+                      {/* 地点名称、推荐人和互动计数 */}
+                      <div className="mt-2 space-y-2">
+                        <p className="text-sm text-muted-foreground truncate whitespace-nowrap">
+                          <span className="mr-1">📍</span>
+                          <span>{isCommunityGuide ? guide.title : rec.place_name}</span>
+                          <span className="mx-1 text-muted-foreground/30">|</span>
+                          {isCommunityGuide ? (
+                            <span className="font-semibold">CMI 社区整理</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="font-semibold text-primary underline-offset-4 hover:underline"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                navigate(getPersonMapPath(rec.user_name));
+                              }}
+                            >
+                              {rec.user_name}
+                            </button>
+                          )}
+                        </p>
+                        
+                        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                          {/* 聚合排序前3的贴纸印章 */}
+                          {getTopStickers(rec.placed_stickers).map((ts) => (
+                            <div key={ts.sticker.id} className="flex items-center bg-accent/40 rounded-full px-2 py-0.5 border border-border/50 backdrop-blur-sm">
+                              <img src={ts.sticker.icon_url} alt="" className="w-3.5 h-3.5 object-contain mr-1 filter saturate-[0.8]" style={{ mixBlendMode: 'multiply' }} />
+                              <span className="text-[10px] font-bold text-muted-foreground ml-0.5">{ts.count}</span>
+                            </div>
+                          ))}
+
+                          {/* 点赞数 */}
+                          {rec.upvotes && rec.upvotes.length > 0 && (
+                            <div className="flex items-center text-primary text-[11px] font-medium bg-primary/10 px-2 py-0.5 rounded-full ml-1">
+                              🔥 {rec.upvotes.length}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

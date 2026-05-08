@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Footprints, List, LogIn, Plus, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { getPersonMapPath, getPlacePath } from '@/lib/paths';
+import { getGuideSourceLabel, getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
 
 const getTodayIndex = (length: number) => {
   if (length <= 0) return 0;
@@ -91,6 +92,18 @@ export default function MapView() {
   const displayedMarkers = activeCategory === '全部' 
     ? markers 
     : markers.filter(m => m.category === activeCategory);
+
+  const selectedRecommendation = selectedRecommendations[0] || null;
+  const selectedGuide = selectedRecommendation
+    ? getPlaceGuide(selectedRecommendation.place_name, selectedRecommendation.category)
+    : null;
+  const selectedIsCommunityGuide = selectedRecommendation
+    ? isCommunityCuratedRecommendation(selectedRecommendation)
+    : false;
+  const todayPickIsCommunityGuide = todayPick ? isCommunityCuratedRecommendation(todayPick) : false;
+  const todayPickGuide = todayPick ? getPlaceGuide(todayPick.place_name, todayPick.category) : null;
+  const latestTraceIsCommunityGuide = latestTrace ? isCommunityCuratedRecommendation(latestTrace) : false;
+  const latestTraceGuide = latestTrace ? getPlaceGuide(latestTrace.place_name, latestTrace.category) : null;
 
   return (
     <div className="relative w-full h-[100dvh] overflow-hidden">
@@ -175,9 +188,11 @@ export default function MapView() {
                 <Sparkles className="h-4 w-4 shrink-0" />
                 今天去哪
               </div>
-              <p className="truncate text-sm font-black text-foreground">{todayPick.place_name}</p>
+              <p className="truncate text-sm font-black text-foreground">
+                {todayPickIsCommunityGuide && todayPickGuide ? todayPickGuide.title : todayPick.place_name}
+              </p>
               <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-snug text-muted-foreground">
-                {todayPick.reason}
+                {todayPickIsCommunityGuide && todayPickGuide ? todayPickGuide.summary : todayPick.reason}
               </p>
             </button>
           )}
@@ -186,15 +201,25 @@ export default function MapView() {
             <button
               type="button"
               className="min-w-0 rounded-2xl border border-border/70 bg-background/95 p-3 text-left shadow-lg backdrop-blur-sm transition-transform active:scale-[0.98]"
-              onClick={() => navigate(getPersonMapPath(latestTrace.user_name))}
+              onClick={() => {
+                if (latestTraceIsCommunityGuide) {
+                  navigate(getPlacePath(latestTrace.place_name));
+                  return;
+                }
+                navigate(getPersonMapPath(latestTrace.user_name));
+              }}
             >
               <div className="mb-1 flex items-center gap-1.5 text-xs font-black text-primary">
                 <Footprints className="h-4 w-4 shrink-0" />
                 最近痕迹
               </div>
-              <p className="truncate text-sm font-black text-foreground">{latestTrace.user_name}</p>
+              <p className="truncate text-sm font-black text-foreground">
+                {latestTraceIsCommunityGuide ? 'CMI 社区整理' : latestTrace.user_name}
+              </p>
               <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-snug text-muted-foreground">
-                刚在 {latestTrace.place_name} 留下一笔
+                {latestTraceIsCommunityGuide && latestTraceGuide
+                  ? `收录了 ${latestTraceGuide.title}`
+                  : `刚在 ${latestTrace.place_name} 留下一笔`}
               </p>
             </button>
           )}
@@ -257,10 +282,42 @@ export default function MapView() {
           onClick={handleCardClick}
         >
           <div className="space-y-4">
-            {/* 推荐理由 */}
-            <p className="quote-text text-lg leading-relaxed text-foreground">
-              {selectedRecommendations[0].reason}
-            </p>
+            {selectedIsCommunityGuide && selectedGuide ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
+                    {selectedGuide.kind}
+                  </span>
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    {getGuideSourceLabel(selectedRecommendation!)}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-black leading-tight text-foreground">
+                    {selectedGuide.title}
+                  </h2>
+                  {selectedGuide.title !== selectedMarker.place_name && (
+                    <p className="break-words text-sm font-semibold text-muted-foreground">
+                      {selectedMarker.place_name}
+                    </p>
+                  )}
+                </div>
+                <p className="line-clamp-4 text-base font-medium leading-relaxed text-foreground">
+                  {selectedGuide.summary}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedGuide.tags.slice(0, 3).map(tag => (
+                    <span key={tag} className="rounded-full bg-accent px-2.5 py-1 text-xs font-bold text-accent-foreground">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="quote-text text-lg leading-relaxed text-foreground">
+                {selectedRecommendations[0].reason}
+              </p>
+            )}
 
             {/* 地点名称和分类 */}
             <div className="flex items-center gap-2">
@@ -273,19 +330,26 @@ export default function MapView() {
             </div>
 
             {/* 推荐人 */}
-            <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <span className="w-8 border-t border-muted-foreground/30"></span> 
-              <button
-                type="button"
-                className="font-semibold text-primary underline-offset-4 hover:underline"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  navigate(getPersonMapPath(selectedRecommendations[0].user_name));
-                }}
-              >
-                {selectedRecommendations[0].user_name} 的清迈地图
-              </button>
-            </p>
+            {selectedIsCommunityGuide ? (
+              <p className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                <span className="w-8 border-t border-muted-foreground/30"></span>
+                来自 CMI 社区收藏
+              </p>
+            ) : (
+              <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <span className="w-8 border-t border-muted-foreground/30"></span> 
+                <button
+                  type="button"
+                  className="font-semibold text-primary underline-offset-4 hover:underline"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    navigate(getPersonMapPath(selectedRecommendations[0].user_name));
+                  }}
+                >
+                  {selectedRecommendations[0].user_name} 的清迈地图
+                </button>
+              </p>
+            )}
 
             {/* 缩略图 */}
             {selectedRecommendations[0].images.length > 0 && (

@@ -6,6 +6,7 @@ import type { Category, Recommendation } from '@/types/types';
 import { CATEGORIES, getCategoryIconUrl } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { getPlacePath } from '@/lib/paths';
+import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
 
 type CategoryCount = {
   name: Category;
@@ -52,6 +53,10 @@ export default function PersonMap() {
 
   const uniquePlaceCount = new Set(recommendations.map(item => item.place_name)).size;
   const signatureCategory = topCategories[0]?.name || '清迈';
+  const isCommunityMap = decodedName === 'CMI社区';
+  const signatureGuide = signatureRecommendation
+    ? getPlaceGuide(signatureRecommendation.place_name, signatureRecommendation.category)
+    : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -66,7 +71,7 @@ export default function PersonMap() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-primary">TA 的清迈地图</p>
+            <p className="text-xs font-bold text-primary">{isCommunityMap ? '社区生活底库' : 'TA 的清迈地图'}</p>
             <h1 className="truncate text-xl font-black text-foreground">{decodedName || '无名旅人'}</h1>
           </div>
         </div>
@@ -79,7 +84,11 @@ export default function PersonMap() {
               {(decodedName || '?').charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-muted-foreground">如果你喜欢 TA 留下的点，可以跟着这张地图逛清迈。</p>
+              <p className="text-sm font-semibold text-muted-foreground">
+                {isCommunityMap
+                  ? '这不是某个人的私人口味，而是 CMI 先整理出来的清迈生活底库：吃饭、咖啡、市场、理发、换汇、打印，先帮后来的人知道这些地方存在。'
+                  : '如果你喜欢 TA 留下的点，可以跟着这张地图逛清迈。'}
+              </p>
               <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
                 <span className="rounded-full bg-accent px-3 py-1 text-accent-foreground">{uniquePlaceCount} 个地点</span>
                 <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">偏爱 {signatureCategory}</span>
@@ -95,13 +104,15 @@ export default function PersonMap() {
             >
               <div className="mb-2 flex items-center gap-2 text-xs font-black text-primary">
                 <Sparkles className="h-4 w-4" />
-                代表性一笔
+                {isCommunityMap ? '社区收藏样例' : '代表性一笔'}
               </div>
               <p className="line-clamp-3 text-base font-semibold leading-relaxed text-foreground">
-                “{signatureRecommendation.reason}”
+                {signatureRecommendation && isCommunityCuratedRecommendation(signatureRecommendation) && signatureGuide
+                  ? signatureGuide.summary
+                  : `“${signatureRecommendation.reason}”`}
               </p>
               <p className="mt-2 truncate text-xs font-medium text-muted-foreground">
-                📍 {signatureRecommendation.place_name}
+                📍 {signatureGuide && isCommunityMap ? signatureGuide.title : signatureRecommendation.place_name}
               </p>
             </button>
           )}
@@ -168,8 +179,29 @@ export default function PersonMap() {
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="line-clamp-2 text-sm font-semibold leading-relaxed">“{item.reason}”</p>
-                  <p className="mt-1 truncate text-xs text-muted-foreground">📍 {item.place_name}</p>
+                  {isCommunityCuratedRecommendation(item) ? (
+                    <>
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black text-primary">
+                          {getPlaceGuide(item.place_name, item.category).kind}
+                        </span>
+                        <span className="truncate text-[11px] font-semibold text-muted-foreground">
+                          {item.place_name}
+                        </span>
+                      </div>
+                      <p className="truncate text-sm font-black leading-tight">
+                        {getPlaceGuide(item.place_name, item.category).title}
+                      </p>
+                      <p className="mt-1 line-clamp-2 text-xs font-semibold leading-relaxed text-muted-foreground">
+                        {getPlaceGuide(item.place_name, item.category).summary}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="line-clamp-2 text-sm font-semibold leading-relaxed">“{item.reason}”</p>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">📍 {item.place_name}</p>
+                    </>
+                  )}
                 </div>
               </button>
             ))

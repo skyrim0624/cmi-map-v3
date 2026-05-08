@@ -27,6 +27,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { getPersonMapPath } from '@/lib/paths';
+import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
 
 export default function PlaceDetail() {
   const { placeName } = useParams<{ placeName: string }>();
@@ -312,6 +313,8 @@ export default function PlaceDetail() {
 
   const firstRec = recommendations[0];
   const allImages = recommendations.flatMap(r => r.images);
+  const firstGuide = getPlaceGuide(firstRec.place_name, firstRec.category);
+  const firstIsCommunityGuide = isCommunityCuratedRecommendation(firstRec);
 
   return (
     <div className="relative w-full min-h-screen bg-background">
@@ -368,25 +371,64 @@ export default function PlaceDetail() {
           <div className="px-6 py-8 space-y-8">
             {/* 地点名称和分类 */}
             <div className="space-y-3">
-              <h1 className="text-2xl font-bold text-foreground">{placeName}</h1>
-              <Badge variant="secondary" className="rounded-full">
-                <img src={getCategoryIconUrl(firstRec.category)} alt="" className="w-4 h-4 mr-1 object-contain" />
-                {firstRec.category}
-              </Badge>
+              {firstIsCommunityGuide ? (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className="rounded-full">
+                      <img src={getCategoryIconUrl(firstRec.category)} alt="" className="w-4 h-4 mr-1 object-contain" />
+                      {firstGuide.kind}
+                    </Badge>
+                    <span className="text-xs font-bold text-muted-foreground">CMI 社区整理</span>
+                  </div>
+                  <div className="space-y-1">
+                    <h1 className="text-3xl font-black leading-tight text-foreground">{firstGuide.title}</h1>
+                    {firstGuide.title !== placeName && (
+                      <p className="break-words text-sm font-semibold text-muted-foreground">{placeName}</p>
+                    )}
+                  </div>
+                  <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
+                    <p className="text-base font-medium leading-relaxed text-foreground">{firstGuide.summary}</p>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {firstGuide.tags.map(tag => (
+                        <span key={tag} className="rounded-full bg-accent px-2.5 py-1 text-xs font-bold text-accent-foreground">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    {firstGuide.tip && (
+                      <p className="mt-3 rounded-xl bg-muted px-3 py-2 text-xs font-semibold leading-relaxed text-muted-foreground">
+                        {firstGuide.tip}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h1 className="text-2xl font-bold text-foreground">{placeName}</h1>
+                  <Badge variant="secondary" className="rounded-full">
+                    <img src={getCategoryIconUrl(firstRec.category)} alt="" className="w-4 h-4 mr-1 object-contain" />
+                    {firstRec.category}
+                  </Badge>
+                </>
+              )}
             </div>
 
             {/* 推荐列表 */}
             <div className="space-y-6">
-              {recommendations.map((rec, idx) => (
-                <div
-                  key={rec.id}
-                  className={`bg-card border border-border card-shadow rounded-xl p-5 space-y-3 relative overflow-hidden transition-all duration-300 ${
-                    activeStickerId && activeRecIdForSticker === rec.id 
-                      ? 'ring-4 ring-primary ring-offset-2 scale-[1.02] cursor-crosshair' 
-                      : ''
-                  }`}
-                  onClick={(e) => handleCardClick(e, rec.id)}
-                >
+              {recommendations.map((rec, idx) => {
+                const guide = getPlaceGuide(rec.place_name, rec.category);
+                const isCommunityGuide = isCommunityCuratedRecommendation(rec);
+
+                return (
+                  <div
+                    key={rec.id}
+                    className={`bg-card border border-border card-shadow rounded-xl p-5 space-y-3 relative overflow-hidden transition-all duration-300 ${
+                      activeStickerId && activeRecIdForSticker === rec.id 
+                        ? 'ring-4 ring-primary ring-offset-2 scale-[1.02] cursor-crosshair' 
+                        : ''
+                    }`}
+                    onClick={(e) => handleCardClick(e, rec.id)}
+                  >
                   {/* 已贴贴纸渲染层 */}
                   {placedStickers[rec.id]?.map((ps) => (
                     <div
@@ -416,20 +458,26 @@ export default function PlaceDetail() {
 
                   {/* 推荐理由 */}
                   <p className="quote-text text-lg leading-relaxed pr-10">
-                    {rec.reason}
+                    {isCommunityGuide ? guide.summary : rec.reason}
                   </p>
 
                   {/* 推荐人 */}
-                  <button
-                    type="button"
-                    className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      navigate(getPersonMapPath(rec.user_name));
-                    }}
-                  >
-                    —— {rec.user_name} 的清迈地图
-                  </button>
+                  {isCommunityGuide ? (
+                    <p className="text-sm font-semibold text-muted-foreground">
+                      —— CMI 社区整理
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        navigate(getPersonMapPath(rec.user_name));
+                      }}
+                    >
+                      —— {rec.user_name} 的清迈地图
+                    </button>
+                  )}
 
                   {/* 该推荐的照片 */}
                   {rec.images.length > 0 && (
@@ -501,7 +549,8 @@ export default function PlaceDetail() {
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
