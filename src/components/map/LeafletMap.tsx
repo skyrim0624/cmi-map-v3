@@ -282,8 +282,8 @@ export const LeafletMap = ({
         return L.divIcon({
           html: renderClusterIconHtml(visuals, count),
           className: 'scrapbook-cluster-icon bg-transparent border-none',
-          iconSize: [68, 48],
-          iconAnchor: [34, 43]
+          iconSize: [70, 58],
+          iconAnchor: [35, 54]
         });
       }
     });
@@ -342,8 +342,8 @@ export const LeafletMap = ({
       `).join('');
 
       const isHotspot = totalUpvotes > 0;
-      const rootWidth = isHotspot ? 92 : 88;
-      const rootHeight = isHotspot ? 62 : 58;
+      const rootWidth = isHotspot ? 68 : 62;
+      const rootHeight = isHotspot ? 70 : 66;
       
       const icon = L.divIcon({
         className: 'custom-marker-icon bg-transparent border-none',
@@ -371,14 +371,14 @@ export const LeafletMap = ({
                 box-shadow: 0 5px 10px rgba(240,83,63,0.25);
                 transform: rotate(5deg);
               ">
-                热 ${totalUpvotes}
+                ♥ ${totalUpvotes}
               </div>
             ` : ''}
             ${stickersHtml}
           </div>
         `,
-        iconSize: isHotspot ? [92, 62] : [88, 58],
-        iconAnchor: isHotspot ? [46, 54] : [44, 50]
+        iconSize: isHotspot ? [68, 70] : [62, 66],
+        iconAnchor: isHotspot ? [34, 63] : [31, 59]
       });
 
       const marker = L.marker([markerData.latitude, markerData.longitude], { icon });
