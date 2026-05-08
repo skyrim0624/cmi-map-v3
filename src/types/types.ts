@@ -78,67 +78,67 @@ export const CATEGORIES: CategoryConfig[] = [
     name: '吃饭', 
     color: 'category-food', 
     icon: '🍜',
-    iconUrl: '/map-icons/ai/food.png'
+    iconUrl: '/map-icons/color/food.png'
   },
   { 
     name: '咖啡', 
     color: 'category-coffee', 
     icon: '☕',
-    iconUrl: '/map-icons/ai/coffee.png'
+    iconUrl: '/map-icons/color/coffee.png'
   },
   { 
     name: '户外', 
     color: 'category-outdoor', 
     icon: '🏔️',
-    iconUrl: '/map-icons/ai/outdoor.png'
+    iconUrl: '/map-icons/color/outdoor.png'
   },
   { 
     name: '拍照', 
     color: 'category-photo', 
     icon: '📸',
-    iconUrl: '/map-icons/ai/photo.png'
+    iconUrl: '/map-icons/color/photo.png'
   },
   { 
     name: '市集', 
     color: 'category-market', 
     icon: '🛍️',
-    iconUrl: '/map-icons/ai/market.png'
+    iconUrl: '/map-icons/color/market.png'
   },
   { 
     name: '马杀鸡', 
     color: 'category-relax', 
     icon: '💆',
-    iconUrl: '/map-icons/ai/massage.png'
+    iconUrl: '/map-icons/color/massage.png'
   },
   { 
     name: '运动', 
     color: 'category-sport', 
     icon: '🏃',
-    iconUrl: '/map-icons/ai/sport.png'
+    iconUrl: '/map-icons/color/sport.png'
   },
   { 
     name: '酒吧', 
     color: 'category-bar', 
     icon: '🍸',
-    iconUrl: '/map-icons/ai/bar.png'
+    iconUrl: '/map-icons/color/bar.png'
   },
   { 
     name: '身心', 
     color: 'category-wellness', 
     icon: '🧘',
-    iconUrl: '/map-icons/ai/wellness.png'
+    iconUrl: '/map-icons/color/wellness.png'
   },
   { 
     name: '生存指南', 
     color: 'category-utility', 
     icon: '🔧',
-    iconUrl: '/map-icons/ai/utility.png'
+    iconUrl: '/map-icons/color/utility.png'
   },
   { 
     name: '彩蛋', 
     color: 'category-treasure', 
     icon: '🥚',
-    iconUrl: '/map-icons/ai/book.png'
+    iconUrl: '/map-icons/color/book.png'
   }
 ];
 

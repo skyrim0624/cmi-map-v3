@@ -36,7 +36,7 @@ export type MapMarkerVisual = {
   isCommunity: boolean;
 };
 
-const ICON_BASE_PATH = '/map-icons/ai';
+const ICON_BASE_PATH = '/map-icons/color';
 
 const TONES: Record<MarkerTone, Pick<MapMarkerVisual, 'accent' | 'shadow'>> = {
   food: {
