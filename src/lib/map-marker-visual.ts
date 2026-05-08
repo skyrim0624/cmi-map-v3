@@ -169,19 +169,16 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
       height:${iconSize}px;
       transform:translateX(-50%);
       border-radius:999px;
+      background:${visual.accent} url('${visual.iconUrl}') center / 100% 100% no-repeat;
+      border:2px solid rgba(255,255,255,0.94);
       filter:drop-shadow(0 10px 18px ${visual.shadow}) drop-shadow(0 1px 2px rgba(34,30,25,0.1));
+      box-sizing:border-box;
     ">
-      <img src="${visual.iconUrl}" alt="${label}" loading="lazy" style="
-        width:100%;
-        height:100%;
-        object-fit:contain;
-        display:block;
-      " />
       ${visual.isCommunity ? `
         <div style="
           position:absolute;
-          right:6px;
-          top:6px;
+          right:4px;
+          top:4px;
           width:7px;
           height:7px;
           border-radius:999px;
@@ -208,14 +205,16 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
 
 export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number) => {
   const miniIcons = visuals.slice(0, 3).map((visual, index) => `
-    <img src="${visual.iconUrl}" alt="" loading="lazy" style="
+    <div aria-hidden="true" style="
       width:28px;
       height:28px;
-      object-fit:contain;
-      display:block;
       margin-left:${index === 0 ? '0' : '-8px'};
+      border-radius:999px;
+      background:${visual.accent} url('${visual.iconUrl}') center / 100% 100% no-repeat;
+      border:1.5px solid rgba(255,255,255,0.9);
       filter:drop-shadow(0 4px 8px ${visual.shadow});
-    " />
+      box-sizing:border-box;
+    "></div>
   `).join('');
 
   return `
