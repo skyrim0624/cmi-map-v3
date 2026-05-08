@@ -36,7 +36,7 @@ export type MapMarkerVisual = {
   isCommunity: boolean;
 };
 
-const ICON_BASE_PATH = '/map-icons/negative-detail';
+const ICON_BASE_PATH = '/map-icons/symbol';
 
 const TONES: Record<MarkerTone, Pick<MapMarkerVisual, 'accent' | 'shadow'>> = {
   food: {
@@ -135,7 +135,7 @@ const buildVisual = (
 ): MapMarkerVisual => ({
   ...TONES[marker.tone],
   label: marker.label,
-  iconUrl: `${ICON_BASE_PATH}/${marker.icon}.png`,
+  iconUrl: `${ICON_BASE_PATH}/${marker.icon}.svg`,
   isCommunity,
 });
 

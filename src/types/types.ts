@@ -69,7 +69,7 @@ export interface CategoryConfig {
   name: Category;
   color: string;
   icon: string;
-  iconUrl: string; // 手绘图标URL
+  iconUrl: string; // 分类图标URL
 }
 
 // 分类配置列表
@@ -78,67 +78,67 @@ export const CATEGORIES: CategoryConfig[] = [
     name: '吃饭', 
     color: 'category-food', 
     icon: '🍜',
-    iconUrl: '/map-icons/negative-detail/food.png'
+    iconUrl: '/map-icons/symbol/food.svg'
   },
   { 
     name: '咖啡', 
     color: 'category-coffee', 
     icon: '☕',
-    iconUrl: '/map-icons/negative-detail/coffee.png'
+    iconUrl: '/map-icons/symbol/coffee.svg'
   },
   { 
     name: '户外', 
     color: 'category-outdoor', 
     icon: '🏔️',
-    iconUrl: '/map-icons/negative-detail/outdoor.png'
+    iconUrl: '/map-icons/symbol/outdoor.svg'
   },
   { 
     name: '拍照', 
     color: 'category-photo', 
     icon: '📸',
-    iconUrl: '/map-icons/negative-detail/photo.png'
+    iconUrl: '/map-icons/symbol/photo.svg'
   },
   { 
     name: '市集', 
     color: 'category-market', 
     icon: '🛍️',
-    iconUrl: '/map-icons/negative-detail/market.png'
+    iconUrl: '/map-icons/symbol/market.svg'
   },
   { 
     name: '马杀鸡', 
     color: 'category-relax', 
     icon: '💆',
-    iconUrl: '/map-icons/negative-detail/massage.png'
+    iconUrl: '/map-icons/symbol/massage.svg'
   },
   { 
     name: '运动', 
     color: 'category-sport', 
     icon: '🏃',
-    iconUrl: '/map-icons/negative-detail/sport.png'
+    iconUrl: '/map-icons/symbol/sport.svg'
   },
   { 
     name: '酒吧', 
     color: 'category-bar', 
     icon: '🍸',
-    iconUrl: '/map-icons/negative-detail/bar.png'
+    iconUrl: '/map-icons/symbol/bar.svg'
   },
   { 
     name: '身心', 
     color: 'category-wellness', 
     icon: '🧘',
-    iconUrl: '/map-icons/negative-detail/wellness.png'
+    iconUrl: '/map-icons/symbol/wellness.svg'
   },
   { 
     name: '生存指南', 
     color: 'category-utility', 
     icon: '🔧',
-    iconUrl: '/map-icons/negative-detail/utility.png'
+    iconUrl: '/map-icons/symbol/utility.svg'
   },
   { 
     name: '彩蛋', 
     color: 'category-treasure', 
     icon: '🥚',
-    iconUrl: '/map-icons/negative-detail/book.png'
+    iconUrl: '/map-icons/symbol/book.svg'
   }
 ];
 
@@ -157,7 +157,7 @@ export const getCategoryIcon = (category: Category): string => {
   return getCategoryConfig(category).icon;
 };
 
-// 获取分类手绘图标URL
+// 获取分类图标URL
 export const getCategoryIconUrl = (category: Category): string => {
   return getCategoryConfig(category).iconUrl;
 };
