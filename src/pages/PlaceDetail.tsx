@@ -375,7 +375,7 @@ export default function PlaceDetail() {
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="secondary" className="rounded-full">
-                      <img src={getCategoryIconUrl(firstRec.category)} alt="" className="w-4 h-4 mr-1 object-contain" />
+                      <img src={getCategoryIconUrl(firstRec.category)} alt="" className="mr-1 h-5 w-5 object-contain" />
                       {firstGuide.kind}
                     </Badge>
                     <span className="text-xs font-bold text-muted-foreground">CMI 社区整理</span>
@@ -406,7 +406,7 @@ export default function PlaceDetail() {
                 <>
                   <h1 className="text-2xl font-bold text-foreground">{placeName}</h1>
                   <Badge variant="secondary" className="rounded-full">
-                    <img src={getCategoryIconUrl(firstRec.category)} alt="" className="w-4 h-4 mr-1 object-contain" />
+                    <img src={getCategoryIconUrl(firstRec.category)} alt="" className="mr-1 h-5 w-5 object-contain" />
                     {firstRec.category}
                   </Badge>
                 </>

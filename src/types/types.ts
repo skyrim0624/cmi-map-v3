@@ -78,67 +78,67 @@ export const CATEGORIES: CategoryConfig[] = [
     name: '吃饭', 
     color: 'category-food', 
     icon: '🍜',
-    iconUrl: '/map-icons/symbol/food.svg'
+    iconUrl: '/categories/1.png'
   },
   { 
     name: '咖啡', 
     color: 'category-coffee', 
     icon: '☕',
-    iconUrl: '/map-icons/symbol/coffee.svg'
+    iconUrl: '/categories/2.png'
   },
   { 
     name: '户外', 
     color: 'category-outdoor', 
     icon: '🏔️',
-    iconUrl: '/map-icons/symbol/outdoor.svg'
+    iconUrl: '/categories/3.png'
   },
   { 
     name: '拍照', 
     color: 'category-photo', 
     icon: '📸',
-    iconUrl: '/map-icons/symbol/photo.svg'
+    iconUrl: '/categories/4.png'
   },
   { 
     name: '市集', 
     color: 'category-market', 
     icon: '🛍️',
-    iconUrl: '/map-icons/symbol/market.svg'
+    iconUrl: '/categories/5.png'
   },
   { 
     name: '马杀鸡', 
     color: 'category-relax', 
     icon: '💆',
-    iconUrl: '/map-icons/symbol/massage.svg'
+    iconUrl: '/categories/6.png'
   },
   { 
     name: '运动', 
     color: 'category-sport', 
     icon: '🏃',
-    iconUrl: '/map-icons/symbol/sport.svg'
+    iconUrl: '/categories/7.png'
   },
   { 
     name: '酒吧', 
     color: 'category-bar', 
     icon: '🍸',
-    iconUrl: '/map-icons/symbol/bar.svg'
+    iconUrl: '/categories/9.png'
   },
   { 
     name: '身心', 
     color: 'category-wellness', 
     icon: '🧘',
-    iconUrl: '/map-icons/symbol/wellness.svg'
+    iconUrl: '/categories/10.png'
   },
   { 
     name: '生存指南', 
     color: 'category-utility', 
     icon: '🔧',
-    iconUrl: '/map-icons/symbol/utility.svg'
+    iconUrl: '/categories/11.png'
   },
   { 
     name: '彩蛋', 
     color: 'category-treasure', 
     icon: '🥚',
-    iconUrl: '/map-icons/symbol/book.svg'
+    iconUrl: '/categories/8.png'
   }
 ];
 

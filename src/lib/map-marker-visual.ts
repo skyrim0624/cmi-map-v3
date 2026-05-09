@@ -36,7 +36,25 @@ export type MapMarkerVisual = {
   isCommunity: boolean;
 };
 
-const ICON_BASE_PATH = '/map-icons/symbol';
+// NOTE: 地图点位使用同一套旧贴纸资产，补齐全局分类之外的细分场景映射。
+const LEGACY_MARKER_ICON_URLS: Record<MarkerIconAsset, string> = {
+  food: '/categories/1.png',
+  coffee: '/categories/2.png',
+  outdoor: '/categories/3.png',
+  photo: '/categories/4.png',
+  market: '/categories/5.png',
+  massage: '/categories/6.png',
+  sport: '/categories/7.png',
+  bar: '/categories/9.png',
+  wellness: '/categories/10.png',
+  utility: '/categories/11.png',
+  hair: '/categories/11.png',
+  exchange: '/categories/11.png',
+  print: '/categories/11.png',
+  book: '/categories/8.png',
+  music: '/categories/9.png',
+  'hot-spring': '/categories/10.png',
+};
 
 const TONES: Record<MarkerTone, Pick<MapMarkerVisual, 'accent' | 'shadow'>> = {
   food: {
@@ -135,7 +153,7 @@ const buildVisual = (
 ): MapMarkerVisual => ({
   ...TONES[marker.tone],
   label: marker.label,
-  iconUrl: `${ICON_BASE_PATH}/${marker.icon}.svg`,
+  iconUrl: LEGACY_MARKER_ICON_URLS[marker.icon],
   isCommunity,
 });
 
@@ -169,21 +187,31 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
       height:${iconSize}px;
       transform:translateX(-50%);
       border-radius:999px;
-      background:${visual.accent} url('${visual.iconUrl}') center / 100% 100% no-repeat;
-      border:2px solid rgba(255,255,255,0.94);
-      filter:drop-shadow(0 10px 18px ${visual.shadow}) drop-shadow(0 1px 2px rgba(34,30,25,0.1));
+      background:#ffffff;
+      padding:6px;
+      box-shadow:0 4px 8px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
+      display:flex;
+      align-items:center;
+      justify-content:center;
       box-sizing:border-box;
     ">
+      <img src="${visual.iconUrl}" alt="${label}" loading="lazy" style="
+        width:100%;
+        height:100%;
+        object-fit:contain;
+        display:block;
+        filter:drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+      " />
       ${visual.isCommunity ? `
         <div style="
           position:absolute;
-          right:4px;
-          top:4px;
+          right:6px;
+          top:6px;
           width:7px;
           height:7px;
           border-radius:999px;
-          background:#fffdf2;
-          border:1.5px solid ${visual.accent};
+          background:${visual.accent};
+          border:1.5px solid #fff;
           box-shadow:0 2px 4px ${visual.shadow};
         "></div>
       ` : ''}
@@ -195,60 +223,74 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
       width:12px;
       height:12px;
       transform:translateX(-50%) rotate(45deg);
-      background:${visual.accent};
-      border-right:1.5px solid rgba(255,255,255,0.28);
-      border-bottom:1.5px solid rgba(255,255,255,0.28);
+      background:#ffffff;
+      border-right:1.5px solid rgba(70,61,52,0.12);
+      border-bottom:1.5px solid rgba(70,61,52,0.12);
       box-shadow:4px 4px 7px ${visual.shadow};
     "></div>
   `;
 };
 
 export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number) => {
-  const miniIcons = visuals.slice(0, 3).map((visual, index) => `
+  const transforms = [
+    'translate(0px, 0px) rotate(-8deg)',
+    'translate(12px, -6px) rotate(14deg)',
+    'translate(-4px, 12px) rotate(-12deg)',
+  ];
+  const displayedVisuals = visuals.slice(0, 3);
+  const miniIcons = displayedVisuals.map((visual, index) => `
     <div aria-hidden="true" style="
-      width:28px;
-      height:28px;
-      margin-left:${index === 0 ? '0' : '-8px'};
-      border-radius:999px;
-      background:${visual.accent} url('${visual.iconUrl}') center / 100% 100% no-repeat;
-      border:1.5px solid rgba(255,255,255,0.9);
-      filter:drop-shadow(0 4px 8px ${visual.shadow});
+      position:absolute;
+      top:8px;
+      left:8px;
+      width:48px;
+      height:48px;
+      transform:${transforms[index]};
+      z-index:${index + 1};
+      background:#ffffff;
+      border-radius:50%;
+      padding:5px;
+      box-shadow:0 3px 6px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
+      display:flex;
+      align-items:center;
+      justify-content:center;
       box-sizing:border-box;
-    "></div>
+    ">
+      <img src="${visual.iconUrl}" alt="" loading="lazy" style="
+        width:100%;
+        height:100%;
+        object-fit:contain;
+        display:block;
+        filter:drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+      " />
+    </div>
   `).join('');
+  const remaining = count - displayedVisuals.length;
 
   return `
     <div style="position:relative; width:72px; height:62px;">
-      <div style="
-        position:absolute;
-        left:50%;
-        top:5px;
-        width:54px;
-        height:54px;
-        transform:translateX(-50%);
-        border-radius:999px;
-        background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,246,235,0.96));
-        color:#2f2b26;
-        border:1.5px solid rgba(47,43,38,0.13);
-        box-shadow:0 10px 20px rgba(35,31,27,0.16), inset 0 1px 0 rgba(255,255,255,0.95);
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        font-family:'Inter','PingFang SC','Noto Sans SC',sans-serif;
-        font-size:18px;
-        font-weight:950;
-        letter-spacing:0;
-      ">${count}</div>
-      <div style="
-        position:absolute;
-        left:50%;
-        top:-4px;
-        transform:translateX(-50%);
-        height:30px;
-        display:flex;
-        align-items:center;
-        z-index:5;
-      ">${miniIcons}</div>
+      ${miniIcons}
+      ${remaining > 0 ? `
+        <div style="
+          position:absolute;
+          bottom:2px;
+          right:-4px;
+          z-index:10;
+          background:#e2e8ce;
+          color:#4a5d23;
+          font-family:'Inter','PingFang SC','Noto Sans SC',sans-serif;
+          font-weight:900;
+          font-size:18px;
+          line-height:1;
+          padding:5px 9px 6px;
+          transform:rotate(-6deg);
+          box-shadow:1px 2px 4px rgba(0,0,0,0.15);
+          border:1px dashed rgba(74,93,35,0.22);
+          border-radius:2px;
+        ">
+          +${remaining}
+        </div>
+      ` : ''}
       <div style="
         position:absolute;
         left:50%;
@@ -256,7 +298,7 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
         width:10px;
         height:10px;
         transform:translateX(-50%) rotate(45deg);
-        background:rgba(250,246,235,0.98);
+        background:#ffffff;
         border-right:1.5px solid rgba(47,43,38,0.12);
         border-bottom:1.5px solid rgba(47,43,38,0.12);
         box-shadow:3px 3px 5px rgba(35,31,27,0.12);

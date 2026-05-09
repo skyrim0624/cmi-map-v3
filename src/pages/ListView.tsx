@@ -96,7 +96,7 @@ export default function ListView() {
                 onClick={() => setSelectedCategory(cat.name)}
                 data-state={selectedCategory === cat.name ? 'on' : 'off'}
               >
-                <img src={cat.iconUrl} alt={cat.name} className="w-4 h-4 mr-1 object-contain" />
+                <img src={cat.iconUrl} alt={cat.name} className="mr-1 h-5 w-5 object-contain" />
                 {cat.name}
               </Button>
             ))}

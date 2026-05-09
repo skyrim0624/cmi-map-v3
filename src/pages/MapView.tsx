@@ -244,7 +244,7 @@ export default function MapView() {
                 setSelectedMarker(null);
               }}
             >
-              <img src={cat.iconUrl} alt={cat.name} className="w-4 h-4 object-contain drop-shadow-sm" />
+              <img src={cat.iconUrl} alt={cat.name} className="h-5 w-5 object-contain drop-shadow-sm" />
               {cat.name}
             </Button>
           ))}
@@ -317,7 +317,7 @@ export default function MapView() {
                   <img
                     src={getCategoryIconUrl(scene.category)}
                     alt=""
-                    className="mx-auto mb-1 h-5 w-5 object-contain"
+                    className="mx-auto mb-1 h-7 w-7 object-contain drop-shadow-sm"
                   />
                   <p className="truncate text-xs font-black">{scene.label}</p>
                 </button>

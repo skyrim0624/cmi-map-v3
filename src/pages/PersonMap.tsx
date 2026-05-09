@@ -143,7 +143,7 @@ export default function PersonMap() {
                   className="rounded-full"
                   onClick={() => setSelectedCategory(item.name)}
                 >
-                  <img src={getCategoryIconUrl(item.name)} alt="" className="mr-1 h-4 w-4 object-contain" />
+                  <img src={getCategoryIconUrl(item.name)} alt="" className="mr-1 h-5 w-5 object-contain" />
                   {item.name} {item.count}
                 </Button>
               ))}

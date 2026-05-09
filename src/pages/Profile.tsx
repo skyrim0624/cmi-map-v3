@@ -359,7 +359,7 @@ export default function Profile() {
                 className="rounded-full whitespace-nowrap press-feedback border border-border/60"
                 onClick={() => setSelectedCategory(cat.name)}
               >
-                <img src={cat.iconUrl} alt={cat.name} className="w-4 h-4 mr-1 object-contain" />
+                <img src={cat.iconUrl} alt={cat.name} className="mr-1 h-5 w-5 object-contain" />
                 {cat.name}
               </Button>
             ))}
