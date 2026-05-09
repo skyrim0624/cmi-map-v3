@@ -27,9 +27,12 @@ const SCENE_ENTRIES: Array<{
 }> = [
   { label: '吃饭', category: '吃饭' },
   { label: '咖啡', category: '咖啡' },
+  { label: '办公', category: '咖啡' },
+  { label: '书店', category: '彩蛋' },
+  { label: '马杀鸡', category: '马杀鸡' },
   { label: '办事', category: '生存指南' },
-  { label: '闲逛', category: '户外' },
-  { label: '放松', category: '马杀鸡' },
+  { label: '拍照', category: '拍照' },
+  { label: '晚上', category: '酒吧' },
 ];
 
 const isDecisionReadyRecommendation = (recommendation: Recommendation) => {
@@ -258,10 +261,10 @@ export default function MapView() {
             <div className="mb-3 flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[11px] font-black uppercase tracking-[0.16em] text-primary">
-                  CMI PICKS
+                  CMI INTENT
                 </p>
                 <h2 className="text-lg font-black leading-tight text-foreground">
-                  今天在清迈
+                  你现在想在清迈做什么？
                 </h2>
               </div>
               <button
@@ -299,7 +302,7 @@ export default function MapView() {
             </button>
           )}
 
-            <div className="grid grid-cols-5 gap-1.5">
+            <div className="grid grid-cols-4 gap-1.5">
               {SCENE_ENTRIES.map(scene => (
                 <button
                   key={scene.label}
