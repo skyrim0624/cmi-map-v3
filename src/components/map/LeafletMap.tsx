@@ -14,6 +14,7 @@ interface LeafletMapProps {
   mode?: 'view' | 'mark'; // 查看模式或标记模式
   onCenterChange?: (lat: number, lng: number) => void;
   defaultCenter?: { lat: number; lng: number };
+  focusUserLocation?: boolean;
   className?: string;
 }
 
@@ -33,6 +34,7 @@ export const LeafletMap = ({
   mode = 'view',
   onCenterChange,
   defaultCenter = CHIANG_MAI_CENTER,
+  focusUserLocation = false,
   className = ''
 }: LeafletMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -44,6 +46,7 @@ export const LeafletMap = ({
   const orientationHandlerRef = useRef<((event: DeviceOrientationEvent) => void) | null>(null);
   const markerVisualsRef = useRef(new WeakMap<L.Marker, MapMarkerVisual>());
   const userHeadingRef = useRef<number>(0); // 用户朝向角度
+  const hasFocusedUserLocationRef = useRef(false);
 
   // 更新回调引用
   useEffect(() => {
@@ -87,6 +90,9 @@ export const LeafletMap = ({
       }
       .leaflet-tile-pane {
         filter: brightness(1.08) saturate(0.5);
+      }
+      .user-location-marker {
+        z-index: 1200 !important;
       }
     `;
     document.head.appendChild(style);
@@ -134,11 +140,6 @@ export const LeafletMap = ({
             try {
               const userLat = position.coords.latitude;
               const userLng = position.coords.longitude;
-              
-              // 根据模式选择用户位置图标
-              const userIconUrl = mode === 'mark' 
-                ? 'https://miaoda-conversation-file.cdn.bcebos.com/user-aitwe90l6zuo/conv-az97tfv4utc0/20260416/file-azwq0xhr1hxc.png' // 录入模式：橙红色地图标记
-                : 'https://miaoda-conversation-file.cdn.bcebos.com/user-aitwe90l6zuo/conv-az97tfv4utc0/20260416/file-azw6hmx5ubr4.png'; // 查看模式：蓝色箭头
               
               // 创建用户位置标记（手工矢量+脉冲光环+指南针指向）
               const createUserIcon = (heading: number = 0) => {
@@ -191,7 +192,11 @@ export const LeafletMap = ({
               };
 
               // 添加用户位置标记
-              const userMarker = L.marker([userLat, userLng], { icon: createUserIcon(0) })
+              const userMarker = L.marker([userLat, userLng], {
+                icon: createUserIcon(0),
+                interactive: false,
+                zIndexOffset: 1200,
+              })
                 .addTo(map);
               
               userLocationMarkerRef.current = userMarker;
@@ -219,6 +224,17 @@ export const LeafletMap = ({
               if (mode === 'mark') {
                 map.setView([userLat, userLng], 15);
               }
+
+              if (mode === 'view' && focusUserLocation && !hasFocusedUserLocationRef.current) {
+                const userLatLng = L.latLng(userLat, userLng);
+                const chiangMaiBounds = L.latLngBounds(CHIANG_MAI_BOUNDS);
+                if (chiangMaiBounds.contains(userLatLng)) {
+                  hasFocusedUserLocationRef.current = true;
+                  map.setView(userLatLng, Math.max(map.getZoom(), 14), { animate: false });
+                  const mapSize = map.getSize();
+                  map.panBy(L.point(0, mapSize.y * 0.12), { animate: false });
+                }
+              }
             } catch (error) {
               console.debug('设置用户位置标记失败', error);
             }
@@ -244,7 +260,7 @@ export const LeafletMap = ({
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, [mode, defaultCenter]); // 移除 onCenterChange 依赖
+  }, [mode, defaultCenter, focusUserLocation]); // 移除 onCenterChange 依赖
 
   // 更新标记点
   useEffect(() => {

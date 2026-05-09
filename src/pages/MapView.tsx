@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { LeafletMap } from '@/components/map/LeafletMap';
 import { getAllRecommendations } from '@/db/api';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Recommendation, MapMarker as MapMarkerType } from '@/types/types';
+import type { Category, Recommendation, MapMarker as MapMarkerType } from '@/types/types';
 import { getCategoryIconUrl, CATEGORIES } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Footprints, List, LogIn, Plus, Sparkles } from 'lucide-react';
+import { Compass, List, LogIn, MapPinned, Plus, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { getPersonMapPath, getPlacePath } from '@/lib/paths';
 import { getGuideSourceLabel, getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
@@ -18,6 +18,41 @@ const getTodayIndex = (length: number) => {
   return dateKey % length;
 };
 
+type ActiveFilter = '精选' | '全部' | Category;
+const FEATURED_MARKER_LIMIT = 12;
+
+const SCENE_ENTRIES: Array<{
+  label: string;
+  category: Category;
+}> = [
+  { label: '吃饭', category: '吃饭' },
+  { label: '咖啡', category: '咖啡' },
+  { label: '办事', category: '生存指南' },
+  { label: '闲逛', category: '户外' },
+  { label: '放松', category: '马杀鸡' },
+];
+
+const isDecisionReadyRecommendation = (recommendation: Recommendation) => {
+  if (!isCommunityCuratedRecommendation(recommendation)) {
+    return recommendation.reason.trim().length >= 18;
+  }
+
+  const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
+  return !guide.tags.includes('待确认') && guide.kind !== '坐标点' && guide.summary.trim().length >= 30;
+};
+
+const getRecommendationPresentation = (recommendation: Recommendation | null) => {
+  if (!recommendation) return null;
+
+  const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
+  const isCommunityGuide = isCommunityCuratedRecommendation(recommendation);
+
+  return {
+    title: isCommunityGuide ? guide.title : recommendation.place_name,
+    summary: isCommunityGuide ? guide.summary : recommendation.reason,
+  };
+};
+
 export default function MapView() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
@@ -25,20 +60,48 @@ export default function MapView() {
   const [markers, setMarkers] = useState<MapMarkerType[]>([]);
   const [selectedMarker, setSelectedMarker] = useState<MapMarkerType | null>(null);
   const [selectedRecommendations, setSelectedRecommendations] = useState<Recommendation[]>([]);
-  const [activeCategory, setActiveCategory] = useState<string>('全部');
+  const [activeCategory, setActiveCategory] = useState<ActiveFilter>('精选');
   
   const displayName = profile?.user_name || user?.email?.split('@')[0] || '游客';
 
-  const storyRecommendations = useMemo(
-    () => recommendations.filter(rec => rec.reason.trim().length >= 16),
+  const decisionReadyRecommendations = useMemo(
+    () => recommendations.filter(isDecisionReadyRecommendation),
     [recommendations]
   );
 
-  const todayPick = storyRecommendations.length > 0
-    ? storyRecommendations[getTodayIndex(storyRecommendations.length)]
+  const todayPick = decisionReadyRecommendations.length > 0
+    ? decisionReadyRecommendations[getTodayIndex(decisionReadyRecommendations.length)]
     : recommendations[0];
 
   const latestTrace = recommendations[0] || null;
+  const sceneRecommendations = useMemo(() => {
+    const picks: Recommendation[] = [];
+    const seenPlaceNames = new Set<string>();
+    const addPick = (recommendation: Recommendation | null | undefined) => {
+      if (!recommendation || seenPlaceNames.has(recommendation.place_name)) return;
+      seenPlaceNames.add(recommendation.place_name);
+      picks.push(recommendation);
+    };
+
+    addPick(todayPick);
+    addPick(latestTrace);
+
+    for (const scene of SCENE_ENTRIES) {
+      addPick(decisionReadyRecommendations.find(rec => rec.category === scene.category));
+    }
+
+    for (const recommendation of decisionReadyRecommendations) {
+      if (picks.length >= FEATURED_MARKER_LIMIT) break;
+      addPick(recommendation);
+    }
+
+    return picks;
+  }, [decisionReadyRecommendations, latestTrace, todayPick]);
+  const featuredPlaceNames = useMemo(
+    () => new Set(sceneRecommendations.map(recommendation => recommendation.place_name)),
+    [sceneRecommendations]
+  );
+  const todayPickPresentation = getRecommendationPresentation(todayPick || null);
 
   // 加载推荐数据
   useEffect(() => {
@@ -89,9 +152,11 @@ export default function MapView() {
   };
 
   // 过滤当前需要显示的标记点
-  const displayedMarkers = activeCategory === '全部' 
-    ? markers 
-    : markers.filter(m => m.category === activeCategory);
+  const displayedMarkers = activeCategory === '精选'
+    ? markers.filter(marker => featuredPlaceNames.has(marker.place_name)).slice(0, FEATURED_MARKER_LIMIT)
+    : activeCategory === '全部'
+      ? markers
+      : markers.filter(m => m.category === activeCategory);
 
   const selectedRecommendation = selectedRecommendations[0] || null;
   const selectedGuide = selectedRecommendation
@@ -100,10 +165,6 @@ export default function MapView() {
   const selectedIsCommunityGuide = selectedRecommendation
     ? isCommunityCuratedRecommendation(selectedRecommendation)
     : false;
-  const todayPickIsCommunityGuide = todayPick ? isCommunityCuratedRecommendation(todayPick) : false;
-  const todayPickGuide = todayPick ? getPlaceGuide(todayPick.place_name, todayPick.category) : null;
-  const latestTraceIsCommunityGuide = latestTrace ? isCommunityCuratedRecommendation(latestTrace) : false;
-  const latestTraceGuide = latestTrace ? getPlaceGuide(latestTrace.place_name, latestTrace.category) : null;
 
   return (
     <div className="relative w-full h-[100dvh] overflow-hidden">
@@ -114,6 +175,7 @@ export default function MapView() {
           onMarkerClick={handleMarkerClick}
           onMapClick={handleMapClick}
           mode="view"
+          focusUserLocation
           className="w-full h-full"
         />
       </div>
@@ -143,6 +205,20 @@ export default function MapView() {
           <Button
             size="sm"
             className={`rounded-full shadow-md font-semibold press-feedback transition-transform ${
+              activeCategory === '精选' 
+                ? 'bg-primary text-primary-foreground border-2 border-transparent scale-105' 
+                : 'bg-background/80 hover:bg-background text-foreground backdrop-blur-sm border-2 border-border/50'
+            }`}
+            onClick={() => {
+              setActiveCategory('精选');
+              setSelectedMarker(null);
+            }}
+          >
+            精选
+          </Button>
+          <Button
+            size="sm"
+            className={`rounded-full shadow-md font-semibold press-feedback transition-transform ${
               activeCategory === '全部' 
                 ? 'bg-primary text-primary-foreground border-2 border-transparent scale-105' 
                 : 'bg-background/80 hover:bg-background text-foreground backdrop-blur-sm border-2 border-border/50'
@@ -152,7 +228,7 @@ export default function MapView() {
               setSelectedMarker(null);
             }}
           >
-            全 部
+            全部
           </Button>
           {CATEGORIES.map((cat) => (
             <Button
@@ -175,54 +251,101 @@ export default function MapView() {
         </div>
       </div>
 
-      {/* 轻探索入口：让地图每天多一点未知感 */}
+      {/* 决策入口：默认先给用户一个清晰选择，再进入完整地图。 */}
       {!selectedMarker && (todayPick || latestTrace) && (
-        <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+104px)] left-4 right-4 z-20 grid grid-cols-2 gap-2">
-          {todayPick && (
+        <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+96px)] left-3 right-3 z-30 md:left-6 md:right-auto md:w-[420px]">
+          <section className="rounded-lg border-2 border-foreground bg-background/95 p-3 shadow-[4px_5px_0_rgba(0,0,0,0.18)] backdrop-blur-md">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-primary">
+                  CMI PICKS
+                </p>
+                <h2 className="text-lg font-black leading-tight text-foreground">
+                  今天在清迈
+                </h2>
+              </div>
+              <button
+                type="button"
+                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-black transition-transform active:scale-[0.97] ${
+                  activeCategory === '精选'
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-card text-foreground'
+                }`}
+                onClick={() => {
+                  setActiveCategory('精选');
+                  setSelectedMarker(null);
+                }}
+              >
+                精选 {displayedMarkers.length}
+              </button>
+            </div>
+
+            {todayPick && todayPickPresentation && (
             <button
               type="button"
-              className="min-w-0 rounded-2xl border-2 border-foreground bg-card/95 p-3 text-left shadow-[3px_4px_0_rgba(0,0,0,0.16)] backdrop-blur-sm transition-transform active:scale-[0.98]"
+                className="mb-3 w-full rounded-lg border border-border bg-card p-3 text-left transition-transform active:scale-[0.98]"
               onClick={() => navigate(getPlacePath(todayPick.place_name))}
             >
-              <div className="mb-1 flex items-center gap-1.5 text-xs font-black text-primary">
+                <div className="mb-1 flex items-center gap-1.5 text-xs font-black text-primary">
                 <Sparkles className="h-4 w-4 shrink-0" />
                 今天去哪
               </div>
-              <p className="truncate text-sm font-black text-foreground">
-                {todayPickIsCommunityGuide && todayPickGuide ? todayPickGuide.title : todayPick.place_name}
+                <p className="truncate text-base font-black text-foreground">
+                  {todayPickPresentation.title}
               </p>
-              <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-snug text-muted-foreground">
-                {todayPickIsCommunityGuide && todayPickGuide ? todayPickGuide.summary : todayPick.reason}
+                <p className="mt-1 line-clamp-2 text-xs font-semibold leading-snug text-muted-foreground">
+                  {todayPickPresentation.summary}
               </p>
             </button>
           )}
 
-          {latestTrace && (
-            <button
-              type="button"
-              className="min-w-0 rounded-2xl border border-border/70 bg-background/95 p-3 text-left shadow-lg backdrop-blur-sm transition-transform active:scale-[0.98]"
-              onClick={() => {
-                if (latestTraceIsCommunityGuide) {
-                  navigate(getPlacePath(latestTrace.place_name));
-                  return;
-                }
-                navigate(getPersonMapPath(latestTrace.user_name));
-              }}
-            >
-              <div className="mb-1 flex items-center gap-1.5 text-xs font-black text-primary">
-                <Footprints className="h-4 w-4 shrink-0" />
-                最近痕迹
-              </div>
-              <p className="truncate text-sm font-black text-foreground">
-                {latestTraceIsCommunityGuide ? 'CMI 社区整理' : latestTrace.user_name}
-              </p>
-              <p className="mt-1 line-clamp-2 text-[11px] font-medium leading-snug text-muted-foreground">
-                {latestTraceIsCommunityGuide && latestTraceGuide
-                  ? `收录了 ${latestTraceGuide.title}`
-                  : `刚在 ${latestTrace.place_name} 留下一笔`}
-              </p>
-            </button>
-          )}
+            <div className="grid grid-cols-5 gap-1.5">
+              {SCENE_ENTRIES.map(scene => (
+                <button
+                  key={scene.label}
+                  type="button"
+                  className={`min-w-0 rounded-lg border p-2 text-center transition-transform active:scale-[0.96] ${
+                    activeCategory === scene.category
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-border bg-card text-foreground'
+                  }`}
+                  onClick={() => {
+                    setActiveCategory(scene.category);
+                    setSelectedMarker(null);
+                  }}
+                >
+                  <img
+                    src={getCategoryIconUrl(scene.category)}
+                    alt=""
+                    className="mx-auto mb-1 h-5 w-5 object-contain"
+                  />
+                  <p className="truncate text-xs font-black">{scene.label}</p>
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                className="flex min-w-0 items-center justify-center gap-1.5 rounded-lg border border-border bg-muted/60 px-3 py-2 text-xs font-black text-foreground transition-transform active:scale-[0.97]"
+                onClick={() => navigate(getPersonMapPath('CMI社区'))}
+              >
+                <Compass className="h-4 w-4 shrink-0 text-primary" />
+                CMI 常去
+              </button>
+              <button
+                type="button"
+                className="flex min-w-0 items-center justify-center gap-1.5 rounded-lg border border-border bg-muted/60 px-3 py-2 text-xs font-black text-foreground transition-transform active:scale-[0.97]"
+                onClick={() => {
+                  setActiveCategory('全部');
+                  setSelectedMarker(null);
+                }}
+              >
+                <MapPinned className="h-4 w-4 shrink-0 text-primary" />
+                完整地图
+              </button>
+            </div>
+          </section>
         </div>
       )}
 
