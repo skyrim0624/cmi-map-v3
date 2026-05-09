@@ -13,8 +13,11 @@ interface LeafletMapProps {
   onMapClick?: () => void; // 点击地图空白区域的回调
   mode?: 'view' | 'mark'; // 查看模式或标记模式
   onCenterChange?: (lat: number, lng: number) => void;
+  onUserLocation?: (lat: number, lng: number) => void;
   defaultCenter?: { lat: number; lng: number };
   focusUserLocation?: boolean;
+  interactive?: boolean;
+  showUserLocation?: boolean;
   className?: string;
 }
 
@@ -33,8 +36,11 @@ export const LeafletMap = ({
   onMapClick,
   mode = 'view',
   onCenterChange,
+  onUserLocation,
   defaultCenter = CHIANG_MAI_CENTER,
   focusUserLocation = false,
+  interactive = true,
+  showUserLocation = true,
   className = ''
 }: LeafletMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -43,6 +49,7 @@ export const LeafletMap = ({
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null);
   const userLocationMarkerRef = useRef<L.Marker | null>(null);
   const onCenterChangeRef = useRef(onCenterChange);
+  const onUserLocationRef = useRef(onUserLocation);
   const orientationHandlerRef = useRef<((event: DeviceOrientationEvent) => void) | null>(null);
   const markerVisualsRef = useRef(new WeakMap<L.Marker, MapMarkerVisual>());
   const userHeadingRef = useRef<number>(0); // 用户朝向角度
@@ -52,6 +59,10 @@ export const LeafletMap = ({
   useEffect(() => {
     onCenterChangeRef.current = onCenterChange;
   }, [onCenterChange]);
+
+  useEffect(() => {
+    onUserLocationRef.current = onUserLocation;
+  }, [onUserLocation]);
 
   // 初始化地图
   useEffect(() => {
@@ -65,6 +76,12 @@ export const LeafletMap = ({
       maxZoom: 18,
       zoomControl: false,
       attributionControl: false,
+      dragging: interactive,
+      touchZoom: interactive,
+      scrollWheelZoom: interactive,
+      doubleClickZoom: interactive,
+      boxZoom: interactive,
+      keyboard: interactive,
       maxBounds: CHIANG_MAI_BOUNDS,
       maxBoundsViscosity: 1.0,
       // 移动端缩放性能优化
@@ -134,12 +151,13 @@ export const LeafletMap = ({
       }
 
       // 获取用户当前位置并添加可爱的位置标记
-      if (navigator.geolocation) {
+      if (showUserLocation && navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
             try {
               const userLat = position.coords.latitude;
               const userLng = position.coords.longitude;
+              onUserLocationRef.current?.(userLat, userLng);
               
               // 创建用户位置标记（手工矢量+脉冲光环+指南针指向）
               const createUserIcon = (heading: number = 0) => {
@@ -260,7 +278,7 @@ export const LeafletMap = ({
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, [mode, defaultCenter, focusUserLocation]); // 移除 onCenterChange 依赖
+  }, [mode, defaultCenter, focusUserLocation, interactive, showUserLocation]); // 移除 onCenterChange 依赖
 
   // 更新标记点
   useEffect(() => {
@@ -418,7 +436,16 @@ export const LeafletMap = ({
 
   return (
     <div className={`relative w-full h-full ${className}`}>
-      <div ref={mapRef} className="w-full h-full rounded-[0px]" style={{ minHeight: '100%', touchAction: 'manipulation', willChange: 'transform' }} />
+      <div
+        ref={mapRef}
+        className="w-full h-full rounded-[0px]"
+        style={{
+          minHeight: '100%',
+          pointerEvents: interactive ? 'auto' : 'none',
+          touchAction: interactive ? 'manipulation' : 'none',
+          willChange: 'transform',
+        }}
+      />
       {/* 标记模式：显示中心定位大头针 - 放在上半部分地图的中心（黄金分割点） */}
       {mode === 'mark' && (
         <div className="absolute top-[31%] left-1/2 -translate-x-1/2 -translate-y-full pointer-events-none z-[1000]">

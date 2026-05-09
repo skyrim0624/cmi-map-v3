@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { LeafletMap } from '@/components/map/LeafletMap';
 import { getAllRecommendations } from '@/db/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,109 +7,64 @@ import type { Category, Recommendation, MapMarker as MapMarkerType } from '@/typ
 import { getCategoryIconUrl, CATEGORIES } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Compass, List, LogIn, MapPinned, Plus, Sparkles } from 'lucide-react';
+import { List, LogIn, MapPinned, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { getPersonMapPath, getPlacePath } from '@/lib/paths';
+import { getPersonMapPath, getPlacePath, getSceneListPath } from '@/lib/paths';
 import { getGuideSourceLabel, getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
-
-const getTodayIndex = (length: number) => {
-  if (length <= 0) return 0;
-  const dateKey = Number(new Date().toISOString().slice(0, 10).replace(/-/g, ''));
-  return dateKey % length;
-};
+import {
+  getCmiScene,
+  getCmiSceneRecommendationPresentation,
+  getCmiSceneRecommendations,
+} from '@/data/cmi-scenes';
 
 type ActiveFilter = '精选' | '全部' | Category;
 const FEATURED_MARKER_LIMIT = 12;
 
-const SCENE_ENTRIES: Array<{
-  label: string;
-  category: Category;
-}> = [
-  { label: '吃饭', category: '吃饭' },
-  { label: '咖啡', category: '咖啡' },
-  { label: '办公', category: '咖啡' },
-  { label: '书店', category: '彩蛋' },
-  { label: '马杀鸡', category: '马杀鸡' },
-  { label: '办事', category: '生存指南' },
-  { label: '拍照', category: '拍照' },
-  { label: '晚上', category: '酒吧' },
-];
-
-const isDecisionReadyRecommendation = (recommendation: Recommendation) => {
-  if (!isCommunityCuratedRecommendation(recommendation)) {
-    return recommendation.reason.trim().length >= 18;
-  }
-
-  const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
-  return !guide.tags.includes('待确认') && guide.kind !== '坐标点' && guide.summary.trim().length >= 30;
-};
-
-const getRecommendationPresentation = (recommendation: Recommendation | null) => {
-  if (!recommendation) return null;
-
-  const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
-  const isCommunityGuide = isCommunityCuratedRecommendation(recommendation);
-
-  return {
-    title: isCommunityGuide ? guide.title : recommendation.place_name,
-    summary: isCommunityGuide ? guide.summary : recommendation.reason,
-  };
-};
-
 export default function MapView() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, profile } = useAuth();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [markers, setMarkers] = useState<MapMarkerType[]>([]);
   const [selectedMarker, setSelectedMarker] = useState<MapMarkerType | null>(null);
   const [selectedRecommendations, setSelectedRecommendations] = useState<Recommendation[]>([]);
   const [activeCategory, setActiveCategory] = useState<ActiveFilter>('精选');
-  
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+
+  const activeScene = getCmiScene(searchParams.get('scene'));
   const displayName = profile?.user_name || user?.email?.split('@')[0] || '游客';
 
-  const decisionReadyRecommendations = useMemo(
-    () => recommendations.filter(isDecisionReadyRecommendation),
+  const featuredRecommendations = useMemo(
+    () => getCmiSceneRecommendations(recommendations, 'pick-for-me', { limit: FEATURED_MARKER_LIMIT }),
     [recommendations]
   );
 
-  const todayPick = decisionReadyRecommendations.length > 0
-    ? decisionReadyRecommendations[getTodayIndex(decisionReadyRecommendations.length)]
-    : recommendations[0];
-
-  const latestTrace = recommendations[0] || null;
   const sceneRecommendations = useMemo(() => {
-    const picks: Recommendation[] = [];
-    const seenPlaceNames = new Set<string>();
-    const addPick = (recommendation: Recommendation | null | undefined) => {
-      if (!recommendation || seenPlaceNames.has(recommendation.place_name)) return;
-      seenPlaceNames.add(recommendation.place_name);
-      picks.push(recommendation);
-    };
+    if (!activeScene) return [];
+    return getCmiSceneRecommendations(recommendations, activeScene, {
+      limit: activeScene.id === 'nearby' ? 36 : undefined,
+      userLocation: userLocation ?? undefined,
+    });
+  }, [activeScene, recommendations, userLocation]);
 
-    addPick(todayPick);
-    addPick(latestTrace);
-
-    for (const scene of SCENE_ENTRIES) {
-      addPick(decisionReadyRecommendations.find(rec => rec.category === scene.category));
-    }
-
-    for (const recommendation of decisionReadyRecommendations) {
-      if (picks.length >= FEATURED_MARKER_LIMIT) break;
-      addPick(recommendation);
-    }
-
-    return picks;
-  }, [decisionReadyRecommendations, latestTrace, todayPick]);
   const featuredPlaceNames = useMemo(
+    () => new Set(featuredRecommendations.map(recommendation => recommendation.place_name)),
+    [featuredRecommendations]
+  );
+  const scenePlaceNames = useMemo(
     () => new Set(sceneRecommendations.map(recommendation => recommendation.place_name)),
     [sceneRecommendations]
   );
-  const todayPickPresentation = getRecommendationPresentation(todayPick || null);
 
   // 加载推荐数据
   useEffect(() => {
     loadRecommendations();
   }, []);
+
+  useEffect(() => {
+    setSelectedMarker(null);
+    setSelectedRecommendations([]);
+  }, [activeScene?.id]);
 
   const loadRecommendations = async () => {
     const data = await getAllRecommendations();
@@ -155,11 +110,13 @@ export default function MapView() {
   };
 
   // 过滤当前需要显示的标记点
-  const displayedMarkers = activeCategory === '精选'
-    ? markers.filter(marker => featuredPlaceNames.has(marker.place_name)).slice(0, FEATURED_MARKER_LIMIT)
-    : activeCategory === '全部'
-      ? markers
-      : markers.filter(m => m.category === activeCategory);
+  const displayedMarkers = activeScene
+    ? markers.filter(marker => scenePlaceNames.has(marker.place_name))
+    : activeCategory === '精选'
+      ? markers.filter(marker => featuredPlaceNames.has(marker.place_name)).slice(0, FEATURED_MARKER_LIMIT)
+      : activeCategory === '全部'
+        ? markers
+        : markers.filter(m => m.category === activeCategory);
 
   const selectedRecommendation = selectedRecommendations[0] || null;
   const selectedGuide = selectedRecommendation
@@ -179,6 +136,7 @@ export default function MapView() {
           onMapClick={handleMapClick}
           mode="view"
           focusUserLocation
+          onUserLocation={(latitude, longitude) => setUserLocation({ latitude, longitude })}
           className="w-full h-full"
         />
       </div>
@@ -195,158 +153,148 @@ export default function MapView() {
         <Button
           variant="outline"
           size="icon"
-          onClick={() => navigate('/list')}
+          onClick={() => navigate(activeScene ? getSceneListPath(activeScene.id) : '/list')}
           className="press-feedback bg-background/80 backdrop-blur-sm shadow-lg hover:bg-background border-border/50"
         >
           <List className="w-5 h-5" />
         </Button>
       </div>
 
-      {/* 分类抽屉/标签过滤器 (Category Filtering) */}
+      {/* 分类抽屉/场景状态栏 */}
       <div className="absolute top-[calc(env(safe-area-inset-top)+64px)] left-0 right-0 z-20 overflow-x-auto hide-scrollbar px-4 md:px-6">
-        <div className="flex items-center gap-3 pb-2 w-max">
-          <Button
-            size="sm"
-            className={`rounded-full shadow-md font-semibold press-feedback transition-transform ${
-              activeCategory === '精选' 
-                ? 'bg-primary text-primary-foreground border-2 border-transparent scale-105' 
-                : 'bg-background/80 hover:bg-background text-foreground backdrop-blur-sm border-2 border-border/50'
-            }`}
-            onClick={() => {
-              setActiveCategory('精选');
-              setSelectedMarker(null);
-            }}
-          >
-            精选
-          </Button>
-          <Button
-            size="sm"
-            className={`rounded-full shadow-md font-semibold press-feedback transition-transform ${
-              activeCategory === '全部' 
-                ? 'bg-primary text-primary-foreground border-2 border-transparent scale-105' 
-                : 'bg-background/80 hover:bg-background text-foreground backdrop-blur-sm border-2 border-border/50'
-            }`}
-            onClick={() => {
-              setActiveCategory('全部');
-              setSelectedMarker(null);
-            }}
-          >
-            全部
-          </Button>
-          {CATEGORIES.map((cat) => (
+        {activeScene ? (
+          <div className="flex w-max items-center gap-3 pb-2">
             <Button
-              key={cat.name}
               size="sm"
-              className={`rounded-full shadow-md flex items-center gap-2 font-semibold press-feedback transition-transform ${
-                activeCategory === cat.name 
-                  ? 'bg-primary text-primary-foreground border-2 border-transparent scale-105' 
+              variant="outline"
+              className="rounded-full border-2 border-border/50 bg-background/85 font-black shadow-md backdrop-blur-sm"
+              onClick={() => navigate('/map')}
+            >
+              完整地图
+            </Button>
+            <div className="flex items-center gap-2 rounded-full border-2 border-primary bg-primary px-4 py-2 text-sm font-black text-primary-foreground shadow-md">
+              <MapPinned className="h-4 w-4" strokeWidth={2.5} />
+              <span>{activeScene.mapTitle}</span>
+              <span className="rounded-full bg-background/20 px-2 py-0.5 text-xs">
+                {displayedMarkers.length} 处
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-full border-2 border-border/50 bg-background/85 font-black shadow-md backdrop-blur-sm"
+              onClick={() => navigate(getSceneListPath(activeScene.id))}
+            >
+              看清单
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 pb-2 w-max">
+            <Button
+              size="sm"
+              className={`rounded-full shadow-md font-semibold press-feedback transition-transform ${
+                activeCategory === '精选'
+                  ? 'bg-primary text-primary-foreground border-2 border-transparent scale-105'
                   : 'bg-background/80 hover:bg-background text-foreground backdrop-blur-sm border-2 border-border/50'
               }`}
               onClick={() => {
-                setActiveCategory(cat.name);
+                setActiveCategory('精选');
                 setSelectedMarker(null);
               }}
             >
-              <img src={cat.iconUrl} alt={cat.name} className="h-5 w-5 object-contain drop-shadow-sm" />
-              {cat.name}
+              精选
             </Button>
-          ))}
-        </div>
+            <Button
+              size="sm"
+              className={`rounded-full shadow-md font-semibold press-feedback transition-transform ${
+                activeCategory === '全部'
+                  ? 'bg-primary text-primary-foreground border-2 border-transparent scale-105'
+                  : 'bg-background/80 hover:bg-background text-foreground backdrop-blur-sm border-2 border-border/50'
+              }`}
+              onClick={() => {
+                setActiveCategory('全部');
+                setSelectedMarker(null);
+              }}
+            >
+              全部
+            </Button>
+            {CATEGORIES.map((cat) => (
+              <Button
+                key={cat.name}
+                size="sm"
+                className={`rounded-full shadow-md flex items-center gap-2 font-semibold press-feedback transition-transform ${
+                  activeCategory === cat.name
+                    ? 'bg-primary text-primary-foreground border-2 border-transparent scale-105'
+                    : 'bg-background/80 hover:bg-background text-foreground backdrop-blur-sm border-2 border-border/50'
+                }`}
+                onClick={() => {
+                  setActiveCategory(cat.name);
+                  setSelectedMarker(null);
+                }}
+              >
+                <img src={cat.iconUrl} alt={cat.name} className="h-5 w-5 object-contain drop-shadow-sm" />
+                {cat.name}
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* 决策入口：默认先给用户一个清晰选择，再进入完整地图。 */}
-      {!selectedMarker && (todayPick || latestTrace) && (
+      {activeScene && !selectedMarker && (
         <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+96px)] left-3 right-3 z-30 md:left-6 md:right-auto md:w-[420px]">
           <section className="rounded-lg border-2 border-foreground bg-background/95 p-3 shadow-[4px_5px_0_rgba(0,0,0,0.18)] backdrop-blur-md">
-            <div className="mb-3 flex items-start justify-between gap-3">
+            <div className="mb-2 flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[11px] font-black uppercase tracking-[0.16em] text-primary">
-                  CMI INTENT
+                  CMI SCENE
                 </p>
-                <h2 className="text-lg font-black leading-tight text-foreground">
-                  你现在想在清迈做什么？
+                <h2 className="truncate text-lg font-black leading-tight text-foreground">
+                  {activeScene.mapTitle}
                 </h2>
               </div>
               <button
                 type="button"
-                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-black transition-transform active:scale-[0.97] ${
-                  activeCategory === '精选'
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border bg-card text-foreground'
-                }`}
-                onClick={() => {
-                  setActiveCategory('精选');
-                  setSelectedMarker(null);
-                }}
+                className="shrink-0 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-black text-foreground transition-transform active:scale-[0.97]"
+                onClick={() => navigate(getSceneListPath(activeScene.id))}
               >
-                精选 {displayedMarkers.length}
+                看清单
               </button>
             </div>
 
-            {todayPick && todayPickPresentation && (
-            <button
-              type="button"
-                className="mb-3 w-full rounded-lg border border-border bg-card p-3 text-left transition-transform active:scale-[0.98]"
-              onClick={() => navigate(getPlacePath(todayPick.place_name))}
-            >
-                <div className="mb-1 flex items-center gap-1.5 text-xs font-black text-primary">
-                <Sparkles className="h-4 w-4 shrink-0" />
-                今天去哪
-              </div>
-                <p className="truncate text-base font-black text-foreground">
-                  {todayPickPresentation.title}
-              </p>
-                <p className="mt-1 line-clamp-2 text-xs font-semibold leading-snug text-muted-foreground">
-                  {todayPickPresentation.summary}
-              </p>
-            </button>
-          )}
+            <p className="mb-3 line-clamp-2 text-xs font-semibold leading-snug text-muted-foreground">
+              {activeScene.description}
+            </p>
 
-            <div className="grid grid-cols-4 gap-1.5">
-              {SCENE_ENTRIES.map(scene => (
-                <button
-                  key={scene.label}
-                  type="button"
-                  className={`min-w-0 rounded-lg border p-2 text-center transition-transform active:scale-[0.96] ${
-                    activeCategory === scene.category
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-border bg-card text-foreground'
-                  }`}
-                  onClick={() => {
-                    setActiveCategory(scene.category);
-                    setSelectedMarker(null);
-                  }}
-                >
-                  <img
-                    src={getCategoryIconUrl(scene.category)}
-                    alt=""
-                    className="mx-auto mb-1 h-7 w-7 object-contain drop-shadow-sm"
-                  />
-                  <p className="truncate text-xs font-black">{scene.label}</p>
-                </button>
-              ))}
-            </div>
+            <div className="space-y-2">
+              {sceneRecommendations.slice(0, 2).map(recommendation => {
+                const presentation = getCmiSceneRecommendationPresentation(recommendation);
+                return (
+                  <button
+                    key={recommendation.id}
+                    type="button"
+                    className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-border bg-card p-2 text-left transition-transform active:scale-[0.98]"
+                    onClick={() => navigate(getPlacePath(recommendation.place_name))}
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent p-1.5">
+                      <img
+                        src={getCategoryIconUrl(recommendation.category)}
+                        alt=""
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-foreground">{presentation.title}</p>
+                      <p className="truncate text-xs font-semibold text-muted-foreground">{presentation.kind}</p>
+                    </div>
+                  </button>
+                );
+              })}
 
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                className="flex min-w-0 items-center justify-center gap-1.5 rounded-lg border border-border bg-muted/60 px-3 py-2 text-xs font-black text-foreground transition-transform active:scale-[0.97]"
-                onClick={() => navigate(getPersonMapPath('CMI社区'))}
-              >
-                <Compass className="h-4 w-4 shrink-0 text-primary" />
-                CMI 常去
-              </button>
-              <button
-                type="button"
-                className="flex min-w-0 items-center justify-center gap-1.5 rounded-lg border border-border bg-muted/60 px-3 py-2 text-xs font-black text-foreground transition-transform active:scale-[0.97]"
-                onClick={() => {
-                  setActiveCategory('全部');
-                  setSelectedMarker(null);
-                }}
-              >
-                <MapPinned className="h-4 w-4 shrink-0 text-primary" />
-                完整地图
-              </button>
+              {sceneRecommendations.length === 0 && (
+                <p className="rounded-lg border border-dashed border-border bg-card p-3 text-sm font-semibold text-muted-foreground">
+                  这个场景还在整理中，可以先切到完整地图看看。
+                </p>
+              )}
             </div>
           </section>
         </div>

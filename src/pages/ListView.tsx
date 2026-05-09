@@ -1,29 +1,42 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAllRecommendations, getRecommendationsByCategory } from '@/db/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Recommendation, Category, PlacedSticker, Sticker } from '@/types/types';
 import { CATEGORIES, getCategoryIconUrl } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, LogIn } from 'lucide-react';
-import { getPersonMapPath, getPlacePath } from '@/lib/paths';
+import { ArrowLeft, LogIn, MapPinned } from 'lucide-react';
+import { getPersonMapPath, getPlacePath, getSceneMapPath } from '@/lib/paths';
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
+import { getCmiScene, getCmiSceneRecommendations } from '@/data/cmi-scenes';
 
 export default function ListView() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, profile } = useAuth();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
-  
+
+  const activeScene = getCmiScene(searchParams.get('scene'));
   const displayName = profile?.user_name || user?.email?.split('@')[0] || '游客';
 
   // 加载推荐数据
   useEffect(() => {
     loadRecommendations();
-  }, [selectedCategory]);
+  }, [selectedCategory, activeScene?.id]);
 
   const loadRecommendations = async () => {
+    if (activeScene) {
+      const data = await getAllRecommendations();
+      setRecommendations(
+        getCmiSceneRecommendations(data, activeScene, {
+          limit: activeScene.id === 'nearby' ? 36 : undefined,
+        })
+      );
+      return;
+    }
+
     if (selectedCategory === 'all') {
       const data = await getAllRecommendations();
       setRecommendations(data);
@@ -57,9 +70,9 @@ export default function ListView() {
   };
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-background">
+    <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-background">
       {/* 顶部标题栏 */}
-      <div className="border-b border-border bg-background">
+      <div className="shrink-0 border-b border-border bg-background">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
             <Button
@@ -70,43 +83,74 @@ export default function ListView() {
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-2xl font-bold text-foreground">CMI Map</h1>
+            <h1 className="text-2xl font-bold text-foreground">
+              {activeScene ? activeScene.detailTitle : 'CMI Map'}
+            </h1>
           </div>
-          <div className="w-10" /> {/* 占位，保持标题居中 */}
+          {activeScene ? (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigate(getSceneMapPath(activeScene.id))}
+              className="press-feedback"
+              aria-label="查看地图视角"
+            >
+              <MapPinned className="h-5 w-5" />
+            </Button>
+          ) : (
+            <div className="w-10" />
+          )}
         </div>
 
-        {/* 分类筛选 */}
-        <div className="w-full overflow-x-auto hide-scrollbar">
-          <div className="flex gap-2 px-6 py-3 w-max">
-            <Button
-              variant={selectedCategory === 'all' ? 'default' : 'outline'}
-              size="sm"
-              className="rounded-full whitespace-nowrap press-feedback relative"
-              onClick={() => setSelectedCategory('all')}
-              data-state={selectedCategory === 'all' ? 'on' : 'off'}
-            >
-              全部
-            </Button>
-            {CATEGORIES.map((cat) => (
-              <Button
-                key={cat.name}
-                variant={selectedCategory === cat.name ? 'default' : 'outline'}
-                size="sm"
-                className="rounded-full whitespace-nowrap press-feedback relative flex items-center"
-                onClick={() => setSelectedCategory(cat.name)}
-                data-state={selectedCategory === cat.name ? 'on' : 'off'}
-              >
-                <img src={cat.iconUrl} alt={cat.name} className="mr-1 h-5 w-5 object-contain" />
-                {cat.name}
-              </Button>
-            ))}
+        {activeScene ? (
+          <div className="px-6 pb-4">
+            <div className="rounded-lg border border-border bg-muted/45 p-3">
+              <div className="mb-1 flex items-center justify-between gap-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-primary">
+                  CMI SCENE
+                </p>
+                <span className="rounded-full bg-background px-2.5 py-1 text-xs font-black text-foreground">
+                  {recommendations.length} 处
+                </span>
+              </div>
+              <p className="text-sm font-semibold leading-relaxed text-muted-foreground">
+                {activeScene.description}
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="w-full overflow-x-auto hide-scrollbar">
+            <div className="flex gap-2 px-6 py-3 w-max">
+              <Button
+                variant={selectedCategory === 'all' ? 'default' : 'outline'}
+                size="sm"
+                className="rounded-full whitespace-nowrap press-feedback relative"
+                onClick={() => setSelectedCategory('all')}
+                data-state={selectedCategory === 'all' ? 'on' : 'off'}
+              >
+                全部
+              </Button>
+              {CATEGORIES.map((cat) => (
+                <Button
+                  key={cat.name}
+                  variant={selectedCategory === cat.name ? 'default' : 'outline'}
+                  size="sm"
+                  className="rounded-full whitespace-nowrap press-feedback relative flex items-center"
+                  onClick={() => setSelectedCategory(cat.name)}
+                  data-state={selectedCategory === cat.name ? 'on' : 'off'}
+                >
+                  <img src={cat.iconUrl} alt={cat.name} className="mr-1 h-5 w-5 object-contain" />
+                  {cat.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 推荐列表 */}
-      <div className="h-[calc(100vh-180px)] w-full overflow-y-auto overflow-x-hidden">
-        <div className="w-full max-w-full space-y-4 px-4 py-6">
+      <div className="w-full flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="w-full max-w-full space-y-4 px-4 py-6 pb-28">
           {recommendations.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               暂无推荐

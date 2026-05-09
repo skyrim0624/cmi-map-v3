@@ -1,6 +1,7 @@
 import { lazy, type ReactNode } from 'react';
 
 const MapView = lazy(() => import('./pages/MapView'));
+const SceneHome = lazy(() => import('./pages/SceneHome'));
 const ListView = lazy(() => import('./pages/ListView'));
 const PlaceDetail = lazy(() => import('./pages/PlaceDetail'));
 const MarkPlace = lazy(() => import('./pages/MarkPlace'));
@@ -27,8 +28,14 @@ export const routes: RouteConfig[] = [
     public: true,
   },
   {
-    name: '地图查看',
+    name: '意图首页',
     path: '/',
+    element: <SceneHome />,
+    public: true,
+  },
+  {
+    name: '地图查看',
+    path: '/map',
     element: <MapView />,
     public: true,
   },
