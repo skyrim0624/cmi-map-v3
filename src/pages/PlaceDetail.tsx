@@ -3,10 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getRecommendationsByPlace, deleteRecommendation, toggleUpvote, toggleWishlist, getAvailableStickers, getPlacedStickers, placeSticker } from '@/db/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Recommendation, Sticker, PlacedSticker } from '@/types/types';
-import { getCategoryIconUrl, getCategoryColor } from '@/types/types';
+import { getCategoryIconUrl } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Trash2, Heart, Bookmark, Sticker as StickerIcon } from 'lucide-react';
+import { ArrowLeft, Trash2, Heart, Bookmark, Sticker as StickerIcon, Share2, Download } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import {
@@ -26,8 +26,29 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { getPersonMapPath } from '@/lib/paths';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { getPersonMapPath, getPlacePath } from '@/lib/paths';
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
+import { createPlaceShareCard, type PlaceShareCardResult } from '@/lib/place-share-card';
+
+type FileShareData = {
+  files?: File[];
+  title?: string;
+  text?: string;
+  url?: string;
+};
+
+type NavigatorWithFileShare = Navigator & {
+  canShare?: (data: FileShareData) => boolean;
+  share?: (data: FileShareData) => Promise<void>;
+};
 
 export default function PlaceDetail() {
   const { placeName } = useParams<{ placeName: string }>();
@@ -39,6 +60,9 @@ export default function PlaceDetail() {
   const [selectedRecommendation, setSelectedRecommendation] = useState<Recommendation | null>(null);
   const [localUpvotes, setLocalUpvotes] = useState<Record<string, { count: number, isUpvoted: boolean }>>({});
   const [localWishlists, setLocalWishlists] = useState<Record<string, boolean>>({});
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareCard, setShareCard] = useState<PlaceShareCardResult | null>(null);
+  const [shareCardLoading, setShareCardLoading] = useState(false);
 
   // 贴纸状态
   const [availableStickers, setAvailableStickers] = useState<Sticker[]>([]);
@@ -49,6 +73,7 @@ export default function PlaceDetail() {
 
   useEffect(() => {
     if (placeName) {
+      setShareCard(null);
       loadRecommendations();
     }
   }, [placeName]);
@@ -294,6 +319,97 @@ export default function PlaceDetail() {
     }, 600);
   };
 
+  const getShareCardInput = () => {
+    const recommendation = recommendations[0];
+    if (!recommendation) return null;
+
+    const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
+    const isCommunityGuide = isCommunityCuratedRecommendation(recommendation);
+
+    return {
+      recommendation,
+      title: isCommunityGuide ? guide.title : recommendation.place_name,
+      kind: isCommunityGuide ? guide.kind : recommendation.category,
+      summary: isCommunityGuide ? guide.summary : recommendation.reason,
+      tags: isCommunityGuide
+        ? guide.tags
+        : [recommendation.category, `${recommendation.user_name} 推荐`],
+      sourceLabel: isCommunityGuide ? 'CMI 社区' : recommendation.user_name,
+      placeUrl: `${window.location.origin}${getPlacePath(recommendation.place_name)}`,
+    };
+  };
+
+  const ensureShareCard = async () => {
+    if (shareCard) return shareCard;
+    if (shareCardLoading) return null;
+
+    const shareCardInput = getShareCardInput();
+    if (!shareCardInput) return null;
+
+    setShareCardLoading(true);
+    try {
+      const generatedCard = await createPlaceShareCard(shareCardInput);
+      setShareCard(generatedCard);
+      return generatedCard;
+    } catch (error) {
+      console.error('Failed to create place share card:', error);
+      toast.error('分享卡片生成失败，请稍后再试');
+      return null;
+    } finally {
+      setShareCardLoading(false);
+    }
+  };
+
+  const handleOpenShareCard = () => {
+    setShareDialogOpen(true);
+    void ensureShareCard();
+  };
+
+  const downloadShareCard = (card: PlaceShareCardResult) => {
+    const downloadUrl = URL.createObjectURL(card.blob);
+    const anchor = document.createElement('a');
+    anchor.href = downloadUrl;
+    anchor.download = card.fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(downloadUrl);
+  };
+
+  const handleDownloadShareCard = async () => {
+    const card = await ensureShareCard();
+    if (!card) return;
+    downloadShareCard(card);
+    toast.success('分享卡片已生成');
+  };
+
+  const handleSystemShareCard = async () => {
+    const card = await ensureShareCard();
+    if (!card) return;
+
+    const shareInput = getShareCardInput();
+    const file = new File([card.blob], card.fileName, { type: 'image/png' });
+    const navigatorWithFileShare = navigator as NavigatorWithFileShare;
+    const shareData: FileShareData = {
+      files: [file],
+      title: shareInput?.title ? `CMI Map · ${shareInput.title}` : 'CMI Map 地点卡片',
+      text: '来自 CMI Map 的清迈地点推荐',
+    };
+
+    if (navigatorWithFileShare.share && (!navigatorWithFileShare.canShare || navigatorWithFileShare.canShare(shareData))) {
+      try {
+        await navigatorWithFileShare.share(shareData);
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        console.error('Failed to share place card:', error);
+      }
+    }
+
+    downloadShareCard(card);
+    toast.success('当前浏览器不支持直接分享，已改为下载图片');
+  };
+
   if (loading) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-background">
@@ -327,6 +443,18 @@ export default function PlaceDetail() {
           onClick={() => navigate(-1)}
         >
           <ArrowLeft className="w-5 h-5" />
+        </Button>
+      </div>
+
+      <div className="absolute top-6 right-6 z-20">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-full bg-background/85 backdrop-blur-sm press-feedback shadow-sm"
+          onClick={handleOpenShareCard}
+          aria-label="生成分享卡片"
+        >
+          <Share2 className="w-5 h-5" />
         </Button>
       </div>
 
@@ -589,6 +717,51 @@ export default function PlaceDetail() {
           </button>
         </div>
       </div>
+
+      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+        <DialogContent className="max-w-[430px] rounded-3xl border-2 border-foreground p-5">
+          <DialogHeader className="space-y-2 text-left">
+            <DialogTitle className="text-2xl font-black">地点分享卡片</DialogTitle>
+            <DialogDescription className="font-semibold leading-relaxed">
+              生成一张适合发朋友圈、小红书和群聊的 4:5 图片卡片。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-2 rounded-2xl border border-border bg-muted/40 p-3">
+            {shareCardLoading || !shareCard ? (
+              <div className="flex aspect-[4/5] w-full items-center justify-center rounded-xl bg-background">
+                <p className="text-sm font-bold text-muted-foreground">正在生成卡片...</p>
+              </div>
+            ) : (
+              <img
+                src={shareCard.dataUrl}
+                alt="CMI Map 地点分享卡片预览"
+                className="aspect-[4/5] w-full rounded-xl object-cover shadow-sm"
+              />
+            )}
+          </div>
+
+          <DialogFooter className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-2 sm:space-x-0">
+            <Button
+              variant="outline"
+              className="h-12 rounded-full border-2 font-black"
+              onClick={handleDownloadShareCard}
+              disabled={shareCardLoading}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              下载图片
+            </Button>
+            <Button
+              className="h-12 rounded-full font-black"
+              onClick={handleSystemShareCard}
+              disabled={shareCardLoading}
+            >
+              <Share2 className="mr-2 h-4 w-4" />
+              直接分享
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 删除确认对话框 */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
