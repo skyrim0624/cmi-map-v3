@@ -1,9 +1,13 @@
 import { lazy, type ReactNode } from 'react';
+import { Navigate } from 'react-router-dom';
+import { getSceneMapPath } from '@/lib/paths';
 
 const MapView = lazy(() => import('./pages/MapView'));
 const SceneHome = lazy(() => import('./pages/SceneHome'));
 const ListView = lazy(() => import('./pages/ListView'));
 const PlaceDetail = lazy(() => import('./pages/PlaceDetail'));
+const AddTrace = lazy(() => import('./pages/AddTrace'));
+const CmiHome = lazy(() => import('./pages/CmiHome'));
 const MarkPlace = lazy(() => import('./pages/MarkPlace'));
 const PersonMap = lazy(() => import('./pages/PersonMap'));
 const PlaygroundMarkPlace = lazy(() => import('./pages/PlaygroundMarkPlace'));
@@ -49,6 +53,23 @@ export const routes: RouteConfig[] = [
     name: '地点详情',
     path: '/place/:placeName',
     element: <PlaceDetail />,
+    public: true,
+  },
+  {
+    name: '补一句推荐',
+    path: '/place/:placeName/add-trace',
+    element: <AddTrace />,
+  },
+  {
+    name: '清迈客栈',
+    path: '/cmi-home',
+    element: <CmiHome />,
+    public: true,
+  },
+  {
+    name: '清迈生存地图',
+    path: '/survival-kit',
+    element: <Navigate to={getSceneMapPath('life-rescue')} replace />,
     public: true,
   },
   {

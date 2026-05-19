@@ -1,23 +1,32 @@
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
 import type { Category, MapMarker } from '@/types/types';
+import { normalizeCategory } from '@/types/types';
 
-type MarkerTone = 'food' | 'coffee' | 'outdoor' | 'photo' | 'market' | 'wellness' | 'utility' | 'night' | 'creative' | 'neutral';
+type MarkerTone = 'food' | 'coffee' | 'outdoor' | 'photo' | 'landmark' | 'market' | 'wellness' | 'utility' | 'night' | 'creative' | 'neutral';
 
 type MarkerIconAsset =
   | 'food'
   | 'coffee'
   | 'outdoor'
-  | 'photo'
+  | 'landmark'
   | 'market'
   | 'massage'
   | 'sport'
   | 'bar'
   | 'wellness'
   | 'utility'
+  | 'sim'
+  | 'pharmacy'
+  | 'clinic'
+  | 'motorbike'
+  | 'visa'
+  | 'laundry'
+  | 'daily'
   | 'hair'
   | 'exchange'
   | 'print'
   | 'book'
+  | 'gallery'
   | 'music'
   | 'hot-spring';
 
@@ -36,24 +45,35 @@ export type MapMarkerVisual = {
   isCommunity: boolean;
 };
 
-// NOTE: 地图点位使用同一套旧贴纸资产，补齐全局分类之外的细分场景映射。
-const LEGACY_MARKER_ICON_URLS: Record<MarkerIconAsset, string> = {
-  food: '/categories/1.png',
-  coffee: '/categories/2.png',
-  outdoor: '/categories/3.png',
-  photo: '/categories/4.png',
-  market: '/categories/5.png',
-  massage: '/categories/6.png',
-  sport: '/categories/7.png',
+// NOTE: 地图点位用更细的图标表达地点类型，避免生存服务全部落到同一个工具箱图标。
+const CMI_FLAT_ICON_BASE = '/map-icons/cmi-flat-v2';
+const cmiFlatIcon = (name: string) => `${CMI_FLAT_ICON_BASE}/${name}.png`;
+
+const MARKER_ICON_URLS: Record<MarkerIconAsset, string> = {
+  food: cmiFlatIcon('place-restaurant'),
+  coffee: cmiFlatIcon('place-cafe'),
+  outdoor: cmiFlatIcon('place-nature'),
+  landmark: cmiFlatIcon('place-landmark'),
+  market: cmiFlatIcon('place-market'),
+  massage: cmiFlatIcon('place-massage'),
+  sport: cmiFlatIcon('direct-sport'),
   bar: '/categories/9.png',
-  wellness: '/categories/10.png',
-  utility: '/categories/11.png',
-  hair: '/categories/11.png',
-  exchange: '/categories/11.png',
-  print: '/categories/11.png',
-  book: '/categories/8.png',
+  wellness: cmiFlatIcon('place-yoga'),
+  utility: cmiFlatIcon('direct-errands'),
+  sim: cmiFlatIcon('survival-sim'),
+  pharmacy: cmiFlatIcon('survival-pharmacy'),
+  clinic: cmiFlatIcon('survival-clinic'),
+  motorbike: cmiFlatIcon('survival-motorbike'),
+  visa: cmiFlatIcon('survival-visa'),
+  laundry: cmiFlatIcon('survival-laundry'),
+  daily: cmiFlatIcon('survival-daily'),
+  hair: cmiFlatIcon('survival-hair'),
+  exchange: cmiFlatIcon('survival-exchange'),
+  print: cmiFlatIcon('survival-print'),
+  book: cmiFlatIcon('place-book'),
+  gallery: cmiFlatIcon('place-gallery'),
   music: '/categories/9.png',
-  'hot-spring': '/categories/10.png',
+  'hot-spring': cmiFlatIcon('place-hot-spring'),
 };
 
 const TONES: Record<MarkerTone, Pick<MapMarkerVisual, 'accent' | 'shadow'>> = {
@@ -72,6 +92,10 @@ const TONES: Record<MarkerTone, Pick<MapMarkerVisual, 'accent' | 'shadow'>> = {
   photo: {
     accent: '#227c9d',
     shadow: 'rgba(22, 83, 106, 0.2)',
+  },
+  landmark: {
+    accent: '#1ba6b5',
+    shadow: 'rgba(20, 114, 126, 0.2)',
   },
   market: {
     accent: '#c75b78',
@@ -103,7 +127,8 @@ const CATEGORY_MARKERS: Record<Category, Pick<MarkerRule, 'label' | 'icon' | 'to
   吃饭: { label: '吃饭', icon: 'food', tone: 'food' },
   咖啡: { label: '咖啡', icon: 'coffee', tone: 'coffee' },
   户外: { label: '户外', icon: 'outdoor', tone: 'outdoor' },
-  拍照: { label: '拍照', icon: 'photo', tone: 'photo' },
+  景点: { label: '景点', icon: 'landmark', tone: 'landmark' },
+  拍照: { label: '景点', icon: 'landmark', tone: 'landmark' },
   市集: { label: '市集', icon: 'market', tone: 'market' },
   马杀鸡: { label: '马杀鸡', icon: 'massage', tone: 'wellness' },
   运动: { label: '运动', icon: 'sport', tone: 'outdoor' },
@@ -114,6 +139,13 @@ const CATEGORY_MARKERS: Record<Category, Pick<MarkerRule, 'label' | 'icon' | 'to
 };
 
 const KIND_RULES: MarkerRule[] = [
+  { pattern: /电话卡|sim|esim|ais|true move|dtac/i, label: '电话卡', icon: 'sim', tone: 'photo' },
+  { pattern: /药店|pharmacy|drugstore/i, label: '药店', icon: 'pharmacy', tone: 'utility' },
+  { pattern: /诊所|医院|牙科|clinic|hospital|dental|dentist/i, label: '医疗', icon: 'clinic', tone: 'wellness' },
+  { pattern: /租摩托|租车|motorbike|scooter|car rental/i, label: '租车', icon: 'motorbike', tone: 'neutral' },
+  { pattern: /签证|visa|tm30|移民局|immigration|证件照|passport photo/i, label: '签证', icon: 'visa', tone: 'night' },
+  { pattern: /洗衣|laundry|laundromat|dry clean/i, label: '洗衣', icon: 'laundry', tone: 'photo' },
+  { pattern: /美妆|日用品|洗护|补货|cosmetics/i, label: '日用', icon: 'daily', tone: 'market' },
   { pattern: /理发|salon|hair|barber|beauty/i, label: '理发', icon: 'hair', tone: 'utility' },
   { pattern: /换汇|exchange|money|currency/i, label: '换汇', icon: 'exchange', tone: 'utility' },
   { pattern: /打印|print|copy/i, label: '打印', icon: 'print', tone: 'utility' },
@@ -132,8 +164,9 @@ const KIND_RULES: MarkerRule[] = [
   { pattern: /按摩|spa|马杀鸡|massage/i, label: '按摩', icon: 'massage', tone: 'wellness' },
   { pattern: /瑜伽|冥想|身心|yoga|meditation/i, label: '身心', icon: 'wellness', tone: 'wellness' },
   { pattern: /体育|运动|跑步|stadium|tennis|gym|fitness/i, label: '运动', icon: 'sport', tone: 'outdoor' },
+  { pattern: /景点|地标|观景点|观景台|寺庙|城门|temple|wat|landmark|viewpoint|monument/i, label: '景点', icon: 'landmark', tone: 'landmark' },
   { pattern: /公园|花园|瀑布|湖|户外|村|山|park|garden|waterfall|lake|village|ดอย/i, label: '户外', icon: 'outdoor', tone: 'outdoor' },
-  { pattern: /艺术|手作|工作室|studio|artist|craft|gallery/i, label: '手作', icon: 'book', tone: 'creative' },
+  { pattern: /艺术|手作|工作室|studio|artist|craft|gallery/i, label: '手作', icon: 'gallery', tone: 'creative' },
   { pattern: /坐标|待确认|coordinate/i, label: '待确认', icon: 'utility', tone: 'neutral' },
 ];
 
@@ -153,7 +186,7 @@ const buildVisual = (
 ): MapMarkerVisual => ({
   ...TONES[marker.tone],
   label: marker.label,
-  iconUrl: LEGACY_MARKER_ICON_URLS[marker.icon],
+  iconUrl: MARKER_ICON_URLS[marker.icon],
   isCommunity,
 });
 
@@ -170,7 +203,8 @@ export const getMapMarkerVisual = (
     return buildVisual(rule, Boolean(communityRecommendation));
   }
 
-  return buildVisual(CATEGORY_MARKERS[markerData.category] || CATEGORY_MARKERS.彩蛋, Boolean(communityRecommendation));
+  const normalizedCategory = normalizeCategory(markerData.category);
+  return buildVisual(CATEGORY_MARKERS[normalizedCategory] || CATEGORY_MARKERS.彩蛋, Boolean(communityRecommendation));
 };
 
 export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolean) => {
@@ -273,20 +307,24 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
       ${remaining > 0 ? `
         <div style="
           position:absolute;
-          bottom:2px;
-          right:-4px;
+          bottom:7px;
+          right:-1px;
           z-index:10;
-          background:#e2e8ce;
-          color:#4a5d23;
+          min-width:27px;
+          height:20px;
+          background:#fff8eb;
+          color:#342f2a;
           font-family:'Inter','PingFang SC','Noto Sans SC',sans-serif;
-          font-weight:900;
-          font-size:18px;
+          font-weight:950;
+          font-size:12px;
           line-height:1;
-          padding:5px 9px 6px;
-          transform:rotate(-6deg);
-          box-shadow:1px 2px 4px rgba(0,0,0,0.15);
-          border:1px dashed rgba(74,93,35,0.22);
-          border-radius:2px;
+          padding:0 7px 1px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          box-shadow:0 2px 0 rgba(45,39,34,0.15), 0 3px 7px rgba(45,39,34,0.14);
+          border:1.5px solid rgba(55,49,43,0.28);
+          border-radius:999px;
         ">
           +${remaining}
         </div>

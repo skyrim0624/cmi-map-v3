@@ -32,18 +32,19 @@ All colors MUST be HSL.
     --ring: 260 30% 62%;
     
     /* 分类颜色 */
-    --category-food: 25 95% 60%; /* 橙色 */
-    --category-coffee: 30 40% 45%; /* 棕色 */
-    --category-outdoor: 120 40% 50%; /* 绿色 */
-    --category-photo: 340 80% 70%; /* 粉色 */
+    --category-food: 14 82% 64%; /* 柔和珊瑚 */
+    --category-coffee: 32 46% 55%; /* 焦糖棕 */
+    --category-outdoor: 105 40% 50%; /* 草木绿 */
+    --category-photo: 340 80% 70%; /* 旧拍照分类兼容色 */
+    --category-landmark: 187 76% 48%; /* 景点 / 地标 */
     --category-graffiti: 270 50% 60%; /* 紫色 */
-    --category-market: 210 80% 60%; /* 蓝色 */
-    --category-relax: 180 50% 55%; /* 青色 */
-    --category-sport: 0 80% 60%; /* 红色 */
+    --category-market: 44 86% 60%; /* 市集明黄 */
+    --category-relax: 268 43% 68%; /* 放松薰衣草 */
+    --category-sport: 198 73% 63%; /* 运动天蓝 */
     --category-treasure: 0 0% 60%; /* 灰色 */
-    --category-bar: 35 80% 55%; /* 琥珀金 */
-    --category-wellness: 170 50% 55%; /* 青绿色 */
-    --category-utility: 210 30% 55%; /* 石板蓝 */
+    --category-bar: 229 68% 64%; /* 夜生活蓝紫 */
+    --category-wellness: 168 48% 56%; /* 身心青绿 */
+    --category-utility: 184 42% 54%; /* 办事孔雀绿 */
     
     /* 阴影 */
     --shadow-card: 0px 4px 12px rgba(0, 0, 0, 0.08);
@@ -72,18 +73,19 @@ All colors MUST be HSL.
     --ring: 260 30% 62%;
     
     /* 分类颜色（暗色模式） */
-    --category-food: 25 85% 55%;
-    --category-coffee: 30 35% 40%;
-    --category-outdoor: 120 35% 45%;
+    --category-food: 14 72% 58%;
+    --category-coffee: 32 38% 47%;
+    --category-outdoor: 105 34% 45%;
     --category-photo: 340 70% 65%;
+    --category-landmark: 187 68% 45%;
     --category-graffiti: 270 45% 55%;
-    --category-market: 210 70% 55%;
-    --category-relax: 180 45% 50%;
-    --category-sport: 0 70% 55%;
+    --category-market: 44 74% 53%;
+    --category-relax: 268 38% 60%;
+    --category-sport: 198 62% 55%;
     --category-treasure: 0 0% 55%;
-    --category-bar: 35 70% 50%;
-    --category-wellness: 170 45% 50%;
-    --category-utility: 210 25% 50%;
+    --category-bar: 229 58% 56%;
+    --category-wellness: 168 42% 48%;
+    --category-utility: 184 35% 47%;
     
     --shadow-card: 0px 4px 12px rgba(0, 0, 0, 0.3);
     --shadow-hover: 0px 6px 16px rgba(0, 0, 0, 0.4);
@@ -95,8 +97,36 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  @supports (height: 100dvh) {
+    html,
+    body,
+    #root {
+      height: 100dvh;
+      min-height: 100dvh;
+    }
+  }
+
   body {
     @apply bg-background text-foreground;
+    position: fixed;
+    inset: 0;
+    margin: 0;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  [data-radix-scroll-area-viewport] {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
@@ -271,6 +301,397 @@ All colors MUST be HSL.
 
   .animate-bounce-slow {
     animation: bounce-slow 2s ease-in-out infinite;
+  }
+}
+
+/* 右上角真实分层翻页入口 */
+.page-curl-entry {
+  --curl-map-shadow: rgba(28, 18, 70, 0.2);
+  --curl-paper-shadow: rgba(40, 31, 50, 0.18);
+  perspective: 760px;
+  transform-style: preserve-3d;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.page-curl-entry:focus-visible {
+  outline: 3px solid hsl(var(--ring) / 0.45);
+  outline-offset: -12px;
+}
+
+.page-curl-entry > span {
+  position: absolute;
+  pointer-events: none;
+}
+
+.page-curl-generated-image {
+  position: absolute;
+  top: -0.15rem;
+  right: -0.15rem;
+  width: 6.9rem;
+  max-width: none;
+  height: auto;
+  pointer-events: none;
+  transform-origin: 100% 0;
+  filter: drop-shadow(-0.08rem 0.2rem 0.32rem rgba(42, 29, 75, 0.12));
+  transition:
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 240ms ease;
+  will-change: transform;
+}
+
+.page-curl-entry:hover .page-curl-generated-image,
+.page-curl-entry:focus-visible .page-curl-generated-image {
+  transform: translate3d(-0.12rem, 0.12rem, 0) scale(1.035) rotate(-1deg);
+  filter: drop-shadow(-0.18rem 0.34rem 0.46rem rgba(42, 29, 75, 0.16));
+}
+
+.page-curl-entry:active .page-curl-generated-image {
+  transform: translate3d(-0.22rem, 0.22rem, 0) scale(1.07) rotate(-1deg);
+}
+
+.page-curl-entry.is-opening .page-curl-generated-image {
+  animation: page-curl-generated-open 520ms cubic-bezier(0.18, 1, 0.34, 1) forwards;
+}
+
+@keyframes page-curl-generated-open {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0);
+  }
+  100% {
+    transform: translate3d(-0.38rem, 0.38rem, 0) scale(1.12) rotate(-1.5deg);
+  }
+}
+
+.page-curl-map-layer {
+  top: -0.18rem;
+  right: -0.18rem;
+  width: 7.7rem;
+  height: 7.7rem;
+  overflow: hidden;
+  border: 2px solid rgba(44, 32, 72, 0.22);
+  border-radius: 0 0 0 2.1rem;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 42%),
+    url("/brand/page-curl-map-underlay-cmi-color.webp") 76% 8% / 128% 128%;
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 255, 255, 0.18),
+    -0.3rem 0.35rem 0.55rem var(--curl-map-shadow);
+  clip-path: polygon(30% 0, 100% 0, 100% 88%, 79% 69%, 60% 39%);
+  transform-origin: top right;
+  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1), filter 300ms ease;
+}
+
+.page-curl-page {
+  top: -0.18rem;
+  right: -0.18rem;
+  width: 7.75rem;
+  height: 7.75rem;
+  clip-path: polygon(46% 0, 100% 0, 100% 58%, 86% 49%, 69% 31%);
+  filter: drop-shadow(-0.24rem 0.38rem 0.35rem var(--curl-paper-shadow));
+  transform-origin: 100% 0;
+  transform-style: preserve-3d;
+  transition:
+    transform 390ms cubic-bezier(0.18, 1, 0.34, 1),
+    filter 390ms ease;
+  will-change: transform;
+}
+
+.page-curl-paper-front,
+.page-curl-paper-back,
+.page-curl-paper-grain,
+.page-curl-fold-ridge {
+  position: absolute;
+  inset: 0;
+}
+
+.page-curl-paper-front {
+  background:
+    radial-gradient(circle at 88% 18%, rgba(255, 255, 255, 0.98), transparent 34%),
+    linear-gradient(132deg, #ffffff 0%, #ffffff 45%, #f7f3ff 72%, #ded5ec 100%);
+  backface-visibility: hidden;
+}
+
+.page-curl-paper-back {
+  background:
+    linear-gradient(132deg, #eee6ff 0%, #ffffff 54%, #f5f0fb 100%);
+  opacity: 0;
+  transform: rotateY(180deg);
+  transition: opacity 220ms ease;
+  backface-visibility: hidden;
+}
+
+.page-curl-paper-grain {
+  opacity: 0.26;
+  background: linear-gradient(135deg, transparent 0 48%, rgba(118, 86, 160, 0.22) 49% 50%, transparent 51% 100%);
+}
+
+.page-curl-fold-ridge {
+  opacity: 0.85;
+  background:
+    linear-gradient(45deg, transparent 49%, rgba(80, 60, 110, 0.22) 50% 51%, transparent 52%),
+    linear-gradient(132deg, transparent 0 58%, rgba(255, 255, 255, 0.85) 60%, transparent 66%);
+}
+
+.page-curl-edge {
+  top: 3.55rem;
+  right: 0.32rem;
+  width: 4.55rem;
+  height: 0.24rem;
+  border-radius: 999px;
+  background: rgba(84, 63, 117, 0.34);
+  transform: rotate(43deg);
+  transform-origin: right center;
+  transition: transform 390ms cubic-bezier(0.18, 1, 0.34, 1), opacity 260ms ease;
+}
+
+.page-curl-cast-shadow {
+  top: 2.25rem;
+  right: 0.72rem;
+  width: 5.2rem;
+  height: 3.5rem;
+  border-radius: 999px;
+  background: radial-gradient(ellipse at center, rgba(28, 18, 70, 0.18), transparent 67%);
+  filter: blur(1.5px);
+  opacity: 0.58;
+  transform: rotate(-31deg);
+  transform-origin: top right;
+  transition: transform 390ms cubic-bezier(0.18, 1, 0.34, 1), opacity 260ms ease;
+}
+
+.page-curl-label {
+  top: 3.85rem;
+  right: 0.18rem;
+  z-index: 3;
+  transform: rotate(-9deg);
+  border: 1.5px solid rgba(60, 40, 110, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 2px 3px 0 rgba(38, 33, 27, 0.1);
+  padding: 0.2rem 0.45rem;
+  color: #5b3e9f;
+  font-size: 0.68rem;
+  font-weight: 950;
+  line-height: 1;
+  transition: opacity 180ms ease, transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .page-curl-entry:hover .page-curl-page,
+  .page-curl-entry:focus-visible .page-curl-page {
+    transform: translate3d(-0.42rem, 0.5rem, 0) rotateX(8deg) rotateY(-18deg) rotateZ(-4deg) scale(1.02);
+    filter: drop-shadow(-0.58rem 0.72rem 0.64rem rgba(28, 18, 70, 0.17));
+  }
+
+  .page-curl-entry:hover .page-curl-paper-back,
+  .page-curl-entry:focus-visible .page-curl-paper-back {
+    opacity: 0.28;
+  }
+
+  .page-curl-entry:hover .page-curl-map-layer,
+  .page-curl-entry:focus-visible .page-curl-map-layer {
+    transform: translate3d(-0.18rem, 0.22rem, 0) rotate(-1deg) scale(1.035);
+  }
+
+  .page-curl-entry:hover .page-curl-edge,
+  .page-curl-entry:focus-visible .page-curl-edge {
+    transform: translate3d(-0.56rem, 0.52rem, 0) rotate(43deg);
+  }
+}
+
+.page-curl-entry:active .page-curl-page {
+  transform: translate3d(-0.58rem, 0.64rem, 0) rotateX(10deg) rotateY(-24deg) rotateZ(-6deg) scale(1.03);
+}
+
+.page-curl-entry.is-opening .page-curl-page {
+  animation: page-curl-open 520ms cubic-bezier(0.18, 1, 0.34, 1) forwards;
+}
+
+.page-curl-entry.is-opening .page-curl-paper-back {
+  opacity: 0.5;
+}
+
+.page-curl-entry.is-opening .page-curl-map-layer {
+  animation: page-curl-map-reveal 520ms cubic-bezier(0.18, 1, 0.34, 1) forwards;
+}
+
+.page-curl-entry.is-opening .page-curl-edge {
+  animation: page-curl-edge-open 520ms cubic-bezier(0.18, 1, 0.34, 1) forwards;
+}
+
+.page-curl-entry.is-opening .page-curl-cast-shadow {
+  animation: page-curl-shadow-open 520ms cubic-bezier(0.18, 1, 0.34, 1) forwards;
+}
+
+.page-curl-entry.is-opening .page-curl-label {
+  opacity: 0;
+  transform: translate3d(-1.35rem, 1.25rem, 0) rotate(-20deg) scale(0.92);
+}
+
+@keyframes page-curl-open {
+  0% {
+    transform: translate3d(0, 0, 0) rotateX(0) rotateY(0) rotateZ(0) scale(1);
+  }
+  45% {
+    transform: translate3d(-0.86rem, 0.82rem, 0) rotateX(12deg) rotateY(-38deg) rotateZ(-8deg) scale(1.055);
+  }
+  100% {
+    transform: translate3d(-1.42rem, 1.42rem, 0) rotateX(15deg) rotateY(-56deg) rotateZ(-12deg) scale(1.08);
+  }
+}
+
+@keyframes page-curl-map-reveal {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0) scale(1);
+    filter: saturate(1);
+  }
+  100% {
+    transform: translate3d(-0.5rem, 0.48rem, 0) rotate(-1.5deg) scale(1.08);
+    filter: saturate(1.08);
+  }
+}
+
+@keyframes page-curl-edge-open {
+  0% {
+    opacity: 1;
+    transform: rotate(47deg);
+  }
+  100% {
+    opacity: 0.48;
+    transform: translate3d(-1.75rem, 1.45rem, 0) rotate(35deg) scaleX(0.72);
+  }
+}
+
+@keyframes page-curl-shadow-open {
+  0% {
+    opacity: 0.78;
+    transform: rotate(-31deg) scale(1);
+  }
+  100% {
+    opacity: 0.36;
+    transform: translate3d(-1.6rem, 1.55rem, 0) rotate(-24deg) scale(1.42);
+  }
+}
+
+@media (min-width: 640px) {
+  .page-curl-map-layer {
+    width: 8.95rem;
+    height: 8.95rem;
+    border-radius: 0 0 0 2.55rem;
+  }
+
+  .page-curl-page {
+    width: 9rem;
+    height: 9rem;
+  }
+
+  .page-curl-edge {
+    top: 4.2rem;
+    width: 5.25rem;
+  }
+
+  .page-curl-cast-shadow {
+    top: 2.75rem;
+    right: 0.92rem;
+    width: 6rem;
+    height: 4.1rem;
+  }
+
+  .page-curl-label {
+    top: 4.55rem;
+    right: 0.36rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-curl-entry,
+  .page-curl-entry * {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+/* SVG 版右上角翻页：用曲线替代三角斜带，避免看起来像一条地图贴纸。 */
+.page-curl-svg {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.25rem;
+  width: 9.15rem;
+  height: 9.15rem;
+  overflow: visible;
+}
+
+.page-curl-svg-map,
+.page-curl-svg-flap {
+  transform-box: fill-box;
+  transform-origin: 100% 0;
+  transition:
+    transform 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 240ms ease,
+    filter 360ms ease;
+  will-change: transform;
+}
+
+.page-curl-svg-underside {
+  opacity: 0.22;
+  transition: opacity 260ms ease;
+}
+
+.page-curl-entry:hover .page-curl-svg-map,
+.page-curl-entry:focus-visible .page-curl-svg-map {
+  transform: translate3d(-0.16rem, 0.16rem, 0) scale(1.025);
+}
+
+.page-curl-entry:hover .page-curl-svg-flap,
+.page-curl-entry:focus-visible .page-curl-svg-flap {
+  transform: translate3d(-0.38rem, 0.42rem, 0) rotate(-5deg) rotateY(-18deg);
+}
+
+.page-curl-entry:hover .page-curl-svg-underside,
+.page-curl-entry:focus-visible .page-curl-svg-underside {
+  opacity: 0.46;
+}
+
+.page-curl-entry:active .page-curl-svg-flap {
+  transform: translate3d(-0.52rem, 0.56rem, 0) rotate(-7deg) rotateY(-24deg);
+}
+
+.page-curl-entry.is-opening .page-curl-svg-map {
+  animation: page-curl-svg-map-open 520ms cubic-bezier(0.18, 1, 0.34, 1) forwards;
+}
+
+.page-curl-entry.is-opening .page-curl-svg-flap {
+  animation: page-curl-svg-flap-open 520ms cubic-bezier(0.18, 1, 0.34, 1) forwards;
+}
+
+.page-curl-entry.is-opening .page-curl-svg-underside {
+  opacity: 0.64;
+}
+
+@keyframes page-curl-svg-flap-open {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0) rotateY(0) scale(1);
+  }
+  45% {
+    transform: translate3d(-0.75rem, 0.8rem, 0) rotate(-8deg) rotateY(-38deg) scale(1.04);
+  }
+  100% {
+    transform: translate3d(-1.25rem, 1.2rem, 0) rotate(-12deg) rotateY(-58deg) scale(1.08);
+  }
+}
+
+@keyframes page-curl-svg-map-open {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(-0.36rem, 0.34rem, 0) scale(1.08);
+  }
+}
+
+@media (min-width: 640px) {
+  .page-curl-svg {
+    width: 10.55rem;
+    height: 10.55rem;
   }
 }
 

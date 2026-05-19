@@ -2,12 +2,41 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
 import path from "path";
+import { rmSync } from "fs";
 
 import { VitePWA } from "vite-plugin-pwa";
+
+const CORE_PRECACHE_ASSETS = [
+  "apple-touch-icon.png",
+  "favicon.png",
+  "pwa-192x192.png",
+  "pwa-512x512.png",
+  "brand/page-curl-corner.png",
+  "brand/cmi-inn-entry.png",
+];
+
+const DEBUG_PUBLIC_DIRS = [
+  ".lint",
+  "docs",
+  "graphify-out",
+  "playgrounds",
+  "prototypes",
+];
+
+const removeDebugPublicAssets = () => ({
+  name: "remove-debug-public-assets",
+  apply: "build" as const,
+  closeBundle() {
+    DEBUG_PUBLIC_DIRS.forEach((dir) => {
+      rmSync(path.resolve(__dirname, "dist", dir), { recursive: true, force: true });
+    });
+  },
+});
 
 // 生产构建专用配置 — 不含 MiaoDa 开发插件
 export default defineConfig({
   plugins: [
+    removeDebugPublicAssets(),
     react(),
     svgr({
       svgrOptions: {
@@ -18,8 +47,30 @@ export default defineConfig({
     }),
     VitePWA({
       registerType: "autoUpdate",
+      includeAssets: CORE_PRECACHE_ASSETS,
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+        globPatterns: ["**/*.{js,css,html,ico}"],
+        globIgnores: [
+          "**/docs/**",
+          "**/generated/**",
+          "**/graphify-out/**",
+          "**/playgrounds/**",
+          "**/prototypes/**",
+        ],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        runtimeCaching: [
+          {
+            urlPattern: ({ request, sameOrigin }) =>
+              sameOrigin && request.destination === "image",
+            handler: "CacheFirst",
+            options: {
+              cacheName: "cmi-map-runtime-images",
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
       },
       manifest: {
         name: "CMI Map",

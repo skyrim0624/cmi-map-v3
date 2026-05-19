@@ -1,5 +1,12 @@
+import { getRecommendationIntentScore } from '@/data/cmi-scene-tags';
+import { matchesCmiSurvivalKitRecommendation } from '@/data/cmi-survival-kit';
+import {
+  getCmiDetailTagsForRecommendation,
+  getCmiPlaceTypeTagsForRecommendation,
+} from '@/data/cmi-taxonomy';
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
 import type { Category, Recommendation } from '@/types/types';
+import { normalizeCategory } from '@/types/types';
 
 export type CmiSceneView = 'detail' | 'map';
 export type CmiSceneHomeGroupId = 'clear-need' | 'nearby' | 'inspiration';
@@ -9,10 +16,17 @@ export type CmiSceneId =
   | 'pick-for-me'
   | 'eat'
   | 'coffee-work'
+  | 'study'
+  | 'shopping'
+  | 'play'
   | 'massage-relax'
   | 'wander'
+  | 'weekend'
+  | 'tomorrow-events'
+  | 'nearby-wander'
   | 'life-rescue'
   | 'night'
+  | 'sport'
   | 'explore'
   | 'community'
   | 'photo';
@@ -104,8 +118,8 @@ export const CMI_SCENES: CmiScene[] = [
     showOnHome: true,
     homeGroup: 'inspiration',
     homeOrder: 3,
-    homeTitle: '不知道去哪',
-    homeDescription: '先给自己一个不费劲的出门答案。',
+    homeTitle: '大家都去了哪里',
+    homeDescription: '社区常去和高可信候选。',
   },
   {
     id: 'eat',
@@ -141,8 +155,8 @@ export const CMI_SCENES: CmiScene[] = [
   },
   {
     id: 'coffee-work',
-    title: '咖啡办公',
-    description: '想喝咖啡、换个地方坐下，或者找一个能认真待一会儿的空间。',
+    title: '办公',
+    description: '找一个能坐下来处理事情的地方，先从咖啡馆、Coworking 和安静空间开始。',
     defaultView: 'detail',
     categoryFallback: '咖啡',
     matchKeywords: [
@@ -156,19 +170,52 @@ export const CMI_SCENES: CmiScene[] = [
       '短坐',
       '电脑',
       '工作',
+      'coworking',
+      '共享办公',
       'coffee',
       'cafe',
       'roastery',
     ],
     primaryActionLabel: '看咖啡办公点',
-    mapTitle: '咖啡办公地图',
-    detailTitle: '适合坐下来的咖啡点',
+    mapTitle: '办公地点地图',
+    detailTitle: '适合办公和坐下来的地方',
     showOnHome: true,
     homeGroup: 'clear-need',
     homeOrder: 2,
-    homeTitle: '咖啡 / 办公',
-    homeDescription: '喝一杯，见朋友，或换个地方坐下来。',
+    homeTitle: '办公',
+    homeDescription: '咖啡馆、Coworking，或安静空间。',
     homeIconCategory: '咖啡',
+  },
+  {
+    id: 'study',
+    title: '学习',
+    description: '找能读书、自习、上课、参加工作坊，或者补一点知识能量的地方。',
+    defaultView: 'detail',
+    categoryFallback: null,
+    matchKeywords: [
+      '学习',
+      '读书',
+      '自习',
+      '图书馆',
+      '书店',
+      '文具',
+      '课程',
+      '工作坊',
+      'workshop',
+      'library',
+      'bookstore',
+      '安静',
+      '展览',
+      '设计',
+    ],
+    primaryActionLabel: '看学习地点',
+    mapTitle: '学习地点地图',
+    detailTitle: '适合学习和读书的地方',
+    showOnHome: true,
+    homeGroup: 'clear-need',
+    homeOrder: 3,
+    homeTitle: '学习',
+    homeDescription: '图书馆、书店、课程和安静自习。',
   },
   {
     id: 'massage-relax',
@@ -182,10 +229,81 @@ export const CMI_SCENES: CmiScene[] = [
     detailTitle: '适合放松一下的地方',
     showOnHome: true,
     homeGroup: 'clear-need',
-    homeOrder: 3,
-    homeTitle: '马杀鸡 / 放松',
-    homeDescription: '身体累了，找个舒服靠谱的地方。',
+    homeOrder: 6,
+    homeTitle: '放松',
+    homeDescription: '马杀鸡、SPA、温泉和身体调理。',
     homeIconCategory: '马杀鸡',
+  },
+  {
+    id: 'shopping',
+    title: '购物',
+    description: '商场、市集、菜市场、超市、伴手礼和日用品补给，先解决买东西这件事。',
+    defaultView: 'detail',
+    categoryFallback: '市集',
+    matchKeywords: [
+      '购物',
+      '商场',
+      '市集',
+      '菜市场',
+      '超市',
+      '采购',
+      '伴手礼',
+      '日用品',
+      '市场',
+      '生鲜',
+      '水果',
+      '美妆',
+      '手作材料',
+      '布料',
+      'mall',
+      'market',
+      'shopping',
+    ],
+    primaryActionLabel: '看购物地点',
+    mapTitle: '购物地点地图',
+    detailTitle: '买东西和补给地点',
+    showOnHome: true,
+    homeGroup: 'clear-need',
+    homeOrder: 4,
+    homeTitle: '购物',
+    homeDescription: '商场、市集、菜市场和日用品。',
+    homeIconCategory: '市集',
+  },
+  {
+    id: 'play',
+    title: '游玩',
+    description: '寺庙、公园、展览、夜市、短途自然点和第一次来清迈会想去的地方。',
+    defaultView: 'detail',
+    categoryFallback: '户外',
+    matchKeywords: [
+      '游玩',
+      '寺庙',
+      '公园',
+      '展览',
+      '艺术',
+      '夜市',
+      '短途',
+      '自然',
+      '瀑布',
+      '温泉',
+      '上山',
+      '拍照',
+      '市集',
+      'temple',
+      'park',
+      'gallery',
+      'waterfall',
+      'hot spring',
+    ],
+    primaryActionLabel: '看游玩地点',
+    mapTitle: '游玩地点地图',
+    detailTitle: '适合游玩和逛逛的地方',
+    showOnHome: true,
+    homeGroup: 'clear-need',
+    homeOrder: 5,
+    homeTitle: '游玩',
+    homeDescription: '寺庙、公园、展览、短途和夜市。',
+    homeIconCategory: '户外',
   },
   {
     id: 'wander',
@@ -223,40 +341,61 @@ export const CMI_SCENES: CmiScene[] = [
   {
     id: 'life-rescue',
     title: '生活救急',
-    description: '打印、换汇、理发、采购、办事这些不浪漫但很关键的清迈生活点。',
+    description: '电话卡、换汇、租摩托、药店、诊所、签证文件、打印、洗衣、日用品、理发这些清迈生活刚需点。',
     defaultView: 'map',
-    categoryFallback: '生存指南',
+    categoryFallback: null,
     matchKeywords: [
       '办事',
       '救急',
+      '电话卡',
+      '网络',
       '打印',
+      '复印',
+      '日用品',
+      '补给',
+      '饮用水',
+      '超市',
       '换汇',
-      '理发',
-      '采购',
       '现金',
+      'ATM',
+      '理发',
+      '药店',
+      '诊所',
+      '医院',
       '签证',
-      '生活基础设施',
-      '长期生活',
+      '移民局',
+      '洗衣',
+      '租摩托',
+      '租车',
+      '生存包',
       'print',
+      'supermarket',
+      'water',
       'exchange',
+      'atm',
       'hair',
       'salon',
-      'market',
+      'pharmacy',
+      'clinic',
+      'hospital',
+      'laundry',
+      'motorbike',
+      'visa',
     ],
     primaryActionLabel: '打开救急地图',
     mapTitle: '生活救急地图',
-    detailTitle: '在清迈住一阵子会用到的地方',
+    detailTitle: '生活服务离不开',
     showOnHome: true,
     homeGroup: 'clear-need',
-    homeOrder: 4,
-    homeTitle: '办事 / 救急',
-    homeDescription: '打印、换汇、理发、采购这些实际问题。',
+    homeOrder: 8,
+    homeTitle: '办事',
+    homeDescription: '换汇、打印、药店、诊所、日用品、租车。',
     homeIconCategory: '生存指南',
   },
   {
     id: 'night',
-    title: '晚上去哪',
-    description: '晚上的清迈不只有酒吧，也包括朋友小聚、演出、夜间吃饭和把一天收尾的地方。',
+    title: '今晚去哪？',
+    description: '晚上的清迈不只有酒吧，也包括夜市、朋友小聚、演出、按摩和把一天收尾的地方。',
     defaultView: 'detail',
     categoryFallback: '酒吧',
     matchKeywords: [
@@ -274,14 +413,138 @@ export const CMI_SCENES: CmiScene[] = [
       'night',
     ],
     primaryActionLabel: '看晚上推荐',
-    mapTitle: '晚上去哪地图',
-    detailTitle: '适合晚上去的地方',
+    mapTitle: '今晚去哪地图',
+    detailTitle: '今晚可以这样过',
     showOnHome: false,
-    homeGroup: null,
-    homeOrder: 0,
-    homeTitle: '晚上去哪',
-    homeDescription: '夜间吃饭、小聚、演出和喝点东西。',
+    homeGroup: 'inspiration',
+    homeOrder: 1,
+    homeTitle: '今晚去哪？',
+    homeDescription: '夜市、小酌、夜景、按摩。',
     homeIconCategory: '酒吧',
+  },
+  {
+    id: 'sport',
+    title: '运动',
+    description: '健身房、瑜伽、球场、公园跑步，以及长期住清迈会用到的运动点。',
+    defaultView: 'detail',
+    categoryFallback: '运动',
+    matchKeywords: [
+      '运动',
+      '健身',
+      '健身房',
+      '瑜伽',
+      '跑步',
+      '慢跑',
+      '球场',
+      '网球',
+      '体育场',
+      'stadium',
+      'tennis',
+      'gym',
+      'yoga',
+      'park',
+    ],
+    primaryActionLabel: '看运动地点',
+    mapTitle: '运动地点地图',
+    detailTitle: '适合运动的地方',
+    showOnHome: true,
+    homeGroup: 'clear-need',
+    homeOrder: 7,
+    homeTitle: '运动',
+    homeDescription: '健身、瑜伽、球场和跑步点。',
+    homeIconCategory: '运动',
+  },
+  {
+    id: 'weekend',
+    title: '周末去哪？',
+    description: '周末更适合市集、短途、自然、咖啡和慢慢逛，不要把它做成普通地点列表。',
+    defaultView: 'detail',
+    categoryFallback: '市集',
+    matchKeywords: [
+      '周末',
+      'weekend',
+      '市集',
+      'walking street',
+      'market',
+      '手作',
+      '自然',
+      '户外',
+      '咖啡',
+      '花园',
+      '艺术',
+      '展览',
+      '慢逛',
+      '短途',
+    ],
+    primaryActionLabel: '看周末灵感',
+    mapTitle: '周末灵感地图',
+    detailTitle: '周末可以这样安排',
+    showOnHome: true,
+    homeGroup: 'inspiration',
+    homeOrder: 2,
+    homeTitle: '周末去哪？',
+    homeDescription: '市集、短途、自然、咖啡。',
+    homeIconCategory: '市集',
+  },
+  {
+    id: 'tomorrow-events',
+    title: '有什么活动？',
+    description: '按时间看今天、明天和最近可参加的活动，优先展示已核实来源和稳定活动源。',
+    defaultView: 'detail',
+    categoryFallback: null,
+    matchKeywords: [
+      '活动',
+      '明天',
+      '本周',
+      'workshop',
+      '工作坊',
+      '展览',
+      'exhibition',
+      'live',
+      '音乐',
+      'meetup',
+      '市集',
+      'CMI',
+      '清迈客栈',
+    ],
+    primaryActionLabel: '看活动',
+    mapTitle: '近期活动地图',
+    detailTitle: '最近有什么活动？',
+    showOnHome: true,
+    homeGroup: 'inspiration',
+    homeOrder: 3,
+    homeTitle: '有什么活动？',
+    homeDescription: '今天、明天、周末活动。',
+  },
+  {
+    id: 'nearby-wander',
+    title: '附近逛逛',
+    description: '人已经在这里了，就先看走路或短距离能到的咖啡、小店、拍照点和社区痕迹。',
+    defaultView: 'map',
+    categoryFallback: null,
+    matchKeywords: [
+      '附近',
+      '周边',
+      '走路',
+      '随便逛',
+      '慢逛',
+      '散步',
+      '小店',
+      '坐坐',
+      '咖啡',
+      '拍照',
+      '社区收藏',
+      'CMI',
+      '日常',
+    ],
+    primaryActionLabel: '看附近',
+    mapTitle: '附近逛逛',
+    detailTitle: '走路可到的有趣地方',
+    showOnHome: true,
+    homeGroup: 'inspiration',
+    homeOrder: 4,
+    homeTitle: '附近逛逛',
+    homeDescription: '走路可到的有趣地方。',
   },
   {
     id: 'explore',
@@ -309,7 +572,7 @@ export const CMI_SCENES: CmiScene[] = [
     primaryActionLabel: '看社区地图',
     mapTitle: 'CMI 社区常去地图',
     detailTitle: 'CMI 社区留下来的地方',
-    showOnHome: true,
+    showOnHome: false,
     homeGroup: 'nearby',
     homeOrder: 2,
     homeTitle: 'CMI 社区常去',
@@ -317,11 +580,20 @@ export const CMI_SCENES: CmiScene[] = [
   },
   {
     id: 'photo',
-    title: '拍照适合去哪',
-    description: '找适合拍照、散步、约朋友一起去的地点，但不把它包装成过度打卡。',
+    title: '景点 / 地标',
+    description: '找城门、寺庙、观景点和第一次来清迈会明确去看的地方；“好拍照”后面更适合作为标签。',
     defaultView: 'detail',
-    categoryFallback: '拍照',
+    categoryFallback: '景点',
     matchKeywords: [
+      '景点',
+      '地标',
+      '观景点',
+      '观景台',
+      '城门',
+      '古城',
+      '寺庙',
+      'landmark',
+      'viewpoint',
       '拍照',
       '好看',
       '花园',
@@ -335,24 +607,37 @@ export const CMI_SCENES: CmiScene[] = [
       'gallery',
       'studio',
     ],
-    primaryActionLabel: '看拍照推荐',
-    mapTitle: '拍照地点地图',
-    detailTitle: '适合拍照和慢慢看的地方',
+    primaryActionLabel: '看景点地标',
+    mapTitle: '景点地标地图',
+    detailTitle: '景点、地标和慢慢看的地方',
     showOnHome: true,
     homeGroup: 'inspiration',
     homeOrder: 1,
-    homeTitle: '拍照 / 好看',
-    homeDescription: '找适合拍照、慢慢看、约朋友一起去的地方。',
-    homeIconCategory: '拍照',
+    homeTitle: '景点 / 地标',
+    homeDescription: '城门、观景点、第一次来会想看的地方。',
+    homeIconCategory: '景点',
   },
 ];
 
 const SCENE_MAP = new Map(CMI_SCENES.map(scene => [scene.id, scene]));
 const COMMUNITY_SCENE_IDS = new Set<CmiSceneId>(['community']);
 const QUALITY_SCENE_IDS = new Set<CmiSceneId>(['nearby', 'pick-for-me', 'explore']);
+const PROXIMITY_RANKED_SCENE_IDS = new Set<CmiSceneId>([
+  'eat',
+  'coffee-work',
+  'study',
+  'shopping',
+  'play',
+  'massage-relax',
+  'sport',
+  'life-rescue',
+]);
 const SCENE_ID_ALIASES: Record<string, CmiSceneId> = {
   today: 'pick-for-me',
-  weekend: 'wander',
+  tonight: 'night',
+  weekend: 'weekend',
+  events: 'tomorrow-events',
+  wanderNearby: 'nearby-wander',
 };
 
 const normalizeSearchValue = (value: string) => value.trim().toLocaleLowerCase();
@@ -401,6 +686,8 @@ export const getCmiSceneRequiredView = (scene: CmiScene, requestedView?: CmiScen
 
 export const getRecommendationSceneText = (recommendation: Recommendation) => {
   const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
+  const placeTypeLabels = getCmiPlaceTypeTagsForRecommendation(recommendation).map(tag => tag.label);
+  const detailLabels = getCmiDetailTagsForRecommendation(recommendation).map(tag => tag.label);
   return normalizeSearchValue(
     [
       recommendation.place_name,
@@ -410,6 +697,8 @@ export const getRecommendationSceneText = (recommendation: Recommendation) => {
       guide.kind,
       guide.summary,
       ...guide.tags,
+      ...placeTypeLabels,
+      ...detailLabels,
     ].join(' ')
   );
 };
@@ -433,7 +722,10 @@ export const getCmiSceneRecommendationPresentation = (
     title: isCommunityGuide ? guide.title : recommendation.place_name,
     kind: guide.kind,
     summary: isCommunityGuide ? guide.summary : recommendation.reason,
-    tags: guide.tags,
+    tags: Array.from(new Set([
+      ...guide.tags,
+      ...getCmiDetailTagsForRecommendation(recommendation).map(tag => tag.label),
+    ])),
     source: isCommunityGuide ? 'community-guide' : 'user-recommendation',
   };
 };
@@ -443,11 +735,19 @@ export const matchesCmiScene = (recommendation: Recommendation, scene: CmiScene)
     return isCommunityCuratedRecommendation(recommendation);
   }
 
+  if (scene.id === 'life-rescue') {
+    return matchesCmiSurvivalKitRecommendation(recommendation);
+  }
+
+  if (getRecommendationIntentScore(recommendation, scene.id) > 0) {
+    return true;
+  }
+
   if (QUALITY_SCENE_IDS.has(scene.id) && isDecisionReadyRecommendation(recommendation)) {
     return true;
   }
 
-  if (scene.categoryFallback && recommendation.category === scene.categoryFallback) {
+  if (scene.categoryFallback && normalizeCategory(recommendation.category) === scene.categoryFallback) {
     return true;
   }
 
@@ -490,10 +790,28 @@ const sortSceneRecommendations = (
   options: CmiSceneRecommendationOptions
 ) =>
   [...recommendations].sort((left, right) => {
-    if (scene.id === 'nearby' && options.userLocation) {
+    const leftQualityScore = getRecommendationQualityScore(left);
+    const rightQualityScore = getRecommendationQualityScore(right);
+
+    if ((scene.id === 'nearby' || scene.id === 'nearby-wander') && options.userLocation) {
       const leftDistance = getDistanceInMeters(options.userLocation, left);
       const rightDistance = getDistanceInMeters(options.userLocation, right);
       return leftDistance - rightDistance;
+    }
+
+    if (PROXIMITY_RANKED_SCENE_IDS.has(scene.id) && options.userLocation) {
+      const leftDistance = getDistanceInMeters(options.userLocation, left);
+      const rightDistance = getDistanceInMeters(options.userLocation, right);
+      const leftDistanceBucket = Math.floor(leftDistance / 750);
+      const rightDistanceBucket = Math.floor(rightDistance / 750);
+      const distanceBucketDifference = leftDistanceBucket - rightDistanceBucket;
+      if (distanceBucketDifference !== 0) return distanceBucketDifference;
+
+      const qualityDifference = rightQualityScore - leftQualityScore;
+      if (qualityDifference !== 0) return qualityDifference;
+
+      const distanceDifference = leftDistance - rightDistance;
+      if (distanceDifference !== 0) return distanceDifference;
     }
 
     if (scene.categoryFallback) {
@@ -503,7 +821,11 @@ const sortSceneRecommendations = (
       if (categoryDifference !== 0) return categoryDifference;
     }
 
-    const qualityDifference = getRecommendationQualityScore(right) - getRecommendationQualityScore(left);
+    const intentDifference =
+      getRecommendationIntentScore(right, scene.id) - getRecommendationIntentScore(left, scene.id);
+    if (intentDifference !== 0) return intentDifference;
+
+    const qualityDifference = rightQualityScore - leftQualityScore;
     if (qualityDifference !== 0) return qualityDifference;
 
     const upvoteDifference = getUpvoteCount(right) - getUpvoteCount(left);

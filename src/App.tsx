@@ -14,9 +14,9 @@ const App: React.FC = () => {
       <AuthProvider>
         <RouteGuard>
           <IntersectObserver />
-          <div className="min-h-screen bg-neutral-100/50 dark:bg-neutral-900/50 flex justify-center">
-            <div className="flex flex-col w-full max-w-[480px] bg-background h-[100dvh] relative shadow-xl sm:border-x sm:border-border/40 [transform:translateZ(0)]">
-              <main className="flex-grow overflow-y-auto overflow-x-hidden">
+          <div className="flex h-[100dvh] justify-center overflow-hidden bg-neutral-100/50 dark:bg-neutral-900/50">
+            <div className="relative flex h-full min-h-0 w-full max-w-[480px] flex-col overflow-hidden bg-background shadow-xl sm:border-x sm:border-border/40 [transform:translateZ(0)]">
+              <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-background [-webkit-overflow-scrolling:touch]">
                 <Suspense fallback={
                   <div className="flex h-full min-h-[100dvh] items-center justify-center">
                     <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary" />

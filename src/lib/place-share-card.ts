@@ -1,6 +1,6 @@
 import QRCode from 'qrcode';
 import type { Category, Recommendation } from '@/types/types';
-import { getCategoryIconUrl } from '@/types/types';
+import { getCategoryIconUrl, normalizeCategory } from '@/types/types';
 
 export interface PlaceShareCardInput {
   recommendation: Recommendation;
@@ -28,6 +28,7 @@ const CATEGORY_ACCENTS: Record<Category, string> = {
   吃饭: '#f15a32',
   咖啡: '#8a5b37',
   户外: '#2f8654',
+  景点: '#1ba6b5',
   拍照: '#1b9bd0',
   市集: '#d75d84',
   马杀鸡: '#8e6ac1',
@@ -260,7 +261,8 @@ export const createPlaceShareCard = async ({
   const context = canvas.getContext('2d');
   if (!context) throw new Error('当前浏览器不支持生成分享卡片');
 
-  const accent = CATEGORY_ACCENTS[recommendation.category] ?? '#9a82c8';
+  const normalizedCategory = normalizeCategory(recommendation.category);
+  const accent = CATEGORY_ACCENTS[normalizedCategory] ?? '#9a82c8';
   drawMapTexture(context);
 
   context.save();
@@ -306,7 +308,7 @@ export const createPlaceShareCard = async ({
   context.fillText(kind || recommendation.category, 886, 187);
   context.restore();
 
-  await drawStickerIcon(context, recommendation.category, 128, 292, 218);
+  await drawStickerIcon(context, normalizedCategory, 128, 292, 218);
 
   context.fillStyle = '#2c2b29';
   context.font = `900 66px ${DISPLAY_FONT}`;

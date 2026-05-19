@@ -4,11 +4,24 @@ import { useNavigate } from 'react-router-dom';
 import { LeafletMap } from '@/components/map/LeafletMap';
 import { createRecommendation, uploadImages } from '@/db/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { CATEGORIES } from '@/types/types';
+import { getCategoryIconUrl } from '@/types/types';
 import type { Category } from '@/types/types';
+import { getCmiInputCategoryOptions } from '@/data/cmi-taxonomy';
+import { getPlacePath } from '@/lib/paths';
 import { toast } from 'sonner';
 
 type Stage = 'camera' | 'analyzing' | 'voice' | 'category' | 'done' | 'map_fallback';
+type SpeechRecognitionConstructor = new () => {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onstart: (() => void) | null;
+  onresult: ((event: any) => void) | null;
+  onerror: ((event: any) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
 
 const ScribbleSparks = ({ active }: { active: boolean }) => {
   if (!active) return null;
@@ -47,11 +60,15 @@ export default function MarkPlace() {
   
   const [flash, setFlash] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [voiceHint, setVoiceHint] = useState('也可以直接打字，不用语音。');
   const [scanned, setScanned] = useState(false);
 
   const [sourceType, setSourceType] = useState<'live' | 'exif' | null>(null);
 
   const [selectedCat, setSelectedCat] = useState<Category | ''>('');
+  const [selectedInputCategoryId, setSelectedInputCategoryId] = useState<string>('');
+  const inputCategoryOptions = getCmiInputCategoryOptions();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -62,35 +79,64 @@ export default function MarkPlace() {
 
   // 初始化 Web Speech API
   useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const speechWindow = window as typeof window & {
+      SpeechRecognition?: SpeechRecognitionConstructor;
+      webkitSpeechRecognition?: SpeechRecognitionConstructor;
+    };
+    const SpeechRecognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
+
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
       recognition.lang = 'zh-CN';
       recognition.continuous = false;
       recognition.interimResults = false;
+      recognition.onstart = () => {
+        setIsListening(true);
+        setVoiceHint('正在听，讲完后会自动写到下面。');
+      };
 
       recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
+        const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+        if (!transcript) {
+          setVoiceHint('没有听清，可以直接打字。');
+          return;
+        }
         setDescription(prev => prev ? `${prev} ${transcript}` : transcript);
-        setIsListening(false);
+        setVoiceHint('已写入，可以继续补充或直接下一步。');
       };
 
       recognition.onerror = (event: any) => {
         console.error('语音识别错误:', event.error);
-        toast.error('语音识别失败，请重试');
+        const nextHint =
+          event.error === 'not-allowed'
+            ? '麦克风权限没开，直接打字也可以。'
+            : event.error === 'no-speech'
+              ? '刚才没听到声音，可以再点一次或直接打字。'
+              : '这个浏览器的语音识别不稳定，直接打字更稳。';
+        setVoiceHint(nextHint);
+        toast(nextHint);
         setIsListening(false);
       };
 
       recognition.onend = () => {
         setIsListening(false);
+        setVoiceHint(prev => prev === '正在听，讲完后会自动写到下面。' ? '可以继续说，也可以直接打字。' : prev);
       };
 
+      setSpeechSupported(true);
       recognitionRef.current = recognition;
+    } else {
+      setSpeechSupported(false);
+      setVoiceHint('当前浏览器不支持语音识别，直接打字就行。');
     }
 
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // NOTE: 部分浏览器在未开始识别时调用 stop 会抛错，卸载时忽略即可。
+        }
       }
     };
   }, []);
@@ -161,7 +207,7 @@ export default function MarkPlace() {
   // 未登录保护
   useEffect(() => {
     if (!user) {
-      toast.error('只有社区成员可以进行推荐，请先登录');
+      toast.error('只有社区成员可以留下痕迹，请先登录');
       navigate('/login');
     }
   }, [user, navigate]);
@@ -233,24 +279,31 @@ export default function MarkPlace() {
 
   // 3. 语音对话控制
   const handleVoiceInput = () => {
-    if (!recognitionRef.current) {
-      toast.error('您的浏览器不支持语音识别');
+    if (!speechSupported || !recognitionRef.current) {
+      toast('当前浏览器不支持语音识别，直接打字就行');
       return;
     }
-    if (isListening) {
-      recognitionRef.current.stop();
+
+    try {
+      if (isListening) {
+        recognitionRef.current.stop();
+        setIsListening(false);
+        setVoiceHint('已停止收音，可以直接编辑文字。');
+      } else {
+        recognitionRef.current.start();
+      }
+    } catch (error) {
+      console.error('语音识别启动失败:', error);
       setIsListening(false);
-    } else {
-      recognitionRef.current.start();
-      setIsListening(true);
-      toast.info('请开始诉说这里的记忆...');
+      setVoiceHint('语音启动失败，直接打字更稳。');
+      toast('语音启动失败，直接打字更稳');
     }
   };
 
   // 4. 用户提交逻辑
   const handleSubmitFinal = async (selectedCategory: Category) => {
     if (!description.trim()) {
-      toast.error('还是随意写/说一点推荐理由吧！');
+      toast.error('还是随意写/说一点具体体验吧！');
       return;
     }
     setStage('done');
@@ -297,15 +350,18 @@ export default function MarkPlace() {
 
       if (recommendation) {
         setTimeout(() => {
-          toast.success('你的这一笔已经印在地图上了 🎉');
-          navigate('/');
+          toast.success('你的这一笔清迈痕迹已经留下了 🎉');
+          navigate(getPlacePath(recommendation.place_name), {
+            replace: true,
+            state: { newTraceId: recommendation.id },
+          });
         }, 1200); // 让印章飞一下再走
       } else {
         throw new Error('提交失败');
       }
     } catch (error) {
       console.error(error);
-      toast.error('标记录入中断！');
+      toast.error('这条痕迹没有留下来，请再试一次');
       setStage('category');
     } finally {
       setUploading(false);
@@ -469,7 +525,7 @@ export default function MarkPlace() {
                     <span className="text-2xl font-black tracking-widest text-[#da2222] opacity-90">RECORDED</span>
                   </div>
                 </div>
-                <p className="text-sm font-semibold text-stone-500">正在把你的推荐印到地图上...</p>
+                <p className="text-sm font-semibold text-stone-500">正在把你的清迈痕迹收进手账...</p>
               </div>
             )}
             
@@ -488,24 +544,35 @@ export default function MarkPlace() {
                <div className="w-full flex flex-col gap-3 py-4 animate-in slide-in-from-bottom-10 fade-in">
                  <div className="text-center mb-2">
                    <p className="text-stone-700 font-bold mb-1">手动选择地标</p>
-                   <p className="text-stone-500 text-xs">拖动地图以微调推荐点</p>
+                   <p className="text-stone-500 text-xs">拖动地图以微调这条痕迹的位置</p>
                  </div>
                  <div className="w-full h-64 bg-stone-300 rounded-2xl relative overflow-hidden flex items-center justify-center mb-2 shadow-inner pointer-events-auto">
                    <LeafletMap mode="mark" onCenterChange={(lat, lng) => setCenter({lat, lng})} className="w-full h-full border-none outline-none" />
                  </div>
                  <button onClick={handleMapConfirm} className="w-full h-12 bg-foreground text-background font-bold rounded-2xl flex items-center justify-center shadow-lg hover:scale-[1.02] transition-transform">
-                   确认位置，去写推荐
+                   确认位置，去写体验
                  </button>
                </div>
             )}
 
             {stage === 'voice' && (
               <div className="w-full flex flex-col items-center gap-5 py-4 animate-in slide-in-from-bottom-10 fade-in duration-500">
-                <p className="text-stone-400 font-medium tracking-widest uppercase text-xs">
-                  {description ? 'Want to say more?' : 'Tap to whisper a memory'}
+                <p className="text-stone-500 font-bold text-sm">
+                  {description ? '还想补充什么？' : '写一句你对这里的真实感觉'}
                 </p>
                 <div className="flex gap-5 items-center">
-                  <button onClick={handleVoiceInput} className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${isListening ? 'bg-primary text-white scale-110 shadow-xl shadow-primary/30' : 'bg-white text-stone-800 shadow-lg hover:scale-105 active:scale-95'}`}>
+                  <button
+                    onClick={handleVoiceInput}
+                    disabled={!speechSupported}
+                    className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
+                      isListening
+                        ? 'bg-primary text-white scale-110 shadow-xl shadow-primary/30'
+                        : speechSupported
+                          ? 'bg-white text-stone-800 shadow-lg hover:scale-105 active:scale-95'
+                          : 'bg-stone-100 text-stone-300 cursor-not-allowed'
+                    }`}
+                    aria-label={speechSupported ? '语音输入' : '当前浏览器不支持语音输入'}
+                  >
                     <ScribbleSparks active={isListening} />
                     {isListening ? <MicOff className="w-7 h-7 animate-pulse" /> : <Mic className="w-7 h-7" />}
                   </button>
@@ -516,10 +583,13 @@ export default function MarkPlace() {
                     </button>
                   )}
                 </div>
+                <p className="max-w-sm text-center text-xs font-medium leading-relaxed text-stone-400">
+                  {voiceHint}
+                </p>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="写下地点名和推荐理由，比如：Fern Forest，树很多很安静，适合上午写东西"
+                  placeholder="写下地点名和具体体验，比如：Fern Forest，树很多很安静，适合上午写东西"
                   className="w-full max-w-sm min-h-24 resize-none rounded-2xl border border-stone-200 bg-white/90 px-4 py-3 text-[15px] leading-relaxed text-stone-800 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
                   maxLength={240}
                 />
@@ -528,17 +598,24 @@ export default function MarkPlace() {
 
             {stage === 'category' && (
               <div className="w-full flex flex-col items-center gap-3 py-4 animate-in slide-in-from-bottom-10 fade-in">
-                <p className="text-stone-600 font-bold mb-1">最后一步，给这段记忆贴个标签</p>
+                <div className="mb-1 text-center">
+                  <p className="text-stone-600 font-bold">最后一步，粗略分一下就行</p>
+                  <p className="mt-1 text-xs font-medium text-stone-400">选不准也没关系，CMI 后面可以再整理。</p>
+                </div>
                 <div className="flex flex-wrap justify-center gap-2.5 w-full max-w-sm">
-                  {CATEGORIES.map((cat) => (
+                  {inputCategoryOptions.map((option) => (
                     <button
-                      key={cat.name}
-                      onClick={() => setSelectedCat(cat.name)}
+                      key={option.id}
+                      onClick={() => {
+                        setSelectedInputCategoryId(option.id);
+                        setSelectedCat(option.storedCategory);
+                      }}
                       disabled={uploading}
-                      className={`flex items-center gap-2 px-3.5 py-2 rounded-full border shadow-sm transition-all text-stone-600 font-medium text-sm ${selectedCat === cat.name ? 'bg-primary/10 border-primary text-primary scale-105 ring-2 ring-primary/20' : 'bg-white border-stone-200 hover:scale-105 active:scale-95'}`}
+                      title={option.description}
+                      className={`flex items-center gap-2 px-3.5 py-2 rounded-full border shadow-sm transition-all text-stone-600 font-medium text-sm ${selectedInputCategoryId === option.id ? 'bg-primary/10 border-primary text-primary scale-105 ring-2 ring-primary/20' : 'bg-white border-stone-200 hover:scale-105 active:scale-95'}`}
                     >
-                      <img src={cat.iconUrl} alt={cat.name} className="w-5 h-5 object-contain" />
-                      <span>{cat.name}</span>
+                      <img src={getCategoryIconUrl(option.storedCategory)} alt="" className="w-5 h-5 object-contain" />
+                      <span>{option.label}</span>
                     </button>
                   ))}
                 </div>

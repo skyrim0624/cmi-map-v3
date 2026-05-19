@@ -1,5 +1,5 @@
 // 分类类型
-export type Category = '吃饭' | '咖啡' | '户外' | '拍照' | '市集' | '马杀鸡' | '运动' | '酒吧' | '身心' | '生存指南' | '彩蛋';
+export type Category = '吃饭' | '咖啡' | '户外' | '景点' | '拍照' | '市集' | '马杀鸡' | '运动' | '酒吧' | '身心' | '生存指南' | '彩蛋';
 
 // 用户角色类型
 export type UserRole = 'user' | 'admin';
@@ -72,49 +72,52 @@ export interface CategoryConfig {
   iconUrl: string; // 分类图标URL
 }
 
+const CMI_FLAT_ICON_BASE = '/map-icons/cmi-flat-v2';
+const cmiFlatIcon = (name: string) => `${CMI_FLAT_ICON_BASE}/${name}.png`;
+
 // 分类配置列表
 export const CATEGORIES: CategoryConfig[] = [
   { 
     name: '吃饭', 
     color: 'category-food', 
     icon: '🍜',
-    iconUrl: '/categories/1.png'
+    iconUrl: cmiFlatIcon('direct-eat')
   },
   { 
     name: '咖啡', 
-    color: 'category-coffee', 
+    color: 'category-coffee',
     icon: '☕',
-    iconUrl: '/categories/2.png'
+    iconUrl: cmiFlatIcon('place-cafe')
   },
-  { 
-    name: '户外', 
-    color: 'category-outdoor', 
+  {
+    name: '户外',
+    color: 'category-outdoor',
     icon: '🏔️',
-    iconUrl: '/categories/3.png'
+    iconUrl: cmiFlatIcon('direct-play')
   },
-  { 
-    name: '拍照', 
-    color: 'category-photo', 
-    icon: '📸',
-    iconUrl: '/categories/4.png'
+  {
+    name: '景点',
+    color: 'category-landmark',
+    icon: '📍',
+    iconUrl: cmiFlatIcon('place-landmark')
   },
-  { 
-    name: '市集', 
+  {
+    name: '市集',
     color: 'category-market', 
     icon: '🛍️',
-    iconUrl: '/categories/5.png'
+    iconUrl: cmiFlatIcon('place-market')
   },
   { 
     name: '马杀鸡', 
     color: 'category-relax', 
     icon: '💆',
-    iconUrl: '/categories/6.png'
+    iconUrl: cmiFlatIcon('place-massage')
   },
   { 
     name: '运动', 
     color: 'category-sport', 
     icon: '🏃',
-    iconUrl: '/categories/7.png'
+    iconUrl: cmiFlatIcon('direct-sport')
   },
   { 
     name: '酒吧', 
@@ -126,13 +129,13 @@ export const CATEGORIES: CategoryConfig[] = [
     name: '身心', 
     color: 'category-wellness', 
     icon: '🧘',
-    iconUrl: '/categories/10.png'
+    iconUrl: cmiFlatIcon('place-yoga')
   },
   { 
     name: '生存指南', 
     color: 'category-utility', 
     icon: '🔧',
-    iconUrl: '/categories/11.png'
+    iconUrl: cmiFlatIcon('direct-errands')
   },
   { 
     name: '彩蛋', 
@@ -143,21 +146,38 @@ export const CATEGORIES: CategoryConfig[] = [
 ];
 
 // 获取分类配置
-export const getCategoryConfig = (category: Category): CategoryConfig => {
-  return CATEGORIES.find(c => c.name === category) || CATEGORIES[0];
+export const getCategoryConfig = (category: Category | string): CategoryConfig => {
+  const normalizedCategory = normalizeCategory(category);
+  return CATEGORIES.find(c => c.name === normalizedCategory) || CATEGORIES.find(c => c.name === '彩蛋') || CATEGORIES[0];
+};
+
+export const normalizeCategory = (category: Category | string): Category => {
+  if (category === '拍照') return '景点';
+  if (category === '放松') return '马杀鸡';
+  if (CATEGORIES.some(item => item.name === category)) return category as Category;
+  return '彩蛋';
+};
+
+export const categoryMatchesFilter = (category: Category | string, filter: Category | string): boolean => (
+  normalizeCategory(category) === normalizeCategory(filter)
+);
+
+export const getCategoryFilterValues = (category: Category | string): Category[] => {
+  if (category === '景点' || category === '拍照') return ['景点', '拍照'];
+  return [normalizeCategory(category)];
 };
 
 // 获取分类颜色
-export const getCategoryColor = (category: Category): string => {
+export const getCategoryColor = (category: Category | string): string => {
   return getCategoryConfig(category).color;
 };
 
 // 获取分类图标
-export const getCategoryIcon = (category: Category): string => {
+export const getCategoryIcon = (category: Category | string): string => {
   return getCategoryConfig(category).icon;
 };
 
 // 获取分类图标URL
-export const getCategoryIconUrl = (category: Category): string => {
+export const getCategoryIconUrl = (category: Category | string): string => {
   return getCategoryConfig(category).iconUrl;
 };

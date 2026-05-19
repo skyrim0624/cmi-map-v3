@@ -1,18 +1,39 @@
-import { supabase } from './supabase';
-import type { Recommendation, Category, Sticker, PlacedSticker } from '@/types/types';
+import type { Category, PlacedSticker, Recommendation, Sticker } from '@/types/types';
+import { getCategoryFilterValues } from '@/types/types';
 import { compressImage } from '@/utils/imageCompression';
+import { supabase } from './supabase';
+
+type ReadOptions = {
+  throwOnError?: boolean;
+};
+
+const handleReadError = (message: string, error: unknown, options?: ReadOptions) => {
+  console.error(message, error);
+  if (options?.throwOnError) throw error;
+};
+
+const activeStampIconUrls = [
+  '/stickers/stamp-good-lucky.png',
+  '/stickers/stamp-caution-et.png',
+  '/stickers/stamp-neutral-milan.png',
+  '/stickers/stamp-paw.png',
+  '/stickers/stamp-cmi-selected.png',
+  '/stickers/stamp-grass.png',
+] as const;
+
+const activeStampOrder = new Map(activeStampIconUrls.map((iconUrl, index) => [iconUrl, index]));
 
 /**
  * 获取所有推荐
  */
-export const getAllRecommendations = async (): Promise<Recommendation[]> => {
+export const getAllRecommendations = async (options?: ReadOptions): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
     .select('*, upvotes(user_id), wishlists(user_id), placed_stickers(*, sticker:stickers(*))')
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('获取推荐失败:', error);
+    handleReadError('获取推荐失败:', error, options);
     return [];
   }
 
@@ -23,16 +44,17 @@ export const getAllRecommendations = async (): Promise<Recommendation[]> => {
  * 按分类获取推荐
  */
 export const getRecommendationsByCategory = async (
-  category: Category
+  category: Category,
+  options?: ReadOptions
 ): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
     .select('*, upvotes(user_id), wishlists(user_id), placed_stickers(*, sticker:stickers(*))')
-    .eq('category', category)
+    .in('category', getCategoryFilterValues(category))
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('获取推荐失败:', error);
+    handleReadError('获取推荐失败:', error, options);
     return [];
   }
 
@@ -83,7 +105,8 @@ export const getRecommendationsByUserId = async (
  * 按地点名称获取推荐
  */
 export const getRecommendationsByPlace = async (
-  placeName: string
+  placeName: string,
+  options?: ReadOptions
 ): Promise<Recommendation[]> => {
   const { data, error } = await supabase
     .from('recommendations')
@@ -92,7 +115,7 @@ export const getRecommendationsByPlace = async (
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('获取地点推荐失败:', error);
+    handleReadError('获取地点推荐失败:', error, options);
     return [];
   }
 
@@ -183,6 +206,37 @@ export const deleteRecommendation = async (id: string): Promise<boolean> => {
   }
 
   return true;
+};
+
+/**
+ * 更新当前登录用户自己的推荐理由
+ */
+export const updateRecommendationReason = async (
+  id: string,
+  reason: string
+): Promise<Recommendation | null> => {
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  const userId = authData.user?.id;
+
+  if (authError || !userId) {
+    console.error('获取当前用户失败:', authError);
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('recommendations')
+    .update({ reason })
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select('*, upvotes(user_id), wishlists(user_id), placed_stickers(*, sticker:stickers(*))')
+    .maybeSingle();
+
+  if (error) {
+    console.error('更新推荐失败:', error);
+    return null;
+  }
+
+  return data;
 };
 
 /**
@@ -368,7 +422,14 @@ export const getAvailableStickers = async (): Promise<Sticker[]> => {
     console.error('获取贴纸失败:', error);
     return [];
   }
-  return data || [];
+
+  const stickers = data || [];
+  const activeStamps = stickers
+    .filter((sticker) => activeStampOrder.has(sticker.icon_url))
+    .sort((a, b) => activeStampOrder.get(a.icon_url)! - activeStampOrder.get(b.icon_url)!);
+
+  // NOTE: 新戳迁移未应用时保留旧贴纸兜底，避免本地/预览环境抽屉空白。
+  return activeStamps.length > 0 ? activeStamps : stickers;
 };
 
 /**

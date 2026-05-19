@@ -3,6 +3,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { MapMarker } from '@/types/types';
 import { getMapMarkerVisual, renderClusterIconHtml, renderMarkerBadgeHtml, type MapMarkerVisual } from '@/lib/map-marker-visual';
+import { CHIANG_MAI_PROVINCE_BOUNDARY, CHIANG_MAI_PROVINCE_BOUNDS } from '@/data/chiang-mai-boundary';
+import { CHIANG_MAI_FEATURE_LINES } from '@/data/chiang-mai-map-features';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -14,8 +16,15 @@ interface LeafletMapProps {
   mode?: 'view' | 'mark'; // 查看模式或标记模式
   onCenterChange?: (lat: number, lng: number) => void;
   onUserLocation?: (lat: number, lng: number) => void;
+  onUserLocationError?: (error: GeolocationPositionError) => void;
   defaultCenter?: { lat: number; lng: number };
+  defaultZoom?: number;
+  focusTarget?: { lat: number; lng: number };
+  focusTargetZoom?: number;
+  focusTargetOffsetYRatio?: number;
   focusUserLocation?: boolean;
+  constrainToChiangMai?: boolean;
+  locationZoom?: number;
   interactive?: boolean;
   showUserLocation?: boolean;
   className?: string;
@@ -24,11 +33,347 @@ interface LeafletMapProps {
 // 清迈市中心坐标
 const CHIANG_MAI_CENTER = { lat: 18.7883, lng: 98.9853 };
 
-// 清迈地区边界（大致范围）
-const CHIANG_MAI_BOUNDS: L.LatLngBoundsExpression = [
-  [18.65, 98.85], // 西南角
-  [18.95, 99.15]  // 东北角
+// 清迈地区边界：交互上用清迈府 bbox 限制拖动，视觉上再用真实行政边界做非矩形遮罩。
+const CHIANG_MAI_BOUNDS: L.LatLngBoundsExpression = CHIANG_MAI_PROVINCE_BOUNDS;
+const MAP_BOUNDARY_MASK_OUTER_RING: L.LatLngExpression[] = [
+  [21.2, 97.2],
+  [21.2, 100.4],
+  [16.2, 100.4],
+  [16.2, 97.2],
 ];
+
+type MapBackgroundOverlay = {
+  id: string;
+  imageUrl: string;
+  bounds: L.LatLngBoundsExpression;
+  opacity: number;
+};
+
+type MapBackgroundArea = {
+  id: string;
+  label: string;
+  position: L.LatLngExpression;
+  primary?: boolean;
+};
+
+type MapBackgroundLandmark = {
+  id: string;
+  label: string;
+  position: L.LatLngExpression;
+  iconUrl: string;
+  iconSize: [number, number];
+  cityOpacity?: number;
+  nearOpacity?: number;
+};
+
+const MAP_BACKGROUND_OVERLAYS: MapBackgroundOverlay[] = [
+  {
+    id: 'old-city-moat-wall',
+    imageUrl: '/map-background-overlays/optimized/old-city-moat-wall.webp',
+    bounds: [
+      [18.7811, 98.9774],
+      [18.7962, 98.9944],
+    ],
+    opacity: 0.16,
+  },
+];
+
+const MAP_BACKGROUND_AREA_LABELS: MapBackgroundArea[] = [
+  { id: 'nimman', label: '尼曼区', position: [18.8026, 98.9624] },
+  { id: 'old-city', label: '古城区', position: [18.7902, 98.9818], primary: true },
+  { id: 'riverside', label: '河边 / 瓦洛洛', position: [18.787, 99.0068] },
+  { id: 'hang-dong', label: '杭东区', position: [18.7048, 98.9272] },
+  { id: 'mae-rim', label: '湄林区', position: [18.9189, 98.9397] },
+  { id: 'suthep', label: '素贴山脚', position: [18.798, 98.944] },
+  { id: 'chang-phueak', label: '昌普区', position: [18.817, 98.985] },
+];
+
+const LANDMARK_ICON_BASE = '/map-landmark-icons/optimized';
+
+const MAP_BACKGROUND_LANDMARKS: MapBackgroundLandmark[] = [
+  {
+    id: 'airport',
+    label: '机场',
+    position: [18.7717, 98.9683],
+    iconUrl: `${LANDMARK_ICON_BASE}/airport-plane-flat.webp`,
+    iconSize: [58, 62],
+    cityOpacity: 0.38,
+    nearOpacity: 0.56,
+  },
+  {
+    id: 'tha-phae-gate',
+    label: '塔佩门',
+    position: [18.7878, 98.9931],
+    iconUrl: `${LANDMARK_ICON_BASE}/tha-phae-gate-flat.webp`,
+    iconSize: [84, 36],
+    cityOpacity: 0.44,
+    nearOpacity: 0.64,
+  },
+  {
+    id: 'wat-chedi-luang',
+    label: '契迪龙寺',
+    position: [18.7869, 98.9868],
+    iconUrl: `${LANDMARK_ICON_BASE}/wat-chedi-luang-flat.webp`,
+    iconSize: [46, 34],
+    cityOpacity: 0.14,
+    nearOpacity: 0.34,
+  },
+  {
+    id: 'wat-phra-singh',
+    label: '帕辛寺',
+    position: [18.7888, 98.9813],
+    iconUrl: `${LANDMARK_ICON_BASE}/wat-phra-singh-flat.webp`,
+    iconSize: [46, 35],
+    cityOpacity: 0.12,
+    nearOpacity: 0.32,
+  },
+  {
+    id: 'doi-suthep',
+    label: '素贴山 / 双龙寺',
+    position: [18.8049, 98.9217],
+    iconUrl: `${LANDMARK_ICON_BASE}/doi-suthep-flat.webp`,
+    iconSize: [76, 42],
+    cityOpacity: 0.26,
+    nearOpacity: 0.46,
+  },
+  {
+    id: 'three-kings',
+    label: '三王纪念碑',
+    position: [18.7903, 98.987],
+    iconUrl: `${LANDMARK_ICON_BASE}/three-kings-monument-flat.webp`,
+    iconSize: [40, 39],
+    cityOpacity: 0.12,
+    nearOpacity: 0.3,
+  },
+  {
+    id: 'maya',
+    label: 'MAYA / 尼曼',
+    position: [18.807, 98.9607],
+    iconUrl: `${LANDMARK_ICON_BASE}/maya-nimman-flat.webp`,
+    iconSize: [50, 37],
+    cityOpacity: 0.24,
+    nearOpacity: 0.42,
+  },
+  {
+    id: 'chiang-mai-university',
+    label: '清迈大学',
+    position: [18.8002, 98.9528],
+    iconUrl: `${LANDMARK_ICON_BASE}/chiang-mai-university-flat.webp`,
+    iconSize: [64, 45],
+    cityOpacity: 0.3,
+    nearOpacity: 0.5,
+  },
+  {
+    id: 'wat-umong',
+    label: '悟孟寺',
+    position: [18.7836, 98.9525],
+    iconUrl: `${LANDMARK_ICON_BASE}/wat-umong-flat.webp`,
+    iconSize: [58, 35],
+    cityOpacity: 0.22,
+    nearOpacity: 0.4,
+  },
+  {
+    id: 'wat-suan-dok',
+    label: '松达寺',
+    position: [18.7898, 98.972],
+    iconUrl: `${LANDMARK_ICON_BASE}/wat-suan-dok-flat.webp`,
+    iconSize: [40, 34],
+    cityOpacity: 0.18,
+    nearOpacity: 0.36,
+  },
+  {
+    id: 'warorot-market',
+    label: '瓦洛洛市场',
+    position: [18.7906, 99.0018],
+    iconUrl: `${LANDMARK_ICON_BASE}/warorot-market-flat.webp`,
+    iconSize: [62, 39],
+    cityOpacity: 0.26,
+    nearOpacity: 0.46,
+  },
+  {
+    id: 'railway-station',
+    label: '火车站',
+    position: [18.7823, 99.0165],
+    iconUrl: `${LANDMARK_ICON_BASE}/railway-station-flat.webp`,
+    iconSize: [54, 44],
+    cityOpacity: 0.24,
+    nearOpacity: 0.42,
+  },
+  {
+    id: 'arcade-bus-terminal',
+    label: 'Arcade 巴士站',
+    position: [18.8012, 99.0174],
+    iconUrl: `${LANDMARK_ICON_BASE}/arcade-bus-terminal-flat.webp`,
+    iconSize: [58, 37],
+    cityOpacity: 0.24,
+    nearOpacity: 0.42,
+  },
+  {
+    id: 'iron-bridge',
+    label: '铁桥',
+    position: [18.7839, 99.0062],
+    iconUrl: `${LANDMARK_ICON_BASE}/iron-bridge-flat.webp`,
+    iconSize: [70, 17],
+    cityOpacity: 0.16,
+    nearOpacity: 0.34,
+  },
+];
+
+const MAP_ZOOM_CLASSES = ['cmi-map-zoom-wide', 'cmi-map-zoom-city', 'cmi-map-zoom-near', 'cmi-map-zoom-street'];
+
+const getMapZoomClass = (zoom: number) => {
+  if (zoom >= 16) return 'cmi-map-zoom-street';
+  if (zoom >= 14.5) return 'cmi-map-zoom-near';
+  if (zoom >= 12.5) return 'cmi-map-zoom-city';
+  return 'cmi-map-zoom-wide';
+};
+
+const applyMapBackgroundZoomClass = (map: L.Map) => {
+  const container = map.getContainer();
+  container.classList.remove(...MAP_ZOOM_CLASSES);
+  container.classList.add(getMapZoomClass(map.getZoom()));
+};
+
+const createAreaLabelIcon = (area: MapBackgroundArea) => L.divIcon({
+  className: 'cmi-map-area-label-icon bg-transparent border-none',
+  html: `<span class="cmi-map-area-label ${area.primary ? 'cmi-map-area-label--primary' : ''}">${area.label}</span>`,
+  iconSize: area.primary ? [122, 42] : [112, 36],
+  iconAnchor: area.primary ? [61, 21] : [56, 18],
+});
+
+const createLandmarkIcon = (landmark: MapBackgroundLandmark) => L.divIcon({
+  className: 'cmi-map-landmark-icon bg-transparent border-none',
+  html: `
+    <div
+      class="cmi-map-landmark"
+      style="
+        --city-opacity: ${landmark.cityOpacity ?? 0.3};
+        --near-opacity: ${landmark.nearOpacity ?? 0.48};
+        --landmark-width: ${landmark.iconSize[0]}px;
+        --landmark-height: ${landmark.iconSize[1]}px;
+      "
+    >
+      <img
+        src="${landmark.iconUrl}"
+        alt=""
+        width="${landmark.iconSize[0]}"
+        height="${landmark.iconSize[1]}"
+        loading="lazy"
+        decoding="async"
+        draggable="false"
+      />
+      <span>${landmark.label}</span>
+    </div>
+  `,
+  iconSize: [landmark.iconSize[0], landmark.iconSize[1] + 18],
+  iconAnchor: [landmark.iconSize[0] / 2, landmark.iconSize[1] / 2],
+});
+
+const getRiverLineStyle = (layer: 'casing' | 'stroke'): L.PolylineOptions => ({
+  pane: 'cmi-map-feature-pane',
+  interactive: false,
+  lineCap: 'round',
+  lineJoin: 'round',
+  smoothFactor: 0.8,
+  color: layer === 'casing' ? '#e8f4f4' : '#9edce1',
+  weight: layer === 'casing' ? 8.2 : 4.1,
+  opacity: layer === 'casing' ? 0.26 : 0.42,
+});
+
+const addMapBackgroundLayer = (map: L.Map) => {
+  const boundaryMaskPane = map.createPane('cmi-map-boundary-mask-pane');
+  boundaryMaskPane.style.zIndex = '305';
+  boundaryMaskPane.style.pointerEvents = 'none';
+
+  const boundaryLinePane = map.createPane('cmi-map-boundary-line-pane');
+  boundaryLinePane.style.zIndex = '306';
+  boundaryLinePane.style.pointerEvents = 'none';
+
+  const featurePane = map.createPane('cmi-map-feature-pane');
+  featurePane.style.zIndex = '312';
+  featurePane.style.pointerEvents = 'none';
+
+  const overlayPane = map.createPane('cmi-map-overlay-pane');
+  overlayPane.style.zIndex = '318';
+  overlayPane.style.pointerEvents = 'none';
+
+  const areaPane = map.createPane('cmi-map-area-pane');
+  areaPane.style.zIndex = '342';
+  areaPane.style.pointerEvents = 'none';
+
+  const landmarkPane = map.createPane('cmi-map-landmark-pane');
+  landmarkPane.style.zIndex = '365';
+  landmarkPane.style.pointerEvents = 'none';
+
+  const backgroundLayer = L.layerGroup();
+
+  L.polygon([MAP_BOUNDARY_MASK_OUTER_RING, CHIANG_MAI_PROVINCE_BOUNDARY], {
+    pane: 'cmi-map-boundary-mask-pane',
+    interactive: false,
+    stroke: false,
+    fill: true,
+    fillColor: '#fffefb',
+    fillOpacity: 1,
+    fillRule: 'evenodd',
+    smoothFactor: 0.6,
+  }).addTo(backgroundLayer);
+
+  L.polyline(CHIANG_MAI_PROVINCE_BOUNDARY, {
+    pane: 'cmi-map-boundary-line-pane',
+    interactive: false,
+    color: '#d7cbb8',
+    weight: 1.4,
+    opacity: 0.72,
+    dashArray: '1 7',
+    lineCap: 'round',
+    lineJoin: 'round',
+    smoothFactor: 0.6,
+  }).addTo(backgroundLayer);
+
+  CHIANG_MAI_FEATURE_LINES.forEach((line) => {
+    L.polyline(line.paths as L.LatLngExpression[][], getRiverLineStyle('casing')).addTo(backgroundLayer);
+    L.polyline(line.paths as L.LatLngExpression[][], getRiverLineStyle('stroke')).addTo(backgroundLayer);
+  });
+
+  MAP_BACKGROUND_OVERLAYS.forEach((overlay) => {
+    L.imageOverlay(overlay.imageUrl, overlay.bounds, {
+      pane: 'cmi-map-overlay-pane',
+      interactive: false,
+      opacity: overlay.opacity,
+    }).addTo(backgroundLayer);
+  });
+
+  MAP_BACKGROUND_AREA_LABELS.forEach((area) => {
+    L.marker(area.position, {
+      icon: createAreaLabelIcon(area),
+      interactive: false,
+      keyboard: false,
+      pane: 'cmi-map-area-pane',
+      zIndexOffset: 0,
+    }).addTo(backgroundLayer);
+  });
+
+  MAP_BACKGROUND_LANDMARKS.forEach((landmark) => {
+    L.marker(landmark.position, {
+      icon: createLandmarkIcon(landmark),
+      interactive: false,
+      keyboard: false,
+      pane: 'cmi-map-landmark-pane',
+      zIndexOffset: -80,
+    }).addTo(backgroundLayer);
+  });
+
+  backgroundLayer.addTo(map);
+  applyMapBackgroundZoomClass(map);
+
+  const updateZoomClass = () => applyMapBackgroundZoomClass(map);
+  map.on('zoomend', updateZoomClass);
+
+  return () => {
+    map.off('zoomend', updateZoomClass);
+    backgroundLayer.remove();
+  };
+};
 
 export const LeafletMap = ({
   markers = [],
@@ -37,8 +382,15 @@ export const LeafletMap = ({
   mode = 'view',
   onCenterChange,
   onUserLocation,
+  onUserLocationError,
   defaultCenter = CHIANG_MAI_CENTER,
+  defaultZoom = 13,
+  focusTarget,
+  focusTargetZoom,
+  focusTargetOffsetYRatio = 0.14,
   focusUserLocation = false,
+  constrainToChiangMai = true,
+  locationZoom = 15,
   interactive = true,
   showUserLocation = true,
   className = ''
@@ -50,6 +402,7 @@ export const LeafletMap = ({
   const userLocationMarkerRef = useRef<L.Marker | null>(null);
   const onCenterChangeRef = useRef(onCenterChange);
   const onUserLocationRef = useRef(onUserLocation);
+  const onUserLocationErrorRef = useRef(onUserLocationError);
   const orientationHandlerRef = useRef<((event: DeviceOrientationEvent) => void) | null>(null);
   const markerVisualsRef = useRef(new WeakMap<L.Marker, MapMarkerVisual>());
   const userHeadingRef = useRef<number>(0); // 用户朝向角度
@@ -64,6 +417,10 @@ export const LeafletMap = ({
     onUserLocationRef.current = onUserLocation;
   }, [onUserLocation]);
 
+  useEffect(() => {
+    onUserLocationErrorRef.current = onUserLocationError;
+  }, [onUserLocationError]);
+
   // 初始化地图
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
@@ -71,8 +428,8 @@ export const LeafletMap = ({
     // 创建地图实例
     const map = L.map(mapRef.current, {
       center: [defaultCenter.lat, defaultCenter.lng],
-      zoom: 13,
-      minZoom: 11,
+      zoom: defaultZoom,
+      minZoom: 8,
       maxZoom: 18,
       zoomControl: false,
       attributionControl: false,
@@ -82,8 +439,8 @@ export const LeafletMap = ({
       doubleClickZoom: interactive,
       boxZoom: interactive,
       keyboard: interactive,
-      maxBounds: CHIANG_MAI_BOUNDS,
-      maxBoundsViscosity: 1.0,
+      maxBounds: constrainToChiangMai ? CHIANG_MAI_BOUNDS : undefined,
+      maxBoundsViscosity: constrainToChiangMai ? 1.0 : undefined,
       // 移动端缩放性能优化
       preferCanvas: true,         // 用 Canvas 替代 SVG 渲染矢量图形
       zoomSnap: 0.5,              // 缩放步长更大，减少中间帧
@@ -92,8 +449,8 @@ export const LeafletMap = ({
       fadeAnimation: false,       // 禁用瓦片淡入，减少合成层
     });
 
-    // 使用自定义样式的 OpenStreetMap 瓦片 - 更白的风格
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    // 使用无文字底图，清迈区域、地标和主路由我们自己叠中文信息，避免泰文文字干扰。
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
       subdomains: 'abcd',
       attribution: '' // 移除版权信息
@@ -103,16 +460,119 @@ export const LeafletMap = ({
     const style = document.createElement('style');
     style.textContent = `
       .leaflet-container {
-        background: #ffffff !important;
+        background: #faf8f1 !important;
       }
       .leaflet-tile-pane {
-        filter: brightness(1.08) saturate(0.5);
+        filter: brightness(0.99) saturate(0.76) contrast(1.18) sepia(0.035);
+      }
+      .cmi-map-boundary-mask-pane,
+      .cmi-map-boundary-line-pane,
+      .cmi-map-feature-pane,
+      .cmi-map-overlay-pane,
+      .cmi-map-area-pane,
+      .cmi-map-landmark-pane,
+      .cmi-map-area-label-icon,
+      .cmi-map-landmark-icon,
+      .cmi-map-area-label,
+      .cmi-map-landmark {
+        pointer-events: none !important;
+      }
+      .cmi-map-area-label {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 88px;
+        color: rgba(57, 52, 68, 0.34);
+        font-family: 'Yuanti SC','Hiragino Maru Gothic ProN','YouYuan','SF Pro Rounded','Arial Rounded MT Bold','PingFang SC',sans-serif;
+        font-size: 17px;
+        font-weight: 650;
+        letter-spacing: 0;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+        text-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.9),
+          0 0 10px rgba(255, 255, 255, 0.88);
+        transform: translateZ(0);
+        transition: opacity 160ms ease;
+      }
+      .cmi-map-area-label--primary {
+        color: rgba(108, 91, 166, 0.38);
+        font-size: 24px;
+      }
+      .cmi-map-overlay-pane img {
+        mix-blend-mode: multiply;
+        filter: saturate(0.7) contrast(0.9);
+      }
+      .cmi-map-landmark {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1px;
+        opacity: 0;
+        transform: translateZ(0) scale(0.96);
+        transition: opacity 160ms ease;
+        will-change: opacity;
+      }
+      .cmi-map-landmark img {
+        display: block;
+        width: var(--landmark-width);
+        height: var(--landmark-height);
+        max-width: none;
+        object-fit: contain;
+        filter: saturate(0.68) contrast(0.92);
+        mix-blend-mode: multiply;
+        user-select: none;
+      }
+      .cmi-map-landmark span {
+        color: rgba(57, 52, 68, 0.34);
+        font-family: 'Yuanti SC','Hiragino Maru Gothic ProN','YouYuan','SF Pro Rounded','Arial Rounded MT Bold','PingFang SC',sans-serif;
+        font-size: 10px;
+        font-weight: 650;
+        line-height: 1;
+        opacity: 0;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+        white-space: nowrap;
+      }
+      .cmi-map-zoom-wide .cmi-map-area-label {
+        opacity: 0.86;
+      }
+      .cmi-map-zoom-city .cmi-map-area-label {
+        opacity: 0.74;
+      }
+      .cmi-map-zoom-city .cmi-map-landmark {
+        opacity: var(--city-opacity);
+      }
+      .cmi-map-zoom-city .cmi-map-landmark span {
+        opacity: 0.56;
+      }
+      .cmi-map-zoom-near .cmi-map-area-label {
+        opacity: 0.58;
+      }
+      .cmi-map-zoom-near .cmi-map-landmark {
+        opacity: var(--near-opacity);
+        transform: translateZ(0) scale(1.08);
+      }
+      .cmi-map-zoom-near .cmi-map-landmark span {
+        opacity: 0.7;
+      }
+      .cmi-map-zoom-street .cmi-map-area-label {
+        opacity: 0.42;
+      }
+      .cmi-map-zoom-street .cmi-map-landmark {
+        opacity: calc(var(--near-opacity) + 0.12);
+        transform: translateZ(0) scale(1.12);
+      }
+      .cmi-map-zoom-street .cmi-map-landmark span {
+        opacity: 1;
       }
       .user-location-marker {
         z-index: 1200 !important;
       }
     `;
     document.head.appendChild(style);
+
+    const cleanupMapBackgroundLayer = addMapBackgroundLayer(map);
 
     mapInstanceRef.current = map;
 
@@ -246,9 +706,9 @@ export const LeafletMap = ({
               if (mode === 'view' && focusUserLocation && !hasFocusedUserLocationRef.current) {
                 const userLatLng = L.latLng(userLat, userLng);
                 const chiangMaiBounds = L.latLngBounds(CHIANG_MAI_BOUNDS);
-                if (chiangMaiBounds.contains(userLatLng)) {
+                if (!constrainToChiangMai || chiangMaiBounds.contains(userLatLng)) {
                   hasFocusedUserLocationRef.current = true;
-                  map.setView(userLatLng, Math.max(map.getZoom(), 14), { animate: false });
+                  map.setView(userLatLng, Math.max(map.getZoom(), locationZoom), { animate: false });
                   const mapSize = map.getSize();
                   map.panBy(L.point(0, mapSize.y * 0.12), { animate: false });
                 }
@@ -258,7 +718,13 @@ export const LeafletMap = ({
             }
           },
           (error) => {
+            onUserLocationErrorRef.current?.(error);
             console.debug('无法获取位置，使用默认位置', error);
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: 30_000,
+            timeout: 10_000,
           }
         );
       }
@@ -275,10 +741,37 @@ export const LeafletMap = ({
       if (userLocationMarkerRef.current) {
         userLocationMarkerRef.current.remove();
       }
+      cleanupMapBackgroundLayer();
+      style.remove();
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, [mode, defaultCenter, focusUserLocation, interactive, showUserLocation]); // 移除 onCenterChange 依赖
+  }, [mode, defaultCenter, defaultZoom, focusUserLocation, constrainToChiangMai, interactive, locationZoom, showUserLocation]); // 移除 onCenterChange 依赖
+
+  useEffect(() => {
+    if (!mapInstanceRef.current || mode !== 'view' || !focusTarget) return;
+
+    const map = mapInstanceRef.current;
+    const targetLatLng = L.latLng(focusTarget.lat, focusTarget.lng);
+
+    // NOTE: 详情卡会盖住下半屏，选中地点需要停在露出的地图区域里，而不是物理中心。
+    const focusSelectedTarget = () => {
+      map.invalidateSize();
+      map.setView(targetLatLng, focusTargetZoom ?? defaultZoom, { animate: false });
+      const mapSize = map.getSize();
+      map.panBy(L.point(0, mapSize.y * focusTargetOffsetYRatio), { animate: false });
+    };
+
+    if (map.getContainer()) {
+      map.whenReady(focusSelectedTarget);
+    }
+  }, [
+    mode,
+    defaultZoom,
+    focusTarget,
+    focusTargetZoom,
+    focusTargetOffsetYRatio,
+  ]);
 
   // 更新标记点
   useEffect(() => {
@@ -442,7 +935,7 @@ export const LeafletMap = ({
         style={{
           minHeight: '100%',
           pointerEvents: interactive ? 'auto' : 'none',
-          touchAction: interactive ? 'manipulation' : 'none',
+          touchAction: 'none',
           willChange: 'transform',
         }}
       />
@@ -450,16 +943,13 @@ export const LeafletMap = ({
       {mode === 'mark' && (
         <div className="absolute top-[31%] left-1/2 -translate-x-1/2 -translate-y-full pointer-events-none z-[1000]">
           <div className="relative animate-bounce-slow">
-            {/* 橙红色手绘地图定位大头针 */}
-            <img 
-              src="/custom-pin.png" 
-              alt="定位标记" 
-              style={{
-                width: '64px',
-                height: '64px',
-                filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
-              }}
-            />
+            {/* NOTE: 定位 pin 改为内联形状，避免依赖已清理的旧图片资产。 */}
+            <div
+              aria-label="定位标记"
+              className="h-16 w-16 rounded-full bg-[#f97316] border-[3px] border-white shadow-[0_4px_8px_rgba(0,0,0,0.3)] flex items-center justify-center"
+            >
+              <div className="h-5 w-5 rounded-full bg-white/95" />
+            </div>
             {/* 底部阴影圆点 */}
             <div 
               className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-2 bg-black/40 rounded-full blur-[2px]"

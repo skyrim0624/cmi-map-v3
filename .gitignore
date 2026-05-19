@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 output
+backups/
 *.local
 package-lock.json
 
@@ -28,3 +29,20 @@ package-lock.json
 history/*.json
 .vite_cache
 .gstack/
+.worktrees/
+
+# Local working artifacts
+tmp/
+scratch/
+generated-assets/
+graphify-out/
+src/graphify-out/
+
+# Design and QA playgrounds are local references, not production app code
+public/playgrounds/
+public/prototypes/
+docs/prototypes/
+docs/cmi-map-icon-inventory-*/
+
+# Supabase local CLI cache
+supabase/.temp/

@@ -1,12 +1,12 @@
+import { ArrowLeft, Compass, MapPinned, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Compass, MapPinned, Sparkles } from 'lucide-react';
-import { getRecommendationsByUser } from '@/db/api';
-import type { Category, Recommendation } from '@/types/types';
-import { CATEGORIES, getCategoryIconUrl } from '@/types/types';
 import { Button } from '@/components/ui/button';
-import { getPlacePath } from '@/lib/paths';
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
+import { getRecommendationsByUser } from '@/db/api';
+import { getPlacePath } from '@/lib/paths';
+import type { Category, Recommendation } from '@/types/types';
+import { categoryMatchesFilter, getCategoryIconUrl, normalizeCategory } from '@/types/types';
 
 type CategoryCount = {
   name: Category;
@@ -16,7 +16,8 @@ type CategoryCount = {
 const getTopCategories = (items: Recommendation[]): CategoryCount[] => {
   const counts = new Map<Category, number>();
   for (const item of items) {
-    counts.set(item.category, (counts.get(item.category) || 0) + 1);
+    const category = normalizeCategory(item.category);
+    counts.set(category, (counts.get(category) || 0) + 1);
   }
   return Array.from(counts.entries())
     .map(([name, count]) => ({ name, count }))
@@ -49,7 +50,7 @@ export default function PersonMap() {
   const signatureRecommendation = useMemo(() => getLongestReason(recommendations), [recommendations]);
   const filteredRecommendations = selectedCategory === 'all'
     ? recommendations
-    : recommendations.filter(item => item.category === selectedCategory);
+    : recommendations.filter(item => categoryMatchesFilter(item.category, selectedCategory));
 
   const uniquePlaceCount = new Set(recommendations.map(item => item.place_name)).size;
   const signatureCategory = topCategories[0]?.name || '清迈';

@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "title",
+    "summary",
+    "durationLabel",
+    "transportSummary",
+    "steps",
+    "alternatives",
+    "checks",
+    "uncertainty",
+    "provider"
+  ],
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "durationLabel": {
+      "type": "string"
+    },
+    "transportSummary": {
+      "type": "string"
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "placeName",
+          "eventTitle",
+          "timeHint",
+          "transportHint",
+          "reason",
+          "caveat"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "placeName": {
+            "type": "string"
+          },
+          "eventTitle": {
+            "type": "string"
+          },
+          "timeHint": {
+            "type": "string"
+          },
+          "transportHint": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "caveat": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "alternatives": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "uncertainty": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "provider": {
+      "type": "string",
+      "enum": [
+        "codex-local"
+      ]
+    }
+  }
+}

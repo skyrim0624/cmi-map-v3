@@ -11,6 +11,7 @@ export interface PlaceGuide {
 
 const COMMUNITY_USER_NAME = 'CMI社区';
 const COMMUNITY_REASON = '来自 CMI 社区的精选收藏';
+const CHIANG_MAI_CENTER = { latitude: 18.7883, longitude: 98.9853 };
 
 const normalizePlaceName = (value: string) =>
   value
@@ -861,6 +862,39 @@ export const COMMUNITY_PLACE_GUIDES: PlaceGuide[] = [
     tags: ['市场', '采购', '本地日常'],
   },
 ];
+
+const inferGuideCategory = (guide: PlaceGuide): Category => {
+  const text = [guide.title, guide.kind, guide.summary, ...guide.tags].join(' ').toLowerCase();
+  const placeTypeText = [guide.title, guide.kind, ...guide.tags].join(' ').toLowerCase();
+
+  if (/咖啡|coffee|cafe|roastery/.test(text)) return '咖啡';
+  if (/餐|饭|小吃|甜品|noodle|food|烤鸭|炸猪肉/.test(text)) return '吃饭';
+  if (/市场|市集|market|bazaar/.test(text)) return '市集';
+  if (/景点|地标|观景点|寺庙|城门|temple|wat|landmark|viewpoint/.test(placeTypeText)) return '景点';
+  if (/温泉|户外|山|短途|茶饮/.test(text)) return '户外';
+  if (/按摩|spa|马杀鸡/.test(text)) return '马杀鸡';
+  if (/运动|网球|球场|健身/.test(text)) return '运动';
+  if (/换汇|打印|理发|诊所|医院|药店|电话卡|办事/.test(text)) return '生存指南';
+
+  return '彩蛋';
+};
+
+export const getCommunityGuideRecommendations = (limit = 12): Recommendation[] =>
+  COMMUNITY_PLACE_GUIDES.slice(0, limit).map((guide, index) => ({
+    id: `community-guide-${index}`,
+    place_name: guide.placeName,
+    category: inferGuideCategory(guide),
+    reason: COMMUNITY_REASON,
+    user_name: COMMUNITY_USER_NAME,
+    user_id: null,
+    latitude: CHIANG_MAI_CENTER.latitude + (index % 5) * 0.003,
+    longitude: CHIANG_MAI_CENTER.longitude + Math.floor(index / 5) * 0.003,
+    images: [],
+    created_at: '2026-05-18T00:00:00.000Z',
+    upvotes: [],
+    wishlists: [],
+    placed_stickers: [],
+  }));
 
 const GUIDE_MAP = new Map(COMMUNITY_PLACE_GUIDES.map(guide => [normalizePlaceName(guide.placeName), guide]));
 

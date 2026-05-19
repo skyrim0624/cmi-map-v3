@@ -1,65 +1,50 @@
+import { LogIn, Plus } from 'lucide-react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { HomeSceneSection } from '@/components/home/home-scene-section';
+import { PageCurlMapEntry } from '@/components/home/page-curl-map-entry';
 import { LeafletMap } from '@/components/map/LeafletMap';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import {
-  CMI_HOME_SCENE_GROUPS,
-  getCmiHomeScenesByGroup,
-  type CmiScene,
-  type CmiSceneId,
-} from '@/data/cmi-scenes';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCategoryIconUrl } from '@/types/types';
-import { Compass, LogIn, MapPinned, Navigation, Plus, Sparkles, Users } from 'lucide-react';
-import { toast } from 'sonner';
+import { getCmiHomeSections } from '@/data/cmi-home-sections';
+import { preloadImages, warmupImages } from '@/lib/image-warmup';
 import { getSceneEntryPath } from '@/lib/paths';
 
-const getSceneToneClass = (sceneId: CmiSceneId) => {
-  switch (sceneId) {
-    case 'life-rescue':
-      return 'border-[#4f6f82] bg-[#f5f9fb]';
-    case 'massage-relax':
-      return 'border-[#2f8b88] bg-[#f1fbfa]';
-    case 'nearby':
-      return 'border-[#4f7f5f] bg-[#f4faf3]';
-    case 'community':
-      return 'border-[#8b6a38] bg-[#fff8ed]';
-    case 'explore':
-      return 'border-primary bg-primary text-primary-foreground';
-    default:
-      return 'border-border bg-card';
-  }
-};
+const CRITICAL_HOME_IMAGE_URLS = [
+  '/brand/page-curl-corner.png',
+  '/brand/cmi-inn-entry.png',
+];
 
-const renderSceneIcon = (scene: CmiScene) => {
-  if (scene.homeIconCategory) {
-    return (
-      <img
-        src={getCategoryIconUrl(scene.homeIconCategory)}
-        alt=""
-        className="h-10 w-10 object-contain drop-shadow-sm"
-      />
-    );
-  }
+const HOME_WARMUP_IMAGE_URLS = [
+  '/map-icons/cmi-flat-v2/direct-eat.png',
+  '/map-icons/cmi-flat-v2/direct-work.png',
+  '/map-icons/cmi-flat-v2/direct-study.png',
+  '/map-icons/cmi-flat-v2/direct-shopping.png',
+  '/map-icons/cmi-flat-v2/direct-play.png',
+  '/map-icons/cmi-flat-v2/direct-relax.png',
+  '/map-icons/cmi-flat-v2/direct-sport.png',
+  '/map-icons/cmi-flat-v2/direct-errands.png',
+  '/map-icons/cmi-flat-v2/home-nearby-wander.png',
+  '/map-icons/cmi-flat-v2/home-community-picks.png',
+  '/map-icons/cmi-flat-v2/place-market.png',
+  '/map-icons/cmi-flat-v2/home-events.png',
+];
 
-  const iconClassName = scene.id === 'explore' ? 'h-8 w-8 text-primary-foreground' : 'h-8 w-8 text-primary';
-
-  switch (scene.id) {
-    case 'nearby':
-      return <Navigation className={iconClassName} strokeWidth={2.6} />;
-    case 'community':
-      return <Users className={iconClassName} strokeWidth={2.6} />;
-    case 'explore':
-      return <Compass className={iconClassName} strokeWidth={2.6} />;
-    default:
-      return <Sparkles className={iconClassName} strokeWidth={2.6} />;
-  }
-};
+preloadImages(CRITICAL_HOME_IMAGE_URLS);
 
 export default function SceneHome() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const displayName = profile?.user_name || user?.email?.split('@')[0] || '游客';
+  const homeSections = getCmiHomeSections();
+  const cmiInnSection = homeSections.find(section => section.id === 'cmi-inn');
+  const visibleHomeSections = homeSections.filter(section => section.id !== 'cmi-inn');
+
+  useEffect(() => {
+    warmupImages(HOME_WARMUP_IMAGE_URLS, { batchSize: 4, delayMs: 120 });
+  }, []);
 
   const handleMarkPlace = () => {
     if (!user) {
@@ -82,72 +67,56 @@ export default function SceneHome() {
         />
       </div>
       <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-background/90 via-background/55 to-background/85" />
+      <div className="pointer-events-none absolute inset-0 z-[11] bg-[radial-gradient(circle_at_100%_0%,rgba(255,255,255,0)_0,rgba(255,255,255,0.28)_8rem,rgba(255,255,255,0)_13rem),linear-gradient(135deg,rgba(255,255,255,0.34),rgba(255,250,242,0.1)_42%,rgba(255,255,255,0.28))]" />
+      <PageCurlMapEntry onClick={() => navigate('/map')} />
 
-      <header className="absolute left-4 right-4 top-[calc(env(safe-area-inset-top)+14px)] z-30 flex items-center justify-between">
+      <header className="absolute left-4 right-4 top-[calc(env(safe-area-inset-top)+14px)] z-30 flex items-center justify-start">
         <h1 className="rounded-full border border-border/70 bg-background/90 px-5 py-2.5 text-2xl font-black text-foreground shadow-lg backdrop-blur-md">
           CMI Map
         </h1>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => navigate('/map')}
-          className="h-12 w-12 rounded-2xl border-border/70 bg-background/90 shadow-lg backdrop-blur-md"
-          aria-label="打开完整地图"
-        >
-          <MapPinned className="h-5 w-5" strokeWidth={2.6} />
-        </Button>
       </header>
 
-      <main className="relative z-20 h-full overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+126px)] pt-[calc(env(safe-area-inset-top)+98px)]">
-        <section className="mb-6">
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-primary">
-            CMI INTENT
-          </p>
-          <h2 className="mt-1 text-3xl font-black leading-tight text-foreground">
-            你现在想在清迈解决什么？
+      <main className="relative z-20 h-full overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+126px)] pt-[calc(env(safe-area-inset-top)+116px)]">
+        <section className="relative mb-5">
+          <h2 className="max-w-[300px] text-[2.2rem] font-black leading-[1.1] text-foreground">
+            <span className="block">清迈，</span>
+            <span className="block whitespace-nowrap">今天怎么过？</span>
           </h2>
-          <p className="mt-2 max-w-[360px] text-sm font-semibold leading-relaxed text-muted-foreground">
-            先选一个意图，再看社区留下来的判断和位置。
+          <p className="mt-2 max-w-[220px] text-sm font-black leading-snug text-muted-foreground/85">
+            给来清迈的人用的中文生活地图。
           </p>
+
+          {cmiInnSection?.feature && (
+            <button
+              type="button"
+              className="group absolute -right-1 -top-4 flex h-[118px] w-[118px] items-center justify-center touch-manipulation transition-transform duration-200 ease-out active:scale-95"
+              onClick={() => navigate(cmiInnSection.feature!.path)}
+              aria-label="打开清迈客栈"
+            >
+              <img
+                src="/brand/cmi-inn-entry.png"
+                alt=""
+                loading="eager"
+                decoding="async"
+                className="h-[96px] w-[96px] rotate-[4deg] object-contain drop-shadow-[4px_6px_0_rgba(0,0,0,0.16)] transition-transform duration-200 ease-out group-active:rotate-0 group-active:drop-shadow-[2px_3px_0_rgba(0,0,0,0.18)]"
+                draggable={false}
+              />
+              <span className="absolute bottom-1 right-1 rotate-[-4deg] rounded-full border-2 border-[#8b6a38] bg-[#fff8ed]/95 px-2 py-1 text-[11px] font-black leading-none text-[#5f4523] shadow-[2px_3px_0_rgba(0,0,0,0.12)]">
+                清迈客栈
+              </span>
+            </button>
+          )}
         </section>
 
         <div className="space-y-6">
-          {CMI_HOME_SCENE_GROUPS.map(group => {
-            const scenes = getCmiHomeScenesByGroup(group.id);
-            if (scenes.length === 0) return null;
-
-            return (
-              <section key={group.id} className="space-y-3">
-                <div>
-                  <h3 className="text-base font-black text-foreground">{group.title}</h3>
-                  <p className="mt-0.5 text-xs font-semibold leading-snug text-muted-foreground">
-                    {group.description}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {scenes.map(scene => (
-                    <button
-                      key={scene.id}
-                      type="button"
-                      className={`min-h-[124px] rounded-lg border-2 p-3 text-left shadow-[3px_4px_0_rgba(0,0,0,0.16)] transition-transform active:translate-y-0.5 active:shadow-[2px_3px_0_rgba(0,0,0,0.14)] ${getSceneToneClass(scene.id)}`}
-                      onClick={() => navigate(getSceneEntryPath(scene))}
-                    >
-                      <div className="mb-3 flex items-start gap-3">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-background/80">
-                          {renderSceneIcon(scene)}
-                        </div>
-                      </div>
-                      <p className="text-base font-black leading-tight">{scene.homeTitle}</p>
-                      <p className="mt-1 line-clamp-2 text-xs font-semibold leading-snug opacity-75">
-                        {scene.homeDescription}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            );
-          })}
+          {visibleHomeSections.map(section => (
+            <HomeSceneSection
+              key={section.id}
+              section={section}
+              onSceneSelect={scene => navigate(getSceneEntryPath(scene))}
+              onFeatureSelect={path => navigate(path)}
+            />
+          ))}
         </div>
       </main>
 
@@ -160,6 +129,7 @@ export default function SceneHome() {
             size="icon"
             className="h-12 w-12 rounded-full border-2 border-foreground bg-background p-0 shadow-[3px_4px_0_rgba(0,0,0,0.24)]"
             onClick={() => navigate('/profile')}
+            aria-label="打开个人页面"
           >
             <Avatar className="h-full w-full">
               {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={displayName} />}
@@ -185,6 +155,7 @@ export default function SceneHome() {
         <button
           className="app-fab flex items-center gap-2 rounded-full border-2 border-foreground bg-primary px-6 py-4 font-bold text-primary-foreground"
           onClick={handleMarkPlace}
+          aria-label="标记新地点"
         >
           <Plus className="h-6 w-6" strokeWidth={3} />
           <span>标记新地点</span>

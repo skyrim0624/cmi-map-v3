@@ -1,17 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Camera, Check, LogOut, Pencil, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, ArrowLeft, Camera, Pencil, Check, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getAllRecommendations, uploadAvatar, updateUserAvatar, updateUserName } from '@/db/api';
-import type { Recommendation, Category, Sticker, PlacedSticker } from '@/types/types';
-import { getCategoryIconUrl, CATEGORIES } from '@/types/types';
-import { checkBadgesUnlocked } from '@/lib/badgeUtils';
-import BadgeWall from '@/components/BadgeWall';
-import BadgeUnlockOverlay from '@/components/BadgeUnlockOverlay';
-import { BADGE_REGISTRY, Badge } from '@/types/badges';
 import { toast } from 'sonner';
+import BadgeUnlockOverlay from '@/components/BadgeUnlockOverlay';
+import BadgeWall from '@/components/BadgeWall';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { getAllRecommendations, updateUserAvatar, updateUserName, uploadAvatar } from '@/db/api';
+import { syncAchievementProgress } from '@/features/achievements/achievement-service';
+import type { Badge } from '@/types/badges';
+import type { Category, PlacedSticker, Recommendation, Sticker } from '@/types/types';
+import { CATEGORIES, categoryMatchesFilter, getCategoryIconUrl } from '@/types/types';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -56,18 +56,10 @@ export default function Profile() {
       setMyRecommendations(mine);
       setMyWishlists(wishlisted);
 
-      const unlocked = checkBadgesUnlocked(user.id, allData);
-      setUnlockedBadges(unlocked);
-
-      const stored = localStorage.getItem(`cmi_badges_${user.id}`);
-      const previouslyViewed: string[] = stored ? JSON.parse(stored) : [];
-      const newlyUnlockedIds = unlocked.filter(id => !previouslyViewed.includes(id));
-      if (newlyUnlockedIds.length > 0) {
-        const newBadge = BADGE_REGISTRY.find(b => b.id === newlyUnlockedIds[0]);
-        if (newBadge) setNewlyUnlockedBadge(newBadge);
-        localStorage.setItem(`cmi_badges_${user.id}`, JSON.stringify(unlocked));
-      } else if (!stored && unlocked.length > 0) {
-        localStorage.setItem(`cmi_badges_${user.id}`, JSON.stringify(unlocked));
+      const achievementProgress = syncAchievementProgress(user.id, allData);
+      setUnlockedBadges(achievementProgress.unlockedIds);
+      if (achievementProgress.newlyUnlockedBadge) {
+        setNewlyUnlockedBadge(achievementProgress.newlyUnlockedBadge);
       }
     } catch (error) {
       console.error('Error loading profile data:', error);
@@ -320,7 +312,7 @@ export default function Profile() {
           onClick={() => setActiveTab('my_pins')}
           className={`flex-1 pb-3 text-center font-bold text-sm transition-colors relative ${activeTab === 'my_pins' ? 'text-foreground' : 'text-stone-400'}`}
         >
-          我贡献的 ({myRecommendations.length})
+          我的痕迹 ({myRecommendations.length})
           {activeTab === 'my_pins' && <div className="absolute bottom-0 left-3 right-3 h-[2.5px] bg-foreground rounded-full" />}
         </button>
         <button
@@ -370,14 +362,14 @@ export default function Profile() {
       {/* ======== 内容区 ======== */}
       <div className="px-5 pb-12">
         {activeTab === 'my_pins' && renderList(
-          myRecommendations.filter(r => selectedCategory === 'all' || r.category === selectedCategory),
-          '手账本里还没有你的专属印记',
-          '去标记一个心动坐标',
+          myRecommendations.filter(r => selectedCategory === 'all' || categoryMatchesFilter(r.category, selectedCategory)),
+          '手账本里还没有你的清迈痕迹',
+          '去留一条痕迹',
           '/mark'
         )}
 
         {activeTab === 'wishlist' && renderList(
-          myWishlists.filter(r => selectedCategory === 'all' || r.category === selectedCategory),
+          myWishlists.filter(r => selectedCategory === 'all' || categoryMatchesFilter(r.category, selectedCategory)),
           '你的愿望清单空空如也',
           '回地图上逛逛，种点草',
           '/'

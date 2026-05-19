@@ -1,21 +1,7 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { getRecommendationsByPlace, deleteRecommendation, toggleUpvote, toggleWishlist, getAvailableStickers, getPlacedStickers, placeSticker } from '@/db/api';
-import { useAuth } from '@/contexts/AuthContext';
-import type { Recommendation, Sticker, PlacedSticker } from '@/types/types';
-import { getCategoryIconUrl } from '@/types/types';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Trash2, Heart, Bookmark, Sticker as StickerIcon, Share2, Download } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ArrowLeft, Bookmark, Download, Heart, Loader2, MapPinned, PencilLine, Share2, Sticker as StickerIcon, Trash2 } from 'lucide-react';
+import { Fragment, useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from '@/components/ui/carousel';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +12,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
 import {
   Dialog,
   DialogContent,
@@ -34,9 +29,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { getPersonMapPath, getPlacePath } from '@/lib/paths';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  getCmiDetailTagsForRecommendation,
+  getCmiPlaceTypeTagsForRecommendation,
+} from '@/data/cmi-taxonomy';
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
+import { deleteRecommendation, getRecommendationsByPlace, updateRecommendationReason } from '@/db/api';
+import {
+  createRecommendationInteractionState,
+  loadAvailableStickers,
+  loadRecommendationStickerPlacements,
+  placeRecommendationSticker,
+  toggleRecommendationUpvote,
+  toggleRecommendationWishlist,
+} from '@/features/interactions/interaction-service';
+import { getAddTracePath, getPersonMapPath, getPlaceMapPath, getPlacePath } from '@/lib/paths';
 import { createPlaceShareCard, type PlaceShareCardResult } from '@/lib/place-share-card';
+import type { PlacedSticker, Recommendation, Sticker } from '@/types/types';
+import { getCategoryIconUrl, normalizeCategory } from '@/types/types';
 
 type FileShareData = {
   files?: File[];
@@ -50,12 +63,18 @@ type NavigatorWithFileShare = Navigator & {
   share?: (data: FileShareData) => Promise<void>;
 };
 
+type LocationState = {
+  newTraceId?: string;
+};
+
 export default function PlaceDetail() {
   const { placeName } = useParams<{ placeName: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedRecommendation, setSelectedRecommendation] = useState<Recommendation | null>(null);
   const [localUpvotes, setLocalUpvotes] = useState<Record<string, { count: number, isUpvoted: boolean }>>({});
@@ -63,6 +82,11 @@ export default function PlaceDetail() {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareCard, setShareCard] = useState<PlaceShareCardResult | null>(null);
   const [shareCardLoading, setShareCardLoading] = useState(false);
+  const [rideDialogOpen, setRideDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingRecommendation, setEditingRecommendation] = useState<Recommendation | null>(null);
+  const [editReason, setEditReason] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   // 贴纸状态
   const [availableStickers, setAvailableStickers] = useState<Sticker[]>([]);
@@ -70,6 +94,7 @@ export default function PlaceDetail() {
   const [activeStickerId, setActiveStickerId] = useState<string | null>(null); 
   const [activeRecIdForSticker, setActiveRecIdForSticker] = useState<string | null>(null);
   const [showStickerDrawer, setShowStickerDrawer] = useState(false);
+  const locationState = location.state as LocationState | null;
 
   useEffect(() => {
     if (placeName) {
@@ -81,37 +106,30 @@ export default function PlaceDetail() {
   const loadRecommendations = async () => {
     if (!placeName) return;
     setLoading(true);
-    const data = await getRecommendationsByPlace(decodeURIComponent(placeName));
-    
-    // 初始化点赞与心愿状态
-    const upvotesState: Record<string, { count: number, isUpvoted: boolean }> = {};
-    const wishlistsState: Record<string, boolean> = {};
-    data.forEach(rec => {
-      const upvotes = rec.upvotes || [];
-      upvotesState[rec.id] = {
-        count: upvotes.length,
-        isUpvoted: user ? upvotes.some(u => u.user_id === user.id) : false
-      };
-      const wishlists = rec.wishlists || [];
-      wishlistsState[rec.id] = user ? wishlists.some(w => w.user_id === user.id) : false;
-    });
-    setLocalUpvotes(upvotesState);
-    setLocalWishlists(wishlistsState);
-    
-    // 加载此地点的所有贴纸
-    const stickersData: Record<string, PlacedSticker[]> = {};
-    await Promise.all(data.map(async (rec) => {
-      stickersData[rec.id] = await getPlacedStickers(rec.id);
-    }));
-    setPlacedStickers(stickersData);
+    setLoadError(null);
 
-    setRecommendations(data);
-    setLoading(false);
+    try {
+      const data = await getRecommendationsByPlace(decodeURIComponent(placeName), { throwOnError: true });
 
-    // 预加载贴纸库
-    if (availableStickers.length === 0) {
-      const stickers = await getAvailableStickers();
-      setAvailableStickers(stickers);
+      const interactionState = createRecommendationInteractionState(data, user?.id);
+      setLocalUpvotes(interactionState.upvotes);
+      setLocalWishlists(interactionState.wishlists);
+
+      const stickersData = await loadRecommendationStickerPlacements(data);
+      setPlacedStickers(stickersData);
+
+      setRecommendations(data);
+
+      // 预加载贴纸库
+      if (availableStickers.length === 0) {
+        const stickers = await loadAvailableStickers();
+        setAvailableStickers(stickers);
+      }
+    } catch {
+      setRecommendations([]);
+      setLoadError('地点详情暂时没连上');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -135,7 +153,7 @@ export default function PlaceDetail() {
       };
     });
 
-    const { success, isUpvoted } = await toggleUpvote(recId, user.id);
+    const { success } = await toggleRecommendationUpvote(recId, user.id);
     
     if (!success) {
       toast.error('点赞失败');
@@ -155,7 +173,7 @@ export default function PlaceDetail() {
 
   const handleToggleWishlist = async (recId: string) => {
     if (!user) {
-      toast('登录后才能收藏地点哦', { description: '注册只需要一个邮箱 ✉️' });
+      toast('登录后才能标记想去哦', { description: '注册只需要一个邮箱 ✉️' });
       navigate('/login', { state: { from: `/place/${placeName}` } });
       return;
     }
@@ -168,7 +186,7 @@ export default function PlaceDetail() {
     }));
     
     try {
-      await toggleWishlist(recId, user.id);
+      await toggleRecommendationWishlist(recId, user.id);
     } catch (error) {
       toast.error('标记失败');
       setLocalWishlists(prev => ({
@@ -182,6 +200,59 @@ export default function PlaceDetail() {
   const handleDeleteClick = (recommendation: Recommendation) => {
     setSelectedRecommendation(recommendation);
     setDeleteDialogOpen(true);
+  };
+
+  const handleEditClick = (recommendation: Recommendation) => {
+    setEditingRecommendation(recommendation);
+    setEditReason(recommendation.reason);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditDialogOpenChange = (open: boolean) => {
+    if (editSubmitting) return;
+    setEditDialogOpen(open);
+    if (!open) {
+      setEditingRecommendation(null);
+      setEditReason('');
+    }
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editingRecommendation) return;
+
+    const nextReason = editReason.trim();
+    if (nextReason.length < 4) {
+      toast.error('至少写 4 个字，别人才能看懂');
+      return;
+    }
+
+    if (nextReason === editingRecommendation.reason.trim()) {
+      handleEditDialogOpenChange(false);
+      return;
+    }
+
+    setEditSubmitting(true);
+    try {
+      const updatedRecommendation = await updateRecommendationReason(
+        editingRecommendation.id,
+        nextReason
+      );
+
+      if (!updatedRecommendation) {
+        toast.error('没有改成功，可能不是你本人写的这一条');
+        return;
+      }
+
+      setRecommendations(prev =>
+        prev.map(rec => rec.id === updatedRecommendation.id ? updatedRecommendation : rec)
+      );
+      toast.success('推荐内容已更新');
+      setEditDialogOpen(false);
+      setEditingRecommendation(null);
+      setEditReason('');
+    } finally {
+      setEditSubmitting(false);
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -213,6 +284,11 @@ export default function PlaceDetail() {
       `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`,
       '_blank'
     );
+  };
+
+  const handleOpenCmiMap = () => {
+    if (recommendations.length === 0) return;
+    navigate(getPlaceMapPath(recommendations[0].place_name));
   };
 
   const handleCardClick = async (e: React.MouseEvent<HTMLDivElement>, recId: string) => {
@@ -251,7 +327,7 @@ export default function PlaceDetail() {
       setActiveRecIdForSticker(null);
 
       // 发起请求
-      const result = await placeSticker({
+      const result = await placeRecommendationSticker({
         recommendation_id: recId,
         user_id: user.id,
         sticker_id: activeStickerId,
@@ -410,10 +486,43 @@ export default function PlaceDetail() {
     toast.success('当前浏览器不支持直接分享，已改为下载图片');
   };
 
+  const handleAddTrace = () => {
+    if (!placeName) return;
+    const addTracePath = getAddTracePath(decodeURIComponent(placeName));
+
+    if (!user) {
+      toast('登录后才能补一句推荐', { description: '注册只需要一个邮箱 ✉️' });
+      navigate('/login', { state: { from: addTracePath } });
+      return;
+    }
+
+    navigate(addTracePath);
+  };
+
   if (loading) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">加载中...</p>
+      <div className="flex h-screen w-full flex-col gap-5 bg-background p-6 pt-20">
+        <div className="aspect-[4/3] w-full animate-pulse rounded-3xl bg-muted" />
+        <div className="space-y-3">
+          <div className="h-7 w-2/3 animate-pulse rounded-full bg-muted" />
+          <div className="h-4 w-full animate-pulse rounded-full bg-muted" />
+          <div className="h-4 w-5/6 animate-pulse rounded-full bg-muted" />
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-background px-6 text-center">
+        <p className="mb-2 text-lg font-black text-foreground">{loadError}</p>
+        <p className="mb-5 text-sm font-semibold leading-relaxed text-muted-foreground">
+          这不是地点不存在，可能只是网络或数据同步失败。
+        </p>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate(-1)}>返回</Button>
+          <Button onClick={loadRecommendations}>重新加载</Button>
+        </div>
       </div>
     );
   }
@@ -431,6 +540,20 @@ export default function PlaceDetail() {
   const allImages = recommendations.flatMap(r => r.images);
   const firstGuide = getPlaceGuide(firstRec.place_name, firstRec.category);
   const firstIsCommunityGuide = isCommunityCuratedRecommendation(firstRec);
+  const firstPlaceTypeTags = getCmiPlaceTypeTagsForRecommendation(firstRec);
+  const firstDetailTags = getCmiDetailTagsForRecommendation(firstRec);
+  const inlineDetailTags = [
+    ...firstPlaceTypeTags.map(tag => ({ id: `place-${tag.id}`, label: tag.label })),
+    ...firstDetailTags.map(tag => ({ id: `detail-${tag.id}`, label: tag.label })),
+  ];
+  const primaryQuickFacts = [
+    firstPlaceTypeTags[0] ? { label: '类型', value: firstPlaceTypeTags[0].label } : null,
+    firstDetailTags[0] ? { label: '适合', value: firstDetailTags[0].label } : null,
+    {
+      label: recommendations.length > 1 ? '社区' : '来源',
+      value: recommendations.length > 1 ? `${recommendations.length} 条补充` : firstRec.user_name,
+    },
+  ].filter((fact): fact is { label: string; value: string } => Boolean(fact));
 
   return (
     <div className="relative w-full min-h-screen bg-background">
@@ -441,6 +564,7 @@ export default function PlaceDetail() {
           size="icon"
           className="rounded-full bg-background/80 backdrop-blur-sm press-feedback"
           onClick={() => navigate(-1)}
+          aria-label="返回上一页"
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -459,17 +583,19 @@ export default function PlaceDetail() {
       </div>
 
       <ScrollArea className="h-screen">
-        <div className="pb-40">
+        <div className="pb-32">
           {/* 照片轮播 */}
           {allImages.length > 0 ? (
-            <div className="w-full aspect-[4/3] bg-muted">
+            <div className="h-[32dvh] min-h-[230px] max-h-[310px] w-full bg-muted">
               <Carousel className="w-full h-full">
                 <CarouselContent>
                   {allImages.map((img, idx) => (
-                    <CarouselItem key={idx} className="relative aspect-[4/3]">
+                    <CarouselItem key={idx} className="relative h-[32dvh] min-h-[230px] max-h-[310px]">
                       <img
                         src={img}
                         alt=""
+                        loading={idx === 0 ? 'eager' : 'lazy'}
+                        decoding="async"
                         className="absolute inset-0 w-full h-full object-cover"
                       />
                     </CarouselItem>
@@ -485,58 +611,71 @@ export default function PlaceDetail() {
             </div>
           ) : (
             <div
-              className="w-full aspect-[4/3] flex items-center justify-center bg-accent"
+              className="flex h-[32dvh] min-h-[230px] max-h-[310px] w-full items-center justify-center bg-accent"
             >
-              <img 
-                src={getCategoryIconUrl(firstRec.category)} 
-                alt={firstRec.category} 
-                className="w-1/3 h-1/3 object-contain opacity-80" 
+              <img
+                src={getCategoryIconUrl(firstRec.category)}
+                alt={normalizeCategory(firstRec.category)}
+                className="w-1/3 h-1/3 object-contain opacity-80"
               />
             </div>
           )}
 
           {/* 内容区域 */}
-          <div className="px-6 py-8 space-y-8">
+          <div className="space-y-5 px-6 pb-8 pt-7">
             {/* 地点名称和分类 */}
             <div className="space-y-3">
               {firstIsCommunityGuide ? (
                 <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 space-y-1">
+                      <h1 className="break-words text-4xl font-black leading-tight text-foreground">{firstGuide.title}</h1>
+                      {firstGuide.title !== placeName && (
+                        <p className="break-words text-sm font-semibold text-muted-foreground">{placeName}</p>
+                      )}
+                    </div>
+                    <span className="shrink-0 rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-center text-xs font-black text-emerald-700">
+                      社区整理
+                    </span>
+                  </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="secondary" className="rounded-full">
+                    <Badge
+                      variant="outline"
+                      className="rounded-full border-border/70 bg-background/90 px-2.5 py-1 text-muted-foreground shadow-sm"
+                    >
                       <img src={getCategoryIconUrl(firstRec.category)} alt="" className="mr-1 h-5 w-5 object-contain" />
                       {firstGuide.kind}
                     </Badge>
-                    <span className="text-xs font-bold text-muted-foreground">CMI 社区整理</span>
-                  </div>
-                  <div className="space-y-1">
-                    <h1 className="text-3xl font-black leading-tight text-foreground">{firstGuide.title}</h1>
-                    {firstGuide.title !== placeName && (
-                      <p className="break-words text-sm font-semibold text-muted-foreground">{placeName}</p>
-                    )}
-                  </div>
-                  <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
-                    <p className="text-base font-medium leading-relaxed text-foreground">{firstGuide.summary}</p>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {firstGuide.tags.map(tag => (
-                        <span key={tag} className="rounded-full bg-accent px-2.5 py-1 text-xs font-bold text-accent-foreground">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    {firstGuide.tip && (
-                      <p className="mt-3 rounded-xl bg-muted px-3 py-2 text-xs font-semibold leading-relaxed text-muted-foreground">
-                        {firstGuide.tip}
-                      </p>
-                    )}
+                    {inlineDetailTags.map(tag => (
+                      <span
+                        key={tag.id}
+                        className="rounded-full border border-primary/15 bg-primary/5 px-2.5 py-1 text-xs font-black text-primary/80"
+                      >
+                        {tag.label}
+                      </span>
+                    ))}
                   </div>
                 </div>
               ) : (
                 <>
-                  <h1 className="text-2xl font-bold text-foreground">{placeName}</h1>
-                  <Badge variant="secondary" className="rounded-full">
-                    <img src={getCategoryIconUrl(firstRec.category)} alt="" className="mr-1 h-5 w-5 object-contain" />
-                    {firstRec.category}
-                  </Badge>
+                  <h1 className="break-words text-4xl font-black leading-tight text-foreground">{placeName}</h1>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className="rounded-full border-border/70 bg-background/90 px-2.5 py-1 text-muted-foreground shadow-sm"
+                    >
+                      <img src={getCategoryIconUrl(firstRec.category)} alt="" className="mr-1 h-5 w-5 object-contain" />
+                      {normalizeCategory(firstRec.category)}
+                    </Badge>
+                    {inlineDetailTags.map(tag => (
+                      <span
+                        key={tag.id}
+                        className="rounded-full border border-primary/15 bg-primary/5 px-2.5 py-1 text-xs font-black text-primary/80"
+                      >
+                        {tag.label}
+                      </span>
+                    ))}
+                  </div>
                 </>
               )}
             </div>
@@ -546,17 +685,46 @@ export default function PlaceDetail() {
               {recommendations.map((rec, idx) => {
                 const guide = getPlaceGuide(rec.place_name, rec.category);
                 const isCommunityGuide = isCommunityCuratedRecommendation(rec);
+                const canEditRecommendation = Boolean(user && rec.user_id === user.id);
 
                 return (
+                  <Fragment key={rec.id}>
+                    {idx === 1 && (
+                      <div className="pt-2">
+                        <p className="text-xs font-black uppercase tracking-[0.14em] text-muted-foreground">
+                          更多补充
+                        </p>
+                      </div>
+                    )}
                   <div
-                    key={rec.id}
-                    className={`bg-card border border-border card-shadow rounded-xl p-5 space-y-3 relative overflow-hidden transition-all duration-300 ${
+                    className={`relative overflow-hidden transition-all duration-300 ${
+                      idx === 0
+                        ? 'space-y-3 rounded-[1.35rem] border border-border bg-card p-4 shadow-[0_10px_28px_rgba(45,45,47,0.07)]'
+                        : 'space-y-3 rounded-xl border border-border bg-card p-5 card-shadow'
+                    } ${
                       activeStickerId && activeRecIdForSticker === rec.id 
                         ? 'ring-4 ring-primary ring-offset-2 scale-[1.02] cursor-crosshair' 
+                        : ''
+                    } ${
+                      locationState?.newTraceId === rec.id
+                        ? 'ring-4 ring-primary ring-offset-2'
                         : ''
                     }`}
                     onClick={(e) => handleCardClick(e, rec.id)}
                   >
+                  {locationState?.newTraceId === rec.id && (
+                    <div className={`absolute right-3 z-20 rounded-full bg-primary px-3 py-1 text-xs font-black text-primary-foreground ${canEditRecommendation ? 'top-14' : 'top-3'}`}>
+                      刚补充
+                    </div>
+                  )}
+                  {idx === 0 && (
+                    <p className="flex items-center gap-2 text-sm font-black text-muted-foreground">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted">
+                        <PencilLine className="h-4 w-4" />
+                      </span>
+                      为什么值得来
+                    </p>
+                  )}
                   {/* 已贴贴纸渲染层 */}
                   {placedStickers[rec.id]?.map((ps) => (
                     <div
@@ -572,20 +740,38 @@ export default function PlaceDetail() {
                       <img src={ps.sticker?.icon_url} alt="" className="w-full h-full object-contain filter saturate-[0.8] contrast-[1.1]" />
                     </div>
                   ))}
-                  {/* 删除按钮（仅对当前用户的推荐显示） */}
-                  {user && rec.user_id === user.id && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-3 right-3 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDeleteClick(rec)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  {/* 编辑 / 删除按钮（仅对当前用户的推荐显示） */}
+                  {canEditRecommendation && (
+                    <div className="absolute right-3 top-3 z-30 flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full bg-background/85 text-foreground hover:bg-accent"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleEditClick(rec);
+                        }}
+                        aria-label="编辑这条推荐"
+                      >
+                        <PencilLine className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full bg-background/85 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDeleteClick(rec);
+                        }}
+                        aria-label="删除这条推荐"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   )}
 
                   {/* 推荐理由 */}
-                  <p className="quote-text text-lg leading-relaxed pr-10">
+                  <p className={`${idx === 0 ? 'text-lg font-bold leading-relaxed text-foreground' : 'quote-text text-lg leading-relaxed'} ${canEditRecommendation ? 'pr-20' : 'pr-10'}`}>
                     {isCommunityGuide ? guide.summary : rec.reason}
                   </p>
 
@@ -607,14 +793,31 @@ export default function PlaceDetail() {
                     </button>
                   )}
 
+                  {idx === 0 && primaryQuickFacts.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {primaryQuickFacts.map(fact => (
+                        <div key={fact.label} className="min-h-[58px] rounded-2xl bg-muted/55 px-2.5 py-2">
+                          <span className="block text-[11px] font-black text-muted-foreground">
+                            {fact.label}
+                          </span>
+                          <strong className="mt-1 block text-xs font-black leading-snug text-foreground">
+                            {fact.value}
+                          </strong>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {/* 该推荐的照片 */}
-                  {rec.images.length > 0 && (
+                  {idx > 0 && rec.images.length > 0 && (
                     <div className="flex gap-2 flex-wrap">
                       {rec.images.map((img, imgIdx) => (
                         <img
                           key={imgIdx}
                           src={img}
                           alt=""
+                          loading="lazy"
+                          decoding="async"
                           className="w-20 h-20 rounded-lg object-cover"
                         />
                       ))}
@@ -664,19 +867,38 @@ export default function PlaceDetail() {
                         e.stopPropagation();
                         handleToggleWishlist(rec.id);
                       }}
-                      className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 active:scale-90 ${
+                      className={`relative flex h-9 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium transition-all duration-300 active:scale-90 ${
                         localWishlists[rec.id]
                           ? 'bg-[#ffebee] text-[#f43f5e] shadow-[0_0_15px_rgba(244,63,94,0.2)]' 
                           : 'text-muted-foreground hover:bg-accent'
                       }`}
                     >
                       <Bookmark className={`w-4 h-4 transition-transform ${localWishlists[rec.id] ? 'fill-current scale-110' : ''}`} strokeWidth={2} />
+                      <span>{localWishlists[rec.id] ? '已想去' : '想去'}</span>
                       {localWishlists[rec.id] && (
                         <span className="absolute inset-0 rounded-full animate-ping bg-[#ffebee] opacity-75"></span>
                       )}
                     </button>
                   </div>
                 </div>
+                    {idx === 0 && (
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-3 rounded-[1.35rem] border border-border bg-card p-4 text-left shadow-[0_7px_20px_rgba(45,45,47,0.06)] transition-transform active:scale-[0.99]"
+                        onClick={handleAddTrace}
+                      >
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                          <PencilLine className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-lg font-black leading-tight text-foreground">我也来补一句</p>
+                          <p className="mt-1 text-sm font-semibold leading-snug text-muted-foreground">
+                            去过这里，再补充路况、拍照点或坑点。
+                          </p>
+                        </div>
+                      </button>
+                    )}
+                  </Fragment>
                 );
               })}
             </div>
@@ -685,11 +907,20 @@ export default function PlaceDetail() {
       </ScrollArea>
 
       {/* 底部导航按钮 */}
-      <div className="absolute bottom-0 left-0 right-0 z-50 px-5 py-4 bg-background/95 backdrop-blur-md border-t border-border/30">
-        <div className="flex items-center gap-2">
-          {/* Google Maps - 主按钮 */}
+      <div className="absolute bottom-0 left-0 right-0 z-50 border-t border-border/60 bg-background/90 px-5 pb-[calc(0.875rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
+        <div className="grid grid-cols-[1fr_1.15fr_0.8fr] gap-2">
+          {/* CMI Map 内部定位 */}
           <button
-            className="flex-[2] h-11 flex items-center justify-center gap-2 rounded-full bg-foreground text-background font-bold text-sm press-feedback transition-all hover:opacity-90 active:scale-95"
+            className="flex min-h-12 items-center justify-center gap-2 rounded-full border-2 border-border bg-card text-sm font-black text-foreground shadow-sm transition-all hover:bg-accent active:scale-95"
+            onClick={handleOpenCmiMap}
+          >
+            <MapPinned className="h-4 w-4" />
+            CMI地图
+          </button>
+
+          {/* Google Maps */}
+          <button
+            className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary text-sm font-black text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-95"
             onClick={handleNavigate}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -698,22 +929,13 @@ export default function PlaceDetail() {
             导航
           </button>
 
-          {/* Grab */}
+          {/* 叫车 */}
           <button
-            className="flex-1 h-11 flex items-center justify-center gap-1.5 rounded-full border-2 border-foreground/15 bg-card font-semibold text-sm press-feedback transition-all hover:border-[#00B14F] hover:bg-[#00B14F]/5 active:scale-95"
-            onClick={handleGrab}
+            className="flex min-h-12 items-center justify-center gap-1.5 rounded-full border-2 border-border bg-card text-sm font-black text-foreground shadow-sm transition-all hover:bg-accent active:scale-95"
+            onClick={() => setRideDialogOpen(true)}
           >
-            <span className="w-2.5 h-2.5 rounded-full bg-[#00B14F] flex-shrink-0" />
-            Grab
-          </button>
-          
-          {/* Bolt */}
-          <button
-            className="flex-1 h-11 flex items-center justify-center gap-1.5 rounded-full border-2 border-foreground/15 bg-card font-semibold text-sm press-feedback transition-all hover:border-[#26D686] hover:bg-[#26D686]/5 active:scale-95"
-            onClick={handleBolt}
-          >
-            <span className="w-2.5 h-2.5 rounded-full bg-[#26D686] flex-shrink-0" />
-            Bolt
+            <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-[#15bf63]" />
+            叫车
           </button>
         </div>
       </div>
@@ -758,6 +980,91 @@ export default function PlaceDetail() {
             >
               <Share2 className="mr-2 h-4 w-4" />
               直接分享
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={rideDialogOpen} onOpenChange={setRideDialogOpen}>
+        <DialogContent className="max-w-[430px] rounded-3xl border-2 border-foreground p-5">
+          <DialogHeader className="space-y-2 text-left">
+            <DialogTitle className="text-2xl font-black">叫车去这里</DialogTitle>
+            <DialogDescription className="font-semibold leading-relaxed">
+              会先复制地点名，打开 App 后直接粘贴搜索更稳。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="outline"
+              className="h-12 rounded-full border-2 font-black"
+              onClick={() => {
+                setRideDialogOpen(false);
+                void handleGrab();
+              }}
+            >
+              <span className="mr-2 h-2.5 w-2.5 rounded-full bg-[#00B14F]" />
+              Grab
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 rounded-full border-2 font-black"
+              onClick={() => {
+                setRideDialogOpen(false);
+                void handleBolt();
+              }}
+            >
+              <span className="mr-2 h-2.5 w-2.5 rounded-full bg-[#26D686]" />
+              Bolt
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editDialogOpen} onOpenChange={handleEditDialogOpenChange}>
+        <DialogContent className="max-w-[430px] rounded-3xl border-2 border-foreground p-5">
+          <DialogHeader className="space-y-2 text-left">
+            <DialogTitle className="text-2xl font-black">编辑这条推荐</DialogTitle>
+            <DialogDescription className="font-semibold leading-relaxed">
+              只改你写过的这句话；地点、分类和照片先保持不变。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <Textarea
+              value={editReason}
+              onChange={(event) => setEditReason(event.target.value)}
+              maxLength={180}
+              className="min-h-36 resize-none rounded-2xl border-2 bg-card px-4 py-4 text-base leading-relaxed"
+              placeholder="补充 Wi-Fi、价格、适合工作时段、坑点等具体体验。"
+            />
+            <div className="flex justify-end text-xs font-bold text-muted-foreground">
+              {editReason.trim().length}/180
+            </div>
+          </div>
+
+          <DialogFooter className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-2 sm:space-x-0">
+            <Button
+              variant="outline"
+              className="h-12 rounded-full border-2 font-black"
+              onClick={() => handleEditDialogOpenChange(false)}
+              disabled={editSubmitting}
+            >
+              取消
+            </Button>
+            <Button
+              className="h-12 rounded-full font-black"
+              onClick={handleEditSubmit}
+              disabled={editSubmitting || editReason.trim().length < 4}
+            >
+              {editSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  保存中
+                </>
+              ) : (
+                '保存修改'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
