@@ -1,6 +1,0 @@
-Leaflet.markercluster supports spiderfy feature.
-By default spiderfyOnMaxZoom is true.
-We also have:
-zoomToBoundsOnClick (default: true) - When you mouse click a cluster it zooms to its bounds.
-If we set zoomToBoundsOnClick: false, spiderfyOnMaxZoom does not matter for normal clicks? Wait, if zoomToBoundsOnClick is false, clicking a cluster spiderfies it!
-Let's check markercluster documentation.
