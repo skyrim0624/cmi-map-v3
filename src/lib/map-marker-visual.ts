@@ -145,7 +145,7 @@ const CATEGORY_MARKERS: Record<Category, Pick<MarkerRule, 'label' | 'icon' | 'to
 };
 
 const KIND_RULES: MarkerRule[] = [
-  { pattern: /电话卡|sim|esim|ais|true move|dtac/i, label: '电话卡', icon: 'sim', tone: 'photo' },
+  { pattern: /电话卡|手机卡|流量卡|\b(?:e?sim|ais|true\s*move|dtac)\b/i, label: '电话卡', icon: 'sim', tone: 'photo' },
   { pattern: /药店|pharmacy|drugstore/i, label: '药店', icon: 'pharmacy', tone: 'utility' },
   { pattern: /诊所|医院|牙科|clinic|hospital|dental|dentist/i, label: '医疗', icon: 'clinic', tone: 'wellness' },
   { pattern: /租摩托|租车|motorbike|scooter|car rental/i, label: '租车', icon: 'motorbike', tone: 'neutral' },
