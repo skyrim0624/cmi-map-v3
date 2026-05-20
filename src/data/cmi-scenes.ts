@@ -147,7 +147,7 @@ export const CMI_SCENES: CmiScene[] = [
       'food',
     ],
     primaryActionLabel: '看吃饭推荐',
-    mapTitle: '吃饭地点地图',
+    mapTitle: '吃点啥呢',
     detailTitle: 'CMI 社区吃饭清单',
     showOnHome: true,
     homeGroup: 'clear-need',
