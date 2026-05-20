@@ -1273,7 +1273,11 @@ export default function MapView() {
               </p>
             )}
 
-            <div className="max-h-[34dvh] space-y-2 overflow-y-auto pr-1">
+            <div
+              className="max-h-[34dvh] space-y-2 overflow-y-auto overscroll-contain pr-1 touch-pan-y [-webkit-overflow-scrolling:touch]"
+              onTouchMove={event => event.stopPropagation()}
+              onWheel={event => event.stopPropagation()}
+            >
               {recommendationsError ? (
                 <div className="rounded-lg border border-dashed border-destructive/30 bg-destructive/5 p-3 text-sm font-semibold leading-relaxed text-destructive">
                   <p>{recommendationsError}，请检查网络后重试。</p>
@@ -1299,7 +1303,7 @@ export default function MapView() {
                 </div>
               ) : (
                 <>
-              {isEventScene && sceneEvents.slice(0, 2).map(event => (
+              {isEventScene && sceneEvents.map(event => (
                 <button
                   key={event.id}
                   type="button"
@@ -1328,7 +1332,7 @@ export default function MapView() {
                 </button>
               ))}
 
-              {!isEventScene && sceneRecommendations.slice(0, 2).map(recommendation => {
+              {!isEventScene && sceneRecommendations.map(recommendation => {
                 const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
                 const isCommunityGuide = isCommunityCuratedRecommendation(recommendation);
                 const presentation = getCmiSceneRecommendationPresentation(recommendation);
