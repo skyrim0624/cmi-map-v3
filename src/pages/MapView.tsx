@@ -1692,18 +1692,6 @@ export default function MapView() {
         </div>
       </div>
 
-      {!activeScene && isEasterEggMode && (
-        <div className="pointer-events-none absolute right-4 bottom-[calc(env(safe-area-inset-bottom)+84px)] z-20 flex items-center gap-1.5 rounded-full border border-border/40 bg-background/90 px-2.5 py-1.5 text-xs font-black text-foreground shadow-lg backdrop-blur-sm md:right-6">
-          <img
-            src={EASTER_STAR_ICON_URL}
-            alt=""
-            className="h-4 w-4 object-contain"
-            aria-hidden="true"
-          />
-          彩蛋探索
-        </div>
-      )}
-
       {/* 活动详情卡片 - z-index 最高 */}
       {selectedMarker && selectedEvent && (
         <div
