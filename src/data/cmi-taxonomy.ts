@@ -212,6 +212,13 @@ export const CMI_PRIMARY_INTENTS: CmiPrimaryIntent[] = [
     inputCategory: '吃饭',
   },
   {
+    id: 'play',
+    label: '游玩',
+    description: '寺庙、公园、展览、短途和第一次来清迈会想去的地方。',
+    sceneId: 'play',
+    inputCategory: '户外',
+  },
+  {
     id: 'work',
     label: '办公',
     description: '咖啡馆、Coworking，或能坐下来处理事情的地方。',
@@ -224,13 +231,6 @@ export const CMI_PRIMARY_INTENTS: CmiPrimaryIntent[] = [
     description: '商场、市集、菜市场、超市和日用品补给。',
     sceneId: 'shopping',
     inputCategory: '市集',
-  },
-  {
-    id: 'play',
-    label: '游玩',
-    description: '寺庙、公园、展览、短途和第一次来清迈会想去的地方。',
-    sceneId: 'play',
-    inputCategory: '户外',
   },
   {
     id: 'relax',
@@ -437,6 +437,14 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
     keywords: ['用餐', '吃饭', '吃', '餐厅', '小吃', '早餐', '甜品', '饿'],
   },
   {
+    id: 'play',
+    label: '游玩',
+    iconUrl: cmiFlatIcon('direct-play'),
+    placeTypeIds: ['landmark', 'temple', 'nature', 'park', 'gallery', 'hot-spring'],
+    categoryFallbacks: ['景点', '户外'],
+    keywords: ['游玩', '景点', '地标', '打卡', '寺庙', '自然', '公园', '展览', '艺术', '温泉'],
+  },
+  {
     id: 'work',
     label: '咖啡办公',
     iconUrl: cmiFlatIcon('direct-work'),
@@ -458,14 +466,6 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
     iconUrl: cmiFlatIcon('direct-shopping'),
     placeTypeIds: ['mall', 'daily', 'stationery', 'reading'],
     keywords: ['购物', '商场', '超市', '日用品', '文具', '书店', '买东西'],
-  },
-  {
-    id: 'play',
-    label: '游玩',
-    iconUrl: cmiFlatIcon('direct-play'),
-    placeTypeIds: ['landmark', 'temple', 'nature', 'park', 'gallery', 'hot-spring'],
-    categoryFallbacks: ['景点', '户外'],
-    keywords: ['游玩', '景点', '地标', '打卡', '寺庙', '自然', '公园', '展览', '艺术', '温泉'],
   },
   {
     id: 'relax',
