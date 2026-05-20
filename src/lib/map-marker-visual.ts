@@ -63,7 +63,7 @@ const MARKER_ICON_URLS: Record<MarkerIconAsset, string> = {
   market: cmiFlatIcon('place-market-handmade'),
   massage: cmiFlatIcon('place-massage'),
   sport: cmiFlatIcon('direct-sport'),
-  bar: '/categories/9.png',
+  bar: cmiFlatIcon('place-club'),
   wellness: cmiFlatIcon('place-yoga'),
   utility: cmiFlatIcon('direct-errands'),
   sim: cmiFlatIcon('survival-sim'),
@@ -241,6 +241,7 @@ export const getMapMarkerVisual = (
 export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolean) => {
   const label = escapeHtml(visual.label);
   const iconSize = isHotspot ? 60 : 56;
+  const imageSize = isHotspot ? 46 : 42;
   const tailTop = iconSize - 10;
 
   return `
@@ -253,16 +254,17 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
       transform:translateX(-50%);
       border-radius:999px;
       background:#ffffff;
-      padding:6px;
-      box-shadow:0 4px 8px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
+      padding:0;
+      border:3px solid #ffffff;
+      box-shadow:0 4px 8px rgba(0,0,0,0.15), 0 0 0 1.5px rgba(47,43,38,0.08);
       display:flex;
       align-items:center;
       justify-content:center;
       box-sizing:border-box;
     ">
       <img src="${visual.iconUrl}" alt="${label}" loading="lazy" style="
-        width:100%;
-        height:100%;
+        width:${imageSize}px;
+        height:${imageSize}px;
         object-fit:contain;
         display:block;
         filter:drop-shadow(0 1px 2px rgba(0,0,0,0.1));
@@ -395,16 +397,17 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
       z-index:${index + 1};
       background:#ffffff;
       border-radius:50%;
-      padding:5px;
-      box-shadow:0 3px 6px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
+      padding:0;
+      border:3px solid #ffffff;
+      box-shadow:0 3px 6px rgba(0,0,0,0.15), 0 0 0 1.5px rgba(47,43,38,0.08);
       display:flex;
       align-items:center;
       justify-content:center;
       box-sizing:border-box;
     ">
       <img src="${visual.iconUrl}" alt="" loading="lazy" style="
-        width:100%;
-        height:100%;
+        width:36px;
+        height:36px;
         object-fit:contain;
         display:block;
         filter:drop-shadow(0 1px 2px rgba(0,0,0,0.1));

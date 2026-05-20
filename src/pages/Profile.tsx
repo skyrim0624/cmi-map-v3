@@ -16,7 +16,7 @@ import { CATEGORIES, categoryMatchesFilter, getCategoryIconUrl } from '@/types/t
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, profile, signOut, refreshProfile } = useAuth();
+  const { user, profile, signOut, refreshProfile, loading: authLoading } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'my_pins' | 'wishlist' | 'badges'>('my_pins');
   const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
@@ -35,9 +35,19 @@ export default function Profile() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!user) {
-    navigate('/login');
-    return null;
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      navigate('/login', { state: { from: '/profile' }, replace: true });
+    }
+  }, [authLoading, navigate, user]);
+
+  if (authLoading || !user) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-background">
+        <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary" />
+      </div>
+    );
   }
 
   const displayName = profile?.user_name || user?.email?.split('@')[0] || '游客';

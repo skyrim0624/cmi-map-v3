@@ -7,7 +7,6 @@ import {
   Clock3,
   HelpCircle,
   MapPin,
-  Megaphone,
   Plus,
   Sparkles,
   Sun,
@@ -52,6 +51,7 @@ interface CategoryMeta {
 
 const POST_TITLE_LIMIT = 24;
 const POST_BODY_LIMIT = 120;
+const BLACKBOARD_ICON_URL = '/cmi-home/blackboard-together.svg';
 
 const CATEGORY_META: CategoryMeta[] = [
   { id: 'all', label: '全部', Icon: Sparkles },
@@ -198,7 +198,7 @@ function CommunityQrCard({ entry }: { entry: (typeof QR_ENTRIES)[number] }) {
 
 function CommunityEntry() {
   return (
-    <section className="rounded-[1.35rem] border border-primary/15 bg-white/85 p-3 shadow-[0_16px_38px_rgba(65,51,112,0.10)]">
+    <section className="rounded-[1.35rem] border border-primary/15 bg-white/90 p-3 shadow-[0_16px_38px_rgba(65,51,112,0.10)]">
       <div className="mb-2.5 flex items-center justify-between gap-3">
         <h3 className="text-base font-black text-foreground">社区入口</h3>
         <span className="text-xs font-black text-muted-foreground">加微信 / 进群</span>
@@ -214,7 +214,7 @@ function CommunityEntry() {
 
 function PostMeta({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
   return (
-    <span className="inline-flex min-h-7 items-center gap-1 rounded-full border border-border bg-background/78 px-2.5 text-xs font-black text-muted-foreground">
+    <span className="inline-flex min-h-7 items-center gap-1 rounded-full border border-border bg-background/80 px-2.5 text-xs font-black text-muted-foreground">
       <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />
       {children}
     </span>
@@ -294,13 +294,13 @@ function SheetShell({
         onClick={onClose}
       />
       <section
-        className="relative max-h-[88dvh] w-full max-w-[480px] overflow-y-auto rounded-t-[1.6rem] border border-border bg-background p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-[0_-18px_48px_rgba(32,25,54,0.22)]"
+        className="relative flex max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] w-full max-w-[480px] flex-col overflow-hidden rounded-t-[1.6rem] border border-border bg-background shadow-[0_-18px_48px_rgba(32,25,54,0.22)]"
         role="dialog"
         aria-modal="true"
         aria-label={title}
       >
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h3 className="text-2xl font-black leading-tight text-foreground">{title}</h3>
+        <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-3 pt-4">
+          <h3 className="text-[1.7rem] font-black leading-tight text-foreground">{title}</h3>
           <button
             type="button"
             className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-border bg-white text-foreground"
@@ -310,7 +310,9 @@ function SheetShell({
             <X className="h-5 w-5" strokeWidth={2.4} />
           </button>
         </div>
-        {children}
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+          {children}
+        </div>
       </section>
     </div>
   );
@@ -509,8 +511,8 @@ export function CmiBlackboard() {
       <div className="rounded-[1.65rem] border border-primary/15 bg-[#fbfaff]/95 p-3 shadow-[0_18px_44px_rgba(65,51,112,0.12)] backdrop-blur-md">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-[0.9rem] bg-primary/10 text-primary">
-              <Megaphone className="h-6 w-6" strokeWidth={2.6} />
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-[0.9rem] bg-primary/10">
+              <img src={BLACKBOARD_ICON_URL} alt="" className="h-9 w-9 object-contain" />
             </div>
             <div className="min-w-0">
               <h2 className="truncate text-[1.45rem] font-black leading-tight text-foreground">
@@ -587,8 +589,8 @@ export function CmiBlackboardEntry({ onOpen }: { onOpen: () => void }) {
         className="group flex w-full items-center gap-3 rounded-[1.35rem] border border-primary/20 bg-[#fbfaff]/95 p-3 text-left shadow-[0_16px_36px_rgba(65,51,112,0.12)] transition-transform active:scale-[0.99]"
         onClick={onOpen}
       >
-        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[1rem] bg-primary/10 text-primary">
-          <Megaphone className="h-[1.625rem] w-[1.625rem]" strokeWidth={2.6} />
+        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[1rem] bg-primary/10">
+          <img src={BLACKBOARD_ICON_URL} alt="" className="h-10 w-10 object-contain" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-3">

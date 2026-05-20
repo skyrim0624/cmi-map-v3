@@ -182,17 +182,13 @@ const renderFilterIcon = (
   className = 'h-6 w-6'
 ) => (
   <span
-    className={`${className} flex shrink-0 items-center justify-center rounded-full bg-background/75 p-0.5`}
+    className={`${className} flex shrink-0 items-center justify-center rounded-full bg-white p-[2px] shadow-[0_1px_4px_rgba(47,43,38,0.16)] ring-1 ring-foreground/10`}
     aria-hidden="true"
   >
     {item.needsIcon || !item.iconUrl ? (
       <span className="h-full w-full rounded-full border border-dashed border-muted-foreground/45 bg-muted/30" />
     ) : (
-      <img
-        src={item.iconUrl}
-        alt=""
-        className="h-full w-full object-contain drop-shadow-sm"
-      />
+      <img src={item.iconUrl} alt="" className="h-full w-full object-contain" />
     )}
   </span>
 );
@@ -827,7 +823,7 @@ export default function MapView() {
           onSubmit={handleMapSearchSubmit}
           role="search"
         >
-          <label className="flex h-11 min-w-0 items-center gap-2 rounded-full border border-border/50 bg-background/86 px-3 shadow-lg backdrop-blur-sm">
+          <label className="flex h-11 min-w-0 items-center gap-2 rounded-full border border-border/50 bg-background/90 px-3 shadow-lg backdrop-blur-sm">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2.6} />
             <input
               value={mapSearchQuery}
@@ -896,7 +892,7 @@ export default function MapView() {
       )}
 
       {/* 分类抽屉/场景状态栏 */}
-      <div className="absolute top-[calc(env(safe-area-inset-top)+64px)] left-0 right-0 z-20 overflow-x-auto hide-scrollbar px-4 md:px-6">
+      <div className="absolute top-[calc(env(safe-area-inset-top)+64px)] left-0 right-0 z-20 px-4 md:px-6">
         {activeScene ? (
           isNearbyScene ? (
           <div className="flex w-max items-center gap-2 pb-2">
@@ -905,7 +901,7 @@ export default function MapView() {
               className={`h-9 rounded-full border px-3 text-xs font-black shadow-md backdrop-blur-sm transition-transform active:translate-y-0.5 ${
                 !activePlaceTypeId
                   ? 'border-primary bg-primary text-primary-foreground'
-                  : 'border-border/50 bg-background/85 text-foreground'
+                  : 'border-border/50 bg-background/90 text-foreground'
               }`}
               onClick={() => handleNearbyPlaceTypeSelect(null)}
             >
@@ -918,7 +914,7 @@ export default function MapView() {
                 className={`h-9 shrink-0 rounded-full border px-2.5 text-xs font-black shadow-md backdrop-blur-sm transition-transform active:translate-y-0.5 ${
                   activePlaceTypeId === filter.value
                     ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border/50 bg-background/85 text-foreground'
+                    : 'border-border/50 bg-background/90 text-foreground'
                 }`}
                 onClick={() => handleNearbyPlaceTypeSelect(filter.value)}
               >
@@ -934,7 +930,7 @@ export default function MapView() {
             <Button
               size="sm"
               variant="outline"
-              className="rounded-full border-2 border-border/50 bg-background/85 font-black shadow-md backdrop-blur-sm"
+              className="rounded-full border-2 border-border/50 bg-background/90 font-black shadow-md backdrop-blur-sm"
               onClick={() => navigate('/map')}
             >
               完整地图
@@ -944,7 +940,7 @@ export default function MapView() {
               className={`rounded-full border-2 px-4 font-black shadow-md backdrop-blur-sm transition-transform active:translate-y-0.5 ${
                 !activeSceneFilterId
                   ? 'border-primary bg-primary text-primary-foreground'
-                  : 'border-border/50 bg-background/85 text-foreground'
+                  : 'border-border/50 bg-background/90 text-foreground'
               }`}
               onClick={() => handleSceneFilterSelect(null)}
             >
@@ -957,7 +953,7 @@ export default function MapView() {
                 className={`rounded-full border-2 px-4 font-black shadow-md backdrop-blur-sm transition-transform active:translate-y-0.5 ${
                   activeSceneFilterId === filter.id
                     ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border/50 bg-background/85 text-foreground'
+                    : 'border-border/50 bg-background/90 text-foreground'
                 }`}
                 onClick={() => handleSceneFilterSelect(filter.id)}
               >
@@ -967,7 +963,7 @@ export default function MapView() {
             <Button
               size="sm"
               variant="outline"
-              className="rounded-full border-2 border-border/50 bg-background/85 font-black shadow-md backdrop-blur-sm"
+              className="rounded-full border-2 border-border/50 bg-background/90 font-black shadow-md backdrop-blur-sm"
               onClick={() => navigate(getSceneListPath(activeScene.id, {
                 filterId: activeSceneFilterId,
                 placeTypeId: activePlaceTypeId,
@@ -981,7 +977,7 @@ export default function MapView() {
             <Button
               size="sm"
               variant="outline"
-              className="rounded-full border-2 border-border/50 bg-background/85 font-black shadow-md backdrop-blur-sm"
+              className="rounded-full border-2 border-border/50 bg-background/90 font-black shadow-md backdrop-blur-sm"
               onClick={() => navigate('/map')}
             >
               完整地图
@@ -1006,7 +1002,7 @@ export default function MapView() {
             <Button
               size="sm"
               variant="outline"
-              className="rounded-full border-2 border-border/50 bg-background/85 font-black shadow-md backdrop-blur-sm"
+              className="rounded-full border-2 border-border/50 bg-background/90 font-black shadow-md backdrop-blur-sm"
               onClick={() => navigate(getSceneListPath(activeScene.id, {
                 filterId: activeSceneFilterId,
                 placeTypeId: activePlaceTypeId,
@@ -1018,13 +1014,14 @@ export default function MapView() {
           )
         ) : isEasterEggMode ? null : (
           <div className="space-y-2 pb-2">
-            <div className="flex w-max items-center gap-2">
+            <div className="-mx-4 overflow-x-auto px-4 hide-scrollbar md:-mx-6 md:px-6">
+              <div className="flex w-max items-center gap-2">
               <Button
                 size="sm"
                 className={`h-10 rounded-full px-4 text-sm font-black shadow-md press-feedback transition-transform ${
                   !isEasterEggMode && activeMapFilterGroupId === 'all'
                     ? 'border-2 border-transparent bg-primary text-primary-foreground scale-105'
-                    : 'border-2 border-border/50 bg-background/84 text-foreground backdrop-blur-sm hover:bg-background'
+                    : 'border-2 border-border/50 bg-background/90 text-foreground backdrop-blur-sm hover:bg-background'
                 }`}
                 onClick={() => handleMapGroupSelect(null)}
                 aria-label="显示全部地点"
@@ -1038,7 +1035,7 @@ export default function MapView() {
                   className={`h-10 shrink-0 rounded-full px-3 text-sm font-black shadow-md press-feedback transition-transform ${
                     !isEasterEggMode && activeMapFilterGroupId === group.id
                       ? 'border-2 border-transparent bg-primary text-primary-foreground scale-105'
-                      : 'border-2 border-border/50 bg-background/84 text-foreground backdrop-blur-sm hover:bg-background'
+                      : 'border-2 border-border/50 bg-background/90 text-foreground backdrop-blur-sm hover:bg-background'
                   }`}
                   onClick={() => handleMapGroupSelect(group)}
                   aria-label={`一级分类：${group.label}`}
@@ -1050,18 +1047,21 @@ export default function MapView() {
                   {group.label}
                 </Button>
               ))}
+              </div>
             </div>
 
             {activeMapFilterGroup && isMapFilterExpanded && (
-              <div className="flex w-max items-center gap-2">
+              <div className="-mx-4 overflow-x-auto px-4 hide-scrollbar md:-mx-6 md:px-6">
+                <div className="flex w-max items-center gap-2">
                 {activeMapSecondaryTags.map(tag => (
                   <Button
                     key={tag.id}
+                    variant="outline"
                     size="sm"
-                    className={`h-9 shrink-0 rounded-full px-2.5 text-xs font-black shadow-md press-feedback transition-transform ${
+                    className={`h-9 min-w-[5.25rem] shrink-0 rounded-full px-2.5 text-xs font-black shadow-md press-feedback transition-transform ${
                       activeMapPlaceTypeId === tag.id
-                        ? 'border border-primary bg-primary/92 text-primary-foreground'
-                        : 'border border-border/50 bg-background/86 text-foreground backdrop-blur-sm'
+                        ? 'border-2 border-primary bg-white/95 text-primary hover:bg-white'
+                        : 'border border-border/50 bg-background/90 text-foreground backdrop-blur-sm hover:bg-background'
                     }`}
                     onClick={() => handleMapPlaceTypeSelect(tag)}
                     aria-label={`二级分类：${tag.label}`}
@@ -1072,6 +1072,7 @@ export default function MapView() {
                     {tag.label}
                   </Button>
                 ))}
+                </div>
               </div>
             )}
 
@@ -1328,7 +1329,7 @@ export default function MapView() {
       {!activeScene && (
         <>
           {isEasterEggMode && (
-            <div className="pointer-events-none absolute right-4 bottom-[calc(env(safe-area-inset-bottom)+88px)] z-20 flex items-center gap-1.5 rounded-full border border-border/40 bg-background/82 px-2.5 py-1.5 text-xs font-black text-foreground shadow-lg backdrop-blur-sm md:right-6">
+            <div className="pointer-events-none absolute right-4 bottom-[calc(env(safe-area-inset-bottom)+88px)] z-20 flex items-center gap-1.5 rounded-full border border-border/40 bg-background/90 px-2.5 py-1.5 text-xs font-black text-foreground shadow-lg backdrop-blur-sm md:right-6">
               <img
                 src={EASTER_STAR_ICON_URL}
                 alt=""

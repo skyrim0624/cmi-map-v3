@@ -8,10 +8,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
+type LoginLocationState = {
+  from?: string;
+};
+
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { signInWithEmail, signUpWithEmail } = useAuth();
+  const redirectPath = (location.state as LoginLocationState | null)?.from || '/';
   
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -65,8 +70,7 @@ export default function Login() {
         toast.success('登录成功！');
         
         // 跳转到之前的页面或首页
-        const from = (location.state as any)?.from || '/';
-        navigate(from, { replace: true });
+        navigate(redirectPath, { replace: true });
       } else {
         // 注册
         const { error } = await signUpWithEmail(email, password, userName.trim());
@@ -84,8 +88,7 @@ export default function Login() {
           return;
         }
         
-        // 跳转到首页
-        navigate('/', { replace: true });
+        navigate(redirectPath, { replace: true });
       }
     } finally {
       setLoading(false);

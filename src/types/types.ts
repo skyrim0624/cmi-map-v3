@@ -128,7 +128,7 @@ export const CATEGORIES: CategoryConfig[] = [
     name: '酒吧', 
     color: 'category-bar', 
     icon: '🍸',
-    iconUrl: '/categories/9.png'
+    iconUrl: cmiFlatIcon('place-club')
   },
   { 
     name: '身心', 
@@ -146,7 +146,7 @@ export const CATEGORIES: CategoryConfig[] = [
     name: '彩蛋', 
     color: 'category-treasure', 
     icon: '🥚',
-    iconUrl: '/categories/8.png'
+    iconUrl: '/map-icons/cmi-easter-v2/egg-v2-02-star.png'
   }
 ];
 

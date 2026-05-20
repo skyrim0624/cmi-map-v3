@@ -53,7 +53,7 @@ const ScribbleSparks = ({ active }: { active: boolean }) => {
 
 export default function MarkPlace() {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   
   const [stage, setStage] = useState<Stage>('camera');
   const [photoURL, setPhotoURL] = useState<string | null>(null);
@@ -224,11 +224,12 @@ export default function MarkPlace() {
 
   // 未登录保护
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       toast.error('只有社区成员可以留下痕迹，请先登录');
-      navigate('/login');
+      navigate('/login', { state: { from: '/mark' }, replace: true });
     }
-  }, [user, navigate]);
+  }, [authLoading, user, navigate]);
 
   // 获取地理位置
   const fetchCurrentLocation = () => {
@@ -391,7 +392,13 @@ export default function MarkPlace() {
     setStage('voice');
   };
 
-  if (!user) return null; // Wait for redirect to happen
+  if (authLoading || !user) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-background">
+        <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen bg-stone-100 flex flex-col items-center justify-start overflow-hidden font-sans">

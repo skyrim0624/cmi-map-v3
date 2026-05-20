@@ -1,5 +1,5 @@
 import { LogIn, Plus } from 'lucide-react';
-import { useEffect } from 'react';
+import { Fragment, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { HomeSceneSection } from '@/components/home/home-scene-section';
@@ -80,7 +80,7 @@ export default function SceneHome() {
         </h1>
       </header>
 
-      <main className="relative z-20 h-full overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+126px)] pt-[calc(env(safe-area-inset-top)+116px)]">
+      <main className="relative z-20 h-full overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+168px)] pt-[calc(env(safe-area-inset-top)+116px)]">
         <section className="relative mb-5">
           <h2 className="max-w-[300px] text-[2.2rem] font-black leading-[1.1] text-foreground">
             <span className="block">清迈，</span>
@@ -113,15 +113,15 @@ export default function SceneHome() {
         </section>
 
         <div className="space-y-6">
-          <CmiBlackboardEntry onOpen={() => navigate('/blackboard')} />
-
           {visibleHomeSections.map(section => (
-            <HomeSceneSection
-              key={section.id}
-              section={section}
-              onSceneSelect={scene => navigate(getSceneEntryPath(scene))}
-              onFeatureSelect={path => navigate(path)}
-            />
+            <Fragment key={section.id}>
+              {section.id === 'life-service' && <CmiBlackboardEntry onOpen={() => navigate('/blackboard')} />}
+              <HomeSceneSection
+                section={section}
+                onSceneSelect={scene => navigate(scene.id === 'pick-for-me' ? '/list' : getSceneEntryPath(scene))}
+                onFeatureSelect={path => navigate(path)}
+              />
+            </Fragment>
           ))}
         </div>
       </main>

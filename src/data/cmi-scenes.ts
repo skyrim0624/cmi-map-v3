@@ -119,8 +119,8 @@ export const CMI_SCENES: CmiScene[] = [
     showOnHome: true,
     homeGroup: 'inspiration',
     homeOrder: 3,
-    homeTitle: '大家都去了哪里',
-    homeDescription: '社区常去和高可信候选。',
+    homeTitle: '看看大家都去了哪里',
+    homeDescription: '直接看最近大家更新了什么。',
   },
   {
     id: 'eat',

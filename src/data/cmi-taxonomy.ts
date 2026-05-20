@@ -239,7 +239,7 @@ export const CMI_PLACE_TYPE_TAGS: CmiPlaceTypeTag[] = [
 
   { id: 'cafe', label: '咖啡馆', primaryIntentIds: ['work', 'study', 'play'], categoryFallback: '咖啡', keywords: ['咖啡', 'cafe', 'coffee', 'roastery', '手冲', '烘焙'], iconUrl: cmiFlatIcon('place-cafe') },
   { id: 'coworking', label: 'Coworking', primaryIntentIds: ['work'], keywords: ['coworking', 'co-working', '办公空间', '共享办公', 'digital nomad'], iconUrl: cmiFlatIcon('place-coworking') },
-  { id: 'reading', label: '看书', primaryIntentIds: ['study', 'work', 'shopping'], keywords: ['看书', '读书', '图书馆', 'library', '自习', '安静学习', '书店', 'bookstore', '阅读'], iconUrl: cmiFlatIcon('place-book') },
+  { id: 'reading', label: '看书', primaryIntentIds: ['study', 'shopping'], keywords: ['看书', '读书', '图书馆', 'library', '自习', '安静学习', '书店', 'bookstore', '阅读'], iconUrl: cmiFlatIcon('place-book') },
 
   { id: 'market', label: '市集', primaryIntentIds: ['shopping', 'play'], categoryFallback: '市集', keywords: ['市集', '周末市集', '手作市集', '本地市场', 'market', 'walking street', 'bazaar', '跳蚤市场'], iconUrl: cmiFlatIcon('place-market-handmade') },
   { id: 'night-market', label: '夜市', primaryIntentIds: ['shopping', 'play'], keywords: ['夜市', 'night market', 'night bazaar', '晚上逛'], iconUrl: cmiFlatIcon('place-night-market-v2') },
@@ -269,7 +269,7 @@ export const CMI_PLACE_TYPE_TAGS: CmiPlaceTypeTag[] = [
   { id: 'climbing', label: '攀岩', primaryIntentIds: ['sport'], keywords: ['攀岩', 'climbing', 'bouldering'], iconUrl: cmiFlatIcon('place-climbing-person') },
 
   { id: 'livehouse', label: 'Livehouse', primaryIntentIds: ['play'], sceneId: 'night', categoryFallback: '酒吧', keywords: ['livehouse', 'live music', '现场音乐', '演出', '乐队'], iconUrl: cmiFlatIcon('place-livehouse-music') },
-  { id: 'bar', label: '酒吧', primaryIntentIds: ['play'], sceneId: 'night', categoryFallback: '酒吧', keywords: ['酒吧', 'bar', '小酌', '喝酒', 'cocktail'], iconUrl: '/categories/9.png' },
+  { id: 'bar', label: '酒吧', primaryIntentIds: ['play'], sceneId: 'night', categoryFallback: '酒吧', keywords: ['酒吧', 'bar', '小酌', '喝酒', 'cocktail'], iconUrl: cmiFlatIcon('place-club') },
   { id: 'club', label: 'Club / 蹦迪', primaryIntentIds: ['play'], sceneId: 'night', categoryFallback: '酒吧', keywords: ['club', '蹦迪', '夜店', '跳舞', 'dj'], iconUrl: cmiFlatIcon('place-club') },
   { id: 'social-dance', label: '交际舞', primaryIntentIds: ['play'], sceneId: 'night', categoryFallback: '酒吧', keywords: ['交际舞', 'swing', 'salsa', '伦巴', 'bachata', '社交舞'], iconUrl: cmiFlatIcon('place-social-dance') },
   { id: 'ktv', label: 'KTV', primaryIntentIds: ['play'], sceneId: 'night', categoryFallback: '酒吧', keywords: ['ktv', 'karaoke', '唱歌'], iconUrl: cmiFlatIcon('place-ktv-microphone') },
@@ -331,7 +331,7 @@ const PLACE_TYPE_ICON_URLS: Partial<Record<string, string>> = {
   yoga: cmiFlatIcon('place-yoga'),
   running: cmiFlatIcon('direct-sport'),
   daily: cmiFlatIcon('survival-daily'),
-  bar: '/categories/9.png',
+  bar: cmiFlatIcon('place-club'),
   pharmacy: cmiFlatIcon('place-pharmacy'),
   clinic: cmiFlatIcon('place-clinic'),
   exchange: cmiFlatIcon('place-exchange'),
@@ -386,8 +386,8 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
     id: 'work',
     label: '咖啡办公',
     iconUrl: cmiFlatIcon('direct-work'),
-    placeTypeIds: ['cafe', 'coworking', 'reading'],
-    keywords: ['咖啡办公', '咖啡', '办公', 'coworking', '看书', '图书馆', '书店', '学习'],
+    placeTypeIds: ['cafe', 'coworking'],
+    keywords: ['咖啡办公', '咖啡', '办公', 'coworking'],
   },
   {
     id: 'market',
@@ -400,8 +400,8 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
     id: 'shopping',
     label: '购物',
     iconUrl: cmiFlatIcon('direct-shopping'),
-    placeTypeIds: ['mall', 'daily', 'stationery'],
-    keywords: ['购物', '商场', '超市', '日用品', '文具', '买东西'],
+    placeTypeIds: ['mall', 'daily', 'stationery', 'reading'],
+    keywords: ['购物', '商场', '超市', '日用品', '文具', '书店', '买东西'],
   },
   {
     id: 'play',
@@ -432,7 +432,7 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
   {
     id: 'nightlife',
     label: '夜生活',
-    iconUrl: '/categories/9.png',
+    iconUrl: cmiFlatIcon('place-club'),
     placeTypeIds: ['livehouse', 'bar', 'club', 'social-dance', 'ktv'],
     keywords: ['夜生活', '晚上', '酒吧', 'livehouse', 'club', '蹦迪', '交际舞', 'ktv', '唱歌'],
   },

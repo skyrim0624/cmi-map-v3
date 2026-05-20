@@ -479,7 +479,7 @@ export default function ListView() {
         isEventScene ? 'bg-[#f8f6f0]' : ''
       }`}
       >
-        <div className={`w-full max-w-full space-y-4 px-4 pb-28 ${isEventScene ? 'py-4' : 'py-6'}`}>
+        <div className={`w-full max-w-full space-y-4 px-4 pb-[calc(9rem+env(safe-area-inset-bottom))] ${isEventScene ? 'py-4' : 'py-6'}`}>
           {sceneEvents.length > 0 && (
             <section className="space-y-3">
               {!isEventScene && (
@@ -700,7 +700,7 @@ export default function ListView() {
       </div>
 
       {/* 底部中央用户头像/登录按钮 */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
+      <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] left-1/2 -translate-x-1/2 z-20">
         {user ? (
           <Button
             variant="ghost"

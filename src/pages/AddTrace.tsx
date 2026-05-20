@@ -15,7 +15,7 @@ export default function AddTrace() {
   const { placeName } = useParams<{ placeName: string }>();
   const decodedPlaceName = decodeURIComponent(placeName || '');
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -26,13 +26,14 @@ export default function AddTrace() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       navigate('/login', {
         state: { from: `/place/${encodeURIComponent(decodedPlaceName)}/add-trace` },
         replace: true,
       });
     }
-  }, [decodedPlaceName, navigate, user]);
+  }, [authLoading, decodedPlaceName, navigate, user]);
 
   useEffect(() => {
     const loadPlace = async () => {
@@ -111,7 +112,13 @@ export default function AddTrace() {
     }
   };
 
-  if (!user) return null;
+  if (authLoading || !user) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-background">
+        <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   if (loading) {
     return (

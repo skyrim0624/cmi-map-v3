@@ -2,6 +2,11 @@ import type { Category, PlacedSticker, Recommendation, Sticker } from '@/types/t
 import { getCategoryFilterValues } from '@/types/types';
 import { compressImage } from '@/utils/imageCompression';
 import { encodeEasterIconMetadata } from '@/lib/easter-icons';
+import {
+  applyRecommendationCorrections,
+  applyRecommendationsCorrections,
+  correctedRecommendationMatchesCategory,
+} from '@/data/cmi-place-corrections';
 import { supabase } from './supabase';
 
 type ReadOptions = {
@@ -38,7 +43,7 @@ export const getAllRecommendations = async (options?: ReadOptions): Promise<Reco
     return [];
   }
 
-  return Array.isArray(data) ? data : [];
+  return Array.isArray(data) ? applyRecommendationsCorrections(data) : [];
 };
 
 /**
@@ -48,18 +53,11 @@ export const getRecommendationsByCategory = async (
   category: Category,
   options?: ReadOptions
 ): Promise<Recommendation[]> => {
-  const { data, error } = await supabase
-    .from('recommendations')
-    .select('*, upvotes(user_id), wishlists(user_id), placed_stickers(*, sticker:stickers(*))')
-    .in('category', getCategoryFilterValues(category))
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    handleReadError('获取推荐失败:', error, options);
-    return [];
-  }
-
-  return Array.isArray(data) ? data : [];
+  const data = await getAllRecommendations(options);
+  const categoryValues = getCategoryFilterValues(category);
+  return data.filter(recommendation =>
+    categoryValues.some(categoryValue => correctedRecommendationMatchesCategory(recommendation, categoryValue))
+  );
 };
 
 /**
@@ -79,7 +77,7 @@ export const getRecommendationsByUser = async (
     return [];
   }
 
-  return Array.isArray(data) ? data : [];
+  return Array.isArray(data) ? applyRecommendationsCorrections(data) : [];
 };
 
 /**
@@ -99,7 +97,7 @@ export const getRecommendationsByUserId = async (
     return [];
   }
 
-  return Array.isArray(data) ? data : [];
+  return Array.isArray(data) ? applyRecommendationsCorrections(data) : [];
 };
 
 /**
@@ -120,7 +118,7 @@ export const getRecommendationsByPlace = async (
     return [];
   }
 
-  return Array.isArray(data) ? data : [];
+  return Array.isArray(data) ? applyRecommendationsCorrections(data) : [];
 };
 
 /**
@@ -207,14 +205,14 @@ export const createRecommendation = async (
         return null;
       }
 
-      return fallbackData;
+      return fallbackData ? applyRecommendationCorrections(fallbackData) : null;
     }
 
     console.error('创建推荐失败:', error);
     return null;
   }
 
-  return data;
+  return data ? applyRecommendationCorrections(data) : null;
 };
 
 /**

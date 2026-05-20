@@ -1,5 +1,5 @@
 import { ArrowLeft, Bookmark, Download, Heart, Loader2, MapPinned, PencilLine, Share2, Sticker as StickerIcon, Trash2 } from 'lucide-react';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -94,6 +94,7 @@ export default function PlaceDetail() {
   const [editingRecommendation, setEditingRecommendation] = useState<Recommendation | null>(null);
   const [editReason, setEditReason] = useState('');
   const [editSubmitting, setEditSubmitting] = useState(false);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // 贴纸状态
   const [availableStickers, setAvailableStickers] = useState<Sticker[]>([]);
@@ -296,6 +297,65 @@ export default function PlaceDetail() {
   const handleOpenCmiMap = () => {
     if (recommendations.length === 0) return;
     navigate(getPlaceMapPath(recommendations[0].place_name));
+  };
+
+  const handleDetailTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    const viewport = event.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
+    const scrollTop = viewport instanceof HTMLElement ? viewport.scrollTop : window.scrollY;
+    if (scrollTop > 4) {
+      swipeStartRef.current = null;
+      return;
+    }
+
+    const touch = event.touches[0];
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const navigateBackToMapFromSwipe = () => {
+    if (recommendations.length === 0) return;
+    navigate(getPlaceMapPath(recommendations[0].place_name));
+  };
+
+  const handleDetailTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start || recommendations.length === 0) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    const isIntentionalDownSwipe = deltaY > 120 && Math.abs(deltaY) > Math.abs(deltaX) * 1.35;
+    if (!isIntentionalDownSwipe) return;
+
+    navigateBackToMapFromSwipe();
+  };
+
+  const handleDetailPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === 'mouse') return;
+
+    const viewport = event.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
+    const scrollTop = viewport instanceof HTMLElement ? viewport.scrollTop : window.scrollY;
+    if (scrollTop > 4) {
+      swipeStartRef.current = null;
+      return;
+    }
+
+    swipeStartRef.current = { x: event.clientX, y: event.clientY };
+  };
+
+  const handleDetailPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === 'mouse') return;
+
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start || recommendations.length === 0) return;
+
+    const deltaX = event.clientX - start.x;
+    const deltaY = event.clientY - start.y;
+    const isIntentionalDownSwipe = deltaY > 120 && Math.abs(deltaY) > Math.abs(deltaX) * 1.35;
+    if (!isIntentionalDownSwipe) return;
+
+    navigateBackToMapFromSwipe();
   };
 
   const handleCardClick = async (e: React.MouseEvent<HTMLDivElement>, recId: string) => {
@@ -554,7 +614,13 @@ export default function PlaceDetail() {
     ...firstDetailTags.map(tag => ({ id: `detail-${tag.id}`, label: tag.label })),
   ];
   return (
-    <div className="relative w-full min-h-screen bg-background">
+    <div
+      className="relative w-full min-h-screen bg-background"
+      onTouchStart={handleDetailTouchStart}
+      onTouchEnd={handleDetailTouchEnd}
+      onPointerDown={handleDetailPointerDown}
+      onPointerUp={handleDetailPointerUp}
+    >
       {/* 返回按钮 */}
       <div className="absolute top-6 left-6 z-20">
         <Button
@@ -572,7 +638,7 @@ export default function PlaceDetail() {
         <Button
           variant="ghost"
           size="icon"
-          className="rounded-full bg-background/85 backdrop-blur-sm press-feedback shadow-sm"
+          className="rounded-full bg-background/90 backdrop-blur-sm press-feedback shadow-sm"
           onClick={handleOpenShareCard}
           aria-label="生成分享卡片"
         >
@@ -744,7 +810,7 @@ export default function PlaceDetail() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 rounded-full bg-background/85 text-foreground hover:bg-accent"
+                        className="h-8 w-8 rounded-full bg-background/90 text-foreground hover:bg-accent"
                         onClick={(event) => {
                           event.stopPropagation();
                           handleEditClick(rec);
@@ -756,7 +822,7 @@ export default function PlaceDetail() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 rounded-full bg-background/85 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        className="h-8 w-8 rounded-full bg-background/90 text-destructive hover:text-destructive hover:bg-destructive/10"
                         onClick={(event) => {
                           event.stopPropagation();
                           handleDeleteClick(rec);
