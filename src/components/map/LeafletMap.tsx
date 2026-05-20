@@ -20,6 +20,7 @@ interface LeafletMapProps {
   markers?: MapMarker[];
   onMarkerClick?: (marker: MapMarker) => void;
   onMapClick?: () => void; // 点击地图空白区域的回调
+  onMapInteraction?: () => void;
   mode?: 'view' | 'mark'; // 查看模式或标记模式
   onCenterChange?: (lat: number, lng: number) => void;
   onUserLocation?: (lat: number, lng: number) => void;
@@ -394,6 +395,7 @@ export const LeafletMap = ({
   markers = [],
   onMarkerClick,
   onMapClick,
+  onMapInteraction,
   mode = 'view',
   onCenterChange,
   onUserLocation,
@@ -416,6 +418,8 @@ export const LeafletMap = ({
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null);
   const userLocationMarkerRef = useRef<L.Marker | null>(null);
   const onCenterChangeRef = useRef(onCenterChange);
+  const onMapClickRef = useRef(onMapClick);
+  const onMapInteractionRef = useRef(onMapInteraction);
   const onUserLocationRef = useRef(onUserLocation);
   const onUserLocationErrorRef = useRef(onUserLocationError);
   const orientationHandlerRef = useRef<((event: DeviceOrientationEvent) => void) | null>(null);
@@ -427,6 +431,14 @@ export const LeafletMap = ({
   useEffect(() => {
     onCenterChangeRef.current = onCenterChange;
   }, [onCenterChange]);
+
+  useEffect(() => {
+    onMapClickRef.current = onMapClick;
+  }, [onMapClick]);
+
+  useEffect(() => {
+    onMapInteractionRef.current = onMapInteraction;
+  }, [onMapInteraction]);
 
   useEffect(() => {
     onUserLocationRef.current = onUserLocation;
@@ -594,6 +606,13 @@ export const LeafletMap = ({
     const cleanupMapBackgroundLayer = addMapBackgroundLayer(map);
 
     mapInstanceRef.current = map;
+    const notifyMapInteraction = () => {
+      onMapInteractionRef.current?.();
+    };
+
+    if (mode === 'view') {
+      map.on('dragstart zoomstart', notifyMapInteraction);
+    }
 
     // 添加地图点击事件
     if (mode === 'mark') {
@@ -604,10 +623,10 @@ export const LeafletMap = ({
         const offset = e.containerPoint.subtract(targetPoint);
         map.panBy(offset, { animate: true, duration: 0.5 });
       });
-    } else if (mode === 'view' && onMapClick) {
+    } else if (mode === 'view') {
       // 查看模式：点击地图空白区域关闭预览卡片
       map.on('click', () => {
-        onMapClick();
+        onMapClickRef.current?.();
       });
     }
 
@@ -760,6 +779,7 @@ export const LeafletMap = ({
       if (userLocationMarkerRef.current) {
         userLocationMarkerRef.current.remove();
       }
+      map.off('dragstart zoomstart', notifyMapInteraction);
       cleanupMapBackgroundLayer();
       style.remove();
       map.remove();

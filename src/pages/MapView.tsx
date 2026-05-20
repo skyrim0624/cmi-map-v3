@@ -222,6 +222,7 @@ export default function MapView() {
   const [selectedMarker, setSelectedMarker] = useState<MapMarkerType | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CmiEvent | null>(null);
   const [selectedRecommendations, setSelectedRecommendations] = useState<Recommendation[]>([]);
+  const [isScenePanelExpanded, setIsScenePanelExpanded] = useState(false);
   const [activeMapFilterGroupId, setActiveMapFilterGroupId] = useState<MapFilterSelection>('all');
   const [isMapFilterExpanded, setIsMapFilterExpanded] = useState(false);
   const [activeMapPlaceTypeId, setActiveMapPlaceTypeId] = useState<string | null>(null);
@@ -381,6 +382,7 @@ export default function MapView() {
     setSelectedMarker(null);
     setSelectedEvent(null);
     setSelectedRecommendations([]);
+    setIsScenePanelExpanded(false);
   }, [activeScene?.id, activePlaceTypeId, activeSceneFilterId]);
 
   useEffect(() => {
@@ -549,7 +551,12 @@ export default function MapView() {
     setSelectedMarker(null);
     setSelectedEvent(null);
     setSelectedRecommendations([]);
+    setIsScenePanelExpanded(false);
     removeSelectedLocationFromUrl();
+  };
+
+  const handleMapInteraction = () => {
+    setIsScenePanelExpanded(false);
   };
 
   const startSelectedCardSwipe = (clientX: number, clientY: number) => {
@@ -941,6 +948,17 @@ export default function MapView() {
   const selectedIsCommunityGuide = selectedRecommendation
     ? isCommunityCuratedRecommendation(selectedRecommendation)
     : false;
+  const scenePanelItemCount = isEventScene ? sceneEvents.length : sceneRecommendations.length;
+  const scenePanelPreviewLabels = isEventScene
+    ? sceneEvents.slice(0, SCENE_PANEL_PREVIEW_LIMIT).map(event => event.title)
+    : sceneRecommendations.slice(0, SCENE_PANEL_PREVIEW_LIMIT).map(recommendation => recommendation.place_name);
+  const scenePanelSummary = recommendationsError
+    ? '同步失败，点开重试'
+    : isLoadingRecommendations
+      ? '正在同步地点'
+      : scenePanelItemCount > 0
+        ? `${scenePanelItemCount} 个地点 · ${scenePanelPreviewLabels.join(' / ')}`
+        : '地点还在整理中';
   const nearbyLocationLabel =
     locationStatus === 'ready'
       ? '已定位：地图以你为中心，附近点按距离排序'
@@ -969,6 +987,7 @@ export default function MapView() {
           markers={displayedMarkers}
           onMarkerClick={handleMarkerClick}
           onMapClick={handleMapClick}
+          onMapInteraction={handleMapInteraction}
           mode="view"
           defaultCenter={defaultMapCenter}
           defaultZoom={selectedMarkerZoom}
@@ -1352,177 +1371,198 @@ export default function MapView() {
       )}
 
       {activeScene && !isNearbyScene && !selectedMarker && (
-        <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+96px)] left-3 right-3 z-30 md:left-6 md:right-auto md:w-[420px]">
-          <section className="max-h-[46dvh] overflow-hidden rounded-lg border-2 border-foreground bg-background/95 p-2.5 shadow-[4px_5px_0_rgba(0,0,0,0.18)] backdrop-blur-md">
-            <div className="mb-1.5 flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-primary">
-                  CMI SCENE
-                </p>
-                <h2 className="truncate text-lg font-black leading-tight text-foreground">
-                  {activeScene.mapTitle}
-                </h2>
-              </div>
+        <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+78px)] left-3 right-3 z-30 md:left-6 md:right-auto md:w-[420px]">
+          <section className={`overflow-hidden rounded-lg border-2 border-foreground bg-background/95 shadow-[4px_5px_0_rgba(0,0,0,0.18)] backdrop-blur-md transition-[max-height,transform] duration-200 ease-out ${
+            isScenePanelExpanded ? 'max-h-[46dvh] p-2.5' : 'max-h-[92px] p-2'
+          }`}>
+            <div className={`flex items-center justify-between gap-2 ${isScenePanelExpanded ? 'mb-1.5' : ''}`}>
               <button
                 type="button"
-                className="shrink-0 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-black text-foreground transition-transform active:scale-[0.97]"
-                onClick={() => navigate(getSceneListPath(activeScene.id, {
-                  filterId: activeSceneFilterId,
-                  placeTypeId: activePlaceTypeId,
-                }))}
+                className="min-w-0 flex-1 rounded-md px-1 py-0.5 text-left transition-colors active:bg-muted/60"
+                aria-expanded={isScenePanelExpanded}
+                onClick={() => setIsScenePanelExpanded(value => !value)}
               >
-                看清单
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-primary">
+                  CMI SCENE
+                </p>
+                <h2 className="truncate text-base font-black leading-tight text-foreground">
+                  {activeScene.mapTitle}
+                </h2>
+                <p className="mt-0.5 truncate text-[11px] font-bold text-muted-foreground">
+                  {scenePanelSummary}
+                </p>
               </button>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <button
+                  type="button"
+                  className="rounded-full border border-border bg-muted/70 px-2.5 py-1.5 text-[11px] font-black text-foreground transition-transform active:scale-[0.97]"
+                  onClick={() => setIsScenePanelExpanded(value => !value)}
+                >
+                  {isScenePanelExpanded ? '收起' : '展开'}
+                </button>
+                <button
+                  type="button"
+                  className="rounded-full border border-border bg-card px-2.5 py-1.5 text-[11px] font-black text-foreground transition-transform active:scale-[0.97]"
+                  onClick={() => navigate(getSceneListPath(activeScene.id, {
+                    filterId: activeSceneFilterId,
+                    placeTypeId: activePlaceTypeId,
+                  }))}
+                >
+                  看清单
+                </button>
+              </div>
             </div>
 
-            {!isDirectIntentScene && (
+            {isScenePanelExpanded && !isDirectIntentScene && (
               <p className="mb-3 line-clamp-2 text-xs font-semibold leading-snug text-muted-foreground">
                 {activeIntentFilter
                   ? `${activeIntentFilter.label}相关地点。点地图标记看位置，点下面卡片看详情。`
                   : activeScene.description}
               </p>
             )}
-            {isPlaceTypeFallback && activePlaceTypeTag && (
+            {isScenePanelExpanded && isPlaceTypeFallback && activePlaceTypeTag && (
               <p className="mb-3 rounded-md border border-dashed border-border bg-card px-2.5 py-2 text-xs font-bold leading-snug text-muted-foreground">
                 {activePlaceTypeTag.label}还在补录，先不混入其他地点。可以看完整地图，或回生存包换一个入口。
               </p>
             )}
 
-            <div
-              className="max-h-[34dvh] space-y-2 overflow-y-auto overscroll-contain pr-1 touch-pan-y [-webkit-overflow-scrolling:touch]"
-              onTouchMove={event => event.stopPropagation()}
-              onWheel={event => event.stopPropagation()}
-            >
-              {recommendationsError ? (
-                <div className="rounded-lg border border-dashed border-destructive/30 bg-destructive/5 p-3 text-sm font-semibold leading-relaxed text-destructive">
-                  <p>{recommendationsError}，请检查网络后重试。</p>
-                  <button
-                    type="button"
-                    className="mt-2 rounded-full border border-destructive/30 bg-background px-3 py-1.5 text-xs font-black text-destructive"
-                    onClick={loadRecommendations}
-                  >
-                    重新同步
-                  </button>
-                </div>
-              ) : isLoadingRecommendations ? (
-                <div className="space-y-2">
-                  {[0, 1].map(item => (
-                    <div key={item} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2">
-                      <div className="h-14 w-14 shrink-0 animate-pulse rounded-lg bg-muted" />
-                      <div className="min-w-0 flex-1 space-y-2">
-                        <div className="h-3 w-2/3 animate-pulse rounded-full bg-muted" />
-                        <div className="h-3 w-full animate-pulse rounded-full bg-muted" />
+            {isScenePanelExpanded && (
+              <div
+                className="max-h-[34dvh] space-y-2 overflow-y-auto overscroll-contain pr-1 touch-pan-y [-webkit-overflow-scrolling:touch]"
+                onTouchMove={event => event.stopPropagation()}
+                onWheel={event => event.stopPropagation()}
+              >
+                {recommendationsError ? (
+                  <div className="rounded-lg border border-dashed border-destructive/30 bg-destructive/5 p-3 text-sm font-semibold leading-relaxed text-destructive">
+                    <p>{recommendationsError}，请检查网络后重试。</p>
+                    <button
+                      type="button"
+                      className="mt-2 rounded-full border border-destructive/30 bg-background px-3 py-1.5 text-xs font-black text-destructive"
+                      onClick={loadRecommendations}
+                    >
+                      重新同步
+                    </button>
+                  </div>
+                ) : isLoadingRecommendations ? (
+                  <div className="space-y-2">
+                    {[0, 1].map(item => (
+                      <div key={item} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2">
+                        <div className="h-14 w-14 shrink-0 animate-pulse rounded-lg bg-muted" />
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <div className="h-3 w-2/3 animate-pulse rounded-full bg-muted" />
+                          <div className="h-3 w-full animate-pulse rounded-full bg-muted" />
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <>
-              {isEventScene && sceneEvents.map(event => (
-                <button
-                  key={event.id}
-                  type="button"
-                  className="flex w-full min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-2 text-left transition-transform active:scale-[0.98]"
-                  onClick={() => navigate(getSceneMapPath(activeScene.id, { eventId: event.id }))}
-                >
-                  <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <CalendarDays className="h-5 w-5" strokeWidth={2.5} />
-                    <span className="mt-1 text-[10px] font-black">
-                      {getCmiEventTimeBucketLabel(event)}
-                    </span>
+                    ))}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      <p className="truncate text-sm font-black text-foreground">
-                        {event.title}
-                      </p>
-                      <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px] font-black text-accent-foreground">
-                        {event.priceLabel}
-                      </span>
-                    </div>
-                    <p className="mt-1 line-clamp-2 text-xs font-semibold leading-snug text-muted-foreground">
-                      {formatCmiEventTime(event)} · {event.venueName}
-                    </p>
-                  </div>
-                </button>
-              ))}
+                ) : (
+                  <>
+                    {isEventScene && sceneEvents.slice(0, SCENE_PANEL_PREVIEW_LIMIT).map(event => (
+                      <button
+                        key={event.id}
+                        type="button"
+                        className="flex w-full min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-2 text-left transition-transform active:scale-[0.98]"
+                        onClick={() => navigate(getSceneMapPath(activeScene.id, { eventId: event.id }))}
+                      >
+                        <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <CalendarDays className="h-5 w-5" strokeWidth={2.5} />
+                          <span className="mt-1 text-[10px] font-black">
+                            {getCmiEventTimeBucketLabel(event)}
+                          </span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <p className="truncate text-sm font-black text-foreground">
+                              {event.title}
+                            </p>
+                            <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px] font-black text-accent-foreground">
+                              {event.priceLabel}
+                            </span>
+                          </div>
+                          <p className="mt-1 line-clamp-2 text-xs font-semibold leading-snug text-muted-foreground">
+                            {formatCmiEventTime(event)} · {event.venueName}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
 
-              {!isEventScene && sceneRecommendations.slice(0, SCENE_PANEL_PREVIEW_LIMIT).map(recommendation => {
-                const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
-                const isCommunityGuide = isCommunityCuratedRecommendation(recommendation);
-                const presentation = getCmiSceneRecommendationPresentation(recommendation);
-                const markerVisual = getMapMarkerVisual({
-                  place_name: recommendation.place_name,
-                  category: recommendation.category,
-                  recommendations: [recommendation],
-                });
-                const summary = isCommunityGuide ? guide.summary : getRecommendationReasonText(recommendation);
-                const cardImage = recommendation.images[0];
-                return (
-                  <button
-                    key={recommendation.id}
-                    type="button"
-                    className="flex w-full min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-2 text-left transition-transform active:scale-[0.98]"
-                    onClick={() => navigate(getPlacePath(recommendation.place_name))}
-                  >
-                    {cardImage ? (
-                      <img
-                        src={cardImage}
-                        alt=""
-                        className="h-14 w-14 shrink-0 rounded-lg object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-accent p-2">
-                        <img
-                          src={markerVisual.iconUrl}
-                          alt=""
-                          className="h-full w-full object-contain"
-                        />
-                      </div>
+                    {!isEventScene && sceneRecommendations.slice(0, SCENE_PANEL_PREVIEW_LIMIT).map(recommendation => {
+                      const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
+                      const isCommunityGuide = isCommunityCuratedRecommendation(recommendation);
+                      const presentation = getCmiSceneRecommendationPresentation(recommendation);
+                      const markerVisual = getMapMarkerVisual({
+                        place_name: recommendation.place_name,
+                        category: recommendation.category,
+                        recommendations: [recommendation],
+                      });
+                      const summary = isCommunityGuide ? guide.summary : getRecommendationReasonText(recommendation);
+                      const cardImage = recommendation.images[0];
+                      return (
+                        <button
+                          key={recommendation.id}
+                          type="button"
+                          className="flex w-full min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-2 text-left transition-transform active:scale-[0.98]"
+                          onClick={() => navigate(getPlacePath(recommendation.place_name))}
+                        >
+                          {cardImage ? (
+                            <img
+                              src={cardImage}
+                              alt=""
+                              className="h-14 w-14 shrink-0 rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-accent p-2">
+                              <img
+                                src={markerVisual.iconUrl}
+                                alt=""
+                                className="h-full w-full object-contain"
+                              />
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex min-w-0 items-center gap-1.5">
+                              <p className="truncate text-sm font-black text-foreground">
+                                {recommendation.place_name}
+                              </p>
+                              <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px] font-black text-accent-foreground">
+                                {presentation.kind}
+                              </span>
+                            </div>
+                            <p className="mt-1 line-clamp-2 text-xs font-semibold leading-snug text-muted-foreground">
+                              {summary || `${markerVisual.label}，点开看详情。`}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+
+                    {isEventScene && sceneEvents.length === 0 && (
+                      <p className="rounded-lg border border-dashed border-border bg-card p-3 text-sm font-semibold text-muted-foreground">
+                        近期活动还在整理中。运营库补录后会自动出现在这里。
+                      </p>
                     )}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <p className="truncate text-sm font-black text-foreground">
-                          {recommendation.place_name}
-                        </p>
-                        <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px] font-black text-accent-foreground">
-                          {presentation.kind}
-                        </span>
-                      </div>
-                      <p className="mt-1 line-clamp-2 text-xs font-semibold leading-snug text-muted-foreground">
-                        {summary || `${markerVisual.label}，点开看详情。`}
+
+                    {!isEventScene && sceneRecommendations.length === 0 && (
+                      <p className="rounded-lg border border-dashed border-border bg-card p-3 text-sm font-semibold text-muted-foreground">
+                        {isPlaceTypeFallback && activePlaceTypeTag
+                          ? `${activePlaceTypeTag.label}地点还在补录中。`
+                          : activeIntentFilter
+                          ? `${activeIntentFilter.label}地点还在补录中。`
+                          : '这个场景还在整理中，可以先切到完整地图看看。'}
                       </p>
-                    </div>
-                  </button>
-                );
-              })}
-
-              {isEventScene && sceneEvents.length === 0 && (
-                <p className="rounded-lg border border-dashed border-border bg-card p-3 text-sm font-semibold text-muted-foreground">
-                  近期活动还在整理中。运营库补录后会自动出现在这里。
-                </p>
-              )}
-
-              {!isEventScene && sceneRecommendations.length === 0 && (
-                <p className="rounded-lg border border-dashed border-border bg-card p-3 text-sm font-semibold text-muted-foreground">
-                  {isPlaceTypeFallback && activePlaceTypeTag
-                    ? `${activePlaceTypeTag.label}地点还在补录中。`
-                    : activeIntentFilter
-                    ? `${activeIntentFilter.label}地点还在补录中。`
-                    : '这个场景还在整理中，可以先切到完整地图看看。'}
-                </p>
-              )}
-                </>
-              )}
-            </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </section>
         </div>
       )}
 
       {/* 底部中间发帖按钮 (11. FAB Hard Press) */}
-      <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+24px)] left-1/2 -translate-x-1/2 z-20">
+      <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+18px)] left-1/2 -translate-x-1/2 z-20">
         <button
-          className="app-fab flex items-center gap-2 bg-primary text-primary-foreground font-bold px-6 py-4 rounded-full border-2 border-foreground"
+          className="app-fab flex items-center gap-2 rounded-full border-2 border-foreground bg-primary px-5 py-3 text-[15px] font-bold text-primary-foreground"
           aria-label="标记新地点"
           onClick={() => {
             if (!user) {
@@ -1533,7 +1573,7 @@ export default function MapView() {
             navigate('/mark');
           }}
         >
-          <Plus className="w-6 h-6" strokeWidth={3} />
+          <Plus className="h-5 w-5" strokeWidth={3} />
           <span>标记新地点</span>
         </button>
       </div>
