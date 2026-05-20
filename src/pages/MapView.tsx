@@ -1559,10 +1559,41 @@ export default function MapView() {
         </div>
       )}
 
-      {/* 底部中间发帖按钮 (11. FAB Hard Press) */}
-      <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+18px)] left-1/2 -translate-x-1/2 z-20">
+      {/* 底部操作区：统一基线和左右占位，避免三个入口各自漂移。 */}
+      <div className="absolute inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+22px)] z-20 grid grid-cols-[minmax(5rem,1fr)_auto_minmax(5rem,1fr)] items-end gap-2 md:inset-x-6">
+        <div className="flex min-w-0 justify-start">
+          {user ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-12 w-12 rounded-full p-0 press-feedback bg-background border-2 border-foreground shadow-[3px_4px_0px_rgba(0,0,0,0.25)] hover:shadow-[2px_3px_0px_rgba(0,0,0,0.25)] hover:translate-y-[1px] transition-all"
+              onClick={() => navigate('/profile')}
+              aria-label="打开个人页面"
+            >
+              <Avatar className="h-full w-full">
+                {profile?.avatar_url && (
+                  <AvatarImage src={profile.avatar_url} alt={displayName} />
+                )}
+                <AvatarFallback className="bg-primary text-primary-foreground font-bold">
+                  {displayName.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          ) : (
+            <Button
+              variant="default"
+              size="sm"
+              className="h-12 rounded-full press-feedback shadow-lg border-2 border-foreground px-4 font-bold"
+              onClick={() => navigate('/login')}
+            >
+              <LogIn className="mr-2 h-4 w-4" />
+              登录
+            </Button>
+          )}
+        </div>
+
         <button
-          className="app-fab flex items-center gap-2 rounded-full border-2 border-foreground bg-primary px-5 py-3 text-[15px] font-bold text-primary-foreground"
+          className="app-fab flex h-14 items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-foreground bg-primary px-5 text-[15px] font-bold text-primary-foreground"
           aria-label="标记新地点"
           onClick={() => {
             if (!user) {
@@ -1576,70 +1607,39 @@ export default function MapView() {
           <Plus className="h-5 w-5" strokeWidth={3} />
           <span>标记新地点</span>
         </button>
-      </div>
 
-      {/* 左下角用户头像/登录按钮 - 与发帖按钮持平 */}
-      <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+24px)] left-4 md:left-6 z-20">
-        {user ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="w-12 h-12 rounded-full p-0 press-feedback bg-background border-2 border-foreground shadow-[3px_4px_0px_rgba(0,0,0,0.25)] hover:shadow-[2px_3px_0px_rgba(0,0,0,0.25)] hover:translate-y-[1px] transition-all"
-            onClick={() => navigate('/profile')}
-            aria-label="打开个人页面"
-          >
-            <Avatar className="w-full h-full">
-              {profile?.avatar_url && (
-                <AvatarImage src={profile.avatar_url} alt={displayName} />
-              )}
-              <AvatarFallback className="bg-primary text-primary-foreground font-bold">
-                {displayName.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-          </Button>
-        ) : (
-          <Button
-            variant="default"
-            size="sm"
-            className="rounded-full press-feedback shadow-lg border-2 border-foreground font-bold"
-            onClick={() => navigate('/login')}
-          >
-            <LogIn className="w-4 h-4 mr-2" />
-            登录
-          </Button>
-        )}
-      </div>
-
-      {!activeScene && (
-        <>
-          {isEasterEggMode && (
-            <div className="pointer-events-none absolute right-4 bottom-[calc(env(safe-area-inset-bottom)+88px)] z-20 flex items-center gap-1.5 rounded-full border border-border/40 bg-background/90 px-2.5 py-1.5 text-xs font-black text-foreground shadow-lg backdrop-blur-sm md:right-6">
+        <div className="flex min-w-0 justify-end">
+          {!activeScene && (
+            <button
+              type="button"
+              className="press-feedback flex h-12 w-12 items-center justify-center rounded-full bg-transparent transition-transform hover:scale-105 active:scale-95"
+              onClick={handleEasterEggToggle}
+              aria-label={isEasterEggMode ? '退出彩蛋探索' : '进入彩蛋探索'}
+              aria-pressed={isEasterEggMode}
+            >
               <img
                 src={EASTER_STAR_ICON_URL}
                 alt=""
-                className="h-4 w-4 object-contain"
+                className={`object-contain drop-shadow-[0_3px_5px_rgba(0,0,0,0.22)] ${
+                  isEasterEggMode ? 'h-12 w-12' : 'h-11 w-11'
+                }`}
                 aria-hidden="true"
               />
-              彩蛋探索
-            </div>
+            </button>
           )}
-          <button
-            type="button"
-            className="press-feedback absolute right-4 bottom-[calc(env(safe-area-inset-bottom)+26px)] z-20 flex h-14 w-14 items-center justify-center rounded-full bg-transparent transition-transform hover:scale-105 active:scale-95 md:right-6"
-            onClick={handleEasterEggToggle}
-            aria-label={isEasterEggMode ? '退出彩蛋探索' : '进入彩蛋探索'}
-            aria-pressed={isEasterEggMode}
-          >
-            <img
-              src={EASTER_STAR_ICON_URL}
-              alt=""
-              className={`object-contain drop-shadow-[0_3px_5px_rgba(0,0,0,0.22)] ${
-                isEasterEggMode ? 'h-12 w-12' : 'h-11 w-11'
-              }`}
-              aria-hidden="true"
-            />
-          </button>
-        </>
+        </div>
+      </div>
+
+      {!activeScene && isEasterEggMode && (
+        <div className="pointer-events-none absolute right-4 bottom-[calc(env(safe-area-inset-bottom)+84px)] z-20 flex items-center gap-1.5 rounded-full border border-border/40 bg-background/90 px-2.5 py-1.5 text-xs font-black text-foreground shadow-lg backdrop-blur-sm md:right-6">
+          <img
+            src={EASTER_STAR_ICON_URL}
+            alt=""
+            className="h-4 w-4 object-contain"
+            aria-hidden="true"
+          />
+          彩蛋探索
+        </div>
       )}
 
       {/* 活动详情卡片 - z-index 最高 */}
