@@ -1791,10 +1791,6 @@ export default function MapView() {
             <p className="text-base font-semibold leading-relaxed text-foreground/85">
               {getRecommendationReasonText(selectedRecommendation)}
             </p>
-
-            <div className="rounded-2xl border border-dashed border-primary/25 bg-primary/5 px-4 py-3 text-sm font-bold leading-relaxed text-muted-foreground">
-              后续这里会接真实彩蛋数据：谁留下的、里面是什么、你是否已经亲自探索过。
-            </div>
           </div>
         </div>
       )}
