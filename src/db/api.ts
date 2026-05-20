@@ -1,6 +1,7 @@
 import type { Category, PlacedSticker, Recommendation, Sticker } from '@/types/types';
 import { getCategoryFilterValues } from '@/types/types';
 import { compressImage } from '@/utils/imageCompression';
+import { encodeEasterIconMetadata } from '@/lib/easter-icons';
 import { supabase } from './supabase';
 
 type ReadOptions = {
@@ -184,6 +185,31 @@ export const createRecommendation = async (
     .maybeSingle();
 
   if (error) {
+    const mayBeMissingEasterIconColumn =
+      Boolean(recommendation.easter_icon_id) &&
+      error.message.toLocaleLowerCase().includes('easter_icon_id');
+
+    if (mayBeMissingEasterIconColumn) {
+      const fallbackRecommendation = {
+        ...recommendation,
+        reason: encodeEasterIconMetadata(recommendation.reason ?? '', recommendation.easter_icon_id!),
+      };
+      delete fallbackRecommendation.easter_icon_id;
+
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('recommendations')
+        .insert([fallbackRecommendation])
+        .select()
+        .maybeSingle();
+
+      if (fallbackError) {
+        console.error('创建推荐失败:', fallbackError);
+        return null;
+      }
+
+      return fallbackData;
+    }
+
     console.error('创建推荐失败:', error);
     return null;
   }

@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCmiHomeSections } from '@/data/cmi-home-sections';
+import { CmiBlackboardEntry } from '@/features/home/blackboard/cmi-blackboard';
 import { preloadImages, warmupImages } from '@/lib/image-warmup';
 import { getSceneEntryPath } from '@/lib/paths';
 
@@ -30,6 +31,9 @@ const HOME_WARMUP_IMAGE_URLS = [
   '/map-icons/cmi-flat-v2/home-community-picks.png',
   '/map-icons/cmi-flat-v2/place-market.png',
   '/map-icons/cmi-flat-v2/home-events.png',
+  '/cmi-home/qr-andreas.jpg',
+  '/cmi-home/qr-community-group-5.jpg',
+  '/cmi-home/qr-linke.jpg',
 ];
 
 preloadImages(CRITICAL_HOME_IMAGE_URLS);
@@ -109,6 +113,8 @@ export default function SceneHome() {
         </section>
 
         <div className="space-y-6">
+          <CmiBlackboardEntry onOpen={() => navigate('/blackboard')} />
+
           {visibleHomeSections.map(section => (
             <HomeSceneSection
               key={section.id}

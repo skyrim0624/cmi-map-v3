@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
 import { getRecommendationsByUser } from '@/db/api';
+import { getRecommendationReasonText } from '@/lib/easter-icons';
 import { getPlacePath } from '@/lib/paths';
 import type { Category, Recommendation } from '@/types/types';
 import { categoryMatchesFilter, getCategoryIconUrl, normalizeCategory } from '@/types/types';
@@ -110,7 +111,7 @@ export default function PersonMap() {
               <p className="line-clamp-3 text-base font-semibold leading-relaxed text-foreground">
                 {signatureRecommendation && isCommunityCuratedRecommendation(signatureRecommendation) && signatureGuide
                   ? signatureGuide.summary
-                  : `“${signatureRecommendation.reason}”`}
+                  : `“${getRecommendationReasonText(signatureRecommendation)}”`}
               </p>
               <p className="mt-2 truncate text-xs font-medium text-muted-foreground">
                 📍 {signatureGuide && isCommunityMap ? signatureGuide.title : signatureRecommendation.place_name}
@@ -199,7 +200,7 @@ export default function PersonMap() {
                     </>
                   ) : (
                     <>
-                      <p className="line-clamp-2 text-sm font-semibold leading-relaxed">“{item.reason}”</p>
+                      <p className="line-clamp-2 text-sm font-semibold leading-relaxed">“{getRecommendationReasonText(item)}”</p>
                       <p className="mt-1 truncate text-xs text-muted-foreground">📍 {item.place_name}</p>
                     </>
                   )}

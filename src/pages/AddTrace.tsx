@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { createPlaceTrace, loadCheckInTargetRecommendations } from '@/features/check-ins/check-in-service';
+import { getRecommendationReasonText } from '@/lib/easter-icons';
 import { getPlacePath } from '@/lib/paths';
 import type { Recommendation } from '@/types/types';
 import { getCategoryIconUrl, normalizeCategory } from '@/types/types';
@@ -163,7 +164,7 @@ export default function AddTrace() {
             {normalizeCategory(sourceRecommendation.category)}
           </div>
           <p className="text-base font-semibold leading-relaxed text-foreground">
-            "{sourceRecommendation.reason}"
+            "{getRecommendationReasonText(sourceRecommendation)}"
           </p>
           <p className="mt-3 text-sm font-bold text-muted-foreground">
             —— {sourceRecommendation.user_name}

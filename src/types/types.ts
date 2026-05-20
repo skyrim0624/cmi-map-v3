@@ -26,6 +26,7 @@ export interface Recommendation {
   latitude: number;
   longitude: number;
   images: string[];
+  easter_icon_id?: string | null;
   created_at: string;
   upvotes?: { user_id: string }[];
   wishlists?: { user_id: string }[];
@@ -40,6 +41,10 @@ export interface MapMarker {
   latitude: number;
   longitude: number;
   recommendations: Recommendation[];
+  visualOverride?: {
+    label: string;
+    iconUrl: string;
+  };
 }
 
 // 贴纸数据类型

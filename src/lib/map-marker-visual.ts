@@ -1,6 +1,7 @@
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
 import type { Category, MapMarker } from '@/types/types';
 import { normalizeCategory } from '@/types/types';
+import { getCmiEasterIconById, getRecommendationEasterIconId } from '@/lib/easter-icons';
 
 type MarkerTone = 'food' | 'coffee' | 'outdoor' | 'photo' | 'landmark' | 'market' | 'wellness' | 'utility' | 'night' | 'creative' | 'neutral';
 
@@ -45,6 +46,11 @@ export type MapMarkerVisual = {
   isCommunity: boolean;
 };
 
+const EASTER_EGG_ICON_PATHS = ['/map-icons/cmi-easter/', '/map-icons/cmi-easter-v2/'];
+
+export const isEasterEggMarkerVisual = (visual: Pick<MapMarkerVisual, 'iconUrl'>) =>
+  EASTER_EGG_ICON_PATHS.some(path => visual.iconUrl.includes(path));
+
 // NOTE: 地图点位用更细的图标表达地点类型，避免生存服务全部落到同一个工具箱图标。
 const CMI_FLAT_ICON_BASE = '/map-icons/cmi-flat-v2';
 const cmiFlatIcon = (name: string) => `${CMI_FLAT_ICON_BASE}/${name}.png`;
@@ -53,8 +59,8 @@ const MARKER_ICON_URLS: Record<MarkerIconAsset, string> = {
   food: cmiFlatIcon('place-restaurant'),
   coffee: cmiFlatIcon('place-cafe'),
   outdoor: cmiFlatIcon('place-nature'),
-  landmark: cmiFlatIcon('place-landmark'),
-  market: cmiFlatIcon('place-market'),
+  landmark: cmiFlatIcon('place-landmark-camera'),
+  market: cmiFlatIcon('place-market-handmade'),
   massage: cmiFlatIcon('place-massage'),
   sport: cmiFlatIcon('direct-sport'),
   bar: '/categories/9.png',
@@ -71,8 +77,8 @@ const MARKER_ICON_URLS: Record<MarkerIconAsset, string> = {
   exchange: cmiFlatIcon('survival-exchange'),
   print: cmiFlatIcon('survival-print'),
   book: cmiFlatIcon('place-book'),
-  gallery: cmiFlatIcon('place-gallery'),
-  music: '/categories/9.png',
+  gallery: cmiFlatIcon('place-gallery-palette'),
+  music: cmiFlatIcon('place-livehouse-music'),
   'hot-spring': cmiFlatIcon('place-hot-spring'),
 };
 
@@ -191,20 +197,45 @@ const buildVisual = (
 });
 
 export const getMapMarkerVisual = (
-  markerData: Pick<MapMarker, 'place_name' | 'category' | 'recommendations'>
+  markerData: Pick<MapMarker, 'place_name' | 'category' | 'recommendations' | 'visualOverride'>
 ): MapMarkerVisual => {
   const communityRecommendation = markerData.recommendations?.find(isCommunityCuratedRecommendation);
   const guide = communityRecommendation
     ? getPlaceGuide(communityRecommendation.place_name, communityRecommendation.category)
     : getPlaceGuide(markerData.place_name, markerData.category);
   const rule = findRule(`${guide.kind} ${guide.title} ${guide.placeName} ${markerData.place_name}`);
-
-  if (rule) {
-    return buildVisual(rule, Boolean(communityRecommendation));
-  }
+  const applyVisualOverride = (visual: MapMarkerVisual): MapMarkerVisual => (
+    markerData.visualOverride
+      ? {
+        ...visual,
+        label: markerData.visualOverride.label,
+        iconUrl: markerData.visualOverride.iconUrl,
+      }
+      : visual
+  );
 
   const normalizedCategory = normalizeCategory(markerData.category);
-  return buildVisual(CATEGORY_MARKERS[normalizedCategory] || CATEGORY_MARKERS.彩蛋, Boolean(communityRecommendation));
+  if (normalizedCategory === '彩蛋') {
+    const easterIconId = markerData.recommendations
+      ?.map(getRecommendationEasterIconId)
+      .find(Boolean);
+    const easterIcon = getCmiEasterIconById(easterIconId);
+
+    return applyVisualOverride({
+      ...TONES.neutral,
+      label: easterIcon.label,
+      iconUrl: easterIcon.url,
+      isCommunity: Boolean(communityRecommendation),
+    });
+  }
+
+  if (rule) {
+    return applyVisualOverride(buildVisual(rule, Boolean(communityRecommendation)));
+  }
+
+  return applyVisualOverride(
+    buildVisual(CATEGORY_MARKERS[normalizedCategory] || CATEGORY_MARKERS.彩蛋, Boolean(communityRecommendation))
+  );
 };
 
 export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolean) => {
@@ -265,7 +296,88 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
   `;
 };
 
+export const renderEasterEggMarkerHtml = (visual: MapMarkerVisual) => {
+  const label = escapeHtml(visual.label);
+  const iconSize = visual.iconUrl.includes('easter-star') ? 34 : 30;
+
+  return `
+    <div title="${label}" aria-label="${label}" style="
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:44px;
+      height:44px;
+      transform:translate(-50%, -50%);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-sizing:border-box;
+    ">
+      <img src="${visual.iconUrl}" alt="${label}" loading="lazy" style="
+        width:${iconSize}px;
+        height:${iconSize}px;
+        object-fit:contain;
+        display:block;
+        filter:drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+      " />
+    </div>
+  `;
+};
+
 export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number) => {
+  if (visuals.length > 0 && visuals.every(isEasterEggMarkerVisual)) {
+    const displayedVisuals = visuals.slice(0, 3);
+    const miniIcons = displayedVisuals.map((visual, index) => {
+      const offsets = [
+        { left: 8, top: 10, rotate: -8 },
+        { left: 24, top: 7, rotate: 10 },
+        { left: 18, top: 21, rotate: -3 },
+      ];
+      const offset = offsets[index];
+      const iconSize = visual.iconUrl.includes('easter-star') ? 24 : 22;
+
+      return `
+        <img src="${visual.iconUrl}" alt="" loading="lazy" style="
+          position:absolute;
+          left:${offset.left}px;
+          top:${offset.top}px;
+          width:${iconSize}px;
+          height:${iconSize}px;
+          object-fit:contain;
+          transform:rotate(${offset.rotate}deg);
+          filter:drop-shadow(0 2px 3px rgba(0,0,0,0.18));
+          z-index:${index + 1};
+        " />
+      `;
+    }).join('');
+
+    return `
+      <div style="position:relative; width:52px; height:44px;">
+        ${miniIcons}
+        ${count > 1 ? `
+          <div style="
+            position:absolute;
+            right:1px;
+            bottom:3px;
+            z-index:10;
+            min-width:18px;
+            height:18px;
+            padding:0 4px;
+            border-radius:999px;
+            background:#fff8eb;
+            color:#342f2a;
+            font-family:'Inter','PingFang SC','Noto Sans SC',sans-serif;
+            font-weight:950;
+            font-size:11px;
+            line-height:18px;
+            text-align:center;
+            box-shadow:0 2px 5px rgba(0,0,0,0.14);
+          ">+${count}</div>
+        ` : ''}
+      </div>
+    `;
+  }
+
   const transforms = [
     'translate(0px, 0px) rotate(-8deg)',
     'translate(12px, -6px) rotate(14deg)',

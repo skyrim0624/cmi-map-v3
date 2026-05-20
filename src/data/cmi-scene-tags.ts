@@ -1,5 +1,6 @@
 import type { CmiSceneId } from '@/data/cmi-scenes';
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
+import { getRecommendationReasonText } from '@/lib/easter-icons';
 import type { Recommendation } from '@/types/types';
 
 export interface CmiIntentSecondaryFilter {
@@ -202,8 +203,9 @@ export const getCmiIntentSecondaryFilters = (sceneId: CmiSceneId) =>
 export const getRecommendationScenarioTags = (recommendation: Recommendation) => {
   const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
   const tags = new Set<string>([recommendation.category, ...guide.tags, guide.kind]);
+  const reasonText = getRecommendationReasonText(recommendation);
   const text = normalize(
-    [recommendation.place_name, recommendation.category, recommendation.reason, guide.title, guide.kind, guide.summary, ...guide.tags].join(' ')
+    [recommendation.place_name, recommendation.category, reasonText, guide.title, guide.kind, guide.summary, ...guide.tags].join(' ')
   );
 
   if (containsAny(text, ['夜市', '晚上', '夜间', '酒吧', 'bar', 'live', '演出'])) tags.add('适合晚上');
@@ -213,7 +215,7 @@ export const getRecommendationScenarioTags = (recommendation: Recommendation) =>
   if (containsAny(text, ['户外', '公园', '散步', '慢逛', '自然'])) tags.add('适合闲逛');
   if (isCommunityCuratedRecommendation(recommendation)) tags.add('CMI 推荐');
   if (recommendation.images.length > 0) tags.add('有照片');
-  if (recommendation.reason.trim().length >= 18) tags.add('有真人痕迹');
+  if (reasonText.length >= 18) tags.add('有真人痕迹');
 
   return Array.from(tags);
 };
@@ -223,8 +225,9 @@ export const getRecommendationIntentScore = (recommendation: Recommendation, sce
   if (!rule) return 0;
 
   const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
+  const reasonText = getRecommendationReasonText(recommendation);
   const text = normalize(
-    [recommendation.place_name, recommendation.category, recommendation.reason, guide.title, guide.kind, guide.summary, ...guide.tags].join(' ')
+    [recommendation.place_name, recommendation.category, reasonText, guide.title, guide.kind, guide.summary, ...guide.tags].join(' ')
   );
   const scenarioTags = getRecommendationScenarioTags(recommendation);
 
@@ -251,8 +254,9 @@ export const matchesCmiIntentSecondaryFilter = (
   if (!filter) return true;
 
   const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
+  const reasonText = getRecommendationReasonText(recommendation);
   const text = normalize(
-    [recommendation.place_name, recommendation.category, recommendation.reason, guide.title, guide.kind, guide.summary, ...guide.tags].join(' ')
+    [recommendation.place_name, recommendation.category, reasonText, guide.title, guide.kind, guide.summary, ...guide.tags].join(' ')
   );
 
   return containsAny(text, filter.keywords);

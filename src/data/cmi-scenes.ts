@@ -5,6 +5,7 @@ import {
   getCmiPlaceTypeTagsForRecommendation,
 } from '@/data/cmi-taxonomy';
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
+import { getRecommendationReasonText } from '@/lib/easter-icons';
 import type { Category, Recommendation } from '@/types/types';
 import { normalizeCategory } from '@/types/types';
 
@@ -692,7 +693,7 @@ export const getRecommendationSceneText = (recommendation: Recommendation) => {
     [
       recommendation.place_name,
       recommendation.category,
-      recommendation.reason,
+      getRecommendationReasonText(recommendation),
       guide.title,
       guide.kind,
       guide.summary,
@@ -705,7 +706,7 @@ export const getRecommendationSceneText = (recommendation: Recommendation) => {
 
 export const isDecisionReadyRecommendation = (recommendation: Recommendation) => {
   if (!isCommunityCuratedRecommendation(recommendation)) {
-    return recommendation.reason.trim().length >= 18;
+    return getRecommendationReasonText(recommendation).length >= 18;
   }
 
   const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
@@ -721,7 +722,7 @@ export const getCmiSceneRecommendationPresentation = (
   return {
     title: isCommunityGuide ? guide.title : recommendation.place_name,
     kind: guide.kind,
-    summary: isCommunityGuide ? guide.summary : recommendation.reason,
+    summary: isCommunityGuide ? guide.summary : getRecommendationReasonText(recommendation),
     tags: Array.from(new Set([
       ...guide.tags,
       ...getCmiDetailTagsForRecommendation(recommendation).map(tag => tag.label),

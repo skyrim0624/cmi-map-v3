@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { MapPin, Mic, MicOff, Check, ArrowLeft, Loader2, PencilLine } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { MapPin, Mic, MicOff, Check, ArrowLeft, Loader2, PencilLine, Shuffle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { LeafletMap } from '@/components/map/LeafletMap';
 import { createRecommendation, uploadImages } from '@/db/api';
@@ -7,6 +7,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getCategoryIconUrl } from '@/types/types';
 import type { Category } from '@/types/types';
 import { getCmiInputCategoryOptions } from '@/data/cmi-taxonomy';
+import {
+  CMI_EASTER_ICON_OPTIONS,
+  DEFAULT_CMI_EASTER_ICON_ID,
+  getCmiEasterIconById,
+} from '@/lib/easter-icons';
 import { getPlacePath } from '@/lib/paths';
 import { toast } from 'sonner';
 
@@ -68,7 +73,20 @@ export default function MarkPlace() {
 
   const [selectedCat, setSelectedCat] = useState<Category | ''>('');
   const [selectedInputCategoryId, setSelectedInputCategoryId] = useState<string>('');
+  const [selectedEasterIconId, setSelectedEasterIconId] = useState(DEFAULT_CMI_EASTER_ICON_ID);
+  const [easterIconQuery, setEasterIconQuery] = useState('');
   const inputCategoryOptions = getCmiInputCategoryOptions();
+  const selectedEasterIcon = getCmiEasterIconById(selectedEasterIconId);
+  const filteredEasterIcons = useMemo(() => {
+    const query = easterIconQuery.trim().toLocaleLowerCase();
+    if (!query) return CMI_EASTER_ICON_OPTIONS;
+
+    return CMI_EASTER_ICON_OPTIONS.filter(icon =>
+      icon.id.includes(query) ||
+      icon.slug.includes(query) ||
+      icon.label.toLocaleLowerCase().includes(query)
+    );
+  }, [easterIconQuery]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -345,7 +363,8 @@ export default function MarkPlace() {
         user_id: user!.id,
         latitude: center.lat,
         longitude: center.lng,
-        images: imageUrls
+        images: imageUrls,
+        easter_icon_id: selectedCategory === '彩蛋' ? selectedEasterIconId : null,
       });
 
       if (recommendation) {
@@ -614,17 +633,80 @@ export default function MarkPlace() {
                       title={option.description}
                       className={`flex items-center gap-2 px-3.5 py-2 rounded-full border shadow-sm transition-all text-stone-600 font-medium text-sm ${selectedInputCategoryId === option.id ? 'bg-primary/10 border-primary text-primary scale-105 ring-2 ring-primary/20' : 'bg-white border-stone-200 hover:scale-105 active:scale-95'}`}
                     >
-                      <img src={getCategoryIconUrl(option.storedCategory)} alt="" className="w-5 h-5 object-contain" />
+                      {option.storedCategory === '彩蛋' ? (
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#ffe06f] p-0.5 shadow-[inset_0_0_0_2px_rgba(255,255,255,0.7),0_3px_8px_rgba(136,101,17,0.14)]">
+                          <img src={selectedEasterIcon.url} alt="" className="h-6 w-6 object-contain" />
+                        </span>
+                      ) : (
+                        <img src={getCategoryIconUrl(option.storedCategory)} alt="" className="w-5 h-5 object-contain" />
+                      )}
                       <span>{option.label}</span>
                     </button>
                   ))}
                 </div>
+                {selectedCat === '彩蛋' && (
+                  <div className="mt-2 w-full max-w-sm rounded-3xl border border-primary/25 bg-primary/5 p-3 shadow-inner animate-in slide-in-from-top-2 fade-in">
+                    <div className="mb-2 flex items-start justify-between gap-3 text-left">
+                      <div>
+                        <p className="text-sm font-black text-foreground">选择一个彩蛋图标</p>
+                        <p className="mt-0.5 text-xs font-semibold text-muted-foreground">50 个都可以用，选一个最像这条记忆的。</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextIcon = CMI_EASTER_ICON_OPTIONS[Math.floor(Math.random() * CMI_EASTER_ICON_OPTIONS.length)];
+                          setSelectedEasterIconId(nextIcon.id);
+                        }}
+                        disabled={uploading}
+                        className="flex h-9 shrink-0 items-center gap-1 rounded-2xl border border-border bg-background px-3 text-xs font-black text-primary shadow-sm active:scale-95 disabled:opacity-50"
+                      >
+                        <Shuffle className="h-3.5 w-3.5" strokeWidth={2.8} />
+                        随机
+                      </button>
+                    </div>
+                    <input
+                      value={easterIconQuery}
+                      onChange={(event) => setEasterIconQuery(event.target.value)}
+                      disabled={uploading}
+                      placeholder="搜猫、花、雨伞、纸飞机"
+                      className="mb-2 h-10 w-full rounded-2xl border border-border bg-background px-3 text-sm font-semibold outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
+                    />
+                    <div className="max-h-52 overflow-y-auto pr-1">
+                      <div className="grid grid-cols-5 gap-2">
+                        {filteredEasterIcons.map((icon) => (
+                          <button
+                            key={icon.id}
+                            type="button"
+                            onClick={() => setSelectedEasterIconId(icon.id)}
+                            disabled={uploading}
+                            title={icon.label}
+                            aria-label={`选择彩蛋图标：${icon.label}`}
+                            className={`relative flex h-12 items-center justify-center rounded-2xl border transition-all active:scale-95 disabled:opacity-50 ${
+                              selectedEasterIconId === icon.id
+                                ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
+                                : 'border-transparent bg-background hover:border-border'
+                            }`}
+                          >
+                            <img src={icon.url} alt="" className="h-8 w-8 object-contain drop-shadow-sm" />
+                            {selectedEasterIconId === icon.id && (
+                              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2 rounded-2xl bg-background px-3 py-2 text-xs font-bold text-muted-foreground">
+                      <img src={selectedEasterIcon.url} alt="" className="h-7 w-7 object-contain" />
+                      <span>已选：{selectedEasterIcon.label}。地图上会显示这个小图标。</span>
+                    </div>
+                  </div>
+                )}
                 {selectedCat && !uploading && (
                   <button 
                     onClick={() => handleSubmitFinal(selectedCat)}
                     className="mt-4 w-full max-w-[200px] h-12 bg-primary text-white font-bold rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all animate-in zoom-in-95 flex items-center justify-center gap-2"
                   >
-                    <span>发布印戳</span>
+                    <span>{selectedCat === '彩蛋' ? '发布彩蛋' : '发布印戳'}</span>
                   </button>
                 )}
                 {uploading && (

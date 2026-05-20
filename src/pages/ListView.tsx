@@ -25,6 +25,7 @@ import { getCmiIntentSecondaryFilters, matchesCmiIntentSecondaryFilter } from '@
 import { getCmiInspirationCards } from '@/data/cmi-inspirations';
 import { CmiInspirationCard } from '@/components/intent/inspiration-card';
 import { getMapMarkerVisual } from '@/lib/map-marker-visual';
+import { getRecommendationReasonText } from '@/lib/easter-icons';
 import { getCmiPlaceTypeTag, matchesCmiPlaceTypeTag } from '@/data/cmi-taxonomy';
 import {
   filterCmiNearbyWanderRecommendations,
@@ -298,6 +299,14 @@ export default function ListView() {
         return;
       }
 
+      if (activePlaceTypeId) {
+        const data = await getAllRecommendations({ throwOnError: true });
+        setRecommendations(data.filter(recommendation =>
+          matchesCmiPlaceTypeTag(recommendation, activePlaceTypeId)
+        ));
+        return;
+      }
+
       if (selectedCategory === 'all') {
         const data = await getAllRecommendations({ throwOnError: true });
         setRecommendations(data);
@@ -352,7 +361,7 @@ export default function ListView() {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <h1 className="text-2xl font-bold text-foreground">
-              {activeScene ? activeScene.detailTitle : 'CMI Map'}
+              {activeScene ? activeScene.detailTitle : activePlaceTypeTag?.label ?? 'CMI Map'}
             </h1>
           </div>
           {activeScene ? (
@@ -637,7 +646,7 @@ export default function ListView() {
                         </div>
                       ) : (
                         <p className="text-base leading-relaxed text-foreground line-clamp-2 break-words">
-                          "{rec.reason}"
+                          "{getRecommendationReasonText(rec)}"
                         </p>
                       )}
 

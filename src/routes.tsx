@@ -4,6 +4,7 @@ import { getSceneMapPath } from '@/lib/paths';
 
 const MapView = lazy(() => import('./pages/MapView'));
 const SceneHome = lazy(() => import('./pages/SceneHome'));
+const CmiBlackboardPage = lazy(() => import('./pages/CmiBlackboardPage'));
 const ListView = lazy(() => import('./pages/ListView'));
 const PlaceDetail = lazy(() => import('./pages/PlaceDetail'));
 const AddTrace = lazy(() => import('./pages/AddTrace'));
@@ -41,6 +42,12 @@ export const routes: RouteConfig[] = [
     name: '地图查看',
     path: '/map',
     element: <MapView />,
+    public: true,
+  },
+  {
+    name: '一起出发看板',
+    path: '/blackboard',
+    element: <CmiBlackboardPage />,
     public: true,
   },
   {

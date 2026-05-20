@@ -48,6 +48,7 @@ import {
 } from '@/features/interactions/interaction-service';
 import { getAddTracePath, getPersonMapPath, getPlaceMapPath, getPlacePath } from '@/lib/paths';
 import { createPlaceShareCard, type PlaceShareCardResult } from '@/lib/place-share-card';
+import { getCmiEasterIconUrl, getRecommendationEasterIconId, getRecommendationReasonText } from '@/lib/easter-icons';
 import type { PlacedSticker, Recommendation, Sticker } from '@/types/types';
 import { getCategoryIconUrl, normalizeCategory } from '@/types/types';
 
@@ -66,6 +67,12 @@ type NavigatorWithFileShare = Navigator & {
 type LocationState = {
   newTraceId?: string;
 };
+
+const getRecommendationIconUrl = (recommendation: Recommendation) => (
+  recommendation.category === '彩蛋'
+    ? getCmiEasterIconUrl(getRecommendationEasterIconId(recommendation))
+    : getCategoryIconUrl(recommendation.category)
+);
 
 export default function PlaceDetail() {
   const { placeName } = useParams<{ placeName: string }>();
@@ -204,7 +211,7 @@ export default function PlaceDetail() {
 
   const handleEditClick = (recommendation: Recommendation) => {
     setEditingRecommendation(recommendation);
-    setEditReason(recommendation.reason);
+    setEditReason(getRecommendationReasonText(recommendation));
     setEditDialogOpen(true);
   };
 
@@ -226,7 +233,7 @@ export default function PlaceDetail() {
       return;
     }
 
-    if (nextReason === editingRecommendation.reason.trim()) {
+    if (nextReason === getRecommendationReasonText(editingRecommendation)) {
       handleEditDialogOpenChange(false);
       return;
     }
@@ -406,7 +413,7 @@ export default function PlaceDetail() {
       recommendation,
       title: isCommunityGuide ? guide.title : recommendation.place_name,
       kind: isCommunityGuide ? guide.kind : recommendation.category,
-      summary: isCommunityGuide ? guide.summary : recommendation.reason,
+      summary: isCommunityGuide ? guide.summary : getRecommendationReasonText(recommendation),
       tags: isCommunityGuide
         ? guide.tags
         : [recommendation.category, `${recommendation.user_name} 推荐`],
@@ -605,7 +612,7 @@ export default function PlaceDetail() {
               className="flex h-[32dvh] min-h-[230px] max-h-[310px] w-full items-center justify-center bg-accent"
             >
               <img
-                src={getCategoryIconUrl(firstRec.category)}
+                src={getRecommendationIconUrl(firstRec)}
                 alt={normalizeCategory(firstRec.category)}
                 className="w-1/3 h-1/3 object-contain opacity-80"
               />
@@ -634,7 +641,7 @@ export default function PlaceDetail() {
                       variant="outline"
                       className="rounded-full border-border/70 bg-background/90 px-2.5 py-1 text-muted-foreground shadow-sm"
                     >
-                      <img src={getCategoryIconUrl(firstRec.category)} alt="" className="mr-1 h-5 w-5 object-contain" />
+                      <img src={getRecommendationIconUrl(firstRec)} alt="" className="mr-1 h-5 w-5 object-contain" />
                       {firstGuide.kind}
                     </Badge>
                     {inlineDetailTags.map(tag => (
@@ -655,7 +662,7 @@ export default function PlaceDetail() {
                       variant="outline"
                       className="rounded-full border-border/70 bg-background/90 px-2.5 py-1 text-muted-foreground shadow-sm"
                     >
-                      <img src={getCategoryIconUrl(firstRec.category)} alt="" className="mr-1 h-5 w-5 object-contain" />
+                      <img src={getRecommendationIconUrl(firstRec)} alt="" className="mr-1 h-5 w-5 object-contain" />
                       {normalizeCategory(firstRec.category)}
                     </Badge>
                     {inlineDetailTags.map(tag => (
@@ -763,7 +770,7 @@ export default function PlaceDetail() {
 
                   {/* 推荐理由 */}
                   <p className={`${idx === 0 ? 'text-lg font-bold leading-relaxed text-foreground' : 'quote-text text-lg leading-relaxed'} ${canEditRecommendation ? 'pr-20' : 'pr-10'}`}>
-                    {isCommunityGuide ? guide.summary : rec.reason}
+                    {isCommunityGuide ? guide.summary : getRecommendationReasonText(rec)}
                   </p>
 
                   {/* 推荐人 */}

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllRecommendations, updateUserAvatar, updateUserName, uploadAvatar } from '@/db/api';
 import { syncAchievementProgress } from '@/features/achievements/achievement-service';
+import { getCmiEasterIconUrl, getRecommendationEasterIconId, getRecommendationReasonText } from '@/lib/easter-icons';
 import type { Badge } from '@/types/badges';
 import type { Category, PlacedSticker, Recommendation, Sticker } from '@/types/types';
 import { CATEGORIES, categoryMatchesFilter, getCategoryIconUrl } from '@/types/types';
@@ -181,11 +182,15 @@ export default function Profile() {
               <img src={rec.images[0]} alt="" className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
             ) : (
               <div className="w-16 h-16 rounded-xl bg-accent flex items-center justify-center p-3 flex-shrink-0">
-                <img src={getCategoryIconUrl(rec.category)} alt="" className="w-full h-full object-contain opacity-60" />
+                <img
+                  src={rec.category === '彩蛋' ? getCmiEasterIconUrl(getRecommendationEasterIconId(rec)) : getCategoryIconUrl(rec.category)}
+                  alt=""
+                  className="w-full h-full object-contain opacity-60"
+                />
               </div>
             )}
             <div className="flex-1 min-w-0 space-y-1.5">
-              <p className="text-sm leading-relaxed line-clamp-2">"{rec.reason}"</p>
+              <p className="text-sm leading-relaxed line-clamp-2">"{getRecommendationReasonText(rec)}"</p>
               <div className="space-y-1.5">
                 <p className="text-xs text-muted-foreground truncate whitespace-nowrap">
                   <span className="mr-1">📍</span>

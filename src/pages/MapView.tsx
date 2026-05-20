@@ -1,5 +1,5 @@
-import { CalendarDays, Copy, ExternalLink, List, LocateFixed, LogIn, Map as MapIcon, MapPinned, Navigation, Plus, ShieldCheck } from 'lucide-react';
-import { useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { CalendarDays, Copy, ExternalLink, List, LocateFixed, LogIn, Map as MapIcon, MapPinned, Navigation, Plus, Search, ShieldCheck, X } from 'lucide-react';
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LeafletMap } from '@/components/map/LeafletMap';
@@ -31,15 +31,18 @@ import {
   getCmiSceneRecommendations,
 } from '@/data/cmi-scenes';
 import {
-  CMI_SURVIVAL_KIT_ITEMS,
-  type CmiSurvivalKitItemId,
-  matchesCmiSurvivalKitRecommendation,
-} from '@/data/cmi-survival-kit';
-import {
-  getCmiDirectIntentTags,
+  type CmiMapFilterGroup,
+  type CmiMapFilterGroupId,
+  type CmiPlaceTypeTag,
+  getCmiMapFilterGroup,
+  getCmiMapFilterGroups,
   getCmiPrimaryIntentSceneIds,
   getCmiPlaceTypeTag,
+  getCmiPlaceTypeTagsByIds,
+  matchesCmiMapFilterGroup,
   matchesCmiPlaceTypeTag,
+  matchesCmiRecommendationSearchQuery,
+  resolveCmiMapFilterQuery,
 } from '@/data/cmi-taxonomy';
 import {
   getGuideSourceLabel,
@@ -48,21 +51,32 @@ import {
 } from '@/data/place-guides';
 import { getAllRecommendations } from '@/db/api';
 import { warmupImages } from '@/lib/image-warmup';
+import {
+  DEFAULT_CMI_EASTER_ICON_ID,
+  getCmiEasterIconById,
+  getCmiEasterIconUrl,
+  getRecommendationEasterIconId,
+  getRecommendationReasonText,
+} from '@/lib/easter-icons';
 import { getMapMarkerVisual } from '@/lib/map-marker-visual';
 import { getPersonMapPath, getPlacePath, getSceneListPath, getSceneMapPath } from '@/lib/paths';
 import type { MapMarker as MapMarkerType, Recommendation } from '@/types/types';
-import { getCategoryIconUrl } from '@/types/types';
 
-type ActiveFilter = 'all' | `place:${string}` | `survival:${CmiSurvivalKitItemId}`;
+type ActiveFilter = `place:${string}`;
 type MapCategoryFilter = {
   id: ActiveFilter;
   label: string;
   iconUrl: string;
-  kind: 'place' | 'survival';
+  needsIcon?: boolean;
+  kind: 'place';
   value: string;
 };
 type LocationStatus = 'idle' | 'locating' | 'ready' | 'error';
+type MapFilterSelection = CmiMapFilterGroupId | 'all';
 const DIRECT_INTENT_SCENE_IDS = new Set(getCmiPrimaryIntentSceneIds());
+const EASTER_QUESTION_ICON_URL = getCmiEasterIconUrl(DEFAULT_CMI_EASTER_ICON_ID);
+const EASTER_STAR_ICON_URL = getCmiEasterIconUrl('egg-v2-02-star');
+const EASTER_EGG_MARKER_LIMIT = 28;
 const LIFE_RESCUE_FILTER_LABELS: Record<string, string> = {
   'sim-internet': '电话卡',
   'cash-exchange': '换钱',
@@ -80,19 +94,108 @@ const normalizeMapPlaceName = (value: string) =>
   value.normalize('NFKC').trim().toLocaleLowerCase();
 
 const createPlaceFilterId = (placeTypeId: string): ActiveFilter => `place:${placeTypeId}`;
-const createSurvivalFilterId = (itemId: CmiSurvivalKitItemId): ActiveFilter => `survival:${itemId}`;
 
-const markerMatchesMapFilter = (marker: MapMarkerType, filter: MapCategoryFilter) =>
-  marker.recommendations.some(recommendation => {
-    if (filter.kind === 'place') {
-      return matchesCmiPlaceTypeTag(recommendation, filter.value);
-    }
+const getStableHash = (value: string) => {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+};
 
-    return (
-      matchesCmiSurvivalKitRecommendation(recommendation) &&
-      matchesCmiIntentSecondaryFilter(recommendation, 'life-rescue', filter.value)
-    );
+const createEasterEggMarkers = (sourceMarkers: MapMarkerType[]): MapMarkerType[] => {
+  const realEasterEggMarkers = sourceMarkers.flatMap((marker) => {
+    const easterRecommendations = marker.recommendations.filter(recommendation => recommendation.category === '彩蛋');
+    if (easterRecommendations.length === 0) return [];
+
+    const icon = getCmiEasterIconById(getRecommendationEasterIconId(easterRecommendations[0]));
+
+    return [{
+      ...marker,
+      id: `easter-real-${marker.id}`,
+      category: '彩蛋' as const,
+      recommendations: easterRecommendations,
+      visualOverride: {
+        label: icon.label,
+        iconUrl: icon.url,
+      },
+    }];
   });
+
+  if (realEasterEggMarkers.length > 0) return realEasterEggMarkers;
+
+  return sourceMarkers
+    .map((marker, index) => ({
+      marker,
+      index,
+      score: getStableHash(`${marker.id}-${marker.place_name}`),
+    }))
+    .sort((left, right) => left.score - right.score)
+    .slice(0, EASTER_EGG_MARKER_LIMIT)
+    .map(({ marker, index, score }) => {
+      const isExplored = score % 3 === 0;
+      const latitudeOffset = ((score % 7) - 3) * 0.00028;
+      const longitudeOffset = (((Math.floor(score / 7) % 7) - 3) * 0.00028);
+      const label = isExplored ? '已探索彩蛋' : '未探索彩蛋';
+      const reason = isExplored
+        ? '这里藏着一段已经被发现过的清迈小记忆。后续接真实数据后，会显示具体的猫、树、涂鸦或一句话。'
+        : '这是一个还没被你探索过的彩蛋点。靠近之后再打开，才会知道别人藏了什么。';
+      const recommendation: Recommendation = {
+        id: `easter-${marker.id}`,
+        place_name: label,
+        category: '彩蛋',
+        reason,
+        user_name: 'CMI Map',
+        user_id: null,
+        latitude: marker.latitude + latitudeOffset,
+        longitude: marker.longitude + longitudeOffset,
+        images: [],
+        created_at: '',
+      };
+
+      return {
+        id: `easter-${marker.id}-${index}`,
+        place_name: label,
+        category: '彩蛋',
+        latitude: recommendation.latitude,
+        longitude: recommendation.longitude,
+        recommendations: [recommendation],
+        visualOverride: {
+          label,
+          iconUrl: isExplored ? EASTER_STAR_ICON_URL : EASTER_QUESTION_ICON_URL,
+        },
+      };
+    });
+};
+
+const toMarkerVisualOverride = (tag: CmiPlaceTypeTag | null | undefined) => (
+  tag?.iconUrl && !tag.needsIcon
+    ? {
+      label: tag.label,
+      iconUrl: tag.iconUrl,
+    }
+    : undefined
+);
+
+const renderFilterIcon = (
+  item: { iconUrl?: string; label: string; needsIcon?: boolean },
+  className = 'h-6 w-6'
+) => (
+  <span
+    className={`${className} flex shrink-0 items-center justify-center rounded-full bg-background/75 p-0.5`}
+    aria-hidden="true"
+  >
+    {item.needsIcon || !item.iconUrl ? (
+      <span className="h-full w-full rounded-full border border-dashed border-muted-foreground/45 bg-muted/30" />
+    ) : (
+      <img
+        src={item.iconUrl}
+        alt=""
+        className="h-full w-full object-contain drop-shadow-sm"
+      />
+    )}
+  </span>
+);
 
 export default function MapView() {
   const navigate = useNavigate();
@@ -105,7 +208,11 @@ export default function MapView() {
   const [selectedMarker, setSelectedMarker] = useState<MapMarkerType | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CmiEvent | null>(null);
   const [selectedRecommendations, setSelectedRecommendations] = useState<Recommendation[]>([]);
-  const [activeCategory, setActiveCategory] = useState<ActiveFilter>('all');
+  const [activeMapFilterGroupId, setActiveMapFilterGroupId] = useState<MapFilterSelection>('all');
+  const [isMapFilterExpanded, setIsMapFilterExpanded] = useState(false);
+  const [activeMapPlaceTypeId, setActiveMapPlaceTypeId] = useState<string | null>(null);
+  const [mapSearchQuery, setMapSearchQuery] = useState('');
+  const [isEasterEggMode, setIsEasterEggMode] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>('idle');
   const [locationRequestKey, setLocationRequestKey] = useState(0);
@@ -135,32 +242,32 @@ export default function MapView() {
     () => activeScene ? getCmiEventsForScene(activeScene.id) : [],
     [activeScene]
   );
-  const mapCategoryFilters = useMemo<MapCategoryFilter[]>(() => {
-    const survivalFilters = CMI_SURVIVAL_KIT_ITEMS.map(item => ({
-      id: createSurvivalFilterId(item.id),
-      label: LIFE_RESCUE_FILTER_LABELS[item.id] ?? item.title,
-      iconUrl: item.iconUrl,
-      kind: 'survival' as const,
-      value: item.id,
-    }));
-    const placeFilters = getCmiDirectIntentTags()
-      .filter(tag => tag.kind === 'place-type' && tag.placeTypeId)
-      .map(tag => ({
-        id: createPlaceFilterId(tag.placeTypeId!),
-        label: tag.label,
-        iconUrl: tag.iconUrl,
-        kind: 'place' as const,
-        value: tag.placeTypeId!,
-      }));
-
-    return [...placeFilters, ...survivalFilters];
-  }, []);
+  const mapFilterGroups = useMemo(() => getCmiMapFilterGroups(), []);
+  const activeMapFilterGroup = useMemo(
+    () => activeMapFilterGroupId === 'all'
+      ? null
+      : getCmiMapFilterGroup(activeMapFilterGroupId),
+    [activeMapFilterGroupId]
+  );
+  const activeMapSecondaryTags = useMemo(
+    () => activeMapFilterGroup ? getCmiPlaceTypeTagsByIds(activeMapFilterGroup.placeTypeIds) : [],
+    [activeMapFilterGroup]
+  );
+  const activeMapPlaceTypeTag = useMemo(
+    () => getCmiPlaceTypeTag(activeMapPlaceTypeId),
+    [activeMapPlaceTypeId]
+  );
+  const mapSearchMatch = useMemo(
+    () => resolveCmiMapFilterQuery(mapSearchQuery),
+    [mapSearchQuery]
+  );
   const nearbyPlaceTypeFilters = useMemo<MapCategoryFilter[]>(
     () =>
       getCmiNearbyWanderPlaceTypeFilters().map(tag => ({
         id: createPlaceFilterId(tag.placeTypeId!),
         label: tag.label,
         iconUrl: tag.iconUrl,
+        needsIcon: tag.needsIcon,
         kind: 'place' as const,
         value: tag.placeTypeId!,
       })),
@@ -220,10 +327,6 @@ export default function MapView() {
   const sceneRecommendations = sceneRecommendationState.recommendations;
   const isPlaceTypeFallback = sceneRecommendationState.isPlaceTypeFallback;
 
-  const activeMapCategoryFilter = useMemo(
-    () => mapCategoryFilters.find(filter => filter.id === activeCategory) ?? null,
-    [activeCategory, mapCategoryFilters]
-  );
   const sceneMarkers = useMemo(() => {
     const markerMap = new Map<string, MapMarkerType>();
 
@@ -371,16 +474,14 @@ export default function MapView() {
 
     setSelectedEvent(null);
     setSelectedMarker(marker);
-    const recs = activeScene
-      ? marker.recommendations
-      : recommendations.filter(r => r.place_name === marker.place_name);
-    setSelectedRecommendations(recs);
+    setSelectedRecommendations(marker.recommendations);
     removeSelectedLocationFromUrl();
   };
 
   // 点击预览卡片，进入详情页
   const handleCardClick = () => {
     if (selectedEvent) return;
+    if (selectedMarker?.category === '彩蛋') return;
     if (selectedMarker) {
       navigate(getPlacePath(selectedMarker.place_name));
     }
@@ -422,6 +523,17 @@ export default function MapView() {
     removeSelectedLocationFromUrl();
   };
 
+  const handleEasterEggToggle = () => {
+    setSelectedMarker(null);
+    setSelectedEvent(null);
+    setSelectedRecommendations([]);
+    setMapSearchQuery('');
+    setActiveMapFilterGroupId('all');
+    setActiveMapPlaceTypeId(null);
+    setIsMapFilterExpanded(false);
+    setIsEasterEggMode(isActive => !isActive);
+  };
+
   const handleUserLocation = (latitude: number, longitude: number) => {
     setUserLocation({ latitude, longitude });
     if (isNearbyScene) setLocationStatus('ready');
@@ -454,33 +566,170 @@ export default function MapView() {
     navigate(getSceneMapPath(activeScene.id, { placeTypeId }));
   };
 
-  // 过滤当前需要显示的标记点
-  const displayedMarkers = useMemo(
-    () =>
-      activeScene
-        ? isEventScene
-          ? sceneEventMarkers
-          : [...sceneEventMarkers, ...sceneMarkers]
-        : activeCategory === 'all'
-          ? markers
-          : activeMapCategoryFilter
-            ? markers.filter(marker => markerMatchesMapFilter(marker, activeMapCategoryFilter))
-            : markers,
-    [
-      activeCategory,
-      activeMapCategoryFilter,
-      activeScene,
-      isEventScene,
-      markers,
-      sceneEventMarkers,
-      sceneMarkers,
-    ]
+  const resetMapFilters = () => {
+    setMapSearchQuery('');
+    setActiveMapFilterGroupId('all');
+    setActiveMapPlaceTypeId(null);
+    setIsMapFilterExpanded(false);
+    setIsEasterEggMode(false);
+    setSelectedMarker(null);
+    setSelectedRecommendations([]);
+  };
+
+  const handleMapGroupSelect = (group: CmiMapFilterGroup | null) => {
+    setMapSearchQuery('');
+    setIsEasterEggMode(false);
+    setSelectedMarker(null);
+    setSelectedRecommendations([]);
+
+    if (!group) {
+      setActiveMapFilterGroupId('all');
+      setActiveMapPlaceTypeId(null);
+      setIsMapFilterExpanded(false);
+      return;
+    }
+
+    if (activeMapFilterGroupId === group.id) {
+      setActiveMapPlaceTypeId(null);
+      setIsMapFilterExpanded(isExpanded => !isExpanded);
+      return;
+    }
+
+    setActiveMapFilterGroupId(group.id);
+    setActiveMapPlaceTypeId(null);
+    setIsMapFilterExpanded(true);
+  };
+
+  const handleMapPlaceTypeSelect = (tag: CmiPlaceTypeTag | null) => {
+    setMapSearchQuery('');
+    setIsEasterEggMode(false);
+    setSelectedMarker(null);
+    setSelectedRecommendations([]);
+
+    if (!tag) {
+      setActiveMapPlaceTypeId(null);
+      return;
+    }
+
+    setActiveMapPlaceTypeId(tag.id);
+  };
+
+  const handleMapSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextQuery = event.target.value;
+    setMapSearchQuery(nextQuery);
+    setIsEasterEggMode(false);
+    setSelectedMarker(null);
+    setSelectedRecommendations([]);
+
+    const match = resolveCmiMapFilterQuery(nextQuery);
+    if (match) {
+      setActiveMapFilterGroupId(match.groupId);
+      setActiveMapPlaceTypeId(match.placeTypeId ?? null);
+      setIsMapFilterExpanded(true);
+      return;
+    }
+
+    setActiveMapFilterGroupId('all');
+    setActiveMapPlaceTypeId(null);
+    setIsMapFilterExpanded(false);
+  };
+
+  const handleMapSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsEasterEggMode(false);
+    const match = resolveCmiMapFilterQuery(mapSearchQuery);
+    if (match) {
+      setActiveMapFilterGroupId(match.groupId);
+      setActiveMapPlaceTypeId(match.placeTypeId ?? null);
+      setIsMapFilterExpanded(true);
+    }
+  };
+
+  const easterEggMarkers = useMemo(
+    () => createEasterEggMarkers(markers),
+    [markers]
   );
+
+  // 过滤当前需要显示的标记点
+  const displayedMarkers = useMemo(() => {
+    if (activeScene) {
+      return isEventScene
+        ? sceneEventMarkers
+        : [...sceneEventMarkers, ...sceneMarkers];
+    }
+
+    if (isEasterEggMode) return easterEggMarkers;
+
+    const isRawSearchActive = Boolean(mapSearchQuery.trim() && !mapSearchMatch);
+    const isFilteredMap =
+      Boolean(activeMapPlaceTypeId) ||
+      activeMapFilterGroupId !== 'all' ||
+      isRawSearchActive;
+
+    if (!isFilteredMap) return markers;
+
+    return markers.flatMap((marker) => {
+      const matchingRecommendations = marker.recommendations.filter((recommendation) => {
+        const matchesPlaceType = activeMapPlaceTypeId
+          ? matchesCmiPlaceTypeTag(recommendation, activeMapPlaceTypeId)
+          : true;
+        const matchesGroup = activeMapPlaceTypeId || activeMapFilterGroupId === 'all'
+          ? true
+          : matchesCmiMapFilterGroup(recommendation, activeMapFilterGroupId);
+        const matchesSearch = isRawSearchActive
+          ? normalizeMapPlaceName(marker.place_name).includes(normalizeMapPlaceName(mapSearchQuery)) ||
+            matchesCmiRecommendationSearchQuery(recommendation, mapSearchQuery)
+          : true;
+
+        return matchesPlaceType && matchesGroup && matchesSearch;
+      });
+
+      if (matchingRecommendations.length === 0) return [];
+
+      const visualTag = activeMapPlaceTypeTag ?? (
+        activeMapFilterGroup
+          ? activeMapSecondaryTags.find(tag =>
+            matchingRecommendations.some(recommendation => matchesCmiPlaceTypeTag(recommendation, tag.id))
+          )
+          : null
+      );
+
+      return [{
+        ...marker,
+        id: matchingRecommendations[0].id,
+        category: matchingRecommendations[0].category,
+        recommendations: matchingRecommendations,
+        visualOverride: toMarkerVisualOverride(visualTag),
+      }];
+    });
+  }, [
+    activeMapFilterGroup,
+    activeMapFilterGroupId,
+    activeMapPlaceTypeId,
+    activeMapPlaceTypeTag,
+    activeMapSecondaryTags,
+    activeScene,
+    easterEggMarkers,
+    isEasterEggMode,
+    isEventScene,
+    mapSearchMatch,
+    mapSearchQuery,
+    markers,
+    sceneEventMarkers,
+    sceneMarkers,
+  ]);
   const mapWarmupImageUrls = useMemo(() => {
     const urls = new Set<string>();
-    const activeFilters = isNearbyScene ? nearbyPlaceTypeFilters : mapCategoryFilters;
+    const activeFilters = isNearbyScene ? nearbyPlaceTypeFilters : activeMapSecondaryTags;
 
-    activeFilters.forEach(filter => urls.add(filter.iconUrl));
+    mapFilterGroups.forEach(group => {
+      if (!group.needsIcon) urls.add(group.iconUrl);
+    });
+    activeFilters.forEach(filter => {
+      if (!filter.needsIcon && filter.iconUrl) urls.add(filter.iconUrl);
+    });
+    urls.add(EASTER_QUESTION_ICON_URL);
+    urls.add(EASTER_STAR_ICON_URL);
     displayedMarkers.slice(0, 48).forEach(marker => urls.add(getMapMarkerVisual(marker).iconUrl));
     sceneRecommendations.slice(0, 4).forEach(recommendation => {
       const firstImage = recommendation.images[0];
@@ -489,9 +738,10 @@ export default function MapView() {
 
     return Array.from(urls);
   }, [
+    activeMapSecondaryTags,
     displayedMarkers,
     isNearbyScene,
-    mapCategoryFilters,
+    mapFilterGroups,
     nearbyPlaceTypeFilters,
     sceneRecommendations,
   ]);
@@ -571,6 +821,35 @@ export default function MapView() {
         </h1>
       </div>
 
+      {!activeScene && (
+        <form
+          className="absolute top-[calc(env(safe-area-inset-top)+12px)] left-[148px] right-[70px] z-20 md:left-[184px] md:right-[92px]"
+          onSubmit={handleMapSearchSubmit}
+          role="search"
+        >
+          <label className="flex h-11 min-w-0 items-center gap-2 rounded-full border border-border/50 bg-background/86 px-3 shadow-lg backdrop-blur-sm">
+            <Search className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2.6} />
+            <input
+              value={mapSearchQuery}
+              onChange={handleMapSearchChange}
+              className="min-w-0 flex-1 bg-transparent text-sm font-black text-foreground outline-none placeholder:text-muted-foreground/70"
+              placeholder="搜地点 / 分类"
+              aria-label="搜索地点或分类"
+            />
+            {mapSearchQuery && (
+              <button
+                type="button"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                onClick={resetMapFilters}
+                aria-label="清空搜索"
+              >
+                <X className="h-4 w-4" strokeWidth={2.8} />
+              </button>
+            )}
+          </label>
+        </form>
+      )}
+
       {!isNearbyScene && (
         <div className="absolute top-[calc(env(safe-area-inset-top)+12px)] right-4 md:right-6 z-20 flex items-center gap-2">
           {activeScene && isDirectIntentScene && (
@@ -592,7 +871,9 @@ export default function MapView() {
                 filterId: activeSceneFilterId,
                 placeTypeId: activePlaceTypeId,
               })
-              : '/list'
+              : activeMapPlaceTypeId
+                ? `/list?placeType=${encodeURIComponent(activeMapPlaceTypeId)}`
+                : '/list'
             )}
             className="press-feedback bg-background/80 backdrop-blur-sm shadow-lg hover:bg-background border-border/50"
             aria-label={activeScene ? '查看清单' : '查看地点清单'}
@@ -641,12 +922,8 @@ export default function MapView() {
                 }`}
                 onClick={() => handleNearbyPlaceTypeSelect(filter.value)}
               >
-                <span className="mr-1.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-background/70 p-0.5">
-                  <img
-                    src={filter.iconUrl}
-                    alt=""
-                    className="h-full w-full object-contain drop-shadow-sm"
-                  />
+                <span className="mr-1.5">
+                  {renderFilterIcon(filter, 'h-5 w-5')}
                 </span>
                 {filter.label}
               </Button>
@@ -739,46 +1016,70 @@ export default function MapView() {
             </Button>
           </div>
           )
-        ) : (
-          <div className="flex items-center gap-3 pb-2 w-max">
-            <Button
-              size="sm"
-              className={`rounded-full shadow-md font-semibold press-feedback transition-transform ${
-                activeCategory === 'all'
-                  ? 'bg-primary text-primary-foreground border-2 border-transparent scale-105'
-                  : 'bg-background/80 hover:bg-background text-foreground backdrop-blur-sm border-2 border-border/50'
-              }`}
-              onClick={() => {
-                setActiveCategory('all');
-                setSelectedMarker(null);
-              }}
-            >
-              全部
-            </Button>
-            {mapCategoryFilters.map((filter) => (
+        ) : isEasterEggMode ? null : (
+          <div className="space-y-2 pb-2">
+            <div className="flex w-max items-center gap-2">
               <Button
-                key={filter.id}
                 size="sm"
-                className={`rounded-full shadow-md flex shrink-0 items-center gap-2 font-semibold press-feedback transition-transform ${
-                  activeCategory === filter.id
-                    ? 'bg-primary text-primary-foreground border-2 border-transparent scale-105'
-                    : 'bg-background/80 hover:bg-background text-foreground backdrop-blur-sm border-2 border-border/50'
+                className={`h-10 rounded-full px-4 text-sm font-black shadow-md press-feedback transition-transform ${
+                  !isEasterEggMode && activeMapFilterGroupId === 'all'
+                    ? 'border-2 border-transparent bg-primary text-primary-foreground scale-105'
+                    : 'border-2 border-border/50 bg-background/84 text-foreground backdrop-blur-sm hover:bg-background'
                 }`}
-                onClick={() => {
-                  setActiveCategory(filter.id);
-                  setSelectedMarker(null);
-                }}
+                onClick={() => handleMapGroupSelect(null)}
+                aria-label="显示全部地点"
               >
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-background/70 p-0.5">
-                  <img
-                    src={filter.iconUrl}
-                    alt={filter.label}
-                    className="h-full w-full object-contain drop-shadow-sm"
-                  />
-                </span>
-                {filter.label}
+                全部
               </Button>
-            ))}
+              {mapFilterGroups.map(group => (
+                <Button
+                  key={group.id}
+                  size="sm"
+                  className={`h-10 shrink-0 rounded-full px-3 text-sm font-black shadow-md press-feedback transition-transform ${
+                    !isEasterEggMode && activeMapFilterGroupId === group.id
+                      ? 'border-2 border-transparent bg-primary text-primary-foreground scale-105'
+                      : 'border-2 border-border/50 bg-background/84 text-foreground backdrop-blur-sm hover:bg-background'
+                  }`}
+                  onClick={() => handleMapGroupSelect(group)}
+                  aria-label={`一级分类：${group.label}`}
+                  aria-expanded={activeMapFilterGroupId === group.id ? isMapFilterExpanded : false}
+                >
+                  <span className="mr-1.5">
+                    {renderFilterIcon(group, 'h-6 w-6')}
+                  </span>
+                  {group.label}
+                </Button>
+              ))}
+            </div>
+
+            {activeMapFilterGroup && isMapFilterExpanded && (
+              <div className="flex w-max items-center gap-2">
+                {activeMapSecondaryTags.map(tag => (
+                  <Button
+                    key={tag.id}
+                    size="sm"
+                    className={`h-9 shrink-0 rounded-full px-2.5 text-xs font-black shadow-md press-feedback transition-transform ${
+                      activeMapPlaceTypeId === tag.id
+                        ? 'border border-primary bg-primary/92 text-primary-foreground'
+                        : 'border border-border/50 bg-background/86 text-foreground backdrop-blur-sm'
+                    }`}
+                    onClick={() => handleMapPlaceTypeSelect(tag)}
+                    aria-label={`二级分类：${tag.label}`}
+                  >
+                    <span className="mr-1.5">
+                      {renderFilterIcon(tag, 'h-5 w-5')}
+                    </span>
+                    {tag.label}
+                  </Button>
+                ))}
+              </div>
+            )}
+
+            {mapSearchQuery && mapSearchMatch && (
+              <div className="w-max rounded-full border border-primary/25 bg-background/90 px-3 py-1.5 text-[11px] font-black text-primary shadow-sm backdrop-blur-sm">
+                已匹配：{mapSearchMatch.label}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -910,7 +1211,7 @@ export default function MapView() {
                   category: recommendation.category,
                   recommendations: [recommendation],
                 });
-                const summary = isCommunityGuide ? guide.summary : recommendation.reason;
+                const summary = isCommunityGuide ? guide.summary : getRecommendationReasonText(recommendation);
                 const cardImage = recommendation.images[0];
                 return (
                   <button
@@ -1024,6 +1325,38 @@ export default function MapView() {
         )}
       </div>
 
+      {!activeScene && (
+        <>
+          {isEasterEggMode && (
+            <div className="pointer-events-none absolute right-4 bottom-[calc(env(safe-area-inset-bottom)+88px)] z-20 flex items-center gap-1.5 rounded-full border border-border/40 bg-background/82 px-2.5 py-1.5 text-xs font-black text-foreground shadow-lg backdrop-blur-sm md:right-6">
+              <img
+                src={EASTER_STAR_ICON_URL}
+                alt=""
+                className="h-4 w-4 object-contain"
+                aria-hidden="true"
+              />
+              彩蛋探索
+            </div>
+          )}
+          <button
+            type="button"
+            className="press-feedback absolute right-4 bottom-[calc(env(safe-area-inset-bottom)+26px)] z-20 flex h-14 w-14 items-center justify-center rounded-full bg-transparent transition-transform hover:scale-105 active:scale-95 md:right-6"
+            onClick={handleEasterEggToggle}
+            aria-label={isEasterEggMode ? '退出彩蛋探索' : '进入彩蛋探索'}
+            aria-pressed={isEasterEggMode}
+          >
+            <img
+              src={isEasterEggMode ? EASTER_STAR_ICON_URL : EASTER_QUESTION_ICON_URL}
+              alt=""
+              className={`object-contain drop-shadow-[0_3px_5px_rgba(0,0,0,0.22)] ${
+                isEasterEggMode ? 'h-12 w-12' : 'h-11 w-11'
+              }`}
+              aria-hidden="true"
+            />
+          </button>
+        </>
+      )}
+
       {/* 活动详情卡片 - z-index 最高 */}
       {selectedMarker && selectedEvent && (
         <div className="absolute bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-border/20 bg-card p-6 shadow-2xl slide-up">
@@ -1091,8 +1424,40 @@ export default function MapView() {
         </div>
       )}
 
+      {selectedMarker && !selectedEvent && isEasterEggMode && selectedMarker.category === '彩蛋' && selectedRecommendation && (
+        <div className="absolute bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-border/20 bg-card p-6 shadow-2xl slide-up">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-background p-2 shadow-md">
+                <img
+                  src={selectedMarker.visualOverride?.iconUrl ?? EASTER_QUESTION_ICON_URL}
+                  alt=""
+                  className="h-full w-full object-contain"
+                />
+              </div>
+              <div className="min-w-0">
+                <p className="text-2xl font-black leading-tight text-foreground">
+                  {selectedMarker.place_name}
+                </p>
+                <p className="mt-1 text-xs font-black text-primary">
+                  彩蛋探索模式
+                </p>
+              </div>
+            </div>
+
+            <p className="text-base font-semibold leading-relaxed text-foreground/85">
+              {getRecommendationReasonText(selectedRecommendation)}
+            </p>
+
+            <div className="rounded-2xl border border-dashed border-primary/25 bg-primary/5 px-4 py-3 text-sm font-bold leading-relaxed text-muted-foreground">
+              后续这里会接真实彩蛋数据：谁留下的、里面是什么、你是否已经亲自探索过。
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 预览卡片 - z-index 最高 */}
-      {selectedMarker && !selectedEvent && selectedRecommendations.length > 0 && (
+      {selectedMarker && !selectedEvent && !isEasterEggMode && selectedRecommendations.length > 0 && (
         <div
           className="absolute bottom-0 left-0 right-0 z-50 bg-card rounded-t-3xl p-6 card-shadow slide-up cursor-pointer press-feedback border-t border-border/20"
           onClick={handleCardClick}
@@ -1131,14 +1496,14 @@ export default function MapView() {
               </div>
             ) : (
               <p className="quote-text text-lg leading-relaxed text-foreground">
-                {selectedRecommendations[0].reason}
+                {getRecommendationReasonText(selectedRecommendations[0])}
               </p>
             )}
 
             {/* 地点名称和分类 */}
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center p-1.5 border border-border/50">
-                <img src={getCategoryIconUrl(selectedMarker.category)} alt="" className="w-full h-full object-contain" />
+                <img src={getMapMarkerVisual(selectedMarker).iconUrl} alt="" className="w-full h-full object-contain" />
               </div>
               <span className="text-base font-black text-foreground">
                 {selectedMarker.place_name}
@@ -1170,7 +1535,7 @@ export default function MapView() {
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                className="flex h-11 items-center justify-center gap-1.5 rounded-full bg-foreground px-3 text-sm font-black text-background transition-transform active:scale-[0.97]"
+                className="flex h-11 items-center justify-center gap-1.5 rounded-full bg-primary px-3 text-sm font-black text-primary-foreground shadow-sm transition-transform hover:bg-primary/90 active:scale-[0.97]"
                 onClick={handleSelectedNavigation}
               >
                 <Navigation className="h-4 w-4" strokeWidth={2.5} />

@@ -2,7 +2,14 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { MapMarker } from '@/types/types';
-import { getMapMarkerVisual, renderClusterIconHtml, renderMarkerBadgeHtml, type MapMarkerVisual } from '@/lib/map-marker-visual';
+import {
+  getMapMarkerVisual,
+  isEasterEggMarkerVisual,
+  renderClusterIconHtml,
+  renderEasterEggMarkerHtml,
+  renderMarkerBadgeHtml,
+  type MapMarkerVisual,
+} from '@/lib/map-marker-visual';
 import { CHIANG_MAI_PROVINCE_BOUNDARY, CHIANG_MAI_PROVINCE_BOUNDS } from '@/data/chiang-mai-boundary';
 import { CHIANG_MAI_FEATURE_LINES } from '@/data/chiang-mai-map-features';
 import 'leaflet.markercluster';
@@ -64,6 +71,7 @@ type MapBackgroundLandmark = {
   iconSize: [number, number];
   cityOpacity?: number;
   nearOpacity?: number;
+  visualTone?: 'stamp';
 };
 
 const MAP_BACKGROUND_OVERLAYS: MapBackgroundOverlay[] = [
@@ -89,6 +97,7 @@ const MAP_BACKGROUND_AREA_LABELS: MapBackgroundArea[] = [
 ];
 
 const LANDMARK_ICON_BASE = '/map-landmark-icons/optimized';
+const STAMP_LANDMARK_ICON_BASE = '/map-landmark-icons/stamp';
 
 const MAP_BACKGROUND_LANDMARKS: MapBackgroundLandmark[] = [
   {
@@ -158,55 +167,61 @@ const MAP_BACKGROUND_LANDMARKS: MapBackgroundLandmark[] = [
     id: 'chiang-mai-university',
     label: '清迈大学',
     position: [18.8002, 98.9528],
-    iconUrl: `${LANDMARK_ICON_BASE}/chiang-mai-university-flat.webp`,
-    iconSize: [64, 45],
-    cityOpacity: 0.3,
-    nearOpacity: 0.5,
+    iconUrl: `${STAMP_LANDMARK_ICON_BASE}/chiang-mai-university-stamp.webp`,
+    iconSize: [44, 42],
+    cityOpacity: 0.28,
+    nearOpacity: 0.52,
+    visualTone: 'stamp',
   },
   {
     id: 'wat-umong',
     label: '悟孟寺',
     position: [18.7836, 98.9525],
-    iconUrl: `${LANDMARK_ICON_BASE}/wat-umong-flat.webp`,
-    iconSize: [58, 35],
+    iconUrl: `${STAMP_LANDMARK_ICON_BASE}/wat-umong-stamp.webp`,
+    iconSize: [48, 32],
     cityOpacity: 0.22,
-    nearOpacity: 0.4,
+    nearOpacity: 0.42,
+    visualTone: 'stamp',
   },
   {
     id: 'wat-suan-dok',
     label: '松达寺',
     position: [18.7898, 98.972],
-    iconUrl: `${LANDMARK_ICON_BASE}/wat-suan-dok-flat.webp`,
-    iconSize: [40, 34],
-    cityOpacity: 0.18,
-    nearOpacity: 0.36,
+    iconUrl: `${STAMP_LANDMARK_ICON_BASE}/wat-suan-dok-stamp.webp`,
+    iconSize: [32, 43],
+    cityOpacity: 0.2,
+    nearOpacity: 0.4,
+    visualTone: 'stamp',
   },
   {
     id: 'warorot-market',
     label: '瓦洛洛市场',
     position: [18.7906, 99.0018],
-    iconUrl: `${LANDMARK_ICON_BASE}/warorot-market-flat.webp`,
-    iconSize: [62, 39],
+    iconUrl: `${STAMP_LANDMARK_ICON_BASE}/warorot-market-stamp.webp`,
+    iconSize: [44, 38],
     cityOpacity: 0.26,
-    nearOpacity: 0.46,
+    nearOpacity: 0.48,
+    visualTone: 'stamp',
   },
   {
     id: 'railway-station',
     label: '火车站',
     position: [18.7823, 99.0165],
-    iconUrl: `${LANDMARK_ICON_BASE}/railway-station-flat.webp`,
-    iconSize: [54, 44],
-    cityOpacity: 0.24,
-    nearOpacity: 0.42,
+    iconUrl: `${STAMP_LANDMARK_ICON_BASE}/railway-station-stamp.webp`,
+    iconSize: [34, 41],
+    cityOpacity: 0.32,
+    nearOpacity: 0.58,
+    visualTone: 'stamp',
   },
   {
     id: 'arcade-bus-terminal',
     label: 'Arcade 巴士站',
     position: [18.8012, 99.0174],
-    iconUrl: `${LANDMARK_ICON_BASE}/arcade-bus-terminal-flat.webp`,
-    iconSize: [58, 37],
-    cityOpacity: 0.24,
-    nearOpacity: 0.42,
+    iconUrl: `${STAMP_LANDMARK_ICON_BASE}/arcade-bus-terminal-stamp.webp`,
+    iconSize: [40, 34],
+    cityOpacity: 0.3,
+    nearOpacity: 0.56,
+    visualTone: 'stamp',
   },
   {
     id: 'iron-bridge',
@@ -245,7 +260,7 @@ const createLandmarkIcon = (landmark: MapBackgroundLandmark) => L.divIcon({
   className: 'cmi-map-landmark-icon bg-transparent border-none',
   html: `
     <div
-      class="cmi-map-landmark"
+      class="cmi-map-landmark ${landmark.visualTone === 'stamp' ? 'cmi-map-landmark--stamp' : ''}"
       style="
         --city-opacity: ${landmark.cityOpacity ?? 0.3};
         --near-opacity: ${landmark.nearOpacity ?? 0.48};
@@ -482,23 +497,24 @@ export const LeafletMap = ({
         align-items: center;
         justify-content: center;
         min-width: 88px;
-        color: rgba(57, 52, 68, 0.34);
-        font-family: 'Yuanti SC','Hiragino Maru Gothic ProN','YouYuan','SF Pro Rounded','Arial Rounded MT Bold','PingFang SC',sans-serif;
-        font-size: 17px;
-        font-weight: 650;
+        color: rgba(62, 59, 68, 0.39);
+        font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif;
+        font-size: 16px;
+        font-weight: 500;
         letter-spacing: 0;
         line-height: 1;
         text-align: center;
         white-space: nowrap;
         text-shadow:
-          0 1px 0 rgba(255, 255, 255, 0.9),
-          0 0 10px rgba(255, 255, 255, 0.88);
+          0 0 2px rgba(255, 255, 255, 0.96),
+          0 0 8px rgba(255, 255, 255, 0.84);
         transform: translateZ(0);
         transition: opacity 160ms ease;
       }
       .cmi-map-area-label--primary {
-        color: rgba(108, 91, 166, 0.38);
-        font-size: 24px;
+        color: rgba(62, 59, 68, 0.39);
+        font-size: 23px;
+        font-weight: 570;
       }
       .cmi-map-overlay-pane img {
         mix-blend-mode: multiply;
@@ -524,11 +540,14 @@ export const LeafletMap = ({
         mix-blend-mode: multiply;
         user-select: none;
       }
+      .cmi-map-landmark--stamp img {
+        filter: saturate(0.9) contrast(1.2) brightness(0.94);
+      }
       .cmi-map-landmark span {
         color: rgba(57, 52, 68, 0.34);
-        font-family: 'Yuanti SC','Hiragino Maru Gothic ProN','YouYuan','SF Pro Rounded','Arial Rounded MT Bold','PingFang SC',sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif;
         font-size: 10px;
-        font-weight: 650;
+        font-weight: 520;
         line-height: 1;
         opacity: 0;
         text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -805,12 +824,13 @@ export const LeafletMap = ({
         const visuals = displayMarkers
           .map(marker => markerVisualsRef.current.get(marker))
           .filter((visual): visual is MapMarkerVisual => Boolean(visual));
+        const isEasterEggCluster = visuals.length > 0 && visuals.every(isEasterEggMarkerVisual);
         
         return L.divIcon({
           html: renderClusterIconHtml(visuals, count),
           className: 'scrapbook-cluster-icon bg-transparent border-none',
-          iconSize: [72, 62],
-          iconAnchor: [36, 58]
+          iconSize: isEasterEggCluster ? [52, 44] : [72, 62],
+          iconAnchor: isEasterEggCluster ? [26, 22] : [36, 58]
         });
       }
     });
@@ -823,6 +843,37 @@ export const LeafletMap = ({
     // 添加新标记
     markers.forEach((markerData) => {
       const markerVisual = getMapMarkerVisual(markerData);
+      const isEasterEggMarker = markerData.category === '彩蛋' || isEasterEggMarkerVisual(markerVisual);
+
+      if (isEasterEggMarker) {
+        const icon = L.divIcon({
+          className: 'custom-marker-icon bg-transparent border-none',
+          html: `
+            <div style="
+              width:44px;
+              height:44px;
+              position:relative;
+            ">
+              ${renderEasterEggMarkerHtml(markerVisual)}
+            </div>
+          `,
+          iconSize: [44, 44],
+          iconAnchor: [22, 22]
+        });
+
+        const marker = L.marker([markerData.latitude, markerData.longitude], { icon });
+        markerVisualsRef.current.set(marker, markerVisual);
+
+        if (onMarkerClick) {
+          marker.on('click', () => {
+            onMarkerClick(markerData);
+          });
+        }
+
+        clusterGroup.addLayer(marker);
+        markersRef.current.push(marker);
+        return;
+      }
       
       // 计算该地点所有推荐的总点赞数
       const totalUpvotes = markerData.recommendations?.reduce((sum, rec) => {
