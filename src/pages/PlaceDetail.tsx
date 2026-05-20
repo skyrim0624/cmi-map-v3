@@ -546,15 +546,6 @@ export default function PlaceDetail() {
     ...firstPlaceTypeTags.map(tag => ({ id: `place-${tag.id}`, label: tag.label })),
     ...firstDetailTags.map(tag => ({ id: `detail-${tag.id}`, label: tag.label })),
   ];
-  const primaryQuickFacts = [
-    firstPlaceTypeTags[0] ? { label: '类型', value: firstPlaceTypeTags[0].label } : null,
-    firstDetailTags[0] ? { label: '适合', value: firstDetailTags[0].label } : null,
-    {
-      label: recommendations.length > 1 ? '社区' : '来源',
-      value: recommendations.length > 1 ? `${recommendations.length} 条补充` : firstRec.user_name,
-    },
-  ].filter((fact): fact is { label: string; value: string } => Boolean(fact));
-
   return (
     <div className="relative w-full min-h-screen bg-background">
       {/* 返回按钮 */}
@@ -791,21 +782,6 @@ export default function PlaceDetail() {
                     >
                       —— {rec.user_name} 的清迈地图
                     </button>
-                  )}
-
-                  {idx === 0 && primaryQuickFacts.length > 0 && (
-                    <div className="grid grid-cols-3 gap-2">
-                      {primaryQuickFacts.map(fact => (
-                        <div key={fact.label} className="min-h-[58px] rounded-2xl bg-muted/55 px-2.5 py-2">
-                          <span className="block text-[11px] font-black text-muted-foreground">
-                            {fact.label}
-                          </span>
-                          <strong className="mt-1 block text-xs font-black leading-snug text-foreground">
-                            {fact.value}
-                          </strong>
-                        </div>
-                      ))}
-                    </div>
                   )}
 
                   {/* 该推荐的照片 */}
