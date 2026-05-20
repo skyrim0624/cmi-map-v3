@@ -48,6 +48,7 @@ export interface CmiPlaceTypeTag {
   sceneId?: CmiSceneId;
   categoryFallback?: Category;
   keywords: string[];
+  recommendationKeywords?: string[];
   iconUrl?: string;
   needsIcon?: boolean;
 }
@@ -115,6 +116,9 @@ const matchesKeyword = (text: string, keyword: string) => {
 
 const containsAny = (text: string, keywords: string[]) =>
   keywords.some(keyword => matchesKeyword(text, keyword));
+
+const getPlaceTypeRecommendationKeywords = (tag: CmiPlaceTypeTag) =>
+  tag.recommendationKeywords ?? tag.keywords;
 
 const CMI_FLAT_ICON_BASE = '/map-icons/cmi-flat-v2';
 const cmiFlatIcon = (name: string) => `${CMI_FLAT_ICON_BASE}/${name}.png`;
@@ -266,7 +270,7 @@ export const CMI_PLACE_TYPE_TAGS: CmiPlaceTypeTag[] = [
 
   { id: 'market', label: '市集', primaryIntentIds: ['shopping', 'play'], categoryFallback: '市集', keywords: ['市集', '周末市集', '手作市集', '本地市场', 'market', 'walking street', 'bazaar', '跳蚤市场'], iconUrl: cmiFlatIcon('place-market-handmade') },
   { id: 'night-market', label: '夜市', primaryIntentIds: ['shopping', 'play'], keywords: ['夜市', 'night market', 'night bazaar', '晚上逛'], iconUrl: cmiFlatIcon('place-night-market-v2') },
-  { id: 'fresh-market', label: '菜市场', primaryIntentIds: ['shopping'], keywords: ['菜市场', '生鲜', '水果', '本地菜市场', '采购'], iconUrl: cmiFlatIcon('place-fresh-market') },
+  { id: 'fresh-market', label: '菜市场', primaryIntentIds: ['shopping'], keywords: ['菜市场', '生鲜', '水果', '本地菜市场'], iconUrl: cmiFlatIcon('place-fresh-market') },
 
   { id: 'mall', label: '商场', primaryIntentIds: ['shopping', 'play'], keywords: ['商场', 'mall', 'central', 'maya', 'one nimman', '避暑'], iconUrl: cmiFlatIcon('place-mall') },
   { id: 'daily', label: '超市 / 日用品', primaryIntentIds: ['shopping', 'errands'], keywords: ['超市', '便利店', '日用品', '补货', 'supermarket', 'grocery', 'lotus', 'big c', 'makro'], iconUrl: cmiFlatIcon('survival-daily') },
@@ -281,7 +285,7 @@ export const CMI_PLACE_TYPE_TAGS: CmiPlaceTypeTag[] = [
 
   { id: 'gym', label: '健身房', primaryIntentIds: ['sport'], keywords: ['健身', 'gym', '健身房', '训练'], iconUrl: cmiFlatIcon('place-gym') },
   { id: 'running', label: '跑步', primaryIntentIds: ['sport'], keywords: ['跑步', '慢跑', 'running', 'run', 'jogging', '跑步路线'], iconUrl: cmiFlatIcon('direct-sport') },
-  { id: 'yoga', label: '瑜伽', primaryIntentIds: ['sport', 'relax'], categoryFallback: '身心', keywords: ['瑜伽', 'yoga', '冥想', '身心'], iconUrl: cmiFlatIcon('place-yoga') },
+  { id: 'yoga', label: '瑜伽', primaryIntentIds: ['sport', 'relax'], keywords: ['瑜伽', 'yoga', '冥想'], iconUrl: cmiFlatIcon('place-yoga') },
   { id: 'tennis', label: '网球', primaryIntentIds: ['sport'], keywords: ['网球', 'tennis'], iconUrl: cmiFlatIcon('place-tennis') },
   { id: 'badminton', label: '羽毛球', primaryIntentIds: ['sport'], keywords: ['羽毛球', 'badminton'], iconUrl: cmiFlatIcon('place-badminton') },
   { id: 'basketball', label: '篮球', primaryIntentIds: ['sport'], keywords: ['篮球', 'basketball'], iconUrl: cmiFlatIcon('place-basketball') },
@@ -293,7 +297,15 @@ export const CMI_PLACE_TYPE_TAGS: CmiPlaceTypeTag[] = [
 
   { id: 'livehouse', label: 'Livehouse', primaryIntentIds: ['play'], sceneId: 'night', keywords: ['livehouse', 'live music', '现场音乐', '演出', '乐队'], iconUrl: cmiFlatIcon('place-livehouse-music') },
   { id: 'bar', label: '酒吧', primaryIntentIds: ['play'], sceneId: 'night', categoryFallback: '酒吧', keywords: ['酒吧', 'bar', '小酌', '喝酒', 'cocktail'], iconUrl: cmiFlatIcon('place-club') },
-  { id: 'club', label: 'Club / 蹦迪', primaryIntentIds: ['play'], sceneId: 'night', keywords: ['club', '蹦迪', '夜店', '跳舞', 'dj'], iconUrl: cmiFlatIcon('place-club') },
+  {
+    id: 'club',
+    label: 'Club / 蹦迪',
+    primaryIntentIds: ['play'],
+    sceneId: 'night',
+    keywords: ['club', 'nightclub', 'night club', '蹦迪', '夜店', '跳舞', 'dj'],
+    recommendationKeywords: ['nightclub', 'night club', '蹦迪', '夜店', '跳舞', 'dj'],
+    iconUrl: cmiFlatIcon('place-club'),
+  },
   { id: 'social-dance', label: '交际舞', primaryIntentIds: ['play'], sceneId: 'night', keywords: ['交际舞', 'swing', 'salsa', '伦巴', 'bachata', '社交舞'], iconUrl: cmiFlatIcon('place-social-dance') },
   { id: 'ktv', label: 'KTV', primaryIntentIds: ['play'], sceneId: 'night', keywords: ['ktv', 'karaoke', '唱歌'], iconUrl: cmiFlatIcon('place-ktv-microphone') },
 
@@ -449,7 +461,7 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
     label: '放松',
     iconUrl: cmiFlatIcon('direct-relax'),
     placeTypeIds: ['massage', 'hot-spring', 'yoga'],
-    categoryFallbacks: ['马杀鸡', '身心'],
+    categoryFallbacks: ['马杀鸡'],
     keywords: ['放松', '休息', '按摩', '马杀鸡', 'spa', '温泉', '瑜伽'],
   },
   {
@@ -651,7 +663,7 @@ export const getCmiPlaceTypeTagsForRecommendation = (recommendation: Recommendat
   const text = getRecommendationStructuredTagText(recommendation);
   const category = normalizeCategory(recommendation.category);
   return CMI_PLACE_TYPE_TAGS.filter(tag => (
-    tag.categoryFallback === category || containsAny(text, tag.keywords)
+    tag.categoryFallback === category || containsAny(text, getPlaceTypeRecommendationKeywords(tag))
   ));
 };
 
@@ -664,7 +676,7 @@ export const matchesCmiPlaceTypeTag = (
   const text = getRecommendationStructuredTagText(recommendation);
   const category = normalizeCategory(recommendation.category);
 
-  return tag.categoryFallback === category || containsAny(text, tag.keywords);
+  return tag.categoryFallback === category || containsAny(text, getPlaceTypeRecommendationKeywords(tag));
 };
 
 export const matchesCmiMapFilterGroup = (

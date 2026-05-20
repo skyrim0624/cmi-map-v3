@@ -176,8 +176,27 @@ const normalizeSurvivalSearchValue = (value: string) =>
     .trim()
     .toLocaleLowerCase();
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const containsLatinToken = (text: string, keyword: string) => {
+  const escapedKeyword = escapeRegExp(keyword).replace(/\s+/g, '\\s+');
+  const tokenPattern = new RegExp(`(^|[^a-z0-9])${escapedKeyword}([^a-z0-9]|$)`, 'i');
+  return tokenPattern.test(text);
+};
+
+const matchesSurvivalKeyword = (text: string, keyword: string) => {
+  const normalizedKeyword = normalizeSurvivalSearchValue(keyword);
+  if (!normalizedKeyword) return false;
+
+  if (/[a-z0-9]/i.test(normalizedKeyword)) {
+    return containsLatinToken(text, normalizedKeyword);
+  }
+
+  return text.includes(normalizedKeyword);
+};
+
 const containsAnySurvivalKeyword = (text: string, keywords: string[]) =>
-  keywords.some(keyword => text.includes(normalizeSurvivalSearchValue(keyword)));
+  keywords.some(keyword => matchesSurvivalKeyword(text, keyword));
 
 export const CMI_SURVIVAL_KIT_MATCH_KEYWORDS = [
   '电话卡',
@@ -226,7 +245,6 @@ export const CMI_SURVIVAL_KIT_MATCH_KEYWORDS = [
   'laundromat',
   'dry clean',
   '日用品',
-  '补给',
   '饮用水',
   'water',
   'supermarket',

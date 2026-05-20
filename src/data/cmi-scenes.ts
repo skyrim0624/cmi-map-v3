@@ -3,6 +3,8 @@ import { matchesCmiSurvivalKitRecommendation } from '@/data/cmi-survival-kit';
 import {
   getCmiDetailTagsForRecommendation,
   getCmiPlaceTypeTagsForRecommendation,
+  type CmiMapFilterGroupId,
+  matchesCmiMapFilterGroup,
 } from '@/data/cmi-taxonomy';
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
@@ -224,7 +226,7 @@ export const CMI_SCENES: CmiScene[] = [
     defaultView: 'detail',
     categoryFallback: '马杀鸡',
     description: '身体累了、脑子太满的时候，找一个能稳定放松的地方。',
-    matchKeywords: ['马杀鸡', '按摩', '放松', 'spa', 'massage', '舒服', '休息', '身体', '疗愈'],
+    matchKeywords: ['马杀鸡', '按摩', 'spa', 'massage', '温泉', 'hot spring', '瑜伽', 'yoga', '身体调理'],
     primaryActionLabel: '看放松推荐',
     mapTitle: '放松地点地图',
     detailTitle: '适合放松一下的地方',
@@ -633,6 +635,15 @@ const PROXIMITY_RANKED_SCENE_IDS = new Set<CmiSceneId>([
   'sport',
   'life-rescue',
 ]);
+const DIRECT_SCENE_MAP_FILTER_GROUPS: Partial<Record<CmiSceneId, CmiMapFilterGroupId>> = {
+  eat: 'eat',
+  'coffee-work': 'work',
+  study: 'study',
+  shopping: 'shopping',
+  play: 'play',
+  'massage-relax': 'relax',
+  sport: 'sport',
+};
 const SCENE_ID_ALIASES: Record<string, CmiSceneId> = {
   today: 'pick-for-me',
   tonight: 'night',
@@ -642,6 +653,25 @@ const SCENE_ID_ALIASES: Record<string, CmiSceneId> = {
 };
 
 const normalizeSearchValue = (value: string) => value.trim().toLocaleLowerCase();
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const containsLatinToken = (text: string, keyword: string) => {
+  const escapedKeyword = escapeRegExp(keyword).replace(/\s+/g, '\\s+');
+  const tokenPattern = new RegExp(`(^|[^a-z0-9])${escapedKeyword}([^a-z0-9]|$)`, 'i');
+  return tokenPattern.test(text);
+};
+
+const matchesSceneKeyword = (text: string, keyword: string) => {
+  const normalizedKeyword = normalizeSearchValue(keyword);
+  if (!normalizedKeyword) return false;
+
+  if (/[a-z0-9]/i.test(normalizedKeyword)) {
+    return containsLatinToken(text, normalizedKeyword);
+  }
+
+  return text.includes(normalizedKeyword);
+};
 
 const normalizePlaceKey = (value: string) =>
   normalizeSearchValue(value)
@@ -740,6 +770,11 @@ export const matchesCmiScene = (recommendation: Recommendation, scene: CmiScene)
     return matchesCmiSurvivalKitRecommendation(recommendation);
   }
 
+  const directSceneMapFilterGroup = DIRECT_SCENE_MAP_FILTER_GROUPS[scene.id];
+  if (directSceneMapFilterGroup) {
+    return matchesCmiMapFilterGroup(recommendation, directSceneMapFilterGroup);
+  }
+
   if (getRecommendationIntentScore(recommendation, scene.id) > 0) {
     return true;
   }
@@ -753,7 +788,7 @@ export const matchesCmiScene = (recommendation: Recommendation, scene: CmiScene)
   }
 
   const sceneText = getRecommendationSceneText(recommendation);
-  return scene.matchKeywords.some(keyword => sceneText.includes(normalizeSearchValue(keyword)));
+  return scene.matchKeywords.some(keyword => matchesSceneKeyword(sceneText, keyword));
 };
 
 const getRecommendationQualityScore = (recommendation: Recommendation) => {
