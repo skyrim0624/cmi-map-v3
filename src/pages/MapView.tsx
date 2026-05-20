@@ -97,7 +97,6 @@ const LIFE_RESCUE_FILTER_LABELS: Record<string, string> = {
 const DIRECT_INTENT_SCENE_BY_MAP_GROUP: Partial<Record<CmiMapFilterGroupId, string>> = {
   eat: 'eat',
   work: 'coffee-work',
-  study: 'study',
   shopping: 'shopping',
   play: 'play',
   relax: 'massage-relax',

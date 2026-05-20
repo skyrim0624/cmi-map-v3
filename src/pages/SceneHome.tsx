@@ -21,7 +21,6 @@ const CRITICAL_HOME_IMAGE_URLS = [
 const HOME_WARMUP_IMAGE_URLS = [
   '/map-icons/cmi-flat-v2/direct-eat.png',
   '/map-icons/cmi-flat-v2/direct-work.png',
-  '/map-icons/cmi-flat-v2/direct-study.png',
   '/map-icons/cmi-flat-v2/direct-shopping.png',
   '/map-icons/cmi-flat-v2/direct-play.png',
   '/map-icons/cmi-flat-v2/direct-relax.png',

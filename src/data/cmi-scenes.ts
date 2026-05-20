@@ -638,7 +638,6 @@ const PROXIMITY_RANKED_SCENE_IDS = new Set<CmiSceneId>([
 const DIRECT_SCENE_MAP_FILTER_GROUPS: Partial<Record<CmiSceneId, CmiMapFilterGroupId>> = {
   eat: 'eat',
   'coffee-work': 'work',
-  study: 'study',
   shopping: 'shopping',
   play: 'play',
   'massage-relax': 'relax',

@@ -6,7 +6,6 @@ import { type Category, getCategoryIconUrl, normalizeCategory, type Recommendati
 export type CmiPrimaryIntentId =
   | 'eat'
   | 'work'
-  | 'study'
   | 'shopping'
   | 'play'
   | 'relax'
@@ -16,7 +15,6 @@ export type CmiPrimaryIntentId =
 export type CmiMapFilterGroupId =
   | 'eat'
   | 'work'
-  | 'study'
   | 'market'
   | 'shopping'
   | 'play'
@@ -221,13 +219,6 @@ export const CMI_PRIMARY_INTENTS: CmiPrimaryIntent[] = [
     inputCategory: '咖啡',
   },
   {
-    id: 'study',
-    label: '学习',
-    description: '图书馆、书店、课程空间和适合读书的地方。',
-    sceneId: 'study',
-    inputCategory: '生存指南',
-  },
-  {
     id: 'shopping',
     label: '购物',
     description: '商场、市集、菜市场、超市和日用品补给。',
@@ -293,9 +284,9 @@ export const CMI_PLACE_TYPE_TAGS: CmiPlaceTypeTag[] = [
   { id: 'breakfast', label: '早餐', primaryIntentIds: ['eat'], keywords: ['早餐', '早饭', 'brunch', '豆浆', '油条', '粥'], iconUrl: cmiFlatIcon('place-breakfast') },
   { id: 'dessert', label: '甜品', primaryIntentIds: ['eat'], keywords: ['甜品', '甜点', 'dessert', '蛋糕', '冰淇淋', '芒果糯米饭'], iconUrl: cmiFlatIcon('place-dessert') },
 
-  { id: 'cafe', label: '咖啡馆', primaryIntentIds: ['work', 'study', 'play'], categoryFallback: '咖啡', keywords: ['咖啡', 'cafe', 'coffee', 'roastery', '手冲', '烘焙'], iconUrl: cmiFlatIcon('place-cafe') },
+  { id: 'cafe', label: '咖啡馆', primaryIntentIds: ['work', 'play'], categoryFallback: '咖啡', keywords: ['咖啡', 'cafe', 'coffee', 'roastery', '手冲', '烘焙'], iconUrl: cmiFlatIcon('place-cafe') },
   { id: 'coworking', label: 'Coworking', primaryIntentIds: ['work'], keywords: ['coworking', 'co-working', '办公空间', '共享办公', 'digital nomad'], iconUrl: cmiFlatIcon('place-coworking') },
-  { id: 'reading', label: '看书', primaryIntentIds: ['study', 'shopping'], keywords: ['看书', '读书', '图书馆', 'library', '自习', '安静学习', '书店', 'bookstore', '阅读'], iconUrl: cmiFlatIcon('place-book') },
+  { id: 'reading', label: '看书', primaryIntentIds: ['shopping'], keywords: ['看书', '读书', '图书馆', 'library', '自习', '安静学习', '书店', 'bookstore', '阅读'], iconUrl: cmiFlatIcon('place-book') },
 
   { id: 'market', label: '市集', primaryIntentIds: ['shopping', 'play'], categoryFallback: '市集', keywords: ['市集', '周末市集', '手作市集', '本地市场', 'market', 'walking street', 'bazaar', '跳蚤市场'], iconUrl: cmiFlatIcon('place-market-handmade') },
   { id: 'night-market', label: '夜市', primaryIntentIds: ['shopping', 'play'], keywords: ['夜市', 'night market', 'night bazaar', '晚上逛'], iconUrl: cmiFlatIcon('place-night-market-v2') },
@@ -303,13 +294,13 @@ export const CMI_PLACE_TYPE_TAGS: CmiPlaceTypeTag[] = [
 
   { id: 'mall', label: '商场', primaryIntentIds: ['shopping', 'play'], keywords: ['商场', 'mall', 'central', 'maya', 'one nimman', '避暑'], iconUrl: cmiFlatIcon('place-mall') },
   { id: 'daily', label: '超市 / 日用品', primaryIntentIds: ['shopping', 'errands'], keywords: ['超市', '便利店', '日用品', '补货', 'supermarket', 'grocery', 'lotus', 'big c', 'makro'], iconUrl: cmiFlatIcon('survival-daily') },
-  { id: 'stationery', label: '书店 / 文具', primaryIntentIds: ['study', 'shopping'], keywords: ['书店', '文具', '学习用品', 'bookstore', 'stationery', '铅笔'], iconUrl: cmiFlatIcon('place-stationery') },
+  { id: 'stationery', label: '书店 / 文具', primaryIntentIds: ['shopping'], keywords: ['书店', '文具', '学习用品', 'bookstore', 'stationery', '铅笔'], iconUrl: cmiFlatIcon('place-stationery') },
 
   { id: 'landmark', label: '地标打卡', primaryIntentIds: ['play'], categoryFallback: '景点', keywords: ['景点', '地标', '打卡', '拍照', '观景点', '观景台', '城门', '古城', 'landmark', 'viewpoint', 'monument'], iconUrl: cmiFlatIcon('place-landmark-camera') },
   { id: 'temple', label: '寺庙', primaryIntentIds: ['play'], keywords: ['寺庙', 'temple', 'wat', '素贴山', 'doi suthep'], iconUrl: cmiFlatIcon('place-temple') },
   { id: 'nature', label: '自然短途', primaryIntentIds: ['play'], categoryFallback: '户外', keywords: ['瀑布', 'waterfall', '上山', '短途', '湖边', '山村', '自然'], iconUrl: cmiFlatIcon('place-nature') },
   { id: 'park', label: '公园', primaryIntentIds: ['play', 'sport'], keywords: ['公园', 'park', '跑步', '散步', '慢跑'], iconUrl: cmiFlatIcon('place-park') },
-  { id: 'gallery', label: '展览 / 艺术', primaryIntentIds: ['play', 'study'], keywords: ['展览', 'exhibition', 'gallery', '艺术', '设计', '手作', '工作坊'], iconUrl: cmiFlatIcon('place-gallery-palette') },
+  { id: 'gallery', label: '展览 / 艺术', primaryIntentIds: ['play'], keywords: ['展览', 'exhibition', 'gallery', '艺术', '设计', '手作', '工作坊'], iconUrl: cmiFlatIcon('place-gallery-palette') },
   { id: 'hot-spring', label: '温泉', primaryIntentIds: ['relax', 'play'], keywords: ['温泉', 'hot spring', '泡汤'], iconUrl: cmiFlatIcon('place-hot-spring') },
 
   { id: 'gym', label: '健身房', primaryIntentIds: ['sport'], keywords: ['健身', 'gym', '健身房', '训练'], iconUrl: cmiFlatIcon('place-gym') },
@@ -370,7 +361,6 @@ export const CMI_DETAIL_TAGS: CmiDetailTag[] = [
 const PRIMARY_INTENT_ICON_URLS: Record<CmiPrimaryIntentId, string> = {
   eat: cmiFlatIcon('direct-eat'),
   work: cmiFlatIcon('direct-work'),
-  study: cmiFlatIcon('direct-study'),
   shopping: cmiFlatIcon('direct-shopping'),
   play: cmiFlatIcon('direct-play'),
   relax: cmiFlatIcon('direct-relax'),
@@ -410,7 +400,6 @@ const PLACE_TYPE_ICON_URLS: Partial<Record<string, string>> = {
 const PRIMARY_INTENT_QUERY_KEYWORDS: Record<CmiPrimaryIntentId, string[]> = {
   eat: ['饿', '吃', '吃饭', '吃什么', '早饭', '午饭', '晚饭', '夜宵', '美食'],
   work: ['办公', '工作', '电脑', '插座', '远程', '坐下来干活', '处理事情'],
-  study: ['学习', '读书', '自习', '课程', '上课', '看书', '工作坊'],
   shopping: ['购物', '买东西', '采购', '补货', '日用品', '逛街'],
   play: ['游玩', '去哪玩', '逛逛', '景点', '地标', '第一次来', '拍照', '短途'],
   relax: ['放松', '休息', '按摩', '马杀鸡', 'spa', '身体累', '泡汤'],
@@ -454,13 +443,6 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
     placeTypeIds: ['cafe', 'coworking'],
     categoryFallbacks: ['咖啡'],
     keywords: ['咖啡办公', '咖啡', '办公', 'coworking'],
-  },
-  {
-    id: 'study',
-    label: '学习',
-    iconUrl: cmiFlatIcon('direct-study'),
-    placeTypeIds: ['reading', 'stationery', 'gallery', 'cafe'],
-    keywords: ['学习', '看书', '书店', '文具', '课程', '工作坊', '自习'],
   },
   {
     id: 'market',
