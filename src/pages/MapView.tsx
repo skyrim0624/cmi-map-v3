@@ -1,5 +1,5 @@
 import { CalendarDays, Copy, ExternalLink, List, LocateFixed, LogIn, Map as MapIcon, MapPinned, Navigation, Plus, Search, ShieldCheck, X } from 'lucide-react';
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type MouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type MouseEvent, type PointerEvent, type TouchEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LeafletMap } from '@/components/map/LeafletMap';
@@ -73,10 +73,15 @@ type MapCategoryFilter = {
 };
 type LocationStatus = 'idle' | 'locating' | 'ready' | 'error';
 type MapFilterSelection = CmiMapFilterGroupId | 'all';
+type SwipeEventController = {
+  preventDefault: () => void;
+  stopPropagation: () => void;
+};
 const DIRECT_INTENT_SCENE_IDS = new Set(getCmiPrimaryIntentSceneIds());
 const EASTER_QUESTION_ICON_URL = getCmiEasterIconUrl(DEFAULT_CMI_EASTER_ICON_ID);
 const EASTER_STAR_ICON_URL = getCmiEasterIconUrl('egg-v2-02-star');
 const EASTER_EGG_MARKER_LIMIT = 28;
+const SELECTED_CARD_CLOSE_SWIPE_DISTANCE = 72;
 const LIFE_RESCUE_FILTER_LABELS: Record<string, string> = {
   'sim-internet': '电话卡',
   'cash-exchange': '换钱',
@@ -225,6 +230,8 @@ export default function MapView() {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>('idle');
   const [locationRequestKey, setLocationRequestKey] = useState(0);
+  const selectedCardTouchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const ignoreNextSelectedCardClickRef = useRef(false);
 
   const activeScene = getCmiScene(searchParams.get('scene'));
   const selectedEventId = searchParams.get('event');
@@ -498,6 +505,10 @@ export default function MapView() {
 
   // 点击预览卡片，进入详情页
   const handleCardClick = () => {
+    if (ignoreNextSelectedCardClickRef.current) {
+      ignoreNextSelectedCardClickRef.current = false;
+      return;
+    }
     if (selectedEvent) return;
     if (selectedMarker?.category === '彩蛋') return;
     if (selectedMarker) {
@@ -539,6 +550,110 @@ export default function MapView() {
     setSelectedEvent(null);
     setSelectedRecommendations([]);
     removeSelectedLocationFromUrl();
+  };
+
+  const startSelectedCardSwipe = (clientX: number, clientY: number) => {
+    selectedCardTouchStartRef.current = {
+      x: clientX,
+      y: clientY,
+    };
+  };
+
+  const isSelectedCardDownSwipe = (clientX: number, clientY: number, distance: number, ratio = 1.15) => {
+    const start = selectedCardTouchStartRef.current;
+    if (!start) return false;
+
+    const deltaX = clientX - start.x;
+    const deltaY = clientY - start.y;
+    return deltaY > distance && deltaY > Math.abs(deltaX) * ratio;
+  };
+
+  const blockSelectedCardSwipeIfNeeded = (
+    event: SwipeEventController,
+    clientX: number,
+    clientY: number
+  ) => {
+    if (isSelectedCardDownSwipe(clientX, clientY, 12)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
+  const finishSelectedCardSwipe = (event: SwipeEventController, clientX: number, clientY: number) => {
+    const shouldClose = isSelectedCardDownSwipe(clientX, clientY, SELECTED_CARD_CLOSE_SWIPE_DISTANCE, 1.2);
+    selectedCardTouchStartRef.current = null;
+    if (!shouldClose) return;
+
+    ignoreNextSelectedCardClickRef.current = true;
+    window.setTimeout(() => {
+      ignoreNextSelectedCardClickRef.current = false;
+    }, 400);
+    event.preventDefault();
+    event.stopPropagation();
+    handleMapClick();
+  };
+
+  const handleSelectedCardTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    startSelectedCardSwipe(touch.clientX, touch.clientY);
+  };
+
+  const handleSelectedCardTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    blockSelectedCardSwipeIfNeeded(event, touch.clientX, touch.clientY);
+  };
+
+  const handleSelectedCardTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+    finishSelectedCardSwipe(event, touch.clientX, touch.clientY);
+  };
+
+  const handleSelectedCardPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === 'mouse' && event.buttons !== 1) return;
+
+    startSelectedCardSwipe(event.clientX, event.clientY);
+  };
+
+  const handleSelectedCardPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    blockSelectedCardSwipeIfNeeded(event, event.clientX, event.clientY);
+  };
+
+  const handleSelectedCardPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    finishSelectedCardSwipe(event, event.clientX, event.clientY);
+  };
+
+  const handleSelectedCardPointerCancel = () => {
+    selectedCardTouchStartRef.current = null;
+  };
+
+  const handleSelectedCardMouseDown = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    startSelectedCardSwipe(event.clientX, event.clientY);
+  };
+
+  const handleSelectedCardMouseMove = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.buttons !== 1) return;
+    blockSelectedCardSwipeIfNeeded(event, event.clientX, event.clientY);
+  };
+
+  const handleSelectedCardMouseUp = (event: MouseEvent<HTMLDivElement>) => {
+    finishSelectedCardSwipe(event, event.clientX, event.clientY);
+  };
+
+  const selectedCardSwipeHandlers = {
+    onTouchStart: handleSelectedCardTouchStart,
+    onTouchMove: handleSelectedCardTouchMove,
+    onTouchEnd: handleSelectedCardTouchEnd,
+    onPointerDown: handleSelectedCardPointerDown,
+    onPointerMove: handleSelectedCardPointerMove,
+    onPointerUp: handleSelectedCardPointerUp,
+    onPointerCancel: handleSelectedCardPointerCancel,
+    onMouseDown: handleSelectedCardMouseDown,
+    onMouseMove: handleSelectedCardMouseMove,
+    onMouseUp: handleSelectedCardMouseUp,
   };
 
   const handleEasterEggToggle = () => {
@@ -1489,7 +1604,11 @@ export default function MapView() {
 
       {/* 活动详情卡片 - z-index 最高 */}
       {selectedMarker && selectedEvent && (
-        <div className="absolute bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-border/20 bg-card p-6 shadow-2xl slide-up">
+        <div
+          className="absolute bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-border/20 bg-card p-6 shadow-2xl slide-up"
+          {...selectedCardSwipeHandlers}
+        >
+          <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-muted-foreground/20" aria-hidden="true" />
           <div className="space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -1555,7 +1674,11 @@ export default function MapView() {
       )}
 
       {selectedMarker && !selectedEvent && isEasterEggMode && selectedMarker.category === '彩蛋' && selectedRecommendation && (
-        <div className="absolute bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-border/20 bg-card p-6 shadow-2xl slide-up">
+        <div
+          className="absolute bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-border/20 bg-card p-6 shadow-2xl slide-up"
+          {...selectedCardSwipeHandlers}
+        >
+          <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-muted-foreground/20" aria-hidden="true" />
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-background p-2 shadow-md">
@@ -1589,9 +1712,11 @@ export default function MapView() {
       {/* 预览卡片 - z-index 最高 */}
       {selectedMarker && !selectedEvent && !isEasterEggMode && selectedRecommendations.length > 0 && (
         <div
-          className="absolute bottom-0 left-0 right-0 z-50 bg-card rounded-t-3xl p-6 card-shadow slide-up cursor-pointer press-feedback border-t border-border/20"
+          className="absolute bottom-0 left-0 right-0 z-50 cursor-pointer rounded-t-3xl border-t border-border/20 bg-card p-6 card-shadow slide-up press-feedback"
           onClick={handleCardClick}
+          {...selectedCardSwipeHandlers}
         >
+          <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-muted-foreground/20" aria-hidden="true" />
           <div className="space-y-4">
             {selectedIsCommunityGuide && selectedGuide ? (
               <div className="space-y-3">
