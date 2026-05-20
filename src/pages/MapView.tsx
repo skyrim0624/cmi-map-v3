@@ -405,8 +405,8 @@ export default function MapView() {
     setSelectedMarker(null);
     setSelectedEvent(null);
     setSelectedRecommendations([]);
-    setIsScenePanelExpanded(false);
-  }, [activeScene?.id, activePlaceTypeId, activeSceneFilterId]);
+    setIsScenePanelExpanded(Boolean(activeScene && !isNearbyScene));
+  }, [activeScene, activePlaceTypeId, activeSceneFilterId, isNearbyScene]);
 
   useEffect(() => {
     if (!selectedEventId) {
@@ -1396,8 +1396,8 @@ export default function MapView() {
       {activeScene && !isNearbyScene && !selectedMarker && (
         <div className={`absolute left-3 right-3 z-30 md:left-6 md:right-auto md:w-[420px] ${
           isScenePanelExpanded
-            ? 'bottom-[calc(env(safe-area-inset-bottom)+100px)]'
-            : 'bottom-[calc(env(safe-area-inset-bottom)+78px)]'
+            ? 'bottom-[calc(env(safe-area-inset-bottom)+116px)]'
+            : 'bottom-[calc(env(safe-area-inset-bottom)+112px)]'
         }`}>
           <section className={`overflow-hidden rounded-lg border-2 border-foreground bg-background/95 shadow-[4px_5px_0_rgba(0,0,0,0.18)] backdrop-blur-md transition-[max-height,transform] duration-200 ease-out ${
             isScenePanelExpanded ? 'max-h-[46dvh] p-2.5' : 'max-h-[92px] p-2'
