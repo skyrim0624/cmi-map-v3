@@ -49,6 +49,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: CORE_PRECACHE_ASSETS,
       workbox: {
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
         globPatterns: ["**/*.{js,css,html,ico}"],
         globIgnores: [
           "**/docs/**",
