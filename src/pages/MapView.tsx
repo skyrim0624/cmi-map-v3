@@ -144,6 +144,20 @@ const getStableHash = (value: string) => {
   return hash;
 };
 
+const withoutEasterEggRecommendations = (sourceMarkers: MapMarkerType[]): MapMarkerType[] =>
+  sourceMarkers.flatMap((marker) => {
+    const recommendations = marker.recommendations.filter(recommendation => recommendation.category !== '彩蛋');
+    if (recommendations.length === 0) return [];
+
+    return [{
+      ...marker,
+      id: recommendations[0].id,
+      category: recommendations[0].category,
+      recommendations,
+      visualOverride: marker.category === '彩蛋' ? undefined : marker.visualOverride,
+    }];
+  });
+
 const createEasterEggMarkers = (sourceMarkers: MapMarkerType[]): MapMarkerType[] => {
   const realEasterEggMarkers = sourceMarkers.flatMap((marker) => {
     const easterRecommendations = marker.recommendations.filter(recommendation => recommendation.category === '彩蛋');
@@ -298,6 +312,8 @@ export default function MapView() {
     () => getCmiPlaceTypeTag(activeMapPlaceTypeId),
     [activeMapPlaceTypeId]
   );
+  const isEasterEggRoute =
+    !activeScene && (searchParams.get('easter') === '1' || searchParams.get('mode') === 'easter');
   const directIntentMapGroup = useMemo(
     () => getCmiMapFilterGroup(directIntentMapGroupId),
     [directIntentMapGroupId]
@@ -407,6 +423,10 @@ export default function MapView() {
     setSelectedRecommendations([]);
     setIsScenePanelExpanded(Boolean(activeScene && !isNearbyScene));
   }, [activeScene, activePlaceTypeId, activeSceneFilterId, isNearbyScene]);
+
+  useEffect(() => {
+    setIsEasterEggMode(isEasterEggRoute);
+  }, [isEasterEggRoute]);
 
   useEffect(() => {
     if (!selectedEventId) {
@@ -687,6 +707,7 @@ export default function MapView() {
   };
 
   const handleEasterEggToggle = () => {
+    const nextIsActive = !isEasterEggMode;
     setSelectedMarker(null);
     setSelectedEvent(null);
     setSelectedRecommendations([]);
@@ -694,7 +715,8 @@ export default function MapView() {
     setActiveMapFilterGroupId('all');
     setActiveMapPlaceTypeId(null);
     setIsMapFilterExpanded(false);
-    setIsEasterEggMode(isActive => !isActive);
+    setIsEasterEggMode(nextIsActive);
+    navigate(nextIsActive ? '/map?easter=1' : '/map', { replace: true });
   };
 
   const handleUserLocation = (latitude: number, longitude: number) => {
@@ -853,9 +875,11 @@ export default function MapView() {
   // 过滤当前需要显示的标记点
   const displayedMarkers = useMemo(() => {
     if (activeScene) {
-      return isEventScene
+      const activeSceneMarkers = isEventScene
         ? sceneEventMarkers
         : [...sceneEventMarkers, ...sceneMarkers];
+
+      return withoutEasterEggRecommendations(activeSceneMarkers);
     }
 
     if (isEasterEggMode) return easterEggMarkers;
@@ -866,10 +890,11 @@ export default function MapView() {
       activeMapFilterGroupId !== 'all' ||
       isRawSearchActive;
 
-    if (!isFilteredMap) return markers;
+    if (!isFilteredMap) return withoutEasterEggRecommendations(markers);
 
     return markers.flatMap((marker) => {
-      const matchingRecommendations = marker.recommendations.filter((recommendation) => {
+      const visibleRecommendations = marker.recommendations.filter(recommendation => recommendation.category !== '彩蛋');
+      const matchingRecommendations = visibleRecommendations.filter((recommendation) => {
         const matchesPlaceType = activeMapPlaceTypeId
           ? matchesCmiPlaceTypeTag(recommendation, activeMapPlaceTypeId)
           : true;
@@ -932,8 +957,10 @@ export default function MapView() {
     activeFilters.forEach(filter => {
       if (!filter.needsIcon && filter.iconUrl) urls.add(filter.iconUrl);
     });
-    urls.add(EASTER_QUESTION_ICON_URL);
-    urls.add(EASTER_STAR_ICON_URL);
+    if (isEasterEggMode) {
+      urls.add(EASTER_QUESTION_ICON_URL);
+      urls.add(EASTER_STAR_ICON_URL);
+    }
     displayedMarkers.slice(0, 48).forEach(marker => urls.add(getMapMarkerVisual(marker).iconUrl));
     sceneRecommendations.slice(0, 4).forEach(recommendation => {
       const firstImage = recommendation.images[0];
@@ -945,6 +972,7 @@ export default function MapView() {
     activeMapSecondaryTags,
     directIntentSecondaryTags,
     displayedMarkers,
+    isEasterEggMode,
     isDirectIntentScene,
     isNearbyScene,
     mapFilterGroups,
@@ -1638,7 +1666,7 @@ export default function MapView() {
         </div>
 
         <div className="flex min-w-0 justify-end">
-          {!activeScene && (
+          {!activeScene && isEasterEggMode && (
             <button
               type="button"
               className="easter-star-button press-feedback relative isolate flex h-12 w-12 items-center justify-center overflow-visible rounded-full bg-transparent transition-transform hover:scale-105 active:scale-95"

@@ -416,6 +416,7 @@ export const LeafletMap = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null);
+  const standaloneMarkerLayerRef = useRef<L.LayerGroup | null>(null);
   const userLocationMarkerRef = useRef<L.Marker | null>(null);
   const onCenterChangeRef = useRef(onCenterChange);
   const onMapClickRef = useRef(onMapClick);
@@ -822,6 +823,13 @@ export const LeafletMap = ({
     if (clusterGroupRef.current) {
       clusterGroupRef.current.clearLayers();
       map.removeLayer(clusterGroupRef.current);
+      clusterGroupRef.current = null;
+    }
+
+    if (standaloneMarkerLayerRef.current) {
+      standaloneMarkerLayerRef.current.clearLayers();
+      map.removeLayer(standaloneMarkerLayerRef.current);
+      standaloneMarkerLayerRef.current = null;
     }
     
     markersRef.current = [];
@@ -860,6 +868,8 @@ export const LeafletMap = ({
       a.layer.spiderfy();
     });
 
+    const standaloneMarkerLayer = L.layerGroup();
+
     // 添加新标记
     markers.forEach((markerData) => {
       const markerVisual = getMapMarkerVisual(markerData);
@@ -890,7 +900,7 @@ export const LeafletMap = ({
           });
         }
 
-        clusterGroup.addLayer(marker);
+        standaloneMarkerLayer.addLayer(marker);
         markersRef.current.push(marker);
         return;
       }
@@ -995,6 +1005,11 @@ export const LeafletMap = ({
 
     map.addLayer(clusterGroup);
     clusterGroupRef.current = clusterGroup;
+
+    if (standaloneMarkerLayer.getLayers().length > 0) {
+      map.addLayer(standaloneMarkerLayer);
+      standaloneMarkerLayerRef.current = standaloneMarkerLayer;
+    }
 
   }, [markers, mode, onMarkerClick]);
 
