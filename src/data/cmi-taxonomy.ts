@@ -16,9 +16,11 @@ export type CmiPrimaryIntentId =
 export type CmiMapFilterGroupId =
   | 'eat'
   | 'work'
+  | 'study'
   | 'market'
   | 'shopping'
   | 'play'
+  | 'relax'
   | 'sport'
   | 'nightlife'
   | 'service';
@@ -390,6 +392,13 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
     keywords: ['咖啡办公', '咖啡', '办公', 'coworking'],
   },
   {
+    id: 'study',
+    label: '学习',
+    iconUrl: cmiFlatIcon('direct-study'),
+    placeTypeIds: ['reading', 'stationery', 'gallery', 'cafe'],
+    keywords: ['学习', '看书', '书店', '文具', '课程', '工作坊', '自习'],
+  },
+  {
     id: 'market',
     label: '市集',
     iconUrl: cmiFlatIcon('place-market-handmade'),
@@ -409,6 +418,13 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
     iconUrl: cmiFlatIcon('direct-play'),
     placeTypeIds: ['landmark', 'temple', 'nature', 'park', 'gallery', 'hot-spring'],
     keywords: ['游玩', '景点', '地标', '打卡', '寺庙', '自然', '公园', '展览', '艺术', '温泉'],
+  },
+  {
+    id: 'relax',
+    label: '放松',
+    iconUrl: cmiFlatIcon('direct-relax'),
+    placeTypeIds: ['massage', 'hot-spring', 'yoga'],
+    keywords: ['放松', '休息', '按摩', '马杀鸡', 'spa', '温泉', '瑜伽'],
   },
   {
     id: 'sport',

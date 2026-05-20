@@ -89,6 +89,19 @@ const LIFE_RESCUE_FILTER_LABELS: Record<string, string> = {
   'daily-restock': '日用品',
   'haircut-care': '理发',
 };
+const DIRECT_INTENT_SCENE_BY_MAP_GROUP: Partial<Record<CmiMapFilterGroupId, string>> = {
+  eat: 'eat',
+  work: 'coffee-work',
+  study: 'study',
+  shopping: 'shopping',
+  play: 'play',
+  relax: 'massage-relax',
+  sport: 'sport',
+  service: 'life-rescue',
+};
+const DIRECT_INTENT_MAP_GROUP_BY_SCENE = Object.fromEntries(
+  Object.entries(DIRECT_INTENT_SCENE_BY_MAP_GROUP).map(([groupId, sceneId]) => [sceneId, groupId])
+) as Partial<Record<string, CmiMapFilterGroupId>>;
 
 const normalizeMapPlaceName = (value: string) =>
   value.normalize('NFKC').trim().toLocaleLowerCase();
@@ -233,6 +246,7 @@ export default function MapView() {
   const isLifeRescueScene = activeScene?.id === 'life-rescue';
   const isEventScene = activeScene?.id === 'tomorrow-events';
   const isDirectIntentScene = activeScene ? DIRECT_INTENT_SCENE_IDS.has(activeScene.id) : false;
+  const directIntentMapGroupId = activeScene ? DIRECT_INTENT_MAP_GROUP_BY_SCENE[activeScene.id] ?? null : null;
   const displayName = profile?.user_name || user?.email?.split('@')[0] || '游客';
   const sceneEvents = useMemo(
     () => activeScene ? getCmiEventsForScene(activeScene.id) : [],
@@ -252,6 +266,14 @@ export default function MapView() {
   const activeMapPlaceTypeTag = useMemo(
     () => getCmiPlaceTypeTag(activeMapPlaceTypeId),
     [activeMapPlaceTypeId]
+  );
+  const directIntentMapGroup = useMemo(
+    () => getCmiMapFilterGroup(directIntentMapGroupId),
+    [directIntentMapGroupId]
+  );
+  const directIntentSecondaryTags = useMemo(
+    () => directIntentMapGroup ? getCmiPlaceTypeTagsByIds(directIntentMapGroup.placeTypeIds) : [],
+    [directIntentMapGroup]
   );
   const mapSearchMatch = useMemo(
     () => resolveCmiMapFilterQuery(mapSearchQuery),
@@ -562,6 +584,43 @@ export default function MapView() {
     navigate(getSceneMapPath(activeScene.id, { placeTypeId }));
   };
 
+  const handleDirectIntentMapGroupSelect = (group: CmiMapFilterGroup | null) => {
+    setMapSearchQuery('');
+    setIsEasterEggMode(false);
+    setSelectedMarker(null);
+    setSelectedEvent(null);
+    setSelectedRecommendations([]);
+
+    if (!group) {
+      setActiveMapFilterGroupId('all');
+      setActiveMapPlaceTypeId(null);
+      setIsMapFilterExpanded(false);
+      navigate('/map');
+      return;
+    }
+
+    const sceneId = DIRECT_INTENT_SCENE_BY_MAP_GROUP[group.id];
+    if (sceneId) {
+      navigate(getSceneMapPath(sceneId));
+      return;
+    }
+
+    setActiveMapFilterGroupId(group.id);
+    setActiveMapPlaceTypeId(null);
+    setIsMapFilterExpanded(true);
+    navigate('/map');
+  };
+
+  const handleDirectIntentPlaceTypeSelect = (tag: CmiPlaceTypeTag) => {
+    if (!activeScene) return;
+    setSelectedMarker(null);
+    setSelectedEvent(null);
+    setSelectedRecommendations([]);
+
+    const nextPlaceTypeId = activePlaceTypeId === tag.id ? null : tag.id;
+    navigate(getSceneMapPath(activeScene.id, { placeTypeId: nextPlaceTypeId }));
+  };
+
   const resetMapFilters = () => {
     setMapSearchQuery('');
     setActiveMapFilterGroupId('all');
@@ -716,7 +775,11 @@ export default function MapView() {
   ]);
   const mapWarmupImageUrls = useMemo(() => {
     const urls = new Set<string>();
-    const activeFilters = isNearbyScene ? nearbyPlaceTypeFilters : activeMapSecondaryTags;
+    const activeFilters = isNearbyScene
+      ? nearbyPlaceTypeFilters
+      : isDirectIntentScene
+        ? directIntentSecondaryTags
+        : activeMapSecondaryTags;
 
     mapFilterGroups.forEach(group => {
       if (!group.needsIcon) urls.add(group.iconUrl);
@@ -735,7 +798,9 @@ export default function MapView() {
     return Array.from(urls);
   }, [
     activeMapSecondaryTags,
+    directIntentSecondaryTags,
     displayedMarkers,
+    isDirectIntentScene,
     isNearbyScene,
     mapFilterGroups,
     nearbyPlaceTypeFilters,
@@ -925,7 +990,67 @@ export default function MapView() {
               </Button>
             ))}
           </div>
-          ) : isDirectIntentScene ? null : isLifeRescueScene ? (
+          ) : isDirectIntentScene ? (
+          <div className="space-y-2 pb-2">
+            <div className="-mx-4 overflow-x-auto px-4 hide-scrollbar md:-mx-6 md:px-6">
+              <div className="flex w-max items-center gap-2">
+                <Button
+                  size="sm"
+                  className="h-10 rounded-full border-2 border-border/50 bg-background/90 px-4 text-sm font-black text-foreground shadow-md backdrop-blur-sm transition-transform active:translate-y-0.5 hover:bg-background"
+                  onClick={() => handleDirectIntentMapGroupSelect(null)}
+                  aria-label="显示完整地图"
+                >
+                  全部
+                </Button>
+                {mapFilterGroups.map(group => (
+                  <Button
+                    key={group.id}
+                    size="sm"
+                    className={`h-10 shrink-0 rounded-full px-3 text-sm font-black shadow-md press-feedback transition-transform ${
+                      directIntentMapGroupId === group.id
+                        ? 'border-2 border-transparent bg-primary text-primary-foreground scale-105'
+                        : 'border-2 border-border/50 bg-background/90 text-foreground backdrop-blur-sm hover:bg-background'
+                    }`}
+                    onClick={() => handleDirectIntentMapGroupSelect(group)}
+                    aria-label={`一级分类：${group.label}`}
+                    aria-expanded={directIntentMapGroupId === group.id}
+                  >
+                    <span className="mr-1.5">
+                      {renderFilterIcon(group, 'h-6 w-6')}
+                    </span>
+                    {group.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {directIntentMapGroup && directIntentSecondaryTags.length > 0 && (
+              <div className="-mx-4 overflow-x-auto px-4 hide-scrollbar md:-mx-6 md:px-6">
+                <div className="flex w-max items-center gap-2">
+                  {directIntentSecondaryTags.map(tag => (
+                    <Button
+                      key={tag.id}
+                      variant="outline"
+                      size="sm"
+                      className={`h-9 min-w-[5.25rem] shrink-0 rounded-full px-2.5 text-xs font-black shadow-md press-feedback transition-transform ${
+                        activePlaceTypeId === tag.id
+                          ? 'border-2 border-primary bg-white/95 text-primary hover:bg-white'
+                          : 'border border-border/50 bg-background/90 text-foreground backdrop-blur-sm hover:bg-background'
+                      }`}
+                      onClick={() => handleDirectIntentPlaceTypeSelect(tag)}
+                      aria-label={`二级分类：${tag.label}`}
+                    >
+                      <span className="mr-1.5">
+                        {renderFilterIcon(tag, 'h-5 w-5')}
+                      </span>
+                      {tag.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          ) : isLifeRescueScene ? (
           <div className="flex w-max items-center gap-2 pb-2">
             <Button
               size="sm"
