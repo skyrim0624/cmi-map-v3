@@ -127,7 +127,7 @@ export const getRecommendationsByPlace = async (
 export const uploadImage = async (file: File): Promise<string | null> => {
   try {
     // 压缩图片
-    const compressedFile = await compressImage(file);
+    const compressedFile = await compressImage(file, { force: true });
     
     // 生成文件名（使用时间戳和随机数）
     const timestamp = Date.now();
@@ -183,14 +183,17 @@ export const createRecommendation = async (
     .maybeSingle();
 
   if (error) {
+    const hasEasterIconField = Object.prototype.hasOwnProperty.call(recommendation, 'easter_icon_id');
     const mayBeMissingEasterIconColumn =
-      Boolean(recommendation.easter_icon_id) &&
+      hasEasterIconField &&
       error.message.toLocaleLowerCase().includes('easter_icon_id');
 
     if (mayBeMissingEasterIconColumn) {
       const fallbackRecommendation = {
         ...recommendation,
-        reason: encodeEasterIconMetadata(recommendation.reason ?? '', recommendation.easter_icon_id!),
+        reason: recommendation.easter_icon_id
+          ? encodeEasterIconMetadata(recommendation.reason ?? '', recommendation.easter_icon_id)
+          : recommendation.reason,
       };
       delete fallbackRecommendation.easter_icon_id;
 

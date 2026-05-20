@@ -13,6 +13,7 @@ import {
   getCmiEasterIconById,
 } from '@/lib/easter-icons';
 import { getPlacePath } from '@/lib/paths';
+import { normalizeImageFile } from '@/utils/imageCompression';
 import { toast } from 'sonner';
 
 type Stage = 'camera' | 'analyzing' | 'voice' | 'category' | 'done' | 'map_fallback';
@@ -94,6 +95,10 @@ export default function MarkPlace() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => () => {
+    if (photoURL) URL.revokeObjectURL(photoURL);
+  }, [photoURL]);
 
   // 初始化 Web Speech API
   useEffect(() => {
@@ -254,9 +259,13 @@ export default function MarkPlace() {
   };
 
   // 1. 照片拦截
-  const handleCapture = (e: React.ChangeEvent<HTMLInputElement>, source: 'live' | 'exif') => {
-    const file = e.target.files?.[0];
-    if (file) {
+  const handleCapture = async (e: React.ChangeEvent<HTMLInputElement>, source: 'live' | 'exif') => {
+    const sourceFile = e.target.files?.[0];
+    if (sourceFile) {
+      const file = await normalizeImageFile(sourceFile).catch((error) => {
+        console.error('照片方向修正失败，使用原图继续:', error);
+        return sourceFile;
+      });
       const url = URL.createObjectURL(file);
       setImages([file]);
       setFlash(true);
@@ -356,7 +365,7 @@ export default function MarkPlace() {
 
       const userName = profile?.user_name || user?.email?.split('@')[0] || '匿名用户';
 
-      const recommendation = await createRecommendation({
+      const recommendationInput = {
         place_name: placeName,
         category: selectedCategory,
         reason: reason,
@@ -365,8 +374,10 @@ export default function MarkPlace() {
         latitude: center.lat,
         longitude: center.lng,
         images: imageUrls,
-        easter_icon_id: selectedCategory === '彩蛋' ? selectedEasterIconId : null,
-      });
+        ...(selectedCategory === '彩蛋' ? { easter_icon_id: selectedEasterIconId } : {}),
+      };
+
+      const recommendation = await createRecommendation(recommendationInput);
 
       if (recommendation) {
         setTimeout(() => {

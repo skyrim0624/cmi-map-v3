@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { createPlaceTrace, loadCheckInTargetRecommendations } from '@/features/check-ins/check-in-service';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
 import { getPlacePath } from '@/lib/paths';
+import { normalizeImageFile } from '@/utils/imageCompression';
 import type { Recommendation } from '@/types/types';
 import { getCategoryIconUrl, normalizeCategory } from '@/types/types';
 
@@ -53,9 +54,14 @@ export default function AddTrace() {
 
   const sourceRecommendation = useMemo(() => recommendations[0] || null, [recommendations]);
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const sourceFile = event.target.files?.[0];
+    if (!sourceFile) return;
+
+    const file = await normalizeImageFile(sourceFile).catch((error) => {
+      console.error('照片方向修正失败，使用原图继续:', error);
+      return sourceFile;
+    });
 
     if (imagePreview) URL.revokeObjectURL(imagePreview);
     setImageFile(file);
