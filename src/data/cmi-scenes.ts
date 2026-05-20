@@ -299,7 +299,7 @@ export const CMI_SCENES: CmiScene[] = [
       'hot spring',
     ],
     primaryActionLabel: '看游玩地点',
-    mapTitle: '游玩地点地图',
+    mapTitle: '去哪儿玩',
     detailTitle: '适合游玩和逛逛的地方',
     showOnHome: true,
     homeGroup: 'clear-need',
