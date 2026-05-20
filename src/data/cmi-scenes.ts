@@ -180,7 +180,7 @@ export const CMI_SCENES: CmiScene[] = [
       'roastery',
     ],
     primaryActionLabel: '看咖啡办公点',
-    mapTitle: '办公地点地图',
+    mapTitle: '办公学习好去处',
     detailTitle: '适合办公和坐下来的地方',
     showOnHome: true,
     homeGroup: 'clear-need',
