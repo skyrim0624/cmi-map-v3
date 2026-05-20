@@ -120,6 +120,35 @@ const containsAny = (text: string, keywords: string[]) =>
 const getPlaceTypeRecommendationKeywords = (tag: CmiPlaceTypeTag) =>
   tag.recommendationKeywords ?? tag.keywords;
 
+const getQueryMatchScore = (text: string, label: string, keywords: string[]) => {
+  const normalizedLabel = normalize(label);
+  if (text === normalizedLabel) return 100;
+  if (matchesKeyword(text, normalizedLabel)) return 90;
+  if (keywords.some(keyword => text === normalize(keyword))) return 80;
+  if (containsAny(text, keywords)) return 60;
+  return 0;
+};
+
+const findBestQueryMatch = <T>(
+  text: string,
+  items: T[],
+  getLabel: (item: T) => string,
+  getKeywords: (item: T) => string[]
+) => {
+  let bestMatch: T | null = null;
+  let bestScore = 0;
+
+  for (const item of items) {
+    const score = getQueryMatchScore(text, getLabel(item), getKeywords(item));
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = item;
+    }
+  }
+
+  return bestMatch;
+};
+
 const CMI_FLAT_ICON_BASE = '/map-icons/cmi-flat-v2';
 const cmiFlatIcon = (name: string) => `${CMI_FLAT_ICON_BASE}/${name}.png`;
 export const CMI_BLANK_FILTER_ICON_URL =
@@ -584,8 +613,11 @@ export const resolveCmiMapFilterQuery = (query: string): CmiMapFilterQueryMatch 
   const text = normalize(query);
   if (!text) return null;
 
-  const placeTypeMatch = CMI_PLACE_TYPE_TAGS.find(tag =>
-    containsAny(text, [tag.label, ...tag.keywords])
+  const placeTypeMatch = findBestQueryMatch(
+    text,
+    CMI_PLACE_TYPE_TAGS,
+    tag => tag.label,
+    tag => tag.keywords
   );
   if (placeTypeMatch) {
     const group = getCmiMapFilterGroupForPlaceType(placeTypeMatch.id);
@@ -598,8 +630,11 @@ export const resolveCmiMapFilterQuery = (query: string): CmiMapFilterQueryMatch 
     }
   }
 
-  const groupMatch = CMI_MAP_FILTER_GROUPS.find(group =>
-    containsAny(text, [group.label, ...group.keywords])
+  const groupMatch = findBestQueryMatch(
+    text,
+    CMI_MAP_FILTER_GROUPS,
+    group => group.label,
+    group => group.keywords
   );
   return groupMatch
     ? {
@@ -613,15 +648,17 @@ export const resolveCmiDirectIntentQuery = (query: string): CmiDirectIntentQuery
   const text = normalize(query);
   if (!text) return null;
 
-  const primaryMatch = CMI_PRIMARY_INTENTS.find(intent =>
-    containsAny(text, [
-      intent.label,
-      intent.description,
-      ...PRIMARY_INTENT_QUERY_KEYWORDS[intent.id],
-    ])
+  const primaryMatch = findBestQueryMatch(
+    text,
+    CMI_PRIMARY_INTENTS,
+    intent => intent.label,
+    intent => [intent.description, ...PRIMARY_INTENT_QUERY_KEYWORDS[intent.id]]
   );
-  const placeTypeMatch = CMI_PLACE_TYPE_TAGS.find(tag =>
-    containsAny(text, [tag.label, ...tag.keywords])
+  const placeTypeMatch = findBestQueryMatch(
+    text,
+    CMI_PLACE_TYPE_TAGS,
+    tag => tag.label,
+    tag => tag.keywords
   );
 
   if (placeTypeMatch) {
