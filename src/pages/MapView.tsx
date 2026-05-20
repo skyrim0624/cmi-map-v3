@@ -82,6 +82,7 @@ const EASTER_QUESTION_ICON_URL = getCmiEasterIconUrl(DEFAULT_CMI_EASTER_ICON_ID)
 const EASTER_STAR_ICON_URL = getCmiEasterIconUrl('egg-v2-02-star');
 const EASTER_EGG_MARKER_LIMIT = 28;
 const SELECTED_CARD_CLOSE_SWIPE_DISTANCE = 72;
+const SCENE_PANEL_PREVIEW_LIMIT = 2;
 const LIFE_RESCUE_FILTER_LABELS: Record<string, string> = {
   'sim-internet': '电话卡',
   'cash-exchange': '换钱',
@@ -1446,7 +1447,7 @@ export default function MapView() {
                 </button>
               ))}
 
-              {!isEventScene && sceneRecommendations.map(recommendation => {
+              {!isEventScene && sceneRecommendations.slice(0, SCENE_PANEL_PREVIEW_LIMIT).map(recommendation => {
                 const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
                 const isCommunityGuide = isCommunityCuratedRecommendation(recommendation);
                 const presentation = getCmiSceneRecommendationPresentation(recommendation);
