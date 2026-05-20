@@ -21,6 +21,7 @@ export type CmiSceneId =
   | 'coffee-work'
   | 'study'
   | 'shopping'
+  | 'market'
   | 'play'
   | 'massage-relax'
   | 'wander'
@@ -270,6 +271,37 @@ export const CMI_SCENES: CmiScene[] = [
     homeOrder: 4,
     homeTitle: '购物',
     homeDescription: '商场、市集、菜市场和日用品。',
+    homeIconCategory: '市集',
+  },
+  {
+    id: 'market',
+    title: '市集',
+    description: '周末市集、夜市、菜市场、本地市场和手作市集，适合慢慢逛、买点小东西或找一点清迈现场感。',
+    defaultView: 'detail',
+    categoryFallback: '市集',
+    matchKeywords: [
+      '市集',
+      '夜市',
+      '菜市场',
+      '周末市集',
+      '手作市集',
+      '本地市场',
+      '市场',
+      '生鲜',
+      '水果',
+      '伴手礼',
+      'market',
+      'bazaar',
+      'walking street',
+    ],
+    primaryActionLabel: '看市集地点',
+    mapTitle: '市集去哪逛',
+    detailTitle: '适合逛逛和采购的市集',
+    showOnHome: false,
+    homeGroup: null,
+    homeOrder: 4,
+    homeTitle: '市集',
+    homeDescription: '周末市集、夜市、菜市场和手作摊。',
     homeIconCategory: '市集',
   },
   {
@@ -630,6 +662,7 @@ const PROXIMITY_RANKED_SCENE_IDS = new Set<CmiSceneId>([
   'coffee-work',
   'study',
   'shopping',
+  'market',
   'play',
   'massage-relax',
   'sport',
@@ -639,6 +672,7 @@ const DIRECT_SCENE_MAP_FILTER_GROUPS: Partial<Record<CmiSceneId, CmiMapFilterGro
   eat: 'eat',
   'coffee-work': 'work',
   shopping: 'shopping',
+  market: 'market',
   play: 'play',
   'massage-relax': 'relax',
   sport: 'sport',

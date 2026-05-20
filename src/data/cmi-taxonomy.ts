@@ -288,9 +288,9 @@ export const CMI_PLACE_TYPE_TAGS: CmiPlaceTypeTag[] = [
   { id: 'coworking', label: 'Coworking', primaryIntentIds: ['work'], keywords: ['coworking', 'co-working', '办公空间', '共享办公', 'digital nomad'], iconUrl: cmiFlatIcon('place-coworking') },
   { id: 'reading', label: '看书', primaryIntentIds: ['shopping'], keywords: ['看书', '读书', '图书馆', 'library', '自习', '安静学习', '书店', 'bookstore', '阅读'], iconUrl: cmiFlatIcon('place-book') },
 
-  { id: 'market', label: '市集', primaryIntentIds: ['shopping', 'play'], categoryFallback: '市集', keywords: ['市集', '周末市集', '手作市集', '本地市场', 'market', 'walking street', 'bazaar', '跳蚤市场'], iconUrl: cmiFlatIcon('place-market-handmade') },
-  { id: 'night-market', label: '夜市', primaryIntentIds: ['shopping', 'play'], keywords: ['夜市', 'night market', 'night bazaar', '晚上逛'], iconUrl: cmiFlatIcon('place-night-market-v2') },
-  { id: 'fresh-market', label: '菜市场', primaryIntentIds: ['shopping'], keywords: ['菜市场', '生鲜', '水果', '本地菜市场'], iconUrl: cmiFlatIcon('place-fresh-market') },
+  { id: 'market', label: '市集', primaryIntentIds: ['shopping', 'play'], sceneId: 'market', categoryFallback: '市集', keywords: ['市集', '周末市集', '手作市集', '本地市场', 'market', 'walking street', 'bazaar', '跳蚤市场'], iconUrl: cmiFlatIcon('place-market-handmade') },
+  { id: 'night-market', label: '夜市', primaryIntentIds: ['shopping', 'play'], sceneId: 'market', keywords: ['夜市', 'night market', 'night bazaar', '晚上逛'], iconUrl: cmiFlatIcon('place-night-market-v2') },
+  { id: 'fresh-market', label: '菜市场', primaryIntentIds: ['shopping'], sceneId: 'market', keywords: ['菜市场', '生鲜', '水果', '本地菜市场'], iconUrl: cmiFlatIcon('place-fresh-market') },
 
   { id: 'mall', label: '商场', primaryIntentIds: ['shopping', 'play'], keywords: ['商场', 'mall', 'central', 'maya', 'one nimman', '避暑'], iconUrl: cmiFlatIcon('place-mall') },
   { id: 'daily', label: '超市 / 日用品', primaryIntentIds: ['shopping', 'errands'], keywords: ['超市', '便利店', '日用品', '补货', 'supermarket', 'grocery', 'lotus', 'big c', 'makro'], iconUrl: cmiFlatIcon('survival-daily') },

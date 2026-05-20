@@ -26,6 +26,7 @@ import {
   matchesCmiIntentSecondaryFilter,
 } from '@/data/cmi-scene-tags';
 import {
+  type CmiSceneId,
   getCmiScene,
   getCmiSceneRecommendationPresentation,
   getCmiSceneRecommendations,
@@ -35,6 +36,7 @@ import {
   type CmiMapFilterGroupId,
   type CmiPlaceTypeTag,
   getCmiMapFilterGroup,
+  getCmiMapFilterGroupForPlaceType,
   getCmiMapFilterGroups,
   getCmiPrimaryIntentSceneIds,
   getCmiPlaceTypeTag,
@@ -77,7 +79,10 @@ type SwipeEventController = {
   preventDefault: () => void;
   stopPropagation: () => void;
 };
-const DIRECT_INTENT_SCENE_IDS = new Set(getCmiPrimaryIntentSceneIds());
+type DirectIntentSceneTarget = {
+  sceneId: CmiSceneId;
+  placeTypeId?: string;
+};
 const EASTER_QUESTION_ICON_URL = getCmiEasterIconUrl(DEFAULT_CMI_EASTER_ICON_ID);
 const EASTER_STAR_ICON_URL = getCmiEasterIconUrl('egg-v2-02-star');
 const EASTER_EGG_MARKER_LIMIT = 28;
@@ -95,18 +100,36 @@ const LIFE_RESCUE_FILTER_LABELS: Record<string, string> = {
   'daily-restock': '日用品',
   'haircut-care': '理发',
 };
-const DIRECT_INTENT_SCENE_BY_MAP_GROUP: Partial<Record<CmiMapFilterGroupId, string>> = {
-  eat: 'eat',
-  work: 'coffee-work',
-  shopping: 'shopping',
-  play: 'play',
-  relax: 'massage-relax',
-  sport: 'sport',
-  service: 'life-rescue',
+const DIRECT_INTENT_SCENE_BY_MAP_GROUP: Partial<Record<CmiMapFilterGroupId, DirectIntentSceneTarget>> = {
+  eat: { sceneId: 'eat' },
+  work: { sceneId: 'coffee-work' },
+  market: { sceneId: 'market' },
+  shopping: { sceneId: 'shopping' },
+  play: { sceneId: 'play' },
+  relax: { sceneId: 'massage-relax' },
+  sport: { sceneId: 'sport' },
+  nightlife: { sceneId: 'night' },
+  service: { sceneId: 'life-rescue' },
 };
-const DIRECT_INTENT_MAP_GROUP_BY_SCENE = Object.fromEntries(
-  Object.entries(DIRECT_INTENT_SCENE_BY_MAP_GROUP).map(([groupId, sceneId]) => [sceneId, groupId])
-) as Partial<Record<string, CmiMapFilterGroupId>>;
+const DIRECT_INTENT_SCENE_IDS = new Set<CmiSceneId>([
+  ...getCmiPrimaryIntentSceneIds(),
+  ...Object.values(DIRECT_INTENT_SCENE_BY_MAP_GROUP).map(target => target.sceneId),
+]);
+
+const getDirectIntentMapGroupId = (
+  sceneId: CmiSceneId,
+  placeTypeId: string | null
+): CmiMapFilterGroupId | null => {
+  if (placeTypeId) {
+    const group = getCmiMapFilterGroupForPlaceType(placeTypeId);
+    if (group) return group.id;
+  }
+
+  const matchedEntry = Object.entries(DIRECT_INTENT_SCENE_BY_MAP_GROUP).find(
+    ([, target]) => target.sceneId === sceneId && !target.placeTypeId
+  );
+  return matchedEntry?.[0] as CmiMapFilterGroupId | undefined ?? null;
+};
 
 const normalizeMapPlaceName = (value: string) =>
   value.normalize('NFKC').trim().toLocaleLowerCase();
@@ -254,7 +277,7 @@ export default function MapView() {
   const isLifeRescueScene = activeScene?.id === 'life-rescue';
   const isEventScene = activeScene?.id === 'tomorrow-events';
   const isDirectIntentScene = activeScene ? DIRECT_INTENT_SCENE_IDS.has(activeScene.id) : false;
-  const directIntentMapGroupId = activeScene ? DIRECT_INTENT_MAP_GROUP_BY_SCENE[activeScene.id] ?? null : null;
+  const directIntentMapGroupId = activeScene ? getDirectIntentMapGroupId(activeScene.id, activePlaceTypeId) : null;
   const displayName = profile?.user_name || user?.email?.split('@')[0] || '游客';
   const sceneEvents = useMemo(
     () => activeScene ? getCmiEventsForScene(activeScene.id) : [],
@@ -721,9 +744,9 @@ export default function MapView() {
       return;
     }
 
-    const sceneId = DIRECT_INTENT_SCENE_BY_MAP_GROUP[group.id];
-    if (sceneId) {
-      navigate(getSceneMapPath(sceneId));
+    const sceneTarget = DIRECT_INTENT_SCENE_BY_MAP_GROUP[group.id];
+    if (sceneTarget) {
+      navigate(getSceneMapPath(sceneTarget.sceneId, { placeTypeId: sceneTarget.placeTypeId }));
       return;
     }
 
