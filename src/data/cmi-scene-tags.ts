@@ -20,8 +20,27 @@ interface CmiIntentSceneRule {
 
 const normalize = (value: string) => value.trim().toLocaleLowerCase();
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const containsLatinToken = (text: string, keyword: string) => {
+  const escapedKeyword = escapeRegExp(keyword).replace(/\s+/g, '\\s+');
+  const tokenPattern = new RegExp(`(^|[^a-z0-9])${escapedKeyword}([^a-z0-9]|$)`, 'i');
+  return tokenPattern.test(text);
+};
+
+const matchesKeyword = (text: string, keyword: string) => {
+  const normalizedKeyword = normalize(keyword);
+  if (!normalizedKeyword) return false;
+
+  if (/[a-z0-9]/i.test(normalizedKeyword)) {
+    return containsLatinToken(text, normalizedKeyword);
+  }
+
+  return text.includes(normalizedKeyword);
+};
+
 const containsAny = (text: string, keywords: string[]) =>
-  keywords.some(keyword => text.includes(normalize(keyword)));
+  keywords.some(keyword => matchesKeyword(text, keyword));
 
 export const CMI_INTENT_SCENE_RULES: Partial<Record<CmiSceneId, CmiIntentSceneRule>> = {
   night: {
@@ -232,11 +251,11 @@ export const getRecommendationIntentScore = (recommendation: Recommendation, sce
   const scenarioTags = getRecommendationScenarioTags(recommendation);
 
   const keywordScore = rule.keywords.reduce(
-    (score, keyword) => score + (text.includes(normalize(keyword)) ? 12 : 0),
+    (score, keyword) => score + (matchesKeyword(text, keyword) ? 12 : 0),
     0
   );
   const scenarioScore = rule.scenarioTags.reduce(
-    (score, tag) => score + (scenarioTags.some(candidate => normalize(candidate).includes(normalize(tag))) ? 10 : 0),
+    (score, tag) => score + (scenarioTags.some(candidate => matchesKeyword(normalize(candidate), tag)) ? 10 : 0),
     0
   );
   const communityScore = isCommunityCuratedRecommendation(recommendation) ? 8 : 0;

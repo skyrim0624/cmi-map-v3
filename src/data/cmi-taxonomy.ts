@@ -87,13 +87,34 @@ export interface CmiMapFilterGroup {
   iconUrl: string;
   needsIcon?: boolean;
   placeTypeIds: string[];
+  categoryFallbacks?: Category[];
   keywords: string[];
 }
 
 const normalize = (value: string) => value.trim().toLocaleLowerCase();
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const containsLatinToken = (text: string, keyword: string) => {
+  const escapedKeyword = escapeRegExp(keyword).replace(/\s+/g, '\\s+');
+  const tokenPattern = new RegExp(`(^|[^a-z0-9])${escapedKeyword}([^a-z0-9]|$)`, 'i');
+  return tokenPattern.test(text);
+};
+
+const matchesKeyword = (text: string, keyword: string) => {
+  const normalizedKeyword = normalize(keyword);
+  if (!normalizedKeyword) return false;
+
+  // NOTE: 英文短词不能用 substring 匹配，否则 brunch 会误中 run、barber 会误中 bar。
+  if (/[a-z0-9]/i.test(normalizedKeyword)) {
+    return containsLatinToken(text, normalizedKeyword);
+  }
+
+  return text.includes(normalizedKeyword);
+};
+
 const containsAny = (text: string, keywords: string[]) =>
-  keywords.some(keyword => text.includes(normalize(keyword)));
+  keywords.some(keyword => matchesKeyword(text, keyword));
 
 const CMI_FLAT_ICON_BASE = '/map-icons/cmi-flat-v2';
 const cmiFlatIcon = (name: string) => `${CMI_FLAT_ICON_BASE}/${name}.png`;
@@ -258,8 +279,8 @@ export const CMI_PLACE_TYPE_TAGS: CmiPlaceTypeTag[] = [
   { id: 'gallery', label: '展览 / 艺术', primaryIntentIds: ['play', 'study'], keywords: ['展览', 'exhibition', 'gallery', '艺术', '设计', '手作', '工作坊'], iconUrl: cmiFlatIcon('place-gallery-palette') },
   { id: 'hot-spring', label: '温泉', primaryIntentIds: ['relax', 'play'], keywords: ['温泉', 'hot spring', '泡汤'], iconUrl: cmiFlatIcon('place-hot-spring') },
 
-  { id: 'gym', label: '健身房', primaryIntentIds: ['sport'], categoryFallback: '运动', keywords: ['健身', 'gym', '健身房', '训练'], iconUrl: cmiFlatIcon('place-gym') },
-  { id: 'running', label: '跑步', primaryIntentIds: ['sport'], categoryFallback: '运动', keywords: ['跑步', '慢跑', 'running', 'run', 'jogging', '跑步路线'], iconUrl: cmiFlatIcon('direct-sport') },
+  { id: 'gym', label: '健身房', primaryIntentIds: ['sport'], keywords: ['健身', 'gym', '健身房', '训练'], iconUrl: cmiFlatIcon('place-gym') },
+  { id: 'running', label: '跑步', primaryIntentIds: ['sport'], keywords: ['跑步', '慢跑', 'running', 'run', 'jogging', '跑步路线'], iconUrl: cmiFlatIcon('direct-sport') },
   { id: 'yoga', label: '瑜伽', primaryIntentIds: ['sport', 'relax'], categoryFallback: '身心', keywords: ['瑜伽', 'yoga', '冥想', '身心'], iconUrl: cmiFlatIcon('place-yoga') },
   { id: 'tennis', label: '网球', primaryIntentIds: ['sport'], keywords: ['网球', 'tennis'], iconUrl: cmiFlatIcon('place-tennis') },
   { id: 'badminton', label: '羽毛球', primaryIntentIds: ['sport'], keywords: ['羽毛球', 'badminton'], iconUrl: cmiFlatIcon('place-badminton') },
@@ -270,11 +291,11 @@ export const CMI_PLACE_TYPE_TAGS: CmiPlaceTypeTag[] = [
   { id: 'crossfit', label: 'CrossFit', primaryIntentIds: ['sport'], keywords: ['crossfit', 'cross fit', '功能训练'], iconUrl: cmiFlatIcon('place-crossfit') },
   { id: 'climbing', label: '攀岩', primaryIntentIds: ['sport'], keywords: ['攀岩', 'climbing', 'bouldering'], iconUrl: cmiFlatIcon('place-climbing-person') },
 
-  { id: 'livehouse', label: 'Livehouse', primaryIntentIds: ['play'], sceneId: 'night', categoryFallback: '酒吧', keywords: ['livehouse', 'live music', '现场音乐', '演出', '乐队'], iconUrl: cmiFlatIcon('place-livehouse-music') },
+  { id: 'livehouse', label: 'Livehouse', primaryIntentIds: ['play'], sceneId: 'night', keywords: ['livehouse', 'live music', '现场音乐', '演出', '乐队'], iconUrl: cmiFlatIcon('place-livehouse-music') },
   { id: 'bar', label: '酒吧', primaryIntentIds: ['play'], sceneId: 'night', categoryFallback: '酒吧', keywords: ['酒吧', 'bar', '小酌', '喝酒', 'cocktail'], iconUrl: cmiFlatIcon('place-club') },
-  { id: 'club', label: 'Club / 蹦迪', primaryIntentIds: ['play'], sceneId: 'night', categoryFallback: '酒吧', keywords: ['club', '蹦迪', '夜店', '跳舞', 'dj'], iconUrl: cmiFlatIcon('place-club') },
-  { id: 'social-dance', label: '交际舞', primaryIntentIds: ['play'], sceneId: 'night', categoryFallback: '酒吧', keywords: ['交际舞', 'swing', 'salsa', '伦巴', 'bachata', '社交舞'], iconUrl: cmiFlatIcon('place-social-dance') },
-  { id: 'ktv', label: 'KTV', primaryIntentIds: ['play'], sceneId: 'night', categoryFallback: '酒吧', keywords: ['ktv', 'karaoke', '唱歌'], iconUrl: cmiFlatIcon('place-ktv-microphone') },
+  { id: 'club', label: 'Club / 蹦迪', primaryIntentIds: ['play'], sceneId: 'night', keywords: ['club', '蹦迪', '夜店', '跳舞', 'dj'], iconUrl: cmiFlatIcon('place-club') },
+  { id: 'social-dance', label: '交际舞', primaryIntentIds: ['play'], sceneId: 'night', keywords: ['交际舞', 'swing', 'salsa', '伦巴', 'bachata', '社交舞'], iconUrl: cmiFlatIcon('place-social-dance') },
+  { id: 'ktv', label: 'KTV', primaryIntentIds: ['play'], sceneId: 'night', keywords: ['ktv', 'karaoke', '唱歌'], iconUrl: cmiFlatIcon('place-ktv-microphone') },
 
   { id: 'pharmacy', label: '药店', primaryIntentIds: ['errands'], keywords: ['药店', 'pharmacy', '买药', '药'], iconUrl: cmiFlatIcon('place-pharmacy') },
   { id: 'clinic', label: '诊所 / 医院', primaryIntentIds: ['errands'], keywords: ['医院', '诊所', 'clinic', 'hospital', '看病'], iconUrl: cmiFlatIcon('place-clinic') },
@@ -382,6 +403,7 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
     label: '用餐',
     iconUrl: cmiFlatIcon('direct-eat'),
     placeTypeIds: ['restaurant', 'snack', 'breakfast', 'dessert'],
+    categoryFallbacks: ['吃饭'],
     keywords: ['用餐', '吃饭', '吃', '餐厅', '小吃', '早餐', '甜品', '饿'],
   },
   {
@@ -389,6 +411,7 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
     label: '咖啡办公',
     iconUrl: cmiFlatIcon('direct-work'),
     placeTypeIds: ['cafe', 'coworking'],
+    categoryFallbacks: ['咖啡'],
     keywords: ['咖啡办公', '咖啡', '办公', 'coworking'],
   },
   {
@@ -403,6 +426,7 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
     label: '市集',
     iconUrl: cmiFlatIcon('place-market-handmade'),
     placeTypeIds: ['market', 'night-market', 'fresh-market'],
+    categoryFallbacks: ['市集'],
     keywords: ['市集', '夜市', '菜市场', '周末市集', '手作市集', '本地市场'],
   },
   {
@@ -417,6 +441,7 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
     label: '游玩',
     iconUrl: cmiFlatIcon('direct-play'),
     placeTypeIds: ['landmark', 'temple', 'nature', 'park', 'gallery', 'hot-spring'],
+    categoryFallbacks: ['景点', '户外'],
     keywords: ['游玩', '景点', '地标', '打卡', '寺庙', '自然', '公园', '展览', '艺术', '温泉'],
   },
   {
@@ -424,6 +449,7 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
     label: '放松',
     iconUrl: cmiFlatIcon('direct-relax'),
     placeTypeIds: ['massage', 'hot-spring', 'yoga'],
+    categoryFallbacks: ['马杀鸡', '身心'],
     keywords: ['放松', '休息', '按摩', '马杀鸡', 'spa', '温泉', '瑜伽'],
   },
   {
@@ -443,6 +469,7 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
       'crossfit',
       'climbing',
     ],
+    categoryFallbacks: ['运动'],
     keywords: ['运动', '健身', '跑步', '瑜伽', '网球', '羽毛球', '篮球', '游泳', '泰拳', 'crossfit', '攀岩'],
   },
   {
@@ -450,6 +477,7 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
     label: '夜生活',
     iconUrl: cmiFlatIcon('place-club'),
     placeTypeIds: ['livehouse', 'bar', 'club', 'social-dance', 'ktv'],
+    categoryFallbacks: ['酒吧'],
     keywords: ['夜生活', '晚上', '酒吧', 'livehouse', 'club', '蹦迪', '交际舞', 'ktv', '唱歌'],
   },
   {
@@ -457,6 +485,7 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
     label: '生活服务',
     iconUrl: cmiFlatIcon('direct-errands'),
     placeTypeIds: ['pharmacy', 'clinic', 'exchange', 'print', 'rental', 'laundry', 'haircut', 'visa', 'sim'],
+    categoryFallbacks: ['生存指南'],
     keywords: ['生活服务', '办事', '药店', '诊所', '医院', '换汇', '打印', '租车', '洗衣', '理发', '签证', '电话卡', 'sim'],
   },
 ];
@@ -644,6 +673,8 @@ export const matchesCmiMapFilterGroup = (
 ) => {
   const group = getCmiMapFilterGroup(groupId);
   if (!group) return true;
+  const category = normalizeCategory(recommendation.category);
+  if (group.categoryFallbacks?.includes(category)) return true;
   return group.placeTypeIds.some(placeTypeId => matchesCmiPlaceTypeTag(recommendation, placeTypeId));
 };
 
