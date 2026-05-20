@@ -1591,7 +1591,7 @@ export default function MapView() {
             aria-pressed={isEasterEggMode}
           >
             <img
-              src={isEasterEggMode ? EASTER_STAR_ICON_URL : EASTER_QUESTION_ICON_URL}
+              src={EASTER_STAR_ICON_URL}
               alt=""
               className={`object-contain drop-shadow-[0_3px_5px_rgba(0,0,0,0.22)] ${
                 isEasterEggMode ? 'h-12 w-12' : 'h-11 w-11'
