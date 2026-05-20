@@ -157,14 +157,16 @@ export default function SceneHome() {
       </div>
 
       <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+24px)] left-1/2 z-30 -translate-x-1/2">
-        <button
-          className="app-fab flex items-center gap-2 rounded-full border-2 border-foreground bg-primary px-6 py-4 font-bold text-primary-foreground"
-          onClick={handleMarkPlace}
-          aria-label="标记新地点"
-        >
-          <Plus className="h-6 w-6" strokeWidth={3} />
-          <span>标记新地点</span>
-        </button>
+        <div className="translate-x-[3px]">
+          <button
+            className="app-fab flex h-14 items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-foreground bg-primary px-5 text-[15px] font-bold text-primary-foreground"
+            onClick={handleMarkPlace}
+            aria-label="标记新地点"
+          >
+            <Plus className="h-5 w-5" strokeWidth={3} />
+            <span>标记新地点</span>
+          </button>
+        </div>
       </div>
     </div>
   );

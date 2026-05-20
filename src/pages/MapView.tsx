@@ -1619,36 +1619,43 @@ export default function MapView() {
           )}
         </div>
 
-        <button
-          className="app-fab flex h-14 items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-foreground bg-primary px-5 text-[15px] font-bold text-primary-foreground"
-          aria-label="标记新地点"
-          onClick={() => {
-            if (!user) {
-              toast('登录后才能标记地点哦', { description: '注册只需要一个邮箱 ✉️' });
-              navigate('/login', { state: { from: '/mark' } });
-              return;
-            }
-            navigate('/mark');
-          }}
-        >
-          <Plus className="h-5 w-5" strokeWidth={3} />
-          <span>标记新地点</span>
-        </button>
+        <div className="translate-x-[3px]">
+          <button
+            className="app-fab flex h-14 items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-foreground bg-primary px-5 text-[15px] font-bold text-primary-foreground"
+            aria-label="标记新地点"
+            onClick={() => {
+              if (!user) {
+                toast('登录后才能标记地点哦', { description: '注册只需要一个邮箱 ✉️' });
+                navigate('/login', { state: { from: '/mark' } });
+                return;
+              }
+              navigate('/mark');
+            }}
+          >
+            <Plus className="h-5 w-5" strokeWidth={3} />
+            <span>标记新地点</span>
+          </button>
+        </div>
 
         <div className="flex min-w-0 justify-end">
           {!activeScene && (
             <button
               type="button"
-              className="press-feedback flex h-12 w-12 items-center justify-center rounded-full bg-transparent transition-transform hover:scale-105 active:scale-95"
+              className="easter-star-button press-feedback relative isolate flex h-12 w-12 items-center justify-center overflow-visible rounded-full bg-transparent transition-transform hover:scale-105 active:scale-95"
               onClick={handleEasterEggToggle}
               aria-label={isEasterEggMode ? '退出彩蛋探索' : '进入彩蛋探索'}
               aria-pressed={isEasterEggMode}
             >
+              <span className="easter-star-rays" aria-hidden="true">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <span key={index} className="easter-star-ray" />
+                ))}
+              </span>
               <img
                 src={EASTER_STAR_ICON_URL}
                 alt=""
-                className={`object-contain drop-shadow-[0_3px_5px_rgba(0,0,0,0.22)] ${
-                  isEasterEggMode ? 'h-12 w-12' : 'h-11 w-11'
+                className={`relative z-10 object-contain drop-shadow-[0_3px_5px_rgba(0,0,0,0.22)] ${
+                  isEasterEggMode ? 'h-[50px] w-[50px]' : 'h-12 w-12'
                 }`}
                 aria-hidden="true"
               />

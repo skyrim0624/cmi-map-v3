@@ -713,6 +713,99 @@ All colors MUST be HSL.
     box-shadow: 0px 0px 0 hsl(var(--foreground));
   }
 
+  .easter-star-rays {
+    position: absolute;
+    inset: -5px;
+    z-index: 0;
+    pointer-events: none;
+    transform-origin: center;
+    animation: easter-star-rays-wiggle 2.6s ease-in-out infinite;
+  }
+
+  .easter-star-ray {
+    position: absolute;
+    width: 8px;
+    height: 2px;
+    border-radius: 9999px;
+    background: hsl(var(--foreground));
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.66);
+    opacity: 0.88;
+  }
+
+  .easter-star-ray:nth-child(1) {
+    left: 24px;
+    top: 2px;
+    width: 8px;
+    transform: rotate(86deg);
+  }
+
+  .easter-star-ray:nth-child(2) {
+    right: 8px;
+    top: 9px;
+    width: 7px;
+    transform: rotate(126deg);
+  }
+
+  .easter-star-ray:nth-child(3) {
+    right: 1px;
+    top: 26px;
+    width: 9px;
+    transform: rotate(-2deg);
+  }
+
+  .easter-star-ray:nth-child(4) {
+    right: 8px;
+    bottom: 9px;
+    width: 7px;
+    transform: rotate(48deg);
+  }
+
+  .easter-star-ray:nth-child(5) {
+    left: 25px;
+    bottom: 2px;
+    width: 8px;
+    transform: rotate(92deg);
+  }
+
+  .easter-star-ray:nth-child(6) {
+    left: 8px;
+    bottom: 9px;
+    width: 7px;
+    transform: rotate(-48deg);
+  }
+
+  .easter-star-ray:nth-child(7) {
+    left: 1px;
+    top: 26px;
+    width: 9px;
+    transform: rotate(2deg);
+  }
+
+  .easter-star-ray:nth-child(8) {
+    left: 8px;
+    top: 9px;
+    width: 7px;
+    transform: rotate(52deg);
+  }
+
+  @keyframes easter-star-rays-wiggle {
+    0%,
+    100% {
+      transform: scale(1) rotate(-0.2deg);
+      opacity: 0.86;
+    }
+    50% {
+      transform: scale(1.018) rotate(0.2deg);
+      opacity: 0.96;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .easter-star-rays {
+      animation: none;
+    }
+  }
+
   /* 13. List Card Peel */
   .app-list-card {
     position: relative;
