@@ -95,6 +95,8 @@ export default function MarkPlace() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const isPhotoDoneStage = stage === 'done' && Boolean(photoURL);
+  const photoAreaHeight = isPhotoDoneStage ? 'calc(100dvh - 13.5rem)' : '55dvh';
 
   useEffect(() => () => {
     if (photoURL) URL.revokeObjectURL(photoURL);
@@ -497,8 +499,8 @@ export default function MarkPlace() {
       {stage !== 'camera' && (
         <div className="w-full h-[100dvh] flex flex-col relative">
           
-          {/* 上半部分：照片区域 - 约 55% 屏高 */}
-          {photoURL && <div className="relative flex-shrink-0 transition-all duration-500" style={{ height: '55dvh' }}>
+          {/* 上半部分：照片区域 */}
+          {photoURL && <div className="relative flex-shrink-0 transition-all duration-500" style={{ height: photoAreaHeight }}>
             <div className={`w-full h-full relative overflow-hidden transition-all duration-1000 ease-soft-out ${stage === 'analyzing' ? 'scale-[0.97]' : 'scale-100'}`}>
               <img src={photoURL} className="w-full h-full object-cover" alt="Captured" />
               
@@ -551,8 +553,8 @@ export default function MarkPlace() {
             </div>
           </div>}
 
-          {/* 下半部分：控件区域 - 占据剩余空间 */}
-          <div className="flex-1 flex flex-col items-center justify-center px-6 pb-safe bg-stone-50 relative overflow-y-auto">
+          {/* 下半部分：控件区域 */}
+          <div className={`flex-1 flex flex-col items-center px-6 pb-safe bg-stone-50 relative overflow-y-auto ${isPhotoDoneStage ? 'justify-start pt-4' : 'justify-center'}`}>
             {!photoURL && stage === 'done' && (
               <div className="flex flex-col items-center justify-center gap-4 text-center">
                 <div className="relative flex items-center justify-center w-36 h-36 border-[3px] border-[#da2222] border-dashed rounded-full mix-blend-multiply opacity-[0.85] bg-[#da2222]/[0.02] rotate-[-8deg]">
@@ -568,12 +570,17 @@ export default function MarkPlace() {
             
             {/* 描述文字便签 */}
             {stage !== 'map_fallback' && (description || isListening) && (
-              <div className="w-full max-w-sm mt-4 mb-2">
+              <div className={`w-full max-w-sm ${isPhotoDoneStage ? 'mt-3 mb-2' : 'mt-4 mb-2'}`}>
                 <div className="bg-[#fff9e6] p-3 text-stone-800 text-[15px] leading-relaxed shadow-sm border border-[#f0e6d2] rounded-lg"
                      style={{ fontFamily: "'Varela Round', 'Nunito', 'PingFang SC', 'Microsoft YaHei', ui-rounded, sans-serif", fontWeight: 500, letterSpacing: "0.02em" }}>
                   {description}
                   {isListening && <span className="inline-block w-2.5 h-5 bg-stone-400 animate-pulse ml-1 align-middle" />}
                 </div>
+                {isPhotoDoneStage && (
+                  <p className="mt-3 text-center text-xs font-bold tracking-[0.08em] text-stone-400">
+                    正在把这条清迈痕迹收进地图...
+                  </p>
+                )}
               </div>
             )}
 
