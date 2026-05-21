@@ -26,10 +26,18 @@ import { getCmiInspirationCards } from '@/data/cmi-inspirations';
 import { CmiInspirationCard } from '@/components/intent/inspiration-card';
 import { getMapMarkerVisual } from '@/lib/map-marker-visual';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
-import { getCmiPlaceTypeTag, matchesCmiPlaceTypeTag } from '@/data/cmi-taxonomy';
+import {
+  type CmiMapFilterGroup,
+  getCmiMapFilterGroup,
+  getCmiMapFilterGroupForPlaceType,
+  getCmiMapFilterGroups,
+  getCmiPlaceTypeTag,
+  getCmiPlaceTypeTagsByIds,
+  matchesCmiMapFilterGroup,
+  matchesCmiPlaceTypeTag,
+} from '@/data/cmi-taxonomy';
 import {
   filterCmiNearbyWanderRecommendations,
-  getCmiNearbyWanderPlaceTypeFilters,
   isCmiNearbyWanderPlaceTypeId,
 } from '@/data/cmi-nearby-wander';
 
@@ -37,6 +45,22 @@ type UserLocation = {
   latitude: number;
   longitude: number;
 };
+
+const renderListFilterIcon = (
+  item: { iconUrl?: string; label: string; needsIcon?: boolean },
+  className = 'h-6 w-6'
+) => (
+  <span
+    className={`${className} flex shrink-0 items-center justify-center rounded-full bg-white p-[2px] shadow-[0_1px_4px_rgba(47,43,38,0.16)] ring-1 ring-foreground/10`}
+    aria-hidden="true"
+  >
+    {item.needsIcon || !item.iconUrl ? (
+      <span className="h-full w-full rounded-full border border-dashed border-muted-foreground/45 bg-muted/30" />
+    ) : (
+      <img src={item.iconUrl} alt="" className="h-full w-full object-contain" />
+    )}
+  </span>
+);
 
 export default function ListView() {
   const navigate = useNavigate();
@@ -65,6 +89,27 @@ export default function ListView() {
       ? null
       : activePlaceTypeParam;
   const activePlaceTypeTag = getCmiPlaceTypeTag(activePlaceTypeId);
+  const mapFilterGroups = useMemo(() => getCmiMapFilterGroups(), []);
+  const activeNearbyMapGroupFromPlaceType = isNearbyScene && activePlaceTypeId
+    ? getCmiMapFilterGroupForPlaceType(activePlaceTypeId)
+    : null;
+  const activeNearbyMapGroup = isNearbyScene
+    ? activeNearbyMapGroupFromPlaceType ?? getCmiMapFilterGroup(sceneFilterParam)
+    : null;
+  const activeNearbyMapGroupId = activeNearbyMapGroup?.id ?? null;
+  const nearbySecondaryTags = useMemo(
+    () => activeNearbyMapGroup ? getCmiPlaceTypeTagsByIds(activeNearbyMapGroup.placeTypeIds) : [],
+    [activeNearbyMapGroup]
+  );
+  const nearbyPlaceTypeFilters = useMemo(
+    () =>
+      nearbySecondaryTags.map(tag => ({
+        id: `place:${tag.id}`,
+        label: tag.label,
+        placeTypeId: tag.id,
+      })),
+    [nearbySecondaryTags]
+  );
   const isEventScene = activeScene?.id === 'tomorrow-events';
   const isWeekendScene = activeScene?.id === 'weekend';
   const listScrollKey = `cmi-map:list-scroll:${location.pathname}${location.search}:category=${selectedCategory}`;
@@ -91,10 +136,10 @@ export default function ListView() {
     );
   }, [sceneEvents, selectedEventType]);
   const intentFilters = activeScene ? getCmiIntentSecondaryFilters(activeScene.id) : [];
-  const nearbyPlaceTypeFilters = useMemo(() => getCmiNearbyWanderPlaceTypeFilters(), []);
   const selectedIntentFilterLabel =
     intentFilters.find(filter => filter.id === selectedIntentFilter)?.label ?? null;
   const selectedFilterLabel = [
+    activeNearbyMapGroup && !activePlaceTypeTag ? activeNearbyMapGroup.label : null,
     activePlaceTypeTag?.label,
     selectedIntentFilterLabel,
   ].filter(Boolean).join(' / ') || null;
@@ -139,7 +184,7 @@ export default function ListView() {
   // 加载推荐数据
   useEffect(() => {
     loadRecommendations();
-  }, [selectedCategory, activeScene?.id, activePlaceTypeId, userLocation]);
+  }, [selectedCategory, activeScene?.id, activeNearbyMapGroupId, activePlaceTypeId, userLocation]);
 
   useEffect(() => () => {
     if (scrollRafRef.current !== null) {
@@ -246,11 +291,30 @@ export default function ListView() {
 
     const nextSearchParams = new URLSearchParams(searchParams);
     nextSearchParams.set('scene', activeScene.id);
-    nextSearchParams.delete('filter');
     if (placeTypeId) {
+      const placeTypeGroup = getCmiMapFilterGroupForPlaceType(placeTypeId);
+      if (placeTypeGroup) {
+        nextSearchParams.set('filter', placeTypeGroup.id);
+      } else {
+        nextSearchParams.delete('filter');
+      }
       nextSearchParams.set('placeType', placeTypeId);
     } else {
       nextSearchParams.delete('placeType');
+    }
+    navigate(`/list?${nextSearchParams.toString()}`, { replace: true });
+  };
+
+  const handleNearbyMapGroupSelect = (group: CmiMapFilterGroup | null) => {
+    if (!activeScene) return;
+
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.set('scene', activeScene.id);
+    nextSearchParams.delete('placeType');
+    if (group) {
+      nextSearchParams.set('filter', group.id);
+    } else {
+      nextSearchParams.delete('filter');
     }
     navigate(`/list?${nextSearchParams.toString()}`, { replace: true });
   };
@@ -290,11 +354,17 @@ export default function ListView() {
         const sceneRecommendations = isNearbyScene
           ? filterCmiNearbyWanderRecommendations(baseSceneRecommendations)
           : baseSceneRecommendations;
+        const groupFilteredSceneRecommendations =
+          isNearbyScene && activeNearbyMapGroupId && !activePlaceTypeId
+            ? sceneRecommendations.filter(recommendation =>
+              matchesCmiMapFilterGroup(recommendation, activeNearbyMapGroupId)
+            )
+            : sceneRecommendations;
         const filteredSceneRecommendations = activePlaceTypeId
-          ? sceneRecommendations.filter(recommendation =>
+          ? groupFilteredSceneRecommendations.filter(recommendation =>
             matchesCmiPlaceTypeTag(recommendation, activePlaceTypeId)
           )
-          : sceneRecommendations;
+          : groupFilteredSceneRecommendations;
         setRecommendations(filteredSceneRecommendations);
         return;
       }
@@ -369,6 +439,7 @@ export default function ListView() {
               variant="outline"
               size="icon"
               onClick={() => navigate(getSceneMapPath(activeScene.id, {
+                filterId: activeNearbyMapGroupId,
                 placeTypeId: activePlaceTypeId,
               }))}
               className="press-feedback"
@@ -411,32 +482,67 @@ export default function ListView() {
         ) : !isEventScene ? (
           <div className="px-6 pb-4">
             {isNearbyScene ? (
-              <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
-                <button
-                  type="button"
-                  className={`min-h-10 shrink-0 rounded-full border px-3 text-sm font-black ${
-                    !activePlaceTypeId
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-border bg-background text-foreground'
-                  }`}
-                  onClick={() => handleNearbyPlaceTypeSelect(null)}
-                >
-                  全部
-                </button>
-                {nearbyPlaceTypeFilters.map(filter => (
-                  <button
-                    key={filter.id}
-                    type="button"
-                    className={`min-h-10 shrink-0 rounded-full border px-3 text-sm font-black ${
-                      activePlaceTypeId === filter.placeTypeId
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-border bg-background text-foreground'
-                    }`}
-                    onClick={() => handleNearbyPlaceTypeSelect(filter.placeTypeId ?? null)}
-                  >
-                    {filter.label}
-                  </button>
-                ))}
+              <div className="space-y-2">
+                <div className="-mx-6 overflow-x-auto px-6 hide-scrollbar">
+                  <div className="flex w-max items-center gap-2">
+                    <button
+                      type="button"
+                      className={`min-h-10 shrink-0 rounded-full border px-4 text-sm font-black shadow-sm transition active:scale-[0.98] ${
+                        !activeNearbyMapGroupId && !activePlaceTypeId
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-border bg-background text-foreground'
+                      }`}
+                      onClick={() => handleNearbyMapGroupSelect(null)}
+                      aria-label="显示附近全部地点"
+                    >
+                      全部
+                    </button>
+                    {mapFilterGroups.map(group => (
+                      <button
+                        key={group.id}
+                        type="button"
+                        className={`min-h-10 shrink-0 rounded-full border px-3 text-sm font-black shadow-sm transition active:scale-[0.98] ${
+                          activeNearbyMapGroupId === group.id
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-border bg-background text-foreground'
+                        }`}
+                        onClick={() => handleNearbyMapGroupSelect(group)}
+                        aria-label={`附近一级分类：${group.label}`}
+                        aria-expanded={activeNearbyMapGroupId === group.id}
+                      >
+                        <span className="mr-1.5 inline-flex align-middle">
+                          {renderListFilterIcon(group, 'h-6 w-6')}
+                        </span>
+                        {group.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {activeNearbyMapGroup && nearbySecondaryTags.length > 0 && (
+                  <div className="-mx-6 overflow-x-auto px-6 hide-scrollbar">
+                    <div className="flex w-max items-center gap-2">
+                      {nearbySecondaryTags.map(tag => (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          className={`min-h-9 shrink-0 rounded-full border px-3 text-xs font-black shadow-sm transition active:scale-[0.98] ${
+                            activePlaceTypeId === tag.id
+                              ? 'border-primary bg-white text-primary'
+                              : 'border-border bg-background text-foreground'
+                          }`}
+                          onClick={() => handleNearbyPlaceTypeSelect(activePlaceTypeId === tag.id ? null : tag.id)}
+                          aria-label={`附近二级分类：${tag.label}`}
+                        >
+                          <span className="mr-1.5 inline-flex align-middle">
+                            {renderListFilterIcon(tag, 'h-5 w-5')}
+                          </span>
+                          {tag.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : !isEventScene && intentFilters.length > 0 && (
               <div className="mt-3 flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
@@ -458,7 +564,7 @@ export default function ListView() {
                     className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-black ${
                       selectedIntentFilter === filter.id
                         ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-border bg-background text-foreground'
+                        : 'border-border bg-background text-foreground'
                   }`}
                     onClick={() => handleIntentFilterSelect(filter.id)}
                   >

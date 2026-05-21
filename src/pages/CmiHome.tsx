@@ -5,15 +5,17 @@ import {
   MapPin,
   QrCode,
 } from 'lucide-react';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
+  CMI_EVENTS,
   type CmiEvent,
   formatCmiEventTime,
   getCmiEventTimeBucketLabel,
-  getTomorrowCmiEvents,
+  getUpcomingCmiEventsFromList,
 } from '@/data/cmi-events';
+import { getPublishedCmiEvents } from '@/db/cmi-events';
 
 interface CmiHomeCheckIn {
   id: string;
@@ -99,22 +101,10 @@ const cmiHomeCheckIns: CmiHomeCheckIn[] = [
   },
 ];
 
-const formatTomorrowLabel = (referenceDate: Date) =>
-  new Intl.DateTimeFormat('zh-CN', {
-    month: 'numeric',
-    day: 'numeric',
-    weekday: 'short',
-    timeZone: 'Asia/Bangkok',
-  }).format(new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate() + 1));
-
-const getPrimaryTomorrowEvents = (referenceDate: Date) => {
-  const tomorrowEvents = getTomorrowCmiEvents(referenceDate);
-  const cmiRelatedEvents = tomorrowEvents.filter(
+const getPrimaryInnEvents = (events: CmiEvent[], referenceDate: Date) =>
+  getUpcomingCmiEventsFromList(events, referenceDate).filter(
     event => event.isCmiRelated || event.venueName.includes('清迈客栈') || event.area.includes('清迈客栈')
   );
-
-  return cmiRelatedEvents.length > 0 ? cmiRelatedEvents : tomorrowEvents;
-};
 
 const formatEventStartClock = (event: CmiEvent) => {
   if (event.startAt) {
@@ -194,13 +184,13 @@ function EventPreviewCard({ event, referenceDate }: { event: CmiEvent; reference
 }
 
 function YardNoticeWall({
-  tomorrowEvents,
+  innEvents,
   referenceDate,
-  tomorrowLabel,
+  onOpenAllEvents,
 }: {
-  tomorrowEvents: CmiEvent[];
+  innEvents: CmiEvent[];
   referenceDate: Date;
-  tomorrowLabel: string;
+  onOpenAllEvents: () => void;
 }) {
   return (
     <section className="mt-5" id="tomorrow-events">
@@ -211,8 +201,8 @@ function YardNoticeWall({
         }} />
         <div className="relative mb-3 flex items-center justify-between gap-3 px-1 pt-1">
           <div>
-            <p className="text-[12px] font-black text-[#3f6e52]">明天在客栈</p>
-            <h2 className="mt-1 text-[2.05rem] font-black leading-none text-[#242424]">{tomorrowLabel}</h2>
+            <p className="text-[12px] font-black text-[#3f6e52]">客栈活动</p>
+            <h2 className="mt-1 text-[2.05rem] font-black leading-none text-[#242424]">最近可参加</h2>
           </div>
           <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[#2e2a23]/8 bg-white/82 text-[#3f6e52] shadow-sm">
             <CalendarDays className="h-5 w-5" strokeWidth={2.5} />
@@ -220,13 +210,20 @@ function YardNoticeWall({
         </div>
 
         <div className="relative space-y-3">
-          {tomorrowEvents.length > 0 ? (
-            tomorrowEvents.slice(0, 2).map(event => (
+          {innEvents.length > 0 ? (
+            innEvents.slice(0, 2).map(event => (
               <EventPreviewCard key={event.id} event={event} referenceDate={referenceDate} />
             ))
           ) : (
             <div className="rounded-[1.5rem] bg-white/90 p-4 text-sm font-black leading-relaxed text-[#5f4523] shadow-[0_14px_35px_rgba(46,42,35,0.08)]">
-              明天还没贴活动。晚点再来看看。
+              <p>暂时还没贴新的客栈活动。晚点再来看看。</p>
+              <button
+                type="button"
+                className="mt-3 min-h-11 rounded-full bg-[#3f6e52] px-4 text-sm font-black text-white shadow-[0_10px_20px_rgba(63,110,82,0.18)] transition active:scale-[0.98]"
+                onClick={onOpenAllEvents}
+              >
+                看清迈近期活动
+              </button>
             </div>
           )}
         </div>
@@ -332,8 +329,21 @@ function MemoryWall() {
 export default function CmiHome() {
   const navigate = useNavigate();
   const referenceDate = useMemo(() => new Date(), []);
-  const tomorrowEvents = useMemo(() => getPrimaryTomorrowEvents(referenceDate), [referenceDate]);
-  const tomorrowLabel = useMemo(() => formatTomorrowLabel(referenceDate), [referenceDate]);
+  const [events, setEvents] = useState<CmiEvent[]>(CMI_EVENTS);
+  const innEvents = useMemo(() => getPrimaryInnEvents(events, referenceDate), [events, referenceDate]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getPublishedCmiEvents().then(data => {
+      if (!isMounted) return;
+      setEvents(data);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div
@@ -391,7 +401,11 @@ export default function CmiHome() {
           </div>
         </section>
 
-        <YardNoticeWall tomorrowEvents={tomorrowEvents} referenceDate={referenceDate} tomorrowLabel={tomorrowLabel} />
+        <YardNoticeWall
+          innEvents={innEvents}
+          referenceDate={referenceDate}
+          onOpenAllEvents={() => navigate('/list?scene=tomorrow-events')}
+        />
 
         <ContactQrSection />
 

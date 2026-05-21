@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   filterCmiNearbyWanderRecommendations,
-  getCmiNearbyWanderPlaceTypeFilters,
   isCmiNearbyWanderPlaceTypeId,
 } from '@/data/cmi-nearby-wander';
 import {
@@ -68,7 +67,7 @@ type ActiveFilter = `place:${string}`;
 type MapCategoryFilter = {
   id: ActiveFilter;
   label: string;
-  iconUrl: string;
+  iconUrl?: string;
   needsIcon?: boolean;
   kind: 'place';
   value: string;
@@ -282,6 +281,13 @@ export default function MapView() {
       : activePlaceTypeParam;
   const activePlaceTypeTag = getCmiPlaceTypeTag(activePlaceTypeId);
   const activeSceneFilterParam = searchParams.get('filter');
+  const activeNearbyMapGroupFromPlaceType = isNearbyScene && activePlaceTypeId
+    ? getCmiMapFilterGroupForPlaceType(activePlaceTypeId)
+    : null;
+  const activeNearbyMapGroup = isNearbyScene
+    ? activeNearbyMapGroupFromPlaceType ?? getCmiMapFilterGroup(activeSceneFilterParam)
+    : null;
+  const activeNearbyMapGroupId = activeNearbyMapGroup?.id ?? null;
   const intentFilters = activeScene ? getCmiIntentSecondaryFilters(activeScene.id) : [];
   const activeSceneFilterId =
     activeSceneFilterParam && intentFilters.some(filter => filter.id === activeSceneFilterParam)
@@ -326,17 +332,21 @@ export default function MapView() {
     () => resolveCmiMapFilterQuery(mapSearchQuery),
     [mapSearchQuery]
   );
+  const nearbySecondaryTags = useMemo(
+    () => activeNearbyMapGroup ? getCmiPlaceTypeTagsByIds(activeNearbyMapGroup.placeTypeIds) : [],
+    [activeNearbyMapGroup]
+  );
   const nearbyPlaceTypeFilters = useMemo<MapCategoryFilter[]>(
     () =>
-      getCmiNearbyWanderPlaceTypeFilters().map(tag => ({
-        id: createPlaceFilterId(tag.placeTypeId!),
+      nearbySecondaryTags.map(tag => ({
+        id: createPlaceFilterId(tag.id),
         label: tag.label,
         iconUrl: tag.iconUrl,
         needsIcon: tag.needsIcon,
         kind: 'place' as const,
-        value: tag.placeTypeId!,
+        value: tag.id,
       })),
-    []
+    [nearbySecondaryTags]
   );
   const sceneEventMarkers = useMemo(
     () => sceneEvents.map(getCmiEventMapMarker).filter((marker): marker is MapMarkerType => Boolean(marker)),
@@ -369,11 +379,17 @@ export default function MapView() {
     const activeSceneRecommendations = isNearbyScene
       ? filterCmiNearbyWanderRecommendations(baseSceneRecommendations)
       : baseSceneRecommendations;
+    const nearbyGroupFilteredRecommendations =
+      isNearbyScene && activeNearbyMapGroupId && !activePlaceTypeId
+        ? activeSceneRecommendations.filter(recommendation =>
+          matchesCmiMapFilterGroup(recommendation, activeNearbyMapGroupId)
+        )
+        : activeSceneRecommendations;
     const placeTypeFilteredRecommendations = activePlaceTypeId
-      ? activeSceneRecommendations.filter(recommendation =>
+      ? nearbyGroupFilteredRecommendations.filter(recommendation =>
         matchesCmiPlaceTypeTag(recommendation, activePlaceTypeId)
       )
-      : activeSceneRecommendations;
+      : nearbyGroupFilteredRecommendations;
     const filteredSceneRecommendations = activeSceneFilterId
       ? placeTypeFilteredRecommendations.filter(recommendation =>
         matchesCmiIntentSecondaryFilter(recommendation, activeScene.id, activeSceneFilterId)
@@ -388,7 +404,15 @@ export default function MapView() {
       recommendations: filteredSceneRecommendations,
       isPlaceTypeFallback,
     };
-  }, [activeScene, activePlaceTypeId, activeSceneFilterId, isNearbyScene, recommendations, userLocation]);
+  }, [
+    activeNearbyMapGroupId,
+    activePlaceTypeId,
+    activeScene,
+    activeSceneFilterId,
+    isNearbyScene,
+    recommendations,
+    userLocation,
+  ]);
   const sceneRecommendations = sceneRecommendationState.recommendations;
   const isPlaceTypeFallback = sceneRecommendationState.isPlaceTypeFallback;
 
@@ -748,7 +772,22 @@ export default function MapView() {
     if (!activeScene) return;
     setSelectedMarker(null);
     setSelectedRecommendations([]);
-    navigate(getSceneMapPath(activeScene.id, { placeTypeId }));
+
+    const placeTypeGroup = getCmiMapFilterGroupForPlaceType(placeTypeId);
+    navigate(getSceneMapPath(activeScene.id, {
+      filterId: placeTypeGroup?.id ?? activeNearbyMapGroupId,
+      placeTypeId,
+    }));
+  };
+
+  const handleNearbyMapGroupSelect = (group: CmiMapFilterGroup | null) => {
+    if (!activeScene) return;
+    setSelectedMarker(null);
+    setSelectedRecommendations([]);
+    navigate(getSceneMapPath(activeScene.id, {
+      filterId: group?.id ?? null,
+      placeTypeId: null,
+    }));
   };
 
   const handleDirectIntentMapGroupSelect = (group: CmiMapFilterGroup | null) => {
@@ -1010,12 +1049,8 @@ export default function MapView() {
       : scenePanelItemCount > 0
         ? `${scenePanelItemCount} 个地点 · ${scenePanelPreviewLabels.join(' / ')}`
         : '地点还在整理中';
-  const nearbyLocationLabel =
-    locationStatus === 'ready'
-      ? '已定位：地图以你为中心，附近点按距离排序'
-      : locationStatus === 'error'
-        ? '没拿到定位权限，允许后点重试'
-        : '正在定位，允许后会以你为中心';
+  const nearbyLocationLabel = '没拿到定位权限，允许后点重试';
+  const shouldShowNearbyLocationNotice = isNearbyScene && locationStatus === 'error';
 
   useEffect(() => {
     warmupImages(mapWarmupImageUrls, { batchSize: 8, delayMs: 80 });
@@ -1132,7 +1167,10 @@ export default function MapView() {
       {isNearbyScene && activeScene && (
         <div className="absolute top-[calc(env(safe-area-inset-top)+12px)] right-4 md:right-6 z-20">
           <a
-            href={getSceneListPath(activeScene.id, { placeTypeId: activePlaceTypeId })}
+            href={getSceneListPath(activeScene.id, {
+              filterId: activeNearbyMapGroupId,
+              placeTypeId: activePlaceTypeId,
+            })}
             className="inline-flex h-9 items-center justify-center rounded-full border border-primary/70 bg-primary px-2.5 text-xs font-black text-primary-foreground shadow-[2px_3px_0_rgba(0,0,0,0.14)] backdrop-blur-sm transition-transform active:translate-y-0.5"
           >
             <List className="mr-1 h-3.5 w-3.5" strokeWidth={2.5} />
@@ -1145,35 +1183,68 @@ export default function MapView() {
       <div className="absolute top-[calc(env(safe-area-inset-top)+64px)] left-0 right-0 z-20 px-4 md:px-6">
         {activeScene ? (
           isNearbyScene ? (
-          <div className="flex w-max items-center gap-2 pb-2">
-            <Button
-              size="sm"
-              className={`h-9 rounded-full border px-3 text-xs font-black shadow-md backdrop-blur-sm transition-transform active:translate-y-0.5 ${
-                !activePlaceTypeId
-                  ? 'border-primary bg-primary text-primary-foreground'
-                  : 'border-border/50 bg-background/90 text-foreground'
-              }`}
-              onClick={() => handleNearbyPlaceTypeSelect(null)}
-            >
-              全部
-            </Button>
-            {nearbyPlaceTypeFilters.map(filter => (
-              <Button
-                key={filter.id}
-                size="sm"
-                className={`h-9 shrink-0 rounded-full border px-2.5 text-xs font-black shadow-md backdrop-blur-sm transition-transform active:translate-y-0.5 ${
-                  activePlaceTypeId === filter.value
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border/50 bg-background/90 text-foreground'
-                }`}
-                onClick={() => handleNearbyPlaceTypeSelect(filter.value)}
-              >
-                <span className="mr-1.5">
-                  {renderFilterIcon(filter, 'h-5 w-5')}
-                </span>
-                {filter.label}
-              </Button>
-            ))}
+          <div className="space-y-2 pb-2">
+            <div className="-mx-4 overflow-x-auto px-4 hide-scrollbar md:-mx-6 md:px-6">
+              <div className="flex w-max items-center gap-2">
+                <Button
+                  size="sm"
+                  className={`h-10 rounded-full px-4 text-sm font-black shadow-md press-feedback transition-transform ${
+                    !activeNearbyMapGroupId && !activePlaceTypeId
+                      ? 'border-2 border-transparent bg-primary text-primary-foreground scale-105'
+                      : 'border-2 border-border/50 bg-background/90 text-foreground backdrop-blur-sm hover:bg-background'
+                  }`}
+                  onClick={() => handleNearbyMapGroupSelect(null)}
+                  aria-label="显示附近全部地点"
+                >
+                  全部
+                </Button>
+                {mapFilterGroups.map(group => (
+                  <Button
+                    key={group.id}
+                    size="sm"
+                    className={`h-10 shrink-0 rounded-full px-3 text-sm font-black shadow-md press-feedback transition-transform ${
+                      activeNearbyMapGroupId === group.id
+                        ? 'border-2 border-transparent bg-primary text-primary-foreground scale-105'
+                        : 'border-2 border-border/50 bg-background/90 text-foreground backdrop-blur-sm hover:bg-background'
+                    }`}
+                    onClick={() => handleNearbyMapGroupSelect(group)}
+                    aria-label={`附近一级分类：${group.label}`}
+                    aria-expanded={activeNearbyMapGroupId === group.id}
+                  >
+                    <span className="mr-1.5">
+                      {renderFilterIcon(group, 'h-6 w-6')}
+                    </span>
+                    {group.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {activeNearbyMapGroup && nearbyPlaceTypeFilters.length > 0 && (
+              <div className="-mx-4 overflow-x-auto px-4 hide-scrollbar md:-mx-6 md:px-6">
+                <div className="flex w-max items-center gap-2">
+                  {nearbyPlaceTypeFilters.map(filter => (
+                    <Button
+                      key={filter.id}
+                      variant="outline"
+                      size="sm"
+                      className={`h-9 min-w-[5.25rem] shrink-0 rounded-full px-2.5 text-xs font-black shadow-md press-feedback transition-transform ${
+                        activePlaceTypeId === filter.value
+                          ? 'border-2 border-primary bg-white/95 text-primary hover:bg-white'
+                          : 'border border-border/50 bg-background/90 text-foreground backdrop-blur-sm hover:bg-background'
+                      }`}
+                      onClick={() => handleNearbyPlaceTypeSelect(activePlaceTypeId === filter.value ? null : filter.value)}
+                      aria-label={`附近二级分类：${filter.label}`}
+                    >
+                      <span className="mr-1.5">
+                        {renderFilterIcon(filter, 'h-5 w-5')}
+                      </span>
+                      {filter.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           ) : isDirectIntentScene ? (
           <div className="space-y-2 pb-2">
@@ -1395,7 +1466,7 @@ export default function MapView() {
         )}
       </div>
 
-      {isNearbyScene && (
+      {shouldShowNearbyLocationNotice && (
         <div className="pointer-events-none absolute top-[calc(env(safe-area-inset-top)+110px)] left-4 right-4 z-20 md:left-6 md:right-auto md:max-w-[360px]">
           <div className="flex items-center gap-2 rounded-full border-2 border-border/50 bg-background/90 px-3 py-2 text-xs font-black text-foreground shadow-md backdrop-blur-sm">
             <LocateFixed className="h-4 w-4 shrink-0 text-primary" strokeWidth={2.5} />

@@ -1,6 +1,6 @@
 # CMI Map 周末地点库
 
-最后核查：2026-05-19 12:35 ICT
+最后核查：2026-05-21 09:56 ICT
 
 ## 口径
 
@@ -27,11 +27,27 @@
 | Nong Ho 周末旧物市集 | 二手 / 旧物市集 | 每周六、周日 07:00-14:00 | 古城北侧 / Chang Phueak 方向 | 稳定周期 | [When in Chiang Mai - Nong Ho](https://www.wheninchiangmai.com/lb132290/nong-ho-flea-market-saturday-sunday) |
 | Chiang Mai Pride 2026 | 本周日节庆活动 | 2026-05-24 13:00-24:00，游行约 16:00 开始 | Buddhasathan / Tha Phae Gate | 已核实，本周末活动 | [Adam's Apple Club - Chiang Mai Pride 2026](https://www.adamsappleclub.com/event/chiang-mai-pride-2026/) |
 
+## 2026-05-21 已发布到正式活动库
+
+| 名称 | 类型 | 时间 | 区域 | 状态 | 来源 |
+| --- | --- | --- | --- | --- | --- |
+| UNDO · REDO 艺术展最后一天 | 展览 | 2026-05-22 08:30-17:00 | Déjà Gallery / Wat Ket | 已核实，最后一天 | [Citylife - UNDO · REDO](https://www.chiangmaicitylife.com/citynow/whats-on/arts-and-exhibitions/undo-%C2%B7-redo-art-exhibition-at-deja-gallery/) |
+| Pride Cover Dance 与平权论坛 | Pride / 舞蹈 / 论坛 | 2026-05-22 15:30 起 | MAYA | 已核实，结束时间需当天复核 | [Time Out - Pride Guide](https://www.timeout.com/chiang-mai/lgbtq/your-ultimate-guide-to-chiang-mai-pride-2026) |
+| Do Place 开幕夜 | 创意空间 / 音乐 | 2026-05-22 16:00 起 | The Goodcery | 已核实，结束时间需当天复核 | [Time Out - This Weekend](https://www.timeout.com/chiang-mai/things-to-do/weekly-event) |
+| Intha Dinner 缅甸茵达文化晚餐 | 晚餐 / 文化 | 2026-05-22 17:00 起 | Carpenter Avenue | 已核实，需预约 | [Time Out - Intha Dinner](https://www.timeout.com/chiang-mai/things-to-do/explore-burmese-flavours-at-intha-dinner) |
+| Aleenta 五道式葡萄酒晚餐 | 晚餐 / 葡萄酒 | 2026-05-22 18:30-22:00 | Aleenta Retreat | 已核实，需预约 | [Citylife - Wine Pairing Dinner](https://www.chiangmaicitylife.com/citynow/whats-on/food-and-drink/wine-pairing-dinner-at-aleenta-retreat-chiang-mai/) |
+| SOUL SOAK 周五热疗与声音疗愈 | 身心灵 / 音乐 | 每周五 11:00-22:00 | Sense Dhara Dhevi | 稳定周期，持续到 2026-08-31 前 | [Citylife - SOUL SOAK](https://www.chiangmaicitylife.com/citynow/whats-on/live-music/soul-soak-is-coming-back-every-friday-at-sense-dhara-dhevi-wellness-club/) |
+| Bboy Jammy James 入门 Breaking 课 | 运动 / 舞蹈 | 2026-05-23 17:00-18:00 | Chontana Mall | 已核实，建议提前报名 | [Time Out - Breaking Class](https://www.timeout.com/chiang-mai/things-to-do/learn-the-breaking-basics-with-bboy-jammy-james) |
+| Northern Scooter Show 2026 | 展会 / 机车 | 2026-05-23 至 05-24 12:00-21:00 | Central Chiangmai Airport | 已核实，本周末活动 | [Citylife - Northern Scooter Show](https://www.chiangmaicitylife.com/citynow/whats-on/clubs-and-societies/northern-scooter-show-2026-2/) |
+| 828 Alleyway Som Tum Rave | 音乐 / 夜生活 | 2026-05-23 19:00 起 | 828.Alleyway | 已核实，结束时间需当天复核 | [Time Out - Som Tum Rave](https://www.timeout.com/chiang-mai/things-to-do/turn-up-the-heat-at-828-alleyways-som-tum-rave) |
+| Tipsy Thai Trivia 泰语知识问答夜 | 社交 / 酒吧 | 2026-05-23 21:00 起 | Look Inside CNX | 已核实，座位需当天复核 | [Time Out - This Weekend](https://www.timeout.com/chiang-mai/things-to-do/weekly-event) |
+| Chiang Mai Music Journey 9 | 音乐节 | 2026-05-24 15:30-24:00 | Chiang Mai PAO Public Park | 已核实，需提前登记 | [Time Out - Music Journey 9](https://www.timeout.com/chiang-mai/things-to-do/catch-your-favourite-thai-artists-at-the-free-chiang-mai-music-journey-9-festival) |
+| Thailand Inventors’ Day Road Show 2026 清迈站 | 科技 / 创新展 | 2026-05-24 至 05-25，具体每日时段以报名页/主办方通知为准 | Chiang Mai Grandview Hotel | 用户提供 NRCT 宣传图核实，需出发前确认具体开放小时 | [Google 表单报名](https://forms.gle/hVNecNBySYHAdA1K6) |
+
 ## 已核查但先不进稳定地点库
 
 | 名称 | 原因 | 来源 |
 | --- | --- | --- |
-| Northern Scooter Show 2026 | 明确是 2026-05-23 到 05-24 的本周末活动，但公开页没给具体每日开放时间；适合进入“本周末活动候选”，复核时间后再公开。 | [Citylife - Northern Scooter Show 2026](https://www.chiangmaicitylife.com/citynow/whats-on/clubs-and-societies/northern-scooter-show-2026-2/) |
 | Rustic Market | 已包含在 Jing Jai 周末场里；如果以后要细分 Jing Jai 的 Farmers Market / Rustic Market，可以拆成独立子事件。 | [Citylife - Rustic Market](https://www.chiangmaicitylife.com/citynow/whats-on/regular-events/rustic-market/) |
 
 ## 每周维护源

@@ -96,61 +96,7 @@ const QR_ENTRIES = [
   },
 ];
 
-const INITIAL_POSTS: BlackboardPost[] = [
-  {
-    id: 'sticky-waterfall',
-    category: 'companion',
-    title: '明天去粘粘瀑布',
-    body: '想找 2-3 个人一起去，上午 10 点出发，下午回。可以包车，也可以有人骑车带路。',
-    author: '林可',
-    authorInitial: '林',
-    createdLabel: '12 分钟前',
-    timeLabel: '明天 10:00',
-    locationLabel: '粘粘瀑布',
-    peopleLabel: '2',
-    confirmedCount: 1,
-    interestedCount: 2,
-  },
-  {
-    id: 'jing-jai-market',
-    category: 'companion',
-    title: '周六早上逛 JJ',
-    body: '想去 Jing Jai 买菜和喝咖啡，顺便补几个 CMI Map 点位。慢慢逛，不赶时间。',
-    author: '小北',
-    authorInitial: '小',
-    createdLabel: '36 分钟前',
-    timeLabel: '周六 09:30',
-    locationLabel: 'Jing Jai Market',
-    peopleLabel: '1',
-    interestedCount: 1,
-  },
-  {
-    id: 'print-shop-help',
-    category: 'help',
-    title: '哪里打印靠谱',
-    body: '需要打印几份签证材料，最好能中文沟通，离古城或宁曼近一点。',
-    author: '远山',
-    authorInitial: '远',
-    createdLabel: '2 小时前',
-    timeLabel: '今天',
-    locationLabel: '古城 / 宁曼',
-    peopleLabel: '0',
-    interestedCount: 0,
-  },
-  {
-    id: 'airport-ride',
-    category: 'ride',
-    title: '周五凌晨拼车去机场',
-    body: '航班 6 点多，想 4 点左右从宁曼出发，有差不多时间的可以一起。',
-    author: 'Echo',
-    authorInitial: 'E',
-    createdLabel: '3 小时前',
-    timeLabel: '周五 04:00',
-    locationLabel: '宁曼 → 机场',
-    peopleLabel: '0',
-    interestedCount: 0,
-  },
-];
+const INITIAL_POSTS: BlackboardPost[] = [];
 
 const createEmptyDraft = (): BlackboardDraft => ({
   category: 'companion',
@@ -377,7 +323,7 @@ function ComposerSheet({
             maxLength={POST_TITLE_LIMIT}
             onChange={event => updateDraft('title', event.target.value)}
             className="mt-2 h-12 w-full rounded-2xl border border-border bg-white px-4 text-base font-bold text-foreground outline-none focus:border-primary"
-            placeholder="比如：明天去粘粘瀑布"
+            placeholder="比如：周末一起逛市集"
           />
         </label>
 
@@ -422,7 +368,7 @@ function ComposerSheet({
             value={draft.locationLabel}
             onChange={event => updateDraft('locationLabel', event.target.value)}
             className="mt-1.5 h-11 w-full rounded-2xl border border-border bg-white px-3 text-sm font-bold outline-none focus:border-primary"
-            placeholder="粘粘瀑布"
+            placeholder="地点 / 区域"
           />
         </label>
 
@@ -559,9 +505,20 @@ export function CmiBlackboard() {
         </div>
 
         <div className="mt-3 space-y-3">
-          {visiblePosts.map(post => (
-            <BlackboardPostCard key={post.id} post={post} onJoin={handleJoinPost} />
-          ))}
+          {visiblePosts.length > 0 ? (
+            visiblePosts.map(post => (
+              <BlackboardPostCard key={post.id} post={post} onJoin={handleJoinPost} />
+            ))
+          ) : (
+            <div className="rounded-[1.2rem] border border-dashed border-primary/20 bg-white/70 p-5 text-center">
+              <p className="text-base font-black text-foreground">
+                还没有真实发布
+              </p>
+              <p className="mt-1 text-sm font-bold leading-relaxed text-muted-foreground">
+                有人发出发、求助或拼车后，会显示在这里。
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -604,11 +561,9 @@ export function CmiBlackboardEntry({ onOpen }: { onOpen: () => void }) {
           <p className="mt-1 line-clamp-2 text-xs font-black leading-snug text-muted-foreground">
             约搭子、求助、拼车，先放在这里。
           </p>
-          <div className="mt-2 flex items-center gap-1.5 text-[11px] font-black text-primary">
-            <span className="rounded-full bg-primary/10 px-2 py-1">找搭子 2</span>
-            <span className="rounded-full bg-primary/10 px-2 py-1">求助 1</span>
-            <span className="rounded-full bg-primary/10 px-2 py-1">拼车 1</span>
-          </div>
+          <p className="mt-2 text-[11px] font-black text-primary">
+            只显示真实发布内容
+          </p>
         </div>
       </button>
     </section>
