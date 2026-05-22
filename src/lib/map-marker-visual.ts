@@ -1,9 +1,9 @@
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
 import type { Category, MapMarker } from '@/types/types';
-import { normalizeCategory } from '@/types/types';
+import { CMI_INN_CATEGORY, CMI_INN_LOGO_ICON_URL, normalizeCategory } from '@/types/types';
 import { getCmiEasterIconById, getRecommendationEasterIconId } from '@/lib/easter-icons';
 
-type MarkerTone = 'food' | 'coffee' | 'outdoor' | 'photo' | 'landmark' | 'market' | 'wellness' | 'utility' | 'night' | 'creative' | 'neutral';
+type MarkerTone = 'food' | 'coffee' | 'outdoor' | 'photo' | 'landmark' | 'market' | 'wellness' | 'utility' | 'night' | 'creative' | 'neutral' | 'cmi';
 
 type MarkerIconAsset =
   | 'food'
@@ -29,7 +29,8 @@ type MarkerIconAsset =
   | 'book'
   | 'gallery'
   | 'music'
-  | 'hot-spring';
+  | 'hot-spring'
+  | 'cmi-inn';
 
 type MarkerRule = {
   pattern: RegExp;
@@ -80,6 +81,7 @@ const MARKER_ICON_URLS: Record<MarkerIconAsset, string> = {
   gallery: cmiFlatIcon('place-gallery-palette'),
   music: cmiFlatIcon('place-livehouse-music'),
   'hot-spring': cmiFlatIcon('place-hot-spring'),
+  'cmi-inn': CMI_INN_LOGO_ICON_URL,
 };
 
 const TONES: Record<MarkerTone, Pick<MapMarkerVisual, 'accent' | 'shadow'>> = {
@@ -127,6 +129,10 @@ const TONES: Record<MarkerTone, Pick<MapMarkerVisual, 'accent' | 'shadow'>> = {
     accent: '#5f665f',
     shadow: 'rgba(63, 70, 63, 0.17)',
   },
+  cmi: {
+    accent: '#2eb45e',
+    shadow: 'rgba(46, 180, 94, 0.22)',
+  },
 };
 
 const CATEGORY_MARKERS: Record<Category, Pick<MarkerRule, 'label' | 'icon' | 'tone'>> = {
@@ -135,6 +141,7 @@ const CATEGORY_MARKERS: Record<Category, Pick<MarkerRule, 'label' | 'icon' | 'to
   户外: { label: '户外', icon: 'outdoor', tone: 'outdoor' },
   景点: { label: '景点', icon: 'landmark', tone: 'landmark' },
   拍照: { label: '景点', icon: 'landmark', tone: 'landmark' },
+  购物: { label: '购物', icon: 'book', tone: 'creative' },
   市集: { label: '市集', icon: 'market', tone: 'market' },
   马杀鸡: { label: '马杀鸡', icon: 'massage', tone: 'wellness' },
   运动: { label: '运动', icon: 'sport', tone: 'outdoor' },
@@ -142,6 +149,7 @@ const CATEGORY_MARKERS: Record<Category, Pick<MarkerRule, 'label' | 'icon' | 'to
   身心: { label: '身心', icon: 'wellness', tone: 'wellness' },
   生存指南: { label: '实用', icon: 'utility', tone: 'utility' },
   彩蛋: { label: '发现', icon: 'book', tone: 'neutral' },
+  [CMI_INN_CATEGORY]: { label: CMI_INN_CATEGORY, icon: 'cmi-inn', tone: 'cmi' },
 };
 
 const KIND_RULES: MarkerRule[] = [

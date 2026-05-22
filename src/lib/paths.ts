@@ -9,6 +9,8 @@ export const getAddTracePath = (placeName: string) =>
 export const getPlaceMapPath = (placeName: string) =>
   `/map?place=${encodeURIComponent(placeName)}`;
 
+export const getProfilePath = () => '/profile';
+
 export const getPersonMapPath = (userName: string) =>
   `/people/${encodeURIComponent(userName)}`;
 

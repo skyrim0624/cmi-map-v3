@@ -14,10 +14,18 @@ import {
 import type { FormEvent, ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getCmiEventPath, getPersonMapPath, getPlacePath } from '@/lib/paths';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  createBlackboardPost,
+  getBlackboardPosts,
+  type BlackboardPostCategory,
+  type BlackboardPostRecord,
+} from '@/db/blackboard-posts';
+import { getCmiEventPath, getPlacePath, getProfilePath } from '@/lib/paths';
 import { cn } from '@/lib/utils';
 
-type BlackboardCategory = 'companion' | 'help' | 'ride';
+type BlackboardCategory = BlackboardPostCategory;
 type BlackboardFilter = 'all' | BlackboardCategory;
 
 interface BlackboardPost {
@@ -103,8 +111,6 @@ const QR_ENTRIES = [
   },
 ];
 
-const INITIAL_POSTS: BlackboardPost[] = [];
-
 const createEmptyDraft = (): BlackboardDraft => ({
   category: 'companion',
   title: '',
@@ -122,6 +128,48 @@ function getActionLabel(category: BlackboardCategory) {
 function getPostCount(posts: BlackboardPost[], filter: BlackboardFilter) {
   if (filter === 'all') return posts.length;
   return posts.filter(post => post.category === filter).length;
+}
+
+function formatCreatedLabel(value: string) {
+  const createdAt = new Date(value);
+  if (Number.isNaN(createdAt.getTime())) return '刚刚';
+
+  const diffMs = Date.now() - createdAt.getTime();
+  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
+  if (diffMinutes < 1) return '刚刚';
+  if (diffMinutes < 60) return `${diffMinutes} 分钟前`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours} 小时前`;
+
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    timeZone: 'Asia/Bangkok',
+  }).format(createdAt);
+}
+
+function getAuthorInitial(author: string) {
+  return author.trim().charAt(0).toUpperCase() || '?';
+}
+
+function mapBlackboardPost(record: BlackboardPostRecord): BlackboardPost {
+  return {
+    id: record.id,
+    category: record.category,
+    title: record.title,
+    body: record.body,
+    linkedEventId: record.linked_event_id ?? undefined,
+    linkedEventTitle: record.linked_event_title ?? undefined,
+    linkedPlaceName: record.linked_place_name ?? undefined,
+    author: record.author_name,
+    authorInitial: getAuthorInitial(record.author_name),
+    createdLabel: formatCreatedLabel(record.created_at),
+    timeLabel: record.time_label || '时间待定',
+    locationLabel: record.location_label || '地点待定',
+    peopleLabel: record.people_label || '0',
+    interestedCount: 0,
+  };
 }
 
 function CommunityQrCard({ entry }: { entry: (typeof QR_ENTRIES)[number] }) {
@@ -233,7 +281,7 @@ function BlackboardPostCard({
   onJoin: (post: BlackboardPost) => void;
 }) {
   const placePath = post.linkedPlaceName ? getPlacePath(post.linkedPlaceName) : undefined;
-  const authorPath = getPersonMapPath(post.author);
+  const authorPath = getProfilePath();
 
   return (
     <article className="rounded-[1.35rem] border border-border bg-white p-4 shadow-[0_12px_30px_rgba(32,25,54,0.08)]">
@@ -336,13 +384,15 @@ function SheetShell({
 
 function ComposerSheet({
   draft,
+  submitting,
   onDraftChange,
   onSubmit,
   onClose,
 }: {
   draft: BlackboardDraft;
+  submitting: boolean;
   onDraftChange: (draft: BlackboardDraft) => void;
-  onSubmit: () => void;
+  onSubmit: () => Promise<void>;
   onClose: () => void;
 }) {
   const isValid = draft.title.trim().length > 0 && draft.body.trim().length > 0;
@@ -356,8 +406,8 @@ function ComposerSheet({
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!isValid) return;
-    onSubmit();
+    if (!isValid || submitting) return;
+    void onSubmit();
   };
 
   return (
@@ -444,10 +494,10 @@ function ComposerSheet({
 
         <button
           type="submit"
-          disabled={!isValid}
+          disabled={!isValid || submitting}
           className="flex h-12 w-full items-center justify-center rounded-full bg-primary text-base font-black text-primary-foreground shadow-[0_12px_26px_rgba(111,90,168,0.24)] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
         >
-          发布
+          {submitting ? '发布中…' : '发布'}
         </button>
       </form>
     </SheetShell>
@@ -485,11 +535,40 @@ export function CmiBlackboard({
   autoOpenComposer?: boolean;
   initialDraft?: Partial<BlackboardDraft>;
 } = {}) {
+  const { user, profile, loading: authLoading } = useAuth();
   const [activeFilter, setActiveFilter] = useState<BlackboardFilter>('all');
-  const [posts, setPosts] = useState(INITIAL_POSTS);
+  const [posts, setPosts] = useState<BlackboardPost[]>([]);
   const [draft, setDraft] = useState<BlackboardDraft>(() => createEmptyDraft());
+  const [loadingPosts, setLoadingPosts] = useState(true);
+  const [postsError, setPostsError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [contactPost, setContactPost] = useState<BlackboardPost | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    setLoadingPosts(true);
+    setPostsError(null);
+
+    getBlackboardPosts()
+      .then(records => {
+        if (!isMounted) return;
+        setPosts(records.map(mapBlackboardPost));
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setPostsError('一起出发加载失败，稍后再试。');
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setLoadingPosts(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!autoOpenComposer || !initialDraft) return;
@@ -520,28 +599,45 @@ export function CmiBlackboard({
     return posts.filter(post => post.category === activeFilter);
   }, [activeFilter, posts]);
 
-  const handleCreatePost = () => {
-    const newPost: BlackboardPost = {
-      id: `local-${Date.now()}`,
-      category: draft.category,
-      title: draft.title.trim(),
-      body: draft.body.trim(),
-      linkedEventId: draft.linkedEventId,
-      linkedEventTitle: draft.linkedEventTitle,
-      linkedPlaceName: draft.linkedPlaceName,
-      author: '你',
-      authorInitial: '你',
-      createdLabel: '刚刚',
-      timeLabel: draft.timeLabel.trim() || '时间待定',
-      locationLabel: draft.locationLabel.trim() || '地点待定',
-      peopleLabel: draft.peopleLabel.trim() || '0',
-      interestedCount: 0,
-    };
+  const handleCreatePost = async () => {
+    if (authLoading || !user) {
+      toast('登录后才能发布一起出发');
+      return;
+    }
 
-    setPosts(currentPosts => [newPost, ...currentPosts]);
-    setActiveFilter('all');
-    setDraft(createEmptyDraft());
-    setComposerOpen(false);
+    const title = draft.title.trim();
+    const body = draft.body.trim();
+    if (!title || !body) return;
+
+    const authorName = profile?.user_name?.trim() || user.email?.split('@')[0] || 'CMI 朋友';
+
+    setSubmitting(true);
+
+    try {
+      const record = await createBlackboardPost({
+        category: draft.category,
+        title,
+        body,
+        timeLabel: draft.timeLabel.trim() || '时间待定',
+        locationLabel: draft.locationLabel.trim() || '地点待定',
+        peopleLabel: draft.peopleLabel.trim() || '0',
+        linkedEventId: draft.linkedEventId,
+        linkedEventTitle: draft.linkedEventTitle,
+        linkedPlaceName: draft.linkedPlaceName,
+        authorId: user.id,
+        authorName,
+      });
+
+      setPosts(currentPosts => [mapBlackboardPost(record), ...currentPosts]);
+      setActiveFilter('all');
+      setDraft(createEmptyDraft());
+      setComposerOpen(false);
+      toast.success('已发布到一起出发');
+    } catch {
+      toast.error('发布失败：没有写入数据库，请稍后再试');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleJoinPost = (post: BlackboardPost) => {
@@ -608,7 +704,18 @@ export function CmiBlackboard({
         </div>
 
         <div className="mt-3 space-y-3">
-          {visiblePosts.length > 0 ? (
+          {loadingPosts ? (
+            <div className="rounded-[1.2rem] border border-dashed border-primary/20 bg-white/70 p-5 text-center">
+              <p className="text-base font-black text-foreground">正在加载真实发布</p>
+              <p className="mt-1 text-sm font-bold leading-relaxed text-muted-foreground">
+                这里现在会读取 Supabase，不再只看本地缓存。
+              </p>
+            </div>
+          ) : postsError ? (
+            <div className="rounded-[1.2rem] border border-dashed border-destructive/30 bg-white/70 p-5 text-center">
+              <p className="text-base font-black text-foreground">{postsError}</p>
+            </div>
+          ) : visiblePosts.length > 0 ? (
             visiblePosts.map(post => (
               <BlackboardPostCard key={post.id} post={post} onJoin={handleJoinPost} />
             ))
@@ -628,6 +735,7 @@ export function CmiBlackboard({
       {composerOpen && (
         <ComposerSheet
           draft={draft}
+          submitting={submitting}
           onDraftChange={setDraft}
           onSubmit={handleCreatePost}
           onClose={() => setComposerOpen(false)}
@@ -670,5 +778,26 @@ export function CmiBlackboardEntry({ onOpen }: { onOpen: () => void }) {
         </div>
       </button>
     </section>
+  );
+}
+
+export function CmiBlackboardHomeCard({ onOpen }: { onOpen: () => void }) {
+  return (
+    <button
+      type="button"
+      className="min-h-[124px] rounded-lg border-2 border-primary bg-[#fbfaff]/95 p-3 text-left text-foreground shadow-[3px_4px_0_rgba(0,0,0,0.16)] transition-transform active:translate-y-0.5 active:shadow-[2px_3px_0_rgba(0,0,0,0.14)]"
+      onClick={onOpen}
+      aria-label="打开一起出发看板"
+    >
+      <div className="mb-3 flex items-start gap-3">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
+          <img src={BLACKBOARD_ICON_URL} alt="" className="h-10 w-10 object-contain" />
+        </div>
+      </div>
+      <p className="text-base font-black leading-tight">一起出发！</p>
+      <p className="mt-1 line-clamp-2 text-xs font-semibold leading-snug text-muted-foreground">
+        约搭子、求助、拼车。
+      </p>
+    </button>
   );
 }

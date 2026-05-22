@@ -75,6 +75,23 @@ const getRecommendationIconUrl = (recommendation: Recommendation) => (
     : getCategoryIconUrl(recommendation.category)
 );
 
+const getPrimaryBadgeForRecommendation = (recommendation: Recommendation) => {
+  const placeTypeTag = getCmiPlaceTypeTagsForRecommendation(recommendation)[0];
+  if (placeTypeTag) {
+    return {
+      label: placeTypeTag.label,
+      iconUrl: placeTypeTag.iconUrl ?? getRecommendationIconUrl(recommendation),
+      isPlaceType: true,
+    };
+  }
+
+  return {
+    label: normalizeCategory(recommendation.category),
+    iconUrl: getRecommendationIconUrl(recommendation),
+    isPlaceType: false,
+  };
+};
+
 const getProfileInitial = (displayName: string) => displayName.trim().charAt(0).toUpperCase() || '?';
 
 export default function PlaceDetail() {
@@ -631,8 +648,11 @@ export default function PlaceDetail() {
   const firstIsCommunityGuide = isCommunityCuratedRecommendation(firstRec);
   const firstPlaceTypeTags = getCmiPlaceTypeTagsForRecommendation(firstRec);
   const firstDetailTags = getCmiDetailTagsForRecommendation(firstRec);
+  const firstPrimaryBadge = getPrimaryBadgeForRecommendation(firstRec);
   const inlineDetailTags = [
-    ...firstPlaceTypeTags.map(tag => ({ id: `place-${tag.id}`, label: tag.label })),
+    ...firstPlaceTypeTags
+      .filter(tag => !(firstPrimaryBadge.isPlaceType && tag.label === firstPrimaryBadge.label))
+      .map(tag => ({ id: `place-${tag.id}`, label: tag.label })),
     ...firstDetailTags.map(tag => ({ id: `detail-${tag.id}`, label: tag.label })),
   ];
   return (
@@ -750,8 +770,8 @@ export default function PlaceDetail() {
                       variant="outline"
                       className="rounded-full border-border/70 bg-background/90 px-2.5 py-1 text-muted-foreground shadow-sm"
                     >
-                      <img src={getRecommendationIconUrl(firstRec)} alt="" className="mr-1 h-5 w-5 object-contain" />
-                      {normalizeCategory(firstRec.category)}
+                      <img src={firstPrimaryBadge.iconUrl} alt="" className="mr-1 h-5 w-5 object-contain" />
+                      {firstPrimaryBadge.label}
                     </Badge>
                     {inlineDetailTags.map(tag => (
                       <span

@@ -11,9 +11,14 @@ import {
   DEFAULT_CMI_EASTER_ICON_ID,
   getCmiEasterIconById,
 } from '@/lib/easter-icons';
-import { getPlacePath } from '@/lib/paths';
+import { getCmiHomePath, getPlacePath } from '@/lib/paths';
 import type { Category } from '@/types/types';
-import { getCategoryIconUrl } from '@/types/types';
+import {
+  CMI_INN_CATEGORY,
+  CMI_INN_COORDINATES,
+  CMI_INN_PLACE_NAME,
+  getCategoryIconUrl,
+} from '@/types/types';
 import { normalizeImageFile } from '@/utils/imageCompression';
 
 type Stage = 'camera' | 'analyzing' | 'voice' | 'category' | 'done' | 'map_fallback';
@@ -44,20 +49,13 @@ type SpeechRecognitionErrorEventLike = {
   error?: string;
 };
 type SpeechPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied' | 'checking';
+type CameraStatus = 'starting' | 'ready' | 'blocked' | 'unsupported' | 'error';
 
 const MARK_PLACE_VIDEO_CONSTRAINTS: MediaTrackConstraints = {
   facingMode: { ideal: 'environment' },
   width: { ideal: 1920 },
   height: { ideal: 1080 },
   frameRate: { ideal: 30, max: 30 },
-};
-
-const isLikelyMobileCameraDevice = () => {
-  const userAgent = navigator.userAgent;
-  return (
-    /Android|iPhone|iPad|iPod/i.test(userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  );
 };
 
 const appendTranscript = (currentText: string, nextText: string) => {
@@ -194,6 +192,8 @@ export default function MarkPlace() {
   const [voiceHint, setVoiceHint] = useState('点一下麦克风开始说，说完会自动写入。');
   const [interimTranscript, setInterimTranscript] = useState('');
   const [scanned, setScanned] = useState(false);
+  const [cameraStatus, setCameraStatus] = useState<CameraStatus>('starting');
+  const [cameraHint, setCameraHint] = useState('正在打开网页相机...');
 
   const [sourceType, setSourceType] = useState<'live' | 'exif' | null>(null);
 
@@ -215,7 +215,6 @@ export default function MarkPlace() {
     );
   }, [easterIconQuery]);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<InstanceType<SpeechRecognitionConstructor> | null>(null);
   const speechStartingRef = useRef(false);
@@ -228,11 +227,18 @@ export default function MarkPlace() {
   const isMapFallbackStage = stage === 'map_fallback';
   const photoAreaHeight = isPhotoDoneStage ? 'calc(100dvh - 13.5rem)' : '55dvh';
   const voiceButtonDisabled = !speechSupported || speechPermission === 'checking';
+  const cameraButtonDisabled = cameraStatus !== 'ready';
 
   const stopCameraStream = () => {
     if (!streamRef.current) return;
     streamRef.current.getTracks().forEach(track => track.stop());
     streamRef.current = null;
+  };
+
+  const markCameraReady = () => {
+    if (!streamRef.current || !videoRef.current || videoRef.current.videoWidth === 0) return;
+    setCameraStatus('ready');
+    setCameraHint('网页相机已打开，直接按中间按钮拍下当前画面。');
   };
 
   const updateInterimTranscript = (nextTranscript: string) => {
@@ -367,26 +373,49 @@ export default function MarkPlace() {
   // 初始化 WebRTC 相机
   useEffect(() => {
     if (stage === 'camera') {
+      let alive = true;
       const startCamera = async () => {
+        setCameraStatus('starting');
+        setCameraHint('正在打开网页相机...');
         try {
           if (!navigator.mediaDevices?.getUserMedia) {
-            toast('当前浏览器不支持网页取景，可以从相册选择照片');
+            if (!alive) return;
+            setCameraStatus('unsupported');
+            setCameraHint('当前浏览器不支持网页相机，可以从相册选择，或直接文字推荐。');
             return;
           }
 
           const mediaStream = await navigator.mediaDevices.getUserMedia({
             video: MARK_PLACE_VIDEO_CONSTRAINTS,
           });
+          if (!alive) {
+            mediaStream.getTracks().forEach(track => track.stop());
+            return;
+          }
           streamRef.current = mediaStream;
           if (videoRef.current) {
             videoRef.current.srcObject = mediaStream;
+            await videoRef.current.play().catch(() => {
+              // NOTE: 少数移动浏览器需要等 loadedmetadata/canplay 事件后才能自动播放预览。
+            });
+            markCameraReady();
           }
         } catch (err) {
           console.error("相机权限获取失败:", err);
-          toast('相机打不开，可以从相册选择照片');
+          if (!alive) return;
+          const errorName = err instanceof DOMException ? err.name : '';
+          const blocked = errorName === 'NotAllowedError' || errorName === 'PermissionDeniedError';
+          setCameraStatus(blocked ? 'blocked' : 'error');
+          setCameraHint(blocked
+            ? '浏览器没有给相机权限。可以在地址栏权限里允许相机，或直接文字推荐。'
+            : '网页相机暂时打不开，可以从相册选择，或直接文字推荐。');
         }
       };
       startCamera();
+      return () => {
+        alive = false;
+        stopCameraStream();
+      };
     } else {
       stopCameraStream();
     }
@@ -396,7 +425,7 @@ export default function MarkPlace() {
   }, [stage]);
 
   const captureFromPreview = () => {
-    if (videoRef.current && canvasRef.current && streamRef.current && videoRef.current.readyState === 4) {
+    if (videoRef.current && canvasRef.current && streamRef.current && videoRef.current.videoWidth > 0) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       canvas.width = video.videoWidth;
@@ -421,19 +450,15 @@ export default function MarkPlace() {
             }, 300);
           }
         }, 'image/jpeg', 0.92);
+      } else {
+        toast('取景器没有拍下来，稍后再试一次');
       }
     } else {
-      fileInputRef.current?.click();
+      toast(cameraHint);
     }
   };
 
   const capturePhoto = () => {
-    if (isLikelyMobileCameraDevice()) {
-      stopCameraStream();
-      fileInputRef.current?.click();
-      return;
-    }
-
     captureFromPreview();
   };
 
@@ -584,18 +609,24 @@ export default function MarkPlace() {
         }
       }
 
-      // 提取标题
       const text = description.trim();
-      let placeName = '';
-      let reason = '';
-      const punctuationIndex = text.search(/[，。！？、,\.!?\n]/);
-      
-      if (punctuationIndex > 0 && punctuationIndex < 30) {
-        placeName = text.substring(0, punctuationIndex);
-        reason = text.substring(punctuationIndex + 1).trim() || text;
-      } else {
-        placeName = text.substring(0, Math.min(30, text.length));
-        reason = text;
+      const isCmiInnCheckIn = selectedCategory === CMI_INN_CATEGORY;
+      const targetCoordinates = isCmiInnCheckIn
+        ? CMI_INN_COORDINATES
+        : { latitude: center.lat, longitude: center.lng };
+      let placeName = CMI_INN_PLACE_NAME;
+      let reason = text;
+
+      if (!isCmiInnCheckIn) {
+        const punctuationIndex = text.search(/[，。！？、,\.!?\n]/);
+
+        if (punctuationIndex > 0 && punctuationIndex < 30) {
+          placeName = text.substring(0, punctuationIndex);
+          reason = text.substring(punctuationIndex + 1).trim() || text;
+        } else {
+          placeName = text.substring(0, Math.min(30, text.length));
+          reason = text;
+        }
       }
 
       const userName = profile?.user_name || user?.email?.split('@')[0] || '匿名用户';
@@ -606,8 +637,8 @@ export default function MarkPlace() {
         reason: reason,
         user_name: userName,
         user_id: user!.id,
-        latitude: center.lat,
-        longitude: center.lng,
+        latitude: targetCoordinates.latitude,
+        longitude: targetCoordinates.longitude,
         images: imageUrls,
         ...(selectedCategory === '彩蛋' ? { easter_icon_id: selectedEasterIconId } : {}),
       };
@@ -616,8 +647,8 @@ export default function MarkPlace() {
 
       if (recommendation) {
         setTimeout(() => {
-          toast.success('你的这一笔清迈痕迹已经留下了 🎉');
-          navigate(getPlacePath(recommendation.place_name), {
+          toast.success(isCmiInnCheckIn ? '这张客栈现场已经放到留言墙了' : '你的这一笔清迈痕迹已经留下了 🎉');
+          navigate(isCmiInnCheckIn ? getCmiHomePath() : getPlacePath(recommendation.place_name), {
             replace: true,
             state: { newTraceId: recommendation.id },
           });
@@ -667,8 +698,28 @@ export default function MarkPlace() {
       {stage === 'camera' && (
         <div className="w-full h-screen flex flex-col relative text-stone-700 bg-stone-900">
           <div className="flex-1 relative overflow-hidden bg-black/10 border-[16px] sm:border-[24px] border-stone-100 rounded-[2.5rem] m-2 shadow-[inset_0_4px_12px_rgba(0,0,0,0.1)] backdrop-blur-[1px]">
-            <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover -z-10" />
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              onLoadedMetadata={markCameraReady}
+              onCanPlay={markCameraReady}
+              className="absolute inset-0 z-0 h-full w-full object-cover"
+            />
             <canvas ref={canvasRef} className="hidden" />
+            {cameraStatus !== 'ready' && (
+              <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-stone-950/75 px-8 text-center text-white backdrop-blur-sm">
+                {cameraStatus === 'starting' ? (
+                  <Loader2 className="mb-3 h-7 w-7 animate-spin text-white/90" />
+                ) : (
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/12">
+                    <PencilLine className="h-6 w-6 text-white/85" />
+                  </div>
+                )}
+                <p className="max-w-xs text-sm font-bold leading-relaxed text-white/90">{cameraHint}</p>
+              </div>
+            )}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 pointer-events-none">
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 border-[3px] border-primary/40 rounded-full border-dashed" />
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-primary/60 rounded-full" />
@@ -690,27 +741,38 @@ export default function MarkPlace() {
           <div className="h-48 sm:h-56 bg-white relative flex flex-col items-center justify-center shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.08)] pb-safe rounded-t-[40px] z-10">
             <div className="absolute top-5 w-32 h-1.5 bg-stone-200 rounded-full shadow-inner opacity-80" />
             <div className="flex items-center gap-6 mt-4 z-10 w-full justify-center px-8">
-              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleCapture(e, 'live')} ref={fileInputRef} />
               <input type="file" accept="image/*" className="hidden" onChange={(e) => handleCapture(e, 'exif')} ref={uploadInputRef} />
               <button
+                type="button"
                 onClick={startQuickTextFlow}
                 className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 shadow-inner hover:bg-stone-200 transition-colors active:scale-95"
                 aria-label="快速文字推荐"
               >
                 <PencilLine className="w-5 h-5" />
               </button>
-              <button 
+              <button
+                type="button"
                 onClick={capturePhoto}
-                className="relative w-[88px] h-[88px] sm:w-[96px] sm:h-[96px] rounded-full flex flex-col items-center justify-center group active:scale-[0.92] transition-transform duration-200 outline-none shrink-0"
+                disabled={cameraButtonDisabled}
+                className={`relative w-[88px] h-[88px] sm:w-[96px] sm:h-[96px] rounded-full flex flex-col items-center justify-center group transition-transform duration-200 outline-none shrink-0 ${
+                  cameraButtonDisabled ? 'cursor-not-allowed opacity-55' : 'active:scale-[0.92]'
+                }`}
+                aria-label={cameraButtonDisabled ? cameraHint : '拍下当前画面'}
               >
                 <div className="absolute inset-0 rounded-full border-4 border-stone-100 shadow-[0_8px_20px_rgba(0,0,0,0.06),inset_0_4px_8px_rgba(0,0,0,0.02)] transition-shadow bg-[#fdfdfc]"></div>
-                <div className="w-[76%] h-[76%] rounded-full bg-gradient-to-br from-[#ff8c42] to-[#e64a00] shadow-[inset_0_-4px_10px_rgba(0,0,0,0.1),0_4px_12px_rgba(255,94,0,0.4)] group-active:shadow-[inset_0_4px_10px_rgba(0,0,0,0.2),0_2px_4px_rgba(255,94,0,0.2)] transition-all flex items-center justify-center">
+                <div className={`w-[76%] h-[76%] rounded-full transition-all flex items-center justify-center ${
+                  cameraButtonDisabled
+                    ? 'bg-stone-200 shadow-inner'
+                    : 'bg-gradient-to-br from-[#ff8c42] to-[#e64a00] shadow-[inset_0_-4px_10px_rgba(0,0,0,0.1),0_4px_12px_rgba(255,94,0,0.4)] group-active:shadow-[inset_0_4px_10px_rgba(0,0,0,0.2),0_2px_4px_rgba(255,94,0,0.2)]'
+                }`}>
                   <div className="absolute top-4 left-6 w-5 h-5 bg-white/40 rounded-full blur-[2px]"></div>
                 </div>
               </button>
-              <button 
+              <button
+                type="button"
                 onClick={() => uploadInputRef.current?.click()}
                 className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 shadow-inner hover:bg-stone-200 transition-colors active:scale-95"
+                aria-label="从相册选择照片"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
               </button>
@@ -920,8 +982,12 @@ export default function MarkPlace() {
                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#ffe06f] p-0.5 shadow-[inset_0_0_0_2px_rgba(255,255,255,0.7),0_3px_8px_rgba(136,101,17,0.14)]">
                           <img src={selectedEasterIcon.url} alt="" className="h-6 w-6 object-contain" />
                         </span>
+                      ) : option.storedCategory === CMI_INN_CATEGORY ? (
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white p-0.5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08),0_3px_8px_rgba(0,0,0,0.12)]">
+                          <img src={option.iconUrl ?? getCategoryIconUrl(option.storedCategory)} alt="" className="h-full w-full object-contain" />
+                        </span>
                       ) : (
-                        <img src={getCategoryIconUrl(option.storedCategory)} alt="" className="w-5 h-5 object-contain" />
+                        <img src={option.iconUrl ?? getCategoryIconUrl(option.storedCategory)} alt="" className="w-5 h-5 object-contain" />
                       )}
                       <span>{option.label}</span>
                     </button>
@@ -989,7 +1055,7 @@ export default function MarkPlace() {
                     onClick={() => handleSubmitFinal(selectedCat)}
                     className="mt-4 w-full max-w-[200px] h-12 bg-primary text-white font-bold rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all animate-in zoom-in-95 flex items-center justify-center gap-2"
                   >
-                    <span>{selectedCat === '彩蛋' ? '发布彩蛋' : '发布印戳'}</span>
+                    <span>{selectedCat === CMI_INN_CATEGORY ? '发布到客栈主页' : selectedCat === '彩蛋' ? '发布彩蛋' : '发布印戳'}</span>
                   </button>
                 )}
                 {uploading && (

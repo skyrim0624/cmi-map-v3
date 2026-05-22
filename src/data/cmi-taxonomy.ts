@@ -1,7 +1,15 @@
 import type { CmiSceneId } from '@/data/cmi-scenes';
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
-import { type Category, getCategoryIconUrl, normalizeCategory, type Recommendation } from '@/types/types';
+import {
+  CMI_INN_CATEGORY,
+  CMI_INN_LOGO_ICON_URL,
+  CMI_INN_PLACE_NAME,
+  type Category,
+  getCategoryIconUrl,
+  normalizeCategory,
+  type Recommendation,
+} from '@/types/types';
 
 export type CmiPrimaryIntentId =
   | 'eat'
@@ -38,6 +46,8 @@ export interface CmiInputCategoryOption {
   description: string;
   storedCategory: Category;
   primaryIntentId?: CmiPrimaryIntentId;
+  iconUrl?: string;
+  targetPlaceName?: string;
 }
 
 export interface CmiPlaceTypeTag {
@@ -231,7 +241,7 @@ export const CMI_PRIMARY_INTENTS: CmiPrimaryIntent[] = [
     label: '购物',
     description: '商场、市集、菜市场、超市和日用品补给。',
     sceneId: 'shopping',
-    inputCategory: '市集',
+    inputCategory: '购物',
   },
   {
     id: 'relax',
@@ -277,6 +287,14 @@ export const CMI_INPUT_CATEGORY_OPTIONS: CmiInputCategoryOption[] = [
     description: '城门、寺庙、观景点，或第一次来清迈会明确去看的地方。',
     storedCategory: '景点',
     primaryIntentId: 'play',
+  },
+  {
+    id: 'cmi-inn',
+    label: CMI_INN_PLACE_NAME,
+    description: '客栈活动现场的照片和一句话，会进入清迈客栈主页留言。',
+    storedCategory: CMI_INN_CATEGORY,
+    iconUrl: CMI_INN_LOGO_ICON_URL,
+    targetPlaceName: CMI_INN_PLACE_NAME,
   },
   ...CMI_PRIMARY_INTENTS.filter(intent => intent.id === 'easter').map(intent => ({
     id: intent.id,
@@ -476,6 +494,7 @@ export const CMI_MAP_FILTER_GROUPS: CmiMapFilterGroup[] = [
     label: '购物',
     iconUrl: cmiFlatIcon('direct-shopping'),
     placeTypeIds: ['mall', 'daily', 'stationery', 'reading'],
+    categoryFallbacks: ['购物'],
     keywords: ['购物', '商场', '超市', '日用品', '文具', '书店', '买东西'],
   },
   {

@@ -32,6 +32,7 @@ export const CMI_EVENT_POSTER_BY_ID: Partial<Record<string, string>> = {
   'cmi-kongxiang-canteen-2026-05-22': '/cmi-home/event-posters/cmi-kongxiang-canteen-2026-05-22.jpg',
   'cmi-song-of-the-sea-screening-2026-05-23': '/cmi-home/event-posters/cmi-song-of-the-sea-screening-2026-05-23.jpg',
   'cmi-swap-market-2026-05-24': '/cmi-home/event-posters/cmi-swap-market-2026-05-24.jpg',
+  'cmi-ai-open-mic-vol-04-2026-05-24': '/cmi-home/event-posters/cmi-ai-open-mic-vol-04-2026-05-24.jpg',
 };
 
 export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = {
@@ -40,6 +41,8 @@ export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = 
   'cmi-kongxiang-canteen-2026-05-22': '/cmi-home/event-card-backgrounds/cmi-kongxiang-canteen-2026-05-22.jpg',
   'cmi-song-of-the-sea-screening-2026-05-23': '/cmi-home/event-card-backgrounds/cmi-song-of-the-sea-screening-2026-05-23.jpg',
   'cmi-swap-market-2026-05-24': '/cmi-home/event-card-backgrounds/cmi-swap-market-2026-05-24.jpg',
+  'cmi-ai-open-mic-vol-04-2026-05-24':
+    '/cmi-home/event-card-backgrounds/cmi-ai-open-mic-vol-04-2026-05-24.jpg',
 };
 
 export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailContent> = {
@@ -209,6 +212,39 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
           '活动形式：旧物、技能、才艺、音乐、画像与互助交换',
           '场地费用：免费参与',
           '参与方式：海报附二维码，可扫码进群了解',
+        ],
+      },
+    ],
+  },
+  'cmi-ai-open-mic-vol-04-2026-05-24': {
+    eventId: 'cmi-ai-open-mic-vol-04-2026-05-24',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-ai-open-mic-vol-04-2026-05-24']!,
+    postTitle: 'AI 开放麦第四期｜本周 AI 使用现场交流',
+    postBlocks: [
+      {
+        kind: 'paragraph',
+        text: 'AI 工具每天都在变化，真正有价值的经验，往往来自具体使用现场。',
+      },
+      {
+        kind: 'paragraph',
+        text: '这期 AI 开放麦继续围绕过去一周的 AI 使用展开交流：工具、案例、项目、问题和踩坑都可以拿出来聊。',
+      },
+      {
+        kind: 'paragraph',
+        text: '不用准备完整演讲，有一个观察、一个尝试、一个踩坑，或者一个正在推进中的想法，都可以现场分享。',
+      },
+      {
+        kind: 'heading',
+        text: '活动信息',
+      },
+      {
+        kind: 'list',
+        items: [
+          '活动时间：5 月 24 日（周日）19:00',
+          '活动地点：清迈客栈',
+          '活动主题：本周 AI 使用 / 工具 / 项目 / 案例 / 踩坑 / 问题',
+          '场地费用：免费参与',
+          '参与方式：无需报名，直接空降即可',
         ],
       },
     ],

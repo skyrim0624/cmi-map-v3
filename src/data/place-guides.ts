@@ -21,6 +21,10 @@ const normalizePlaceName = (value: string) =>
     .trim()
     .toLowerCase();
 
+const PLACE_GUIDE_ALIASES: Array<[string, string]> = [
+  ['各种外文书', 'Suriwong Book Center'],
+];
+
 const createFallbackGuide = (placeName: string, category?: Category | string): PlaceGuide => {
   const lowerName = placeName.toLowerCase();
 
@@ -61,6 +65,16 @@ const createFallbackGuide = (placeName: string, category?: Category | string): P
       kind: '市场',
       summary: '市场类点位适合想看清迈日常生活的人：买吃的、买水果、找小东西，顺便感受这座城市真实运转的样子。',
       tags: ['市场', '本地生活', '采购'],
+    };
+  }
+
+  if (/book|library|书店|买书|看书|文具/.test(lowerName) || category === '购物') {
+    return {
+      placeName,
+      title: '书店 / 文具店',
+      kind: '书店',
+      summary: '适合买书、文具、学习用品或找一点纸质材料。对想读书、自习、做活动物料的人都很实用。',
+      tags: ['书店', '文具', '学习用品'],
     };
   }
 
@@ -869,6 +883,7 @@ const inferGuideCategory = (guide: PlaceGuide): Category => {
 
   if (/咖啡|coffee|cafe|roastery/.test(text)) return '咖啡';
   if (/餐|饭|小吃|甜品|noodle|food|烤鸭|炸猪肉/.test(text)) return '吃饭';
+  if (/书店|文具|学习用品|bookstore|library/.test(text)) return '购物';
   if (/市场|市集|market|bazaar/.test(text)) return '市集';
   if (/景点|地标|观景点|寺庙|城门|temple|wat|landmark|viewpoint/.test(placeTypeText)) return '景点';
   if (/温泉|户外|山|短途|茶饮/.test(text)) return '户外';
@@ -897,6 +912,14 @@ export const getCommunityGuideRecommendations = (limit = 12): Recommendation[] =
   }));
 
 const GUIDE_MAP = new Map(COMMUNITY_PLACE_GUIDES.map(guide => [normalizePlaceName(guide.placeName), guide]));
+const GUIDE_ALIAS_MAP = new Map(
+  PLACE_GUIDE_ALIASES.map(([alias, canonicalName]) => [
+    normalizePlaceName(alias),
+    normalizePlaceName(canonicalName),
+  ])
+);
 
 export const getPlaceGuide = (placeName: string, category?: Category | string) =>
-  GUIDE_MAP.get(normalizePlaceName(placeName)) || createFallbackGuide(placeName, category);
+  GUIDE_MAP.get(normalizePlaceName(placeName))
+  || GUIDE_MAP.get(GUIDE_ALIAS_MAP.get(normalizePlaceName(placeName)) ?? '')
+  || createFallbackGuide(placeName, category);

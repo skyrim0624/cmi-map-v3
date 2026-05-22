@@ -2,8 +2,15 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { getAllRecommendations, getRecommendationsByCategory } from '@/db/api';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Recommendation, Category, PlacedSticker, Sticker } from '@/types/types';
-import { CATEGORIES, getCategoryIconUrl } from '@/types/types';
+import {
+  CATEGORIES,
+  getCategoryIconUrl,
+  isPublicMapRecommendation,
+  type Category,
+  type PlacedSticker,
+  type Recommendation,
+  type Sticker,
+} from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowLeft, LogIn, MapPinned } from 'lucide-react';
@@ -348,7 +355,8 @@ export default function ListView() {
     try {
       if (activeScene) {
         const data = await getAllRecommendations({ throwOnError: true });
-        const baseSceneRecommendations = getCmiSceneRecommendations(data, activeScene, {
+        const publicRecommendations = data.filter(isPublicMapRecommendation);
+        const baseSceneRecommendations = getCmiSceneRecommendations(publicRecommendations, activeScene, {
           userLocation: userLocation ?? undefined,
         });
         const sceneRecommendations = isNearbyScene
@@ -371,7 +379,7 @@ export default function ListView() {
 
       if (activePlaceTypeId) {
         const data = await getAllRecommendations({ throwOnError: true });
-        setRecommendations(data.filter(recommendation =>
+        setRecommendations(data.filter(isPublicMapRecommendation).filter(recommendation =>
           matchesCmiPlaceTypeTag(recommendation, activePlaceTypeId)
         ));
         return;
@@ -379,10 +387,10 @@ export default function ListView() {
 
       if (selectedCategory === 'all') {
         const data = await getAllRecommendations({ throwOnError: true });
-        setRecommendations(data);
+        setRecommendations(data.filter(isPublicMapRecommendation));
       } else {
         const data = await getRecommendationsByCategory(selectedCategory, { throwOnError: true });
-        setRecommendations(data);
+        setRecommendations(data.filter(isPublicMapRecommendation));
       }
     } catch {
       setRecommendations([]);

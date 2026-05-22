@@ -1,5 +1,4 @@
-import type { Category, Recommendation } from '@/types/types';
-import { normalizeCategory } from '@/types/types';
+import { CMI_INN_CATEGORY, type Category, type Recommendation, normalizeCategory } from '@/types/types';
 
 type PlaceCorrection = {
   category?: Category;
@@ -26,7 +25,13 @@ const PLACE_CORRECTION_ENTRIES: Array<[string, PlaceCorrection]> = [
     [
       'Suriwong Book Center',
       {
-        category: '生存指南',
+        category: '购物',
+      },
+    ],
+    [
+      '各种外文书',
+      {
+        category: '购物',
       },
     ],
     [
@@ -203,7 +208,9 @@ export const applyRecommendationCorrections = (recommendation: Recommendation): 
 
   return {
     ...recommendation,
-    category: correction.category ?? recommendation.category,
+    category: normalizeCategory(recommendation.category) === CMI_INN_CATEGORY
+      ? recommendation.category
+      : correction.category ?? recommendation.category,
     latitude: correction.latitude ?? recommendation.latitude,
     longitude: correction.longitude ?? recommendation.longitude,
   };

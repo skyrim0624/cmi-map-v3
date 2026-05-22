@@ -1,5 +1,13 @@
+export const CMI_INN_PLACE_NAME = '清迈客栈';
+export const CMI_INN_CATEGORY = '清迈客栈';
+export const CMI_INN_LOGO_ICON_URL = '/brand/cmi-inn-logo-icon.png';
+export const CMI_INN_COORDINATES = {
+  latitude: 18.7932,
+  longitude: 98.9874,
+} as const;
+
 // 分类类型
-export type Category = '吃饭' | '咖啡' | '户外' | '景点' | '拍照' | '市集' | '马杀鸡' | '运动' | '酒吧' | '身心' | '生存指南' | '彩蛋';
+export type Category = '吃饭' | '咖啡' | '户外' | '景点' | '拍照' | '购物' | '市集' | '马杀鸡' | '运动' | '酒吧' | '身心' | '生存指南' | '彩蛋' | typeof CMI_INN_CATEGORY;
 
 // 用户角色类型
 export type UserRole = 'user' | 'admin';
@@ -107,6 +115,12 @@ export const CATEGORIES: CategoryConfig[] = [
     iconUrl: cmiFlatIcon('place-landmark')
   },
   {
+    name: '购物',
+    color: 'category-shopping',
+    icon: '🛍️',
+    iconUrl: cmiFlatIcon('direct-shopping')
+  },
+  {
     name: '市集',
     color: 'category-market', 
     icon: '🛍️',
@@ -150,18 +164,37 @@ export const CATEGORIES: CategoryConfig[] = [
   }
 ];
 
+const SPECIAL_CATEGORIES: CategoryConfig[] = [
+  {
+    name: CMI_INN_CATEGORY,
+    color: 'category-cmi-inn',
+    icon: 'CMI',
+    iconUrl: CMI_INN_LOGO_ICON_URL,
+  },
+];
+
+const ALL_CATEGORY_CONFIGS = [...CATEGORIES, ...SPECIAL_CATEGORIES];
+
 // 获取分类配置
 export const getCategoryConfig = (category: Category | string): CategoryConfig => {
   const normalizedCategory = normalizeCategory(category);
-  return CATEGORIES.find(c => c.name === normalizedCategory) || CATEGORIES.find(c => c.name === '彩蛋') || CATEGORIES[0];
+  return ALL_CATEGORY_CONFIGS.find(c => c.name === normalizedCategory) || CATEGORIES.find(c => c.name === '彩蛋') || CATEGORIES[0];
 };
 
 export const normalizeCategory = (category: Category | string): Category => {
   if (category === '拍照') return '景点';
   if (category === '放松') return '马杀鸡';
-  if (CATEGORIES.some(item => item.name === category)) return category as Category;
+  if (ALL_CATEGORY_CONFIGS.some(item => item.name === category)) return category as Category;
   return '彩蛋';
 };
+
+export const isCmiInnCheckInRecommendation = (
+  recommendation: Pick<Recommendation, 'category'>
+) => normalizeCategory(recommendation.category) === CMI_INN_CATEGORY;
+
+export const isPublicMapRecommendation = (
+  recommendation: Pick<Recommendation, 'category'>
+) => !isCmiInnCheckInRecommendation(recommendation);
 
 export const categoryMatchesFilter = (category: Category | string, filter: Category | string): boolean => (
   normalizeCategory(category) === normalizeCategory(filter)

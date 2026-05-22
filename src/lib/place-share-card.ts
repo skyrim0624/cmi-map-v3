@@ -1,6 +1,6 @@
 import QRCode from 'qrcode';
 import type { Category, Recommendation } from '@/types/types';
-import { getCategoryIconUrl, normalizeCategory } from '@/types/types';
+import { CMI_INN_CATEGORY, getCategoryIconUrl, normalizeCategory } from '@/types/types';
 
 export interface PlaceShareCardInput {
   recommendation: Recommendation;
@@ -30,6 +30,7 @@ const CATEGORY_ACCENTS: Record<Category, string> = {
   户外: '#2f8654',
   景点: '#1ba6b5',
   拍照: '#1b9bd0',
+  购物: '#b66b2f',
   市集: '#d75d84',
   马杀鸡: '#8e6ac1',
   运动: '#e6503e',
@@ -37,6 +38,7 @@ const CATEGORY_ACCENTS: Record<Category, string> = {
   身心: '#5aa99a',
   生存指南: '#6f7f8f',
   彩蛋: '#7b63b6',
+  [CMI_INN_CATEGORY]: '#2eb45e',
 };
 
 const sanitizeFileName = (value: string) =>

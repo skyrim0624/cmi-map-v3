@@ -38,6 +38,7 @@ All colors MUST be HSL.
     --category-photo: 340 80% 70%; /* 旧拍照分类兼容色 */
     --category-landmark: 187 76% 48%; /* 景点 / 地标 */
     --category-graffiti: 270 50% 60%; /* 紫色 */
+    --category-shopping: 35 72% 58%; /* 购物琥珀 */
     --category-market: 44 86% 60%; /* 市集明黄 */
     --category-relax: 268 43% 68%; /* 放松薰衣草 */
     --category-sport: 198 73% 63%; /* 运动天蓝 */
@@ -79,6 +80,7 @@ All colors MUST be HSL.
     --category-photo: 340 70% 65%;
     --category-landmark: 187 68% 45%;
     --category-graffiti: 270 45% 55%;
+    --category-shopping: 35 62% 52%;
     --category-market: 44 74% 53%;
     --category-relax: 268 38% 60%;
     --category-sport: 198 62% 55%;

@@ -3,7 +3,7 @@ import type { ResolvedCmiHomeSection } from '@/data/cmi-home-sections';
 import { HomeSceneIcon, getHomeSceneToneClass } from '@/components/home/home-scene-icon';
 import { DirectIntentCommandPanel } from '@/features/home/direct-intent/direct-intent-command-panel';
 import { HomeSurvivalKitCommandPanel } from '@/features/home/survival-kit/survival-kit-command-panel';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   BedDouble,
   CalendarDays,
@@ -17,6 +17,7 @@ interface HomeSceneSectionProps {
   section: ResolvedCmiHomeSection;
   onSceneSelect: (scene: CmiScene) => void;
   onFeatureSelect: (path: string) => void;
+  trailingSceneCard?: ReactNode;
 }
 
 function HomeSceneCard({
@@ -123,6 +124,7 @@ export function HomeSceneSection({
   section,
   onSceneSelect,
   onFeatureSelect,
+  trailingSceneCard,
 }: HomeSceneSectionProps) {
   const [ideaIndex, setIdeaIndex] = useState(0);
   const rotatingIdea = section.showRotatingIdeas === false
@@ -159,6 +161,7 @@ export function HomeSceneSection({
           {section.scenes.map(scene => (
             <HomeSceneCard key={scene.id} scene={scene} onSelect={onSceneSelect} />
           ))}
+          {trailingSceneCard}
         </div>
       )}
 

@@ -244,7 +244,7 @@ export const CMI_SCENES: CmiScene[] = [
     title: '购物',
     description: '商场、市集、菜市场、超市、伴手礼和日用品补给，先解决买东西这件事。',
     defaultView: 'detail',
-    categoryFallback: '市集',
+    categoryFallback: '购物',
     matchKeywords: [
       '购物',
       '商场',
@@ -272,7 +272,7 @@ export const CMI_SCENES: CmiScene[] = [
     homeOrder: 4,
     homeTitle: '购物',
     homeDescription: '商场、市集、菜市场和日用品。',
-    homeIconCategory: '市集',
+    homeIconCategory: '购物',
   },
   {
     id: 'market',

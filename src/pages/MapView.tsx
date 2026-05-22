@@ -61,7 +61,7 @@ import {
 } from '@/lib/easter-icons';
 import { getMapMarkerVisual } from '@/lib/map-marker-visual';
 import { getPersonMapPath, getPlacePath, getSceneListPath, getSceneMapPath } from '@/lib/paths';
-import type { MapMarker as MapMarkerType, Recommendation } from '@/types/types';
+import { isPublicMapRecommendation, type MapMarker as MapMarkerType, type Recommendation } from '@/types/types';
 
 type ActiveFilter = `place:${string}`;
 type MapCategoryFilter = {
@@ -145,7 +145,9 @@ const getStableHash = (value: string) => {
 
 const withoutEasterEggRecommendations = (sourceMarkers: MapMarkerType[]): MapMarkerType[] =>
   sourceMarkers.flatMap((marker) => {
-    const recommendations = marker.recommendations.filter(recommendation => recommendation.category !== '彩蛋');
+    const recommendations = marker.recommendations.filter(recommendation =>
+      recommendation.category !== '彩蛋' && isPublicMapRecommendation(recommendation)
+    );
     if (recommendations.length === 0) return [];
 
     return [{
@@ -508,11 +510,12 @@ export default function MapView() {
 
     try {
       const data = await getAllRecommendations({ throwOnError: true });
-      setRecommendations(data);
+      const publicRecommendations = data.filter(isPublicMapRecommendation);
+      setRecommendations(publicRecommendations);
 
       // 按地点名称分组，创建标记点
       const markerMap = new Map<string, MapMarkerType>();
-      data.forEach((rec) => {
+      publicRecommendations.forEach((rec) => {
         if (!markerMap.has(rec.place_name)) {
           markerMap.set(rec.place_name, {
             id: rec.id,
@@ -932,7 +935,9 @@ export default function MapView() {
     if (!isFilteredMap) return withoutEasterEggRecommendations(markers);
 
     return markers.flatMap((marker) => {
-      const visibleRecommendations = marker.recommendations.filter(recommendation => recommendation.category !== '彩蛋');
+      const visibleRecommendations = marker.recommendations.filter(recommendation =>
+        recommendation.category !== '彩蛋' && isPublicMapRecommendation(recommendation)
+      );
       const matchingRecommendations = visibleRecommendations.filter((recommendation) => {
         const matchesPlaceType = activeMapPlaceTypeId
           ? matchesCmiPlaceTypeTag(recommendation, activeMapPlaceTypeId)

@@ -63,6 +63,16 @@ if (import.meta.env.DEV && "serviceWorker" in navigator) {
   }
 }
 
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  let isReloadingForNewServiceWorker = false;
+
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (isReloadingForNewServiceWorker) return;
+    isReloadingForNewServiceWorker = true;
+    window.location.reload();
+  });
+}
+
 createRoot(document.getElementById("root")!).render(
   <AppWrapper>
     <App />
