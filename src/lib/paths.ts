@@ -14,6 +14,18 @@ export const getPersonMapPath = (userName: string) =>
 
 export const getCmiHomePath = () => '/cmi-home';
 
+export const getCmiEventPath = (eventId: string) =>
+  `/events/${encodeURIComponent(eventId)}`;
+
+export const getCmiBlackboardPath = (input?: { compose?: boolean; eventId?: string | null }) => {
+  const searchParams = new URLSearchParams();
+  if (input?.compose) searchParams.set('compose', '1');
+  if (input?.eventId) searchParams.set('event', input.eventId);
+
+  const query = searchParams.toString();
+  return query ? `/blackboard?${query}` : '/blackboard';
+};
+
 export const getAiRouteLabPath = () => '/ai-route-lab';
 
 export interface ScenePathOptions {

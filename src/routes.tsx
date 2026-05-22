@@ -9,6 +9,7 @@ const ListView = lazy(() => import('./pages/ListView'));
 const PlaceDetail = lazy(() => import('./pages/PlaceDetail'));
 const AddTrace = lazy(() => import('./pages/AddTrace'));
 const CmiHome = lazy(() => import('./pages/CmiHome'));
+const CmiEventDetail = lazy(() => import('./pages/CmiEventDetail'));
 const MarkPlace = lazy(() => import('./pages/MarkPlace'));
 const PersonMap = lazy(() => import('./pages/PersonMap'));
 const PlaygroundMarkPlace = lazy(() => import('./pages/PlaygroundMarkPlace'));
@@ -68,9 +69,9 @@ export const routes: RouteConfig[] = [
     element: <AddTrace />,
   },
   {
-    name: '清迈客栈',
-    path: '/cmi-home',
-    element: <CmiHome />,
+    name: '活动详情',
+    path: '/events/:eventId',
+    element: <CmiEventDetail />,
     public: true,
   },
   {

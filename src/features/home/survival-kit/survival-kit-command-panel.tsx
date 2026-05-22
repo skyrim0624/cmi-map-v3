@@ -1,10 +1,11 @@
+import { ArrowRight, Search } from 'lucide-react';
+import { type FormEvent, useState } from 'react';
 import {
   CMI_SURVIVAL_KIT_ITEMS,
   type CmiSurvivalKitItemId,
 } from '@/data/cmi-survival-kit';
+import { SurvivalGuideEntryCard } from '@/features/home/survival-kit/survival-guide-library';
 import { getSceneListPath } from '@/lib/paths';
-import { ArrowRight, Search } from 'lucide-react';
-import { type FormEvent, useState } from 'react';
 
 interface HomeSurvivalKitCommandPanelProps {
   onFeatureSelect: (path: string) => void;
@@ -126,6 +127,8 @@ export function HomeSurvivalKitCommandPanel({
           </button>
         </label>
       </form>
+
+      <SurvivalGuideEntryCard onOpen={() => onFeatureSelect('/survival-guides')} />
     </div>
   );
 }

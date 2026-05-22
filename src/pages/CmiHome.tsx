@@ -1,13 +1,24 @@
 import {
+  ArrowRight,
   CalendarDays,
-  ChevronRight,
+  CircleCheck,
   Clock3,
+  Home,
   MapPin,
+  MessageCircle,
   QrCode,
+  RefreshCw,
+  Sparkles,
+  Stamp,
+  UsersRound,
+  type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { getCmiEventCardBackgroundUrl } from '@/data/cmi-event-details';
 import {
   CMI_EVENTS,
   type CmiEvent,
@@ -15,16 +26,20 @@ import {
   getCmiEventTimeBucketLabel,
   getUpcomingCmiEventsFromList,
 } from '@/data/cmi-events';
+import { getProfilesByUserNames, getRecommendationsByPlace, type PublicProfile } from '@/db/api';
+import {
+  type CmiEventStamp,
+  getCmiEventStampDeviceId,
+  getCmiEventStamps,
+  placeCmiEventStamp,
+} from '@/db/cmi-event-stamps';
 import { getPublishedCmiEvents } from '@/db/cmi-events';
+import { getRecommendationReasonText } from '@/lib/easter-icons';
+import { getAddTracePath, getCmiEventPath, getPersonMapPath } from '@/lib/paths';
+import type { Recommendation } from '@/types/types';
 
-interface CmiHomeCheckIn {
-  id: string;
-  author: string;
-  dateLabel: string;
-  imageUrl: string;
-  title: string;
-  note: string;
-}
+const CMI_INN_PLACE_NAME = '清迈客栈';
+const CMI_INN_TIME_ZONE = 'Asia/Bangkok';
 
 interface CmiHomeContact {
   id: string;
@@ -58,46 +73,35 @@ const cmiHomeContacts: CmiHomeContact[] = [
   },
 ];
 
-const cmiHomeCheckIns: CmiHomeCheckIn[] = [
+interface CmiHomeIntroFact {
+  id: string;
+  label: string;
+  value: string;
+  description: string;
+  Icon: LucideIcon;
+}
+
+const cmiHomeIntroFacts: CmiHomeIntroFact[] = [
   {
-    id: 'yard-table',
-    author: '来听分享的人',
-    dateLabel: '5 月',
-    imageUrl: '/cmi-home/checkin-yard-table.jpg',
-    title: '活动散了也没人急着走。',
-    note: '活动后大家又在院子里聊了很久。',
+    id: 'stay',
+    label: '客栈住宿',
+    value: '能住',
+    description: '到清迈先落脚，订房、问路和附近生活都能从这里开始。',
+    Icon: Home,
   },
   {
-    id: 'doorway',
-    author: '住过一晚的人',
-    dateLabel: '5 月',
-    imageUrl: '/cmi-home/checkin-doorway.jpg',
-    title: '第一次来不太会尴尬。',
-    note: '不用很会社交，先坐下就好。',
+    id: 'living-room',
+    label: '社区客厅',
+    value: '能坐',
+    description: '白天来院子坐一会儿，常会碰见正在清迈生活的人。',
+    Icon: UsersRound,
   },
   {
-    id: 'garden',
-    author: '下午来坐的人',
-    dateLabel: '5 月',
-    imageUrl: '/cmi-home/checkin-garden.jpg',
-    title: '下午有树荫，能坐一会儿。',
-    note: '不是景点，更像一个能缓一下的地方。',
-  },
-  {
-    id: 'zebra',
-    author: '拍照的人',
-    dateLabel: '5 月',
-    imageUrl: '/cmi-home/checkin-zebra.jpg',
-    title: '一眼就记住那只斑马。',
-    note: '院子里有一些奇怪但好记的小东西。',
-  },
-  {
-    id: 'entrance',
-    author: '活动组织者',
-    dateLabel: '5 月',
-    imageUrl: '/cmi-home/checkin-entrance.jpg',
-    title: '活动前的院子很安静。',
-    note: '活动开始前，大家会慢慢到。',
+    id: 'events',
+    label: '活动现场',
+    value: '能参加',
+    description: '晚餐、分享、正念、观影和市集会持续同步到活动看板。',
+    Icon: Sparkles,
   },
 ];
 
@@ -106,7 +110,49 @@ const getPrimaryInnEvents = (events: CmiEvent[], referenceDate: Date) =>
     event => event.isCmiRelated || event.venueName.includes('清迈客栈') || event.area.includes('清迈客栈')
   );
 
+const formatBangkokDateTime = (value: string | number | undefined) => {
+  if (!value) return '等待同步';
+
+  const date = typeof value === 'number' ? new Date(value) : new Date(value);
+  if (Number.isNaN(date.getTime())) return '等待同步';
+
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: CMI_INN_TIME_ZONE,
+  }).format(date);
+};
+
+const formatRecordDate = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '刚刚';
+
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    timeZone: CMI_INN_TIME_ZONE,
+  }).format(date);
+};
+
+const getNewestTimestamp = (values: Array<string | undefined>) => {
+  const timestamps = values
+    .map(value => (value ? new Date(value).getTime() : Number.NaN))
+    .filter(Number.isFinite);
+
+  return timestamps.length > 0 ? Math.max(...timestamps) : undefined;
+};
+
+const getRecordImages = (record: Recommendation) =>
+  (Array.isArray(record.images) ? record.images : []).filter(Boolean);
+
 const formatEventStartClock = (event: CmiEvent) => {
+  if (event.stableSchedule && event.tags.includes('具体时段待确认')) {
+    return '待定';
+  }
+
   if (event.startAt) {
     return new Intl.DateTimeFormat('zh-CN', {
       hour: '2-digit',
@@ -119,16 +165,207 @@ const formatEventStartClock = (event: CmiEvent) => {
   return event.recurrence?.startTime ?? '待定';
 };
 
-function EventPreviewCard({ event, referenceDate }: { event: CmiEvent; referenceDate: Date }) {
+const groupEventStampsByEventId = (stamps: CmiEventStamp[]) =>
+  stamps.reduce<Record<string, CmiEventStamp[]>>((groups, stamp) => {
+    groups[stamp.eventId] = [...(groups[stamp.eventId] ?? []), stamp];
+    return groups;
+  }, {});
+
+function InnIntroSection() {
   return (
-    <article className="overflow-hidden rounded-[1.55rem] border-2 border-[#2e2a23]/10 bg-[#fffdf6] shadow-[5px_6px_0_rgba(46,42,35,0.10),0_16px_34px_rgba(46,42,35,0.10)]">
-      <div className="relative h-[8.4rem] overflow-hidden border-b-2 border-[#2e2a23]/10">
-        <img
-          src="/cmi-home/event-ai-courtyard.png"
-          alt=""
-          className="h-full w-full object-cover object-left"
+    <section className="mt-5" id="inn-intro">
+      <div className="rounded-[1.45rem] border-2 border-[#2e2a23]/10 bg-[#fff9ec] px-4 py-4 shadow-[0_12px_30px_rgba(46,42,35,0.08)]">
+        <p className="text-[12px] font-black text-[#8b5f32]">客栈介绍</p>
+        <h2 className="mt-1 text-[1.55rem] font-black leading-tight text-[#242424]">
+          清迈客栈是 CMI 在清迈的线下入口。
+        </h2>
+        <p className="mt-2 text-[14px] font-bold leading-relaxed text-[#4a463d]">
+          能住、能来坐，也能参加社区活动；第一次到清迈，可以先从这个院子接上人和生活。
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function InnDetailSection({
+  onOpenMap,
+  onLeaveTrace,
+}: {
+  onOpenMap: () => void;
+  onLeaveTrace: () => void;
+}) {
+  return (
+    <section className="mt-5" id="inn-detail">
+      <div className="overflow-hidden rounded-[1.8rem] border-2 border-[#2e2a23]/10 bg-[#fff9ec] shadow-[0_16px_42px_rgba(46,42,35,0.09)]">
+        <div className="px-4 py-4">
+          <p className="text-[12px] font-black text-[#8b5f32]">客栈介绍</p>
+          <h2 className="mt-1 text-[1.9rem] font-black leading-tight text-[#242424]">
+            一个可以落脚、碰面、留下故事的清迈院子
+          </h2>
+          <p className="mt-3 text-[15px] font-bold leading-relaxed text-[#4a463d]">
+            清迈客栈不是单纯的住宿点。它更像 CMI 社区在清迈的线下客厅：有人来住几晚，有人来参加一场活动，也有人只是路过院子，和桌边的人聊起接下来要做什么。
+          </p>
+
+          <div className="mt-4 grid gap-2">
+            {cmiHomeIntroFacts.map(({ id, label, value, description, Icon }) => (
+              <div
+                key={id}
+                className="grid grid-cols-[3.6rem_minmax(0,1fr)] items-center gap-3 rounded-[1.05rem] border border-[#2e2a23]/8 bg-white/76 p-3"
+              >
+                <div className="flex h-14 w-14 items-center justify-center rounded-[1rem] bg-[#e8f1e5] text-[#3f6e52]">
+                  <Icon className="h-6 w-6" strokeWidth={2.5} />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-[1.15rem] font-black leading-none text-[#242424]">{value}</p>
+                    <p className="rounded-full bg-[#fff0d5] px-2 py-0.5 text-[11px] font-black text-[#8b5f32]">{label}</p>
+                  </div>
+                  <p className="mt-1 text-[12px] font-bold leading-relaxed text-[#6d6a62]">{description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              className="min-h-11 rounded-full bg-[#3f6e52] text-sm font-black text-white shadow-[0_10px_20px_rgba(63,110,82,0.18)]"
+              onClick={onOpenMap}
+            >
+              <MapPin className="mr-1.5 h-4 w-4" strokeWidth={2.5} />
+              地图位置
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 rounded-full border-[#8b5f32]/25 bg-white text-sm font-black text-[#5f4523]"
+              onClick={onLeaveTrace}
+            >
+              <MessageCircle className="mr-1.5 h-4 w-4" strokeWidth={2.5} />
+              留一句
+            </Button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function EventInterestWall({
+  stamps,
+  hasStamped,
+  isStamping,
+  onStamp,
+}: {
+  stamps: CmiEventStamp[];
+  hasStamped: boolean;
+  isStamping: boolean;
+  onStamp: () => void;
+}) {
+  const visibleStamps = stamps.slice(-22);
+  const stampCount = stamps.length;
+
+  return (
+    <div
+      className="mt-4 rounded-[1.05rem] border border-[#3f6e52]/15 bg-[#edf6ee] p-3 shadow-[0_10px_22px_rgba(63,110,82,0.10)]"
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[12px] font-black leading-none text-[#3f6e52]">想去墙</p>
+          <p className="mt-1 text-sm font-black leading-tight text-[#2f4034]">
+            {stampCount > 0 ? `${stampCount} 个想去戳` : '还没人盖戳'}
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={hasStamped || isStamping}
+          className="flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#3f6e52] px-3 text-sm font-black text-white shadow-[0_8px_16px_rgba(63,110,82,0.18)] transition active:scale-[0.97] disabled:bg-[#7c9b87] disabled:text-white/85"
+          onClick={(event) => {
+            event.stopPropagation();
+            onStamp();
+          }}
+        >
+          <Stamp className="h-4 w-4" strokeWidth={2.5} />
+          {hasStamped ? '已盖戳' : isStamping ? '盖戳中' : '盖想去戳'}
+        </button>
+      </div>
+
+      <div className="relative mt-3 h-[4.85rem] overflow-hidden rounded-[0.95rem] border border-[#3f6e52]/12 bg-white/78">
+        <div
+          className="absolute inset-0 opacity-[0.16]"
+          style={{
+            backgroundImage: 'linear-gradient(#3f6e52 1px, transparent 1px), linear-gradient(90deg, #3f6e52 1px, transparent 1px)',
+            backgroundSize: '18px 18px',
+          }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1f2f25]/78 via-[#1f2f25]/24 to-transparent" />
+        {visibleStamps.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center px-3 text-center text-[12px] font-black text-[#3f6e52]/70">
+            第一个想去戳，等你来盖。
+          </div>
+        )}
+        {visibleStamps.map((stamp, index) => (
+          <span
+            key={stamp.id}
+            className="absolute rounded-full border-2 border-[#d55747] bg-[#fff7f2]/92 px-2.5 py-1 text-[12px] font-black leading-none text-[#d55747] shadow-sm"
+            style={{
+              left: `${stamp.xRatio}%`,
+              top: `${stamp.yRatio}%`,
+              transform: `translate(-50%, -50%) rotate(${stamp.rotation}deg)`,
+              zIndex: index + 1,
+            }}
+          >
+            {stamp.stampLabel}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EventPreviewCard({
+  event,
+  referenceDate,
+  onOpenEvent,
+  stamps,
+  hasStamped,
+  isStamping,
+  onStampEvent,
+}: {
+  event: CmiEvent;
+  referenceDate: Date;
+  onOpenEvent: () => void;
+  stamps: CmiEventStamp[];
+  hasStamped: boolean;
+  isStamping: boolean;
+  onStampEvent: () => void;
+}) {
+  const cardBackgroundUrl = getCmiEventCardBackgroundUrl(event.id) ?? '/cmi-home/event-ai-courtyard.png';
+  const handleKeyDown = (keyboardEvent: KeyboardEvent<HTMLElement>) => {
+    if (keyboardEvent.key !== 'Enter' && keyboardEvent.key !== ' ') return;
+    keyboardEvent.preventDefault();
+    onOpenEvent();
+  };
+
+  return (
+    <article
+      role="link"
+      tabIndex={0}
+      onClick={onOpenEvent}
+      onKeyDown={handleKeyDown}
+      className="cursor-pointer overflow-hidden rounded-[1.55rem] border-2 border-[#2e2a23]/10 bg-[#fffdf6] shadow-[5px_6px_0_rgba(46,42,35,0.10),0_16px_34px_rgba(46,42,35,0.10)] transition hover:-translate-y-0.5 hover:shadow-[5px_8px_0_rgba(46,42,35,0.10),0_18px_38px_rgba(46,42,35,0.12)] active:scale-[0.99]"
+      aria-label={`查看${event.title}活动详情`}
+    >
+      <div className="relative h-[11.2rem] overflow-hidden border-b-2 border-[#2e2a23]/10 bg-[#f6efe0]">
+        <img
+          src={cardBackgroundUrl}
+          alt={`${event.title}活动横幅图`}
+          className="h-full w-full object-cover object-top"
+          loading="lazy"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#1f2f25]/64 via-[#1f2f25]/16 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#1c1a15]/45 to-transparent" />
         <div className="absolute right-3 top-3 rounded-full bg-[#fff8df]/95 px-3 py-1.5 text-[11px] font-black text-[#335941] shadow-sm">
           {event.priceLabel}
         </div>
@@ -143,41 +380,53 @@ function EventPreviewCard({ event, referenceDate }: { event: CmiEvent; reference
       </div>
 
       <div className="p-4">
-        <div className="mb-2 flex flex-wrap gap-2">
-          <span className="rounded-full bg-[#e8f2e7] px-2.5 py-1 text-[11px] font-black text-[#3f6e52]">
-            客栈现场
-          </span>
-          <span className="rounded-full bg-[#f2e8ff] px-2.5 py-1 text-[11px] font-black text-[#755da9]">
-            中文友好
-          </span>
-        </div>
         <h3 className="text-[1.48rem] font-black leading-[1.08] text-[#242424]">
           {event.title}
         </h3>
+        <p className="mt-2 line-clamp-2 text-sm font-bold leading-relaxed text-[#5b564d]">
+          {event.summary}
+        </p>
 
-        <div className="mt-4 grid gap-2 rounded-[1.05rem] border border-[#2e2a23]/8 bg-[#fff7df] p-3 text-sm font-black text-[#3d3a33]">
-          <div className="flex items-center gap-2">
-            <Clock3 className="h-4 w-4 text-[#8b5f32]" strokeWidth={2.5} />
-            <span>{formatCmiEventTime(event, referenceDate)}</span>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {event.tags.slice(0, 4).map(tag => (
+            <span
+              key={tag}
+              className="rounded-full border border-[#3f6e52]/15 bg-[#edf6ee] px-2.5 py-1 text-[11px] font-black leading-none text-[#3f6e52]"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(7.4rem,0.78fr)] gap-3 rounded-[1.05rem] border border-[#2e2a23]/8 bg-[#fff7df] p-3 text-sm font-black text-[#3d3a33]">
+          <div className="grid min-w-0 gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <Clock3 className="h-4 w-4 shrink-0 text-[#8b5f32]" strokeWidth={2.5} />
+              <span className="min-w-0 leading-snug">{formatCmiEventTime(event, referenceDate)}</span>
+            </div>
+            <div className="flex min-w-0 items-center gap-2">
+              <MapPin className="h-4 w-4 shrink-0 text-[#8b5f32]" strokeWidth={2.5} />
+              <span className="min-w-0 leading-snug">{event.venueName}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-[#8b5f32]" strokeWidth={2.5} />
-            <span>{event.venueName}</span>
+          <div className="grid min-w-0 content-center gap-1.5 border-l border-[#8b5f32]/20 pl-3 text-right">
+            <div>
+              <p className="text-[10px] font-black leading-none text-[#8b5f32]/75">费用</p>
+              <p className="mt-1 text-[12px] font-black leading-tight text-[#3d3a33]">{event.priceLabel}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-black leading-none text-[#8b5f32]/75">参与</p>
+              <p className="mt-1 text-[12px] font-black leading-tight text-[#3d3a33]">{event.registrationLabel}</p>
+            </div>
           </div>
         </div>
 
-        {event.sourceUrl && (
-          <a
-            href={event.sourceUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-4 flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#3f6e52] px-4 text-base font-black text-white shadow-[0_10px_22px_rgba(63,110,82,0.22)] transition active:scale-[0.98]"
-            aria-label={`${event.registrationLabel}: ${event.title}`}
-          >
-            {event.registrationLabel}
-            <ChevronRight className="h-4 w-4" strokeWidth={3} />
-          </a>
-        )}
+        <EventInterestWall
+          stamps={stamps}
+          hasStamped={hasStamped}
+          isStamping={isStamping}
+          onStamp={onStampEvent}
+        />
       </div>
     </article>
   );
@@ -187,11 +436,27 @@ function YardNoticeWall({
   innEvents,
   referenceDate,
   onOpenAllEvents,
+  onOpenEvent,
+  eventStampsById,
+  stampedEventIds,
+  stampingEventIds,
+  onStampEvent,
 }: {
   innEvents: CmiEvent[];
   referenceDate: Date;
   onOpenAllEvents: () => void;
+  onOpenEvent: (eventId: string) => void;
+  eventStampsById: Record<string, CmiEventStamp[]>;
+  stampedEventIds: Record<string, boolean>;
+  stampingEventIds: Record<string, boolean>;
+  onStampEvent: (eventId: string) => void;
 }) {
+  const visibleInnEvents = innEvents.slice(0, 4);
+  const latestCheckedAtLabel = formatBangkokDateTime(
+    getNewestTimestamp(innEvents.map(event => event.lastCheckedAt))
+  );
+  const verifiedEventCount = innEvents.filter(event => event.isVerified).length;
+
   return (
     <section className="mt-5" id="tomorrow-events">
       <div className="relative overflow-hidden rounded-[1.8rem] border-2 border-[#2e2a23]/10 bg-[#fff9ec] p-3 shadow-[0_16px_42px_rgba(46,42,35,0.10)]">
@@ -201,18 +466,56 @@ function YardNoticeWall({
         }} />
         <div className="relative mb-3 flex items-center justify-between gap-3 px-1 pt-1">
           <div>
-            <p className="text-[12px] font-black text-[#3f6e52]">客栈活动</p>
-            <h2 className="mt-1 text-[2.05rem] font-black leading-none text-[#242424]">最近可参加</h2>
+            <p className="text-[12px] font-black text-[#3f6e52]">自动同步看板</p>
+            <h2 className="mt-1 text-[2.05rem] font-black leading-none text-[#242424]">客栈活动</h2>
           </div>
-          <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[#2e2a23]/8 bg-white/82 text-[#3f6e52] shadow-sm">
-            <CalendarDays className="h-5 w-5" strokeWidth={2.5} />
+          <button
+            type="button"
+            className="flex min-h-11 items-center gap-1.5 rounded-full border border-[#2e2a23]/8 bg-white/82 px-3 text-sm font-black text-[#3f6e52] shadow-sm transition active:scale-[0.98]"
+            onClick={onOpenAllEvents}
+          >
+            全部
+            <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+          </button>
+        </div>
+
+        <div className="relative mb-3 grid grid-cols-3 gap-2">
+          <div className="rounded-[1rem] border border-[#3f6e52]/12 bg-white/78 p-3">
+            <div className="flex items-center gap-1.5 text-[11px] font-black text-[#3f6e52]">
+              <CalendarDays className="h-3.5 w-3.5" strokeWidth={2.5} />
+              近期
+            </div>
+            <p className="mt-1 text-[1.25rem] font-black leading-none text-[#242424]">{innEvents.length} 场</p>
+          </div>
+          <div className="rounded-[1rem] border border-[#3f6e52]/12 bg-white/78 p-3">
+            <div className="flex items-center gap-1.5 text-[11px] font-black text-[#3f6e52]">
+              <CircleCheck className="h-3.5 w-3.5" strokeWidth={2.5} />
+              已核实
+            </div>
+            <p className="mt-1 text-[1.25rem] font-black leading-none text-[#242424]">{verifiedEventCount} 场</p>
+          </div>
+          <div className="rounded-[1rem] border border-[#3f6e52]/12 bg-white/78 p-3">
+            <div className="flex items-center gap-1.5 text-[11px] font-black text-[#3f6e52]">
+              <RefreshCw className="h-3.5 w-3.5" strokeWidth={2.5} />
+              同步
+            </div>
+            <p className="mt-1 text-[12px] font-black leading-tight text-[#242424]">{latestCheckedAtLabel}</p>
           </div>
         </div>
 
         <div className="relative space-y-3">
           {innEvents.length > 0 ? (
-            innEvents.slice(0, 2).map(event => (
-              <EventPreviewCard key={event.id} event={event} referenceDate={referenceDate} />
+            visibleInnEvents.map(event => (
+              <EventPreviewCard
+                key={event.id}
+                event={event}
+                referenceDate={referenceDate}
+                onOpenEvent={() => onOpenEvent(event.id)}
+                stamps={eventStampsById[event.id] ?? []}
+                hasStamped={Boolean(stampedEventIds[event.id])}
+                isStamping={Boolean(stampingEventIds[event.id])}
+                onStampEvent={() => onStampEvent(event.id)}
+              />
             ))
           ) : (
             <div className="rounded-[1.5rem] bg-white/90 p-4 text-sm font-black leading-relaxed text-[#5f4523] shadow-[0_14px_35px_rgba(46,42,35,0.08)]">
@@ -227,6 +530,113 @@ function YardNoticeWall({
             </div>
           )}
         </div>
+      </div>
+    </section>
+  );
+}
+
+function InnRecordCard({
+  record,
+  profile,
+  onOpenProfile,
+}: {
+  record: Recommendation;
+  profile?: PublicProfile;
+  onOpenProfile: () => void;
+}) {
+  const imageUrls = getRecordImages(record);
+  const reasonText = getRecommendationReasonText(record);
+  const displayName = profile?.user_name || record.user_name || 'CMI 朋友';
+  const avatarFallback = displayName.trim().charAt(0).toUpperCase() || '?';
+
+  return (
+    <article className="overflow-hidden rounded-[1.3rem] border border-[#2e2a23]/8 bg-white/90 shadow-[0_14px_30px_rgba(46,42,35,0.08)]">
+      <div className={imageUrls.length === 1 ? 'grid' : 'grid grid-cols-2 gap-1.5 p-1.5'}>
+        {imageUrls.map((imageUrl, index) => (
+          <img
+            key={imageUrl}
+            src={imageUrl}
+            alt={`清迈客栈记录照片 ${index + 1}`}
+            className={imageUrls.length === 1
+              ? 'h-[12rem] w-full object-cover'
+              : 'h-[8.6rem] w-full rounded-[1rem] object-cover'}
+            loading="lazy"
+          />
+        ))}
+      </div>
+      <div className="p-4">
+        <p className="text-[15px] font-black leading-relaxed text-[#242424]">
+          “{reasonText}”
+        </p>
+        <div className="mt-3 flex items-center justify-between gap-3 text-[12px] font-black text-[#7a6b58]">
+          <button
+            type="button"
+            className="flex min-w-0 items-center gap-2 rounded-full pr-2 text-left transition hover:text-[#3f6e52] active:scale-[0.98]"
+            onClick={onOpenProfile}
+            aria-label={`打开${displayName}的清迈地图`}
+          >
+            <Avatar className="h-8 w-8 border border-[#2e2a23]/10 bg-[#e8f1e5]">
+              {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={displayName} className="object-cover" />}
+              <AvatarFallback className="bg-[#e8f1e5] text-[12px] font-black text-[#3f6e52]">
+                {avatarFallback}
+              </AvatarFallback>
+            </Avatar>
+            <span className="min-w-0 truncate">—— {displayName}</span>
+          </button>
+          <span className="shrink-0">{formatRecordDate(record.created_at)}</span>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function InnRecordsSection({
+  records,
+  loading,
+  error,
+  profilesByUserName,
+  onOpenProfile,
+}: {
+  records: Recommendation[];
+  loading: boolean;
+  error: string | null;
+  profilesByUserName: Record<string, PublicProfile>;
+  onOpenProfile: (userName: string) => void;
+}) {
+  const visibleRecords = records.filter(record => getRecordImages(record).length > 0).slice(0, 3);
+
+  return (
+    <section className="mt-5" id="inn-records">
+      <div className="mb-3 px-1">
+        <h2 className="text-[1.7rem] font-black leading-tight text-[#242424]">大家说</h2>
+      </div>
+
+      <div className="grid gap-3">
+        {loading ? (
+          Array.from({ length: 2 }).map((_, index) => (
+            <div
+              key={index}
+              className="h-[8.8rem] animate-pulse rounded-[1.3rem] bg-white/70"
+            />
+          ))
+        ) : error ? (
+          <div className="rounded-[1.3rem] border border-[#2e2a23]/8 bg-white/86 p-4 text-sm font-black leading-relaxed text-[#5f4523] shadow-[0_12px_26px_rgba(46,42,35,0.06)]">
+            {error}
+          </div>
+        ) : visibleRecords.length > 0 ? (
+          visibleRecords.map(record => (
+            <InnRecordCard
+              key={record.id}
+              record={record}
+              profile={profilesByUserName[record.user_name]}
+              onOpenProfile={() => onOpenProfile(record.user_name)}
+            />
+          ))
+        ) : (
+          <div className="rounded-[1.3rem] border border-[#2e2a23]/8 bg-white/86 p-4 text-sm font-black leading-relaxed text-[#5f4523] shadow-[0_12px_26px_rgba(46,42,35,0.06)]">
+            暂时还没有带照片的清迈客栈记录。
+          </div>
+        )}
       </div>
     </section>
   );
@@ -280,57 +690,22 @@ function ContactQrSection() {
   );
 }
 
-function MemoryNoteCard({ checkIn }: { checkIn: CmiHomeCheckIn }) {
-  return (
-    <article className="flex gap-3 rounded-[1.15rem] bg-white/62 px-2 py-3">
-      <div className="relative h-[4.6rem] w-[4.6rem] shrink-0 overflow-hidden rounded-[0.85rem] bg-[#f7f0e5]">
-        {checkIn.imageUrl && (
-          <img
-            src={checkIn.imageUrl}
-            alt={checkIn.title}
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-black leading-none text-[#6d6a62]">
-          {checkIn.dateLabel} · {checkIn.author}
-        </p>
-        <p className="mt-1 text-[1.05rem] font-black leading-snug text-[#242424]">{checkIn.title}</p>
-        <p className="mt-1.5 text-[13px] font-bold leading-relaxed text-[#5f4523]">{checkIn.note}</p>
-      </div>
-    </article>
-  );
-}
-
-function MemoryWall() {
-  return (
-    <section id="memory-wall" className="mt-5">
-      <div className="mb-3 flex items-end justify-between gap-3 px-1">
-        <div>
-          <p className="text-[12px] font-black text-[#8b5f32]">地点记录</p>
-          <h2 className="mt-1 text-[1.7rem] font-black leading-tight text-[#242424]">大家在客栈留下的</h2>
-        </div>
-        <span className="rounded-full border border-[#8b5f32]/15 bg-white/70 px-3 py-1.5 text-[11px] font-black text-[#5f4523]">
-          推荐 / 记忆
-        </span>
-      </div>
-
-      <div className="space-y-2.5">
-        {cmiHomeCheckIns.map(checkIn => (
-          <MemoryNoteCard key={checkIn.id} checkIn={checkIn} />
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export default function CmiHome() {
   const navigate = useNavigate();
   const referenceDate = useMemo(() => new Date(), []);
   const [events, setEvents] = useState<CmiEvent[]>(CMI_EVENTS);
   const innEvents = useMemo(() => getPrimaryInnEvents(events, referenceDate), [events, referenceDate]);
+  const visibleInnEventIdsKey = useMemo(
+    () => innEvents.slice(0, 4).map(event => event.id).join('|'),
+    [innEvents]
+  );
+  const [eventStampsById, setEventStampsById] = useState<Record<string, CmiEventStamp[]>>({});
+  const [stampedEventIds, setStampedEventIds] = useState<Record<string, boolean>>({});
+  const [stampingEventIds, setStampingEventIds] = useState<Record<string, boolean>>({});
+  const [innRecords, setInnRecords] = useState<Recommendation[]>([]);
+  const [innRecordsLoading, setInnRecordsLoading] = useState(true);
+  const [innRecordsError, setInnRecordsError] = useState<string | null>(null);
+  const [profilesByUserName, setProfilesByUserName] = useState<Record<string, PublicProfile>>({});
 
   useEffect(() => {
     let isMounted = true;
@@ -344,6 +719,123 @@ export default function CmiHome() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    setInnRecordsLoading(true);
+    setInnRecordsError(null);
+
+    getRecommendationsByPlace(CMI_INN_PLACE_NAME, { throwOnError: true })
+      .then(records => {
+        if (!isMounted) return;
+        setInnRecords(records);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setInnRecords([]);
+        setInnRecordsError('记录墙暂时没连上，稍后再刷新看看。');
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setInnRecordsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const userNames = innRecords.map(record => record.user_name);
+
+    getProfilesByUserNames(userNames).then(profiles => {
+      if (!isMounted) return;
+      setProfilesByUserName(
+        profiles.reduce<Record<string, PublicProfile>>((profilesByName, profile) => {
+          if (profile.user_name) profilesByName[profile.user_name] = profile;
+          return profilesByName;
+        }, {})
+      );
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [innRecords]);
+
+  const handleOpenProfile = (userName: string) => {
+    if (!userName) return;
+    navigate(getPersonMapPath(userName));
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    const eventIds = visibleInnEventIdsKey.split('|').filter(Boolean);
+
+    if (eventIds.length === 0) {
+      setEventStampsById({});
+      setStampedEventIds({});
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    const deviceId = getCmiEventStampDeviceId();
+
+    getCmiEventStamps(eventIds).then(stamps => {
+      if (!isMounted) return;
+
+      setEventStampsById(groupEventStampsByEventId(stamps));
+      setStampedEventIds(
+        eventIds.reduce<Record<string, boolean>>((state, eventId) => {
+          state[eventId] = stamps.some(stamp => stamp.eventId === eventId && stamp.deviceId === deviceId);
+          return state;
+        }, {})
+      );
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [visibleInnEventIdsKey]);
+
+  const handleStampEvent = async (eventId: string) => {
+    if (stampedEventIds[eventId]) {
+      toast('你已经给这个活动盖过想去戳了');
+      return;
+    }
+
+    setStampingEventIds(prev => ({ ...prev, [eventId]: true }));
+
+    try {
+      const nextStamp = await placeCmiEventStamp(eventId);
+
+      if (nextStamp) {
+        setEventStampsById(prev => ({
+          ...prev,
+          [eventId]: [...(prev[eventId] ?? []), nextStamp],
+        }));
+        setStampedEventIds(prev => ({ ...prev, [eventId]: true }));
+        toast.success('已盖上想去戳');
+        return;
+      }
+
+      const deviceId = getCmiEventStampDeviceId();
+      const refreshedStamps = await getCmiEventStamps([eventId]);
+      setEventStampsById(prev => ({
+        ...prev,
+        [eventId]: refreshedStamps,
+      }));
+      setStampedEventIds(prev => ({
+        ...prev,
+        [eventId]: refreshedStamps.some(stamp => stamp.deviceId === deviceId),
+      }));
+      toast('这个活动已经有你的想去戳了');
+    } finally {
+      setStampingEventIds(prev => ({ ...prev, [eventId]: false }));
+    }
+  };
 
   return (
     <div
@@ -401,15 +893,33 @@ export default function CmiHome() {
           </div>
         </section>
 
+        <InnIntroSection />
+
         <YardNoticeWall
           innEvents={innEvents}
           referenceDate={referenceDate}
           onOpenAllEvents={() => navigate('/list?scene=tomorrow-events')}
+          onOpenEvent={(eventId) => navigate(getCmiEventPath(eventId))}
+          eventStampsById={eventStampsById}
+          stampedEventIds={stampedEventIds}
+          stampingEventIds={stampingEventIds}
+          onStampEvent={handleStampEvent}
+        />
+
+        <InnDetailSection
+          onOpenMap={() => navigate('/map?scene=community')}
+          onLeaveTrace={() => navigate(getAddTracePath(CMI_INN_PLACE_NAME))}
+        />
+
+        <InnRecordsSection
+          records={innRecords}
+          loading={innRecordsLoading}
+          error={innRecordsError}
+          profilesByUserName={profilesByUserName}
+          onOpenProfile={handleOpenProfile}
         />
 
         <ContactQrSection />
-
-        <MemoryWall />
       </main>
     </div>
   );

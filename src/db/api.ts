@@ -1,4 +1,4 @@
-import type { Category, PlacedSticker, Recommendation, Sticker } from '@/types/types';
+import type { Category, PlacedSticker, Profile, Recommendation, Sticker } from '@/types/types';
 import { getCategoryFilterValues } from '@/types/types';
 import { compressImage } from '@/utils/imageCompression';
 import { encodeEasterIconMetadata } from '@/lib/easter-icons';
@@ -12,6 +12,8 @@ import { supabase } from './supabase';
 type ReadOptions = {
   throwOnError?: boolean;
 };
+
+export type PublicProfile = Pick<Profile, 'id' | 'user_name' | 'avatar_url'>;
 
 const handleReadError = (message: string, error: unknown, options?: ReadOptions) => {
   console.error(message, error);
@@ -119,6 +121,26 @@ export const getRecommendationsByPlace = async (
   }
 
   return Array.isArray(data) ? applyRecommendationsCorrections(data) : [];
+};
+
+export const getProfilesByUserNames = async (
+  userNames: string[],
+  options?: ReadOptions
+): Promise<PublicProfile[]> => {
+  const uniqueUserNames = Array.from(new Set(userNames.map(name => name.trim()).filter(Boolean)));
+  if (uniqueUserNames.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id,user_name,avatar_url')
+    .in('user_name', uniqueUserNames);
+
+  if (error) {
+    handleReadError('获取用户头像失败:', error, options);
+    return [];
+  }
+
+  return Array.isArray(data) ? data as PublicProfile[] : [];
 };
 
 /**
