@@ -29,6 +29,21 @@ type SpeechRecognitionConstructor = new () => {
   stop: () => void;
 };
 
+const MARK_PLACE_VIDEO_CONSTRAINTS: MediaTrackConstraints = {
+  facingMode: { ideal: 'environment' },
+  width: { ideal: 1920 },
+  height: { ideal: 1080 },
+  frameRate: { ideal: 30, max: 30 },
+};
+
+const isLikelyMobileCameraDevice = () => {
+  const userAgent = navigator.userAgent;
+  return (
+    /Android|iPhone|iPad|iPod/i.test(userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+};
+
 const ScribbleSparks = ({ active }: { active: boolean }) => {
   if (!active) return null;
   const sparks = Array.from({ length: 12 }).map((_, i) => {
@@ -97,6 +112,12 @@ export default function MarkPlace() {
   const streamRef = useRef<MediaStream | null>(null);
   const isPhotoDoneStage = stage === 'done' && Boolean(photoURL);
   const photoAreaHeight = isPhotoDoneStage ? 'calc(100dvh - 13.5rem)' : '55dvh';
+
+  const stopCameraStream = () => {
+    if (!streamRef.current) return;
+    streamRef.current.getTracks().forEach(track => track.stop());
+    streamRef.current = null;
+  };
 
   useEffect(() => () => {
     if (photoURL) URL.revokeObjectURL(photoURL);
@@ -171,8 +192,13 @@ export default function MarkPlace() {
     if (stage === 'camera') {
       const startCamera = async () => {
         try {
+          if (!navigator.mediaDevices?.getUserMedia) {
+            toast('当前浏览器不支持网页取景，可以从相册选择照片');
+            return;
+          }
+
           const mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment' }
+            video: MARK_PLACE_VIDEO_CONSTRAINTS,
           });
           streamRef.current = mediaStream;
           if (videoRef.current) {
@@ -185,20 +211,14 @@ export default function MarkPlace() {
       };
       startCamera();
     } else {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
-      }
+      stopCameraStream();
     }
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
-      }
+      stopCameraStream();
     };
   }, [stage]);
 
-  const capturePhoto = () => {
+  const captureFromPreview = () => {
     if (videoRef.current && canvasRef.current && streamRef.current && videoRef.current.readyState === 4) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -206,10 +226,12 @@ export default function MarkPlace() {
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext('2d');
       if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         canvas.toBlob((blob) => {
           if (blob) {
-            const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+            const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
             const url = URL.createObjectURL(file);
             setImages([file]);
             setFlash(true);
@@ -221,12 +243,21 @@ export default function MarkPlace() {
               setFlash(false);
             }, 300);
           }
-        }, 'image/jpeg', 0.8);
+        }, 'image/jpeg', 0.92);
       }
     } else {
-      // Fallback
       fileInputRef.current?.click();
     }
+  };
+
+  const capturePhoto = () => {
+    if (isLikelyMobileCameraDevice()) {
+      stopCameraStream();
+      fileInputRef.current?.click();
+      return;
+    }
+
+    captureFromPreview();
   };
 
   // 未登录保护
@@ -264,6 +295,7 @@ export default function MarkPlace() {
   const handleCapture = async (e: React.ChangeEvent<HTMLInputElement>, source: 'live' | 'exif') => {
     const sourceFile = e.target.files?.[0];
     if (sourceFile) {
+      e.target.value = '';
       const file = await normalizeImageFile(sourceFile).catch((error) => {
         console.error('照片方向修正失败，使用原图继续:', error);
         return sourceFile;

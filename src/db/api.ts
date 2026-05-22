@@ -126,8 +126,14 @@ export const getRecommendationsByPlace = async (
  */
 export const uploadImage = async (file: File): Promise<string | null> => {
   try {
-    // 压缩图片
-    const compressedFile = await compressImage(file, { force: true });
+    // NOTE: 地点照片是地图内容资产，宁愿稍大一点，也不要把用户刚拍的照片压糊。
+    const compressedFile = await compressImage(file, {
+      force: true,
+      maxSizeMB: 2.5,
+      maxWidthOrHeight: 2400,
+      quality: 0.9,
+      outputType: 'image/jpeg',
+    });
     
     // 生成文件名（使用时间戳和随机数）
     const timestamp = Date.now();

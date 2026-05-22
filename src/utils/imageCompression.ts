@@ -255,8 +255,8 @@ export const normalizeImageFile = (
 ): Promise<File> =>
   compressImage(file, {
     maxSizeMB: Number.POSITIVE_INFINITY,
-    maxWidthOrHeight: options.maxWidthOrHeight ?? 1800,
-    quality: options.quality ?? 0.92,
+    maxWidthOrHeight: options.maxWidthOrHeight ?? 2560,
+    quality: options.quality ?? 0.95,
     force: true,
     outputType: options.outputType ?? 'image/jpeg',
   });
