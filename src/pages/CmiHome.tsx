@@ -40,6 +40,7 @@ import type { Recommendation } from '@/types/types';
 
 const CMI_INN_PLACE_NAME = '清迈客栈';
 const CMI_INN_TIME_ZONE = 'Asia/Bangkok';
+const EVENT_STAMP_ICON_URL = '/stickers/stamp-cmi-selected.png';
 
 interface CmiHomeContact {
   id: string;
@@ -275,24 +276,25 @@ function EventInterestWall({
         <div className="min-w-0">
           <p className="text-[12px] font-black leading-none text-[#3f6e52]">想去墙</p>
           <p className="mt-1 text-sm font-black leading-tight text-[#2f4034]">
-            {stampCount > 0 ? `${stampCount} 个想去戳` : '还没人盖戳'}
+            {stampCount > 0 ? `${stampCount} 枚盖戳` : '还没人盖戳'}
           </p>
         </div>
         <button
           type="button"
           disabled={hasStamped || isStamping}
-          className="flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#3f6e52] px-3 text-sm font-black text-white shadow-[0_8px_16px_rgba(63,110,82,0.18)] transition active:scale-[0.97] disabled:bg-[#7c9b87] disabled:text-white/85"
+          className="flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-full border border-[#3f6e52]/18 bg-white/92 px-3 text-sm font-black text-[#3f6e52] shadow-sm transition active:scale-[0.97] disabled:border-[#3f6e52]/10 disabled:bg-white/68 disabled:text-[#6d8f79]"
           onClick={(event) => {
             event.stopPropagation();
             onStamp();
           }}
+          aria-label="盖想去戳"
         >
           <Stamp className="h-4 w-4" strokeWidth={2.5} />
-          {hasStamped ? '已盖戳' : isStamping ? '盖戳中' : '盖想去戳'}
+          {hasStamped ? '已盖' : isStamping ? '盖中' : '盖戳'}
         </button>
       </div>
 
-      <div className="relative mt-3 h-[4.85rem] overflow-hidden rounded-[0.95rem] border border-[#3f6e52]/12 bg-white/78">
+      <div className="relative mt-3 h-[5.7rem] overflow-hidden rounded-[0.95rem] border border-[#3f6e52]/12 bg-white/78">
         <div
           className="absolute inset-0 opacity-[0.16]"
           style={{
@@ -306,18 +308,21 @@ function EventInterestWall({
           </div>
         )}
         {visibleStamps.map((stamp, index) => (
-          <span
+          <img
             key={stamp.id}
-            className="absolute rounded-full border-2 border-[#d55747] bg-[#fff7f2]/92 px-2.5 py-1 text-[12px] font-black leading-none text-[#d55747] shadow-sm"
+            src={EVENT_STAMP_ICON_URL}
+            alt={`${stamp.stampLabel}盖戳`}
+            className="absolute h-14 w-14 object-contain opacity-90 drop-shadow-sm"
             style={{
               left: `${stamp.xRatio}%`,
               top: `${stamp.yRatio}%`,
               transform: `translate(-50%, -50%) rotate(${stamp.rotation}deg)`,
+              mixBlendMode: 'multiply',
               zIndex: index + 1,
             }}
-          >
-            {stamp.stampLabel}
-          </span>
+            loading="lazy"
+            decoding="async"
+          />
         ))}
       </div>
     </div>
@@ -802,7 +807,7 @@ export default function CmiHome() {
 
   const handleStampEvent = async (eventId: string) => {
     if (stampedEventIds[eventId]) {
-      toast('你已经给这个活动盖过想去戳了');
+      toast('你已经给这个活动盖过戳了');
       return;
     }
 
@@ -817,7 +822,7 @@ export default function CmiHome() {
           [eventId]: [...(prev[eventId] ?? []), nextStamp],
         }));
         setStampedEventIds(prev => ({ ...prev, [eventId]: true }));
-        toast.success('已盖上想去戳');
+        toast.success('已盖戳');
         return;
       }
 
@@ -831,7 +836,7 @@ export default function CmiHome() {
         ...prev,
         [eventId]: refreshedStamps.some(stamp => stamp.deviceId === deviceId),
       }));
-      toast('这个活动已经有你的想去戳了');
+      toast('这个活动已经有你的盖戳了');
     } finally {
       setStampingEventIds(prev => ({ ...prev, [eventId]: false }));
     }
