@@ -67,7 +67,10 @@ export const getCmiEventStamps = async (eventIds: string[]): Promise<CmiEventSta
   return Array.isArray(data) ? (data as CmiEventStampRow[]).map(toCmiEventStamp) : [];
 };
 
-export const placeCmiEventStamp = async (eventId: string): Promise<CmiEventStamp | null> => {
+export const placeCmiEventStamp = async (
+  eventId: string,
+  options: { stampLabel?: string } = {}
+): Promise<CmiEventStamp | null> => {
   const deviceId = getCmiEventStampDeviceId();
   const { data: authData } = await supabase.auth.getUser();
   const userId = authData.user?.id ?? null;
@@ -86,7 +89,7 @@ export const placeCmiEventStamp = async (eventId: string): Promise<CmiEventStamp
         x_ratio: xRatio,
         y_ratio: yRatio,
         rotation,
-        stamp_label: '想去',
+        stamp_label: options.stampLabel ?? '盖戳',
       },
       {
         onConflict: 'event_id,device_id',

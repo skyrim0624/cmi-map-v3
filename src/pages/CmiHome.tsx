@@ -26,7 +26,7 @@ import {
   getCmiEventTimeBucketLabel,
   getUpcomingCmiEventsFromList,
 } from '@/data/cmi-events';
-import { getProfilesByUserNames, getRecommendationsByPlace, type PublicProfile } from '@/db/api';
+import { getAvailableStickers, getProfilesByUserNames, getRecommendationsByPlace, type PublicProfile } from '@/db/api';
 import {
   getCmiEventStampDeviceId,
   getCmiEventStamps,
@@ -35,7 +35,7 @@ import {
 import { getPublishedCmiEvents } from '@/db/cmi-events';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
 import { getAddTracePath, getCmiEventPath, getPersonMapPath } from '@/lib/paths';
-import type { Recommendation } from '@/types/types';
+import type { Recommendation, Sticker } from '@/types/types';
 
 const CMI_INN_PLACE_NAME = '清迈客栈';
 const CMI_INN_TIME_ZONE = 'Asia/Bangkok';
@@ -263,11 +263,85 @@ function EventStampButton({
         onStamp();
       }}
       onKeyDown={(event) => event.stopPropagation()}
-      aria-label="盖想去戳"
+      aria-label="盖戳"
     >
       <Stamp className="h-4 w-4" strokeWidth={2.5} />
       {hasStamped ? '已盖戳' : isStamping ? '盖戳中' : '盖戳'}
     </button>
+  );
+}
+
+function EventStickerDrawer({
+  stickers,
+  loading,
+  onClose,
+  onSelect,
+}: {
+  stickers: Sticker[];
+  loading: boolean;
+  onClose: () => void;
+  onSelect: (sticker: Sticker) => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end bg-black/32 px-4"
+      onClick={onClose}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') onClose();
+      }}
+    >
+      <div
+        className="mx-auto w-full max-w-[520px] rounded-t-[1.55rem] border border-[#2e2a23]/10 bg-[#fffdf8] p-5 pb-[calc(1.1rem+env(safe-area-inset-bottom))] shadow-[0_-18px_48px_rgba(46,42,35,0.18)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[12px] font-black text-[#8b5f32]">选择图章</p>
+            <h2 className="mt-1 text-lg font-black leading-tight text-[#242424]">盖一个喜欢的戳</h2>
+          </div>
+          <button
+            type="button"
+            className="rounded-full border border-[#2e2a23]/10 bg-white px-3 py-1.5 text-sm font-black text-[#5f4523] shadow-sm transition active:scale-[0.98]"
+            onClick={onClose}
+          >
+            关闭
+          </button>
+        </div>
+
+        <div className="grid grid-cols-4 gap-3">
+          {loading ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="h-[5.8rem] animate-pulse rounded-[1rem] bg-[#edf6ee]" />
+            ))
+          ) : stickers.length > 0 ? (
+            stickers.map(sticker => (
+              <button
+                key={sticker.id}
+                type="button"
+                className="flex min-h-[5.8rem] flex-col items-center justify-center gap-1.5 rounded-[1rem] border border-[#2e2a23]/10 bg-white/88 p-2 text-center shadow-sm transition hover:bg-[#edf6ee] active:scale-[0.96]"
+                onClick={() => onSelect(sticker)}
+              >
+                <img
+                  src={sticker.icon_url}
+                  alt=""
+                  className="h-12 w-12 object-contain saturate-[0.85] contrast-[1.08]"
+                  style={{ mixBlendMode: 'multiply' }}
+                  loading="lazy"
+                  decoding="async"
+                />
+                <span className="max-w-full truncate text-[11px] font-black leading-none text-[#5f4523]">
+                  {sticker.name}
+                </span>
+              </button>
+            ))
+          ) : (
+            <div className="col-span-4 rounded-[1rem] border border-[#2e2a23]/8 bg-white/86 p-4 text-sm font-black text-[#5f4523]">
+              图章暂时没加载出来，稍后再试。
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -642,6 +716,9 @@ export default function CmiHome() {
   );
   const [stampedEventIds, setStampedEventIds] = useState<Record<string, boolean>>({});
   const [stampingEventIds, setStampingEventIds] = useState<Record<string, boolean>>({});
+  const [availableStickers, setAvailableStickers] = useState<Sticker[]>([]);
+  const [stickersLoading, setStickersLoading] = useState(true);
+  const [activeStampEventId, setActiveStampEventId] = useState<string | null>(null);
   const [innRecords, setInnRecords] = useState<Recommendation[]>([]);
   const [innRecordsLoading, setInnRecordsLoading] = useState(true);
   const [innRecordsError, setInnRecordsError] = useState<string | null>(null);
@@ -654,6 +731,25 @@ export default function CmiHome() {
       if (!isMounted) return;
       setEvents(data);
     });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    setStickersLoading(true);
+
+    getAvailableStickers()
+      .then(stickers => {
+        if (!isMounted) return;
+        setAvailableStickers(stickers);
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setStickersLoading(false);
+      });
 
     return () => {
       isMounted = false;
@@ -738,20 +834,25 @@ export default function CmiHome() {
     };
   }, [visibleInnEventIdsKey]);
 
-  const handleStampEvent = async (eventId: string) => {
+  const handleOpenStampDrawer = (eventId: string) => {
     if (stampedEventIds[eventId]) {
       toast('你已经给这个活动盖过戳了');
       return;
     }
 
+    setActiveStampEventId(eventId);
+  };
+
+  const handleStampEvent = async (eventId: string, sticker: Sticker) => {
     setStampingEventIds(prev => ({ ...prev, [eventId]: true }));
+    setActiveStampEventId(null);
 
     try {
-      const nextStamp = await placeCmiEventStamp(eventId);
+      const nextStamp = await placeCmiEventStamp(eventId, { stampLabel: sticker.name });
 
       if (nextStamp) {
         setStampedEventIds(prev => ({ ...prev, [eventId]: true }));
-        toast.success('已盖戳');
+        toast.success(`已盖上「${sticker.name}」`);
         return;
       }
 
@@ -765,6 +866,11 @@ export default function CmiHome() {
     } finally {
       setStampingEventIds(prev => ({ ...prev, [eventId]: false }));
     }
+  };
+
+  const handleSelectEventSticker = (sticker: Sticker) => {
+    if (!activeStampEventId) return;
+    void handleStampEvent(activeStampEventId, sticker);
   };
 
   return (
@@ -832,7 +938,7 @@ export default function CmiHome() {
           onOpenEvent={(eventId) => navigate(getCmiEventPath(eventId))}
           stampedEventIds={stampedEventIds}
           stampingEventIds={stampingEventIds}
-          onStampEvent={handleStampEvent}
+          onStampEvent={handleOpenStampDrawer}
         />
 
         <InnDetailSection
@@ -850,6 +956,15 @@ export default function CmiHome() {
 
         <ContactQrSection />
       </main>
+
+      {activeStampEventId && (
+        <EventStickerDrawer
+          stickers={availableStickers}
+          loading={stickersLoading}
+          onClose={() => setActiveStampEventId(null)}
+          onSelect={handleSelectEventSticker}
+        />
+      )}
     </div>
   );
 }
