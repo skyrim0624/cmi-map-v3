@@ -1,17 +1,17 @@
-import { useEffect, useRef } from 'react';
 import L from 'leaflet';
+import { useEffect, useRef } from 'react';
 import 'leaflet/dist/leaflet.css';
-import type { MapMarker } from '@/types/types';
+import { CHIANG_MAI_PROVINCE_BOUNDARY, CHIANG_MAI_PROVINCE_BOUNDS } from '@/data/chiang-mai-boundary';
+import { CHIANG_MAI_FEATURE_LINES } from '@/data/chiang-mai-map-features';
 import {
   getMapMarkerVisual,
   isEasterEggMarkerVisual,
+  type MapMarkerVisual,
   renderClusterIconHtml,
   renderEasterEggMarkerHtml,
   renderMarkerBadgeHtml,
-  type MapMarkerVisual,
 } from '@/lib/map-marker-visual';
-import { CHIANG_MAI_PROVINCE_BOUNDARY, CHIANG_MAI_PROVINCE_BOUNDS } from '@/data/chiang-mai-boundary';
-import { CHIANG_MAI_FEATURE_LINES } from '@/data/chiang-mai-map-features';
+import type { MapMarker } from '@/types/types';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -33,6 +33,7 @@ interface LeafletMapProps {
   focusUserLocation?: boolean;
   constrainToChiangMai?: boolean;
   locationZoom?: number;
+  markTargetYRatio?: number;
   interactive?: boolean;
   showUserLocation?: boolean;
   className?: string;
@@ -408,6 +409,7 @@ export const LeafletMap = ({
   focusUserLocation = false,
   constrainToChiangMai = true,
   locationZoom = 15,
+  markTargetYRatio = 0.5,
   interactive = true,
   showUserLocation = true,
   className = ''
@@ -617,10 +619,10 @@ export const LeafletMap = ({
 
     // 添加地图点击事件
     if (mode === 'mark') {
-      // 标记模式：点击地图移动到点击位置（目标位置在视口靠上 31% 的位置）
+      // 标记模式：点击地图移动到准星位置。准星比例由容器布局传入，避免准星和真实坐标错位。
       map.on('click', (e: L.LeafletMouseEvent) => {
         const mapSize = map.getSize();
-        const targetPoint = L.point(mapSize.x / 2, mapSize.y * 0.31);
+        const targetPoint = L.point(mapSize.x / 2, mapSize.y * markTargetYRatio);
         const offset = e.containerPoint.subtract(targetPoint);
         map.panBy(offset, { animate: true, duration: 0.5 });
       });
@@ -636,12 +638,12 @@ export const LeafletMap = ({
       // 标记模式：监听地图移动与设置初始偏移
       if (mode === 'mark') {
         const mapSize = map.getSize();
-        // 初始移动：把默认的物理中心（50%）拉到视觉中心（31%）上
-        map.panBy(L.point(0, mapSize.y * 0.19), { animate: false });
+        // 初始移动：把默认物理中心拉到准星位置。
+        map.panBy(L.point(0, mapSize.y * (0.5 - markTargetYRatio)), { animate: false });
         
         map.on('moveend', () => {
           const currentMapSize = map.getSize();
-          const targetPoint = L.point(currentMapSize.x / 2, currentMapSize.y * 0.31);
+          const targetPoint = L.point(currentMapSize.x / 2, currentMapSize.y * markTargetYRatio);
           const customCenter = map.containerPointToLatLng(targetPoint);
           if (onCenterChangeRef.current) {
             onCenterChangeRef.current(customCenter.lat, customCenter.lng);
@@ -786,7 +788,7 @@ export const LeafletMap = ({
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, [mode, defaultCenter, defaultZoom, focusUserLocation, constrainToChiangMai, interactive, locationZoom, showUserLocation]); // 移除 onCenterChange 依赖
+  }, [mode, defaultCenter, defaultZoom, focusUserLocation, constrainToChiangMai, interactive, locationZoom, markTargetYRatio, showUserLocation]); // 移除 onCenterChange 依赖
 
   useEffect(() => {
     if (!mapInstanceRef.current || mode !== 'view' || !focusTarget) return;
@@ -1025,20 +1027,19 @@ export const LeafletMap = ({
           willChange: 'transform',
         }}
       />
-      {/* 标记模式：显示中心定位大头针 - 放在上半部分地图的中心（黄金分割点） */}
+      {/* 标记模式：显示精确准星，中心小点才是真正落点。 */}
       {mode === 'mark' && (
-        <div className="absolute top-[31%] left-1/2 -translate-x-1/2 -translate-y-full pointer-events-none z-[1000]">
-          <div className="relative animate-bounce-slow">
-            {/* NOTE: 定位 pin 改为内联形状，避免依赖已清理的旧图片资产。 */}
+        <div
+          className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[1000]"
+          style={{ top: `${markTargetYRatio * 100}%` }}
+        >
+          <div className="relative h-24 w-24">
+            <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-foreground/45 shadow-[0_0_0_1px_rgba(255,255,255,0.65)]" />
+            <div className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-foreground/45 shadow-[0_0_0_1px_rgba(255,255,255,0.65)]" />
+            <div className="absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-white bg-background/80 shadow-[0_8px_22px_rgba(0,0,0,0.22),inset_0_0_0_2px_rgba(249,115,22,0.28)]" />
             <div
-              aria-label="定位标记"
-              className="h-16 w-16 rounded-full bg-[#f97316] border-[3px] border-white shadow-[0_4px_8px_rgba(0,0,0,0.3)] flex items-center justify-center"
-            >
-              <div className="h-5 w-5 rounded-full bg-white/95" />
-            </div>
-            {/* 底部阴影圆点 */}
-            <div 
-              className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-2 bg-black/40 rounded-full blur-[2px]"
+              aria-label="定位准星"
+              className="absolute left-1/2 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#f97316] shadow-[0_0_0_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.24)]"
             />
           </div>
         </div>

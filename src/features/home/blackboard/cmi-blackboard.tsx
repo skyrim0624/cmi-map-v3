@@ -1,6 +1,4 @@
-import { useMemo, useState } from 'react';
-import type { FormEvent } from 'react';
-import type { ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import {
   CarFront,
   Check,
@@ -13,7 +11,10 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import type { FormEvent, ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { getCmiEventPath, getPersonMapPath, getPlacePath } from '@/lib/paths';
 import { cn } from '@/lib/utils';
 
 type BlackboardCategory = 'companion' | 'help' | 'ride';
@@ -24,6 +25,9 @@ interface BlackboardPost {
   category: BlackboardCategory;
   title: string;
   body: string;
+  linkedEventId?: string;
+  linkedEventTitle?: string;
+  linkedPlaceName?: string;
   author: string;
   authorInitial: string;
   createdLabel: string;
@@ -34,13 +38,16 @@ interface BlackboardPost {
   interestedCount: number;
 }
 
-interface BlackboardDraft {
+export interface BlackboardDraft {
   category: BlackboardCategory;
   title: string;
   body: string;
   timeLabel: string;
   locationLabel: string;
   peopleLabel: string;
+  linkedEventId?: string;
+  linkedEventTitle?: string;
+  linkedPlaceName?: string;
 }
 
 interface CategoryMeta {
@@ -158,12 +165,63 @@ function CommunityEntry() {
   );
 }
 
-function PostMeta({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
-  return (
-    <span className="inline-flex min-h-7 items-center gap-1 rounded-full border border-border bg-background/80 px-2.5 text-xs font-black text-muted-foreground">
+function PostMeta({
+  icon: Icon,
+  children,
+  to,
+}: {
+  icon: LucideIcon;
+  children: ReactNode;
+  to?: string;
+}) {
+  const className =
+    'inline-flex min-h-7 items-center gap-1 rounded-full border border-border bg-background/80 px-2.5 text-xs font-black text-muted-foreground';
+  const content = (
+    <>
       <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />
       {children}
+    </>
+  );
+
+  if (to) {
+    return (
+      <Link
+        to={to}
+        className={cn(className, 'transition active:scale-[0.98] active:bg-primary/10')}
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <span className={className}>
+      {content}
     </span>
+  );
+}
+
+function renderPostBody(post: BlackboardPost) {
+  if (!post.linkedEventId || !post.linkedEventTitle) return post.body;
+
+  const mention = `@${post.linkedEventTitle}`;
+  const mentionIndex = post.body.indexOf(mention);
+  if (mentionIndex < 0) return post.body;
+
+  const beforeMention = post.body.slice(0, mentionIndex);
+  const afterMention = post.body.slice(mentionIndex + mention.length);
+
+  return (
+    <>
+      {beforeMention}
+      <Link
+        to={getCmiEventPath(post.linkedEventId)}
+        className="font-black text-primary underline decoration-primary/35 underline-offset-4 active:opacity-70"
+      >
+        {mention}
+      </Link>
+      {afterMention}
+    </>
   );
 }
 
@@ -174,6 +232,9 @@ function BlackboardPostCard({
   post: BlackboardPost;
   onJoin: (post: BlackboardPost) => void;
 }) {
+  const placePath = post.linkedPlaceName ? getPlacePath(post.linkedPlaceName) : undefined;
+  const authorPath = getPersonMapPath(post.author);
+
   return (
     <article className="rounded-[1.35rem] border border-border bg-white p-4 shadow-[0_12px_30px_rgba(32,25,54,0.08)]">
       <div className="flex items-start justify-between gap-3">
@@ -189,12 +250,12 @@ function BlackboardPostCard({
       </div>
 
       <p className="mt-3 text-[15px] font-semibold leading-relaxed text-foreground/80">
-        {post.body}
+        {renderPostBody(post)}
       </p>
 
       <div className="mt-3 flex flex-wrap gap-2">
         <PostMeta icon={Clock3}>{post.timeLabel}</PostMeta>
-        <PostMeta icon={MapPin}>{post.locationLabel}</PostMeta>
+        <PostMeta icon={MapPin} to={placePath}>{post.locationLabel}</PostMeta>
         <PostMeta icon={Users}>人 {post.peopleLabel}</PostMeta>
         {typeof post.confirmedCount === 'number' && (
           <PostMeta icon={Check}>已确认 {post.confirmedCount}</PostMeta>
@@ -203,11 +264,20 @@ function BlackboardPostCard({
 
       <div className="mt-4 flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-black text-primary">
-            {post.authorInitial}
-          </span>
-          <span className="min-w-0 truncate text-sm font-black text-muted-foreground">
-            {post.author} · {post.createdLabel}
+          <Link
+            to={authorPath}
+            className="flex min-w-0 items-center gap-2 rounded-full pr-1 transition active:scale-[0.98] active:bg-primary/5"
+            aria-label={`查看${post.author}的个人主页`}
+          >
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-black text-primary">
+              {post.authorInitial}
+            </span>
+            <span className="min-w-0 truncate text-sm font-black text-muted-foreground">
+              {post.author}
+            </span>
+          </Link>
+          <span className="shrink-0 text-sm font-black text-muted-foreground">
+            · {post.createdLabel}
           </span>
         </div>
         <button
@@ -408,12 +478,42 @@ function ContactSheet({
   );
 }
 
-export function CmiBlackboard() {
+export function CmiBlackboard({
+  autoOpenComposer = false,
+  initialDraft,
+}: {
+  autoOpenComposer?: boolean;
+  initialDraft?: Partial<BlackboardDraft>;
+} = {}) {
   const [activeFilter, setActiveFilter] = useState<BlackboardFilter>('all');
   const [posts, setPosts] = useState(INITIAL_POSTS);
   const [draft, setDraft] = useState<BlackboardDraft>(() => createEmptyDraft());
   const [composerOpen, setComposerOpen] = useState(false);
   const [contactPost, setContactPost] = useState<BlackboardPost | null>(null);
+
+  useEffect(() => {
+    if (!autoOpenComposer || !initialDraft) return;
+
+    const nextDraft = {
+      ...createEmptyDraft(),
+      ...initialDraft,
+    };
+
+    setDraft(nextDraft);
+    setActiveFilter(nextDraft.category);
+    setComposerOpen(true);
+  }, [
+    autoOpenComposer,
+    initialDraft?.category,
+    initialDraft?.title,
+    initialDraft?.body,
+    initialDraft?.timeLabel,
+    initialDraft?.locationLabel,
+    initialDraft?.peopleLabel,
+    initialDraft?.linkedEventId,
+    initialDraft?.linkedEventTitle,
+    initialDraft?.linkedPlaceName,
+  ]);
 
   const visiblePosts = useMemo(() => {
     if (activeFilter === 'all') return posts;
@@ -426,6 +526,9 @@ export function CmiBlackboard() {
       category: draft.category,
       title: draft.title.trim(),
       body: draft.body.trim(),
+      linkedEventId: draft.linkedEventId,
+      linkedEventTitle: draft.linkedEventTitle,
+      linkedPlaceName: draft.linkedPlaceName,
       author: '你',
       authorInitial: '你',
       createdLabel: '刚刚',

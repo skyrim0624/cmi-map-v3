@@ -12,6 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,7 +38,7 @@ import {
   getCmiPlaceTypeTagsForRecommendation,
 } from '@/data/cmi-taxonomy';
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
-import { deleteRecommendation, getRecommendationsByPlace, updateRecommendationReason } from '@/db/api';
+import { deleteRecommendation, getProfilesByUserNames, getRecommendationsByPlace, type PublicProfile, updateRecommendationReason } from '@/db/api';
 import {
   createRecommendationInteractionState,
   loadAvailableStickers,
@@ -46,9 +47,9 @@ import {
   toggleRecommendationUpvote,
   toggleRecommendationWishlist,
 } from '@/features/interactions/interaction-service';
+import { getCmiEasterIconUrl, getRecommendationEasterIconId, getRecommendationReasonText } from '@/lib/easter-icons';
 import { getAddTracePath, getPersonMapPath, getPlaceMapPath, getPlacePath } from '@/lib/paths';
 import { createPlaceShareCard, type PlaceShareCardResult } from '@/lib/place-share-card';
-import { getCmiEasterIconUrl, getRecommendationEasterIconId, getRecommendationReasonText } from '@/lib/easter-icons';
 import type { PlacedSticker, Recommendation, Sticker } from '@/types/types';
 import { getCategoryIconUrl, normalizeCategory } from '@/types/types';
 
@@ -74,12 +75,15 @@ const getRecommendationIconUrl = (recommendation: Recommendation) => (
     : getCategoryIconUrl(recommendation.category)
 );
 
+const getProfileInitial = (displayName: string) => displayName.trim().charAt(0).toUpperCase() || '?';
+
 export default function PlaceDetail() {
   const { placeName } = useParams<{ placeName: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [profilesByUserName, setProfilesByUserName] = useState<Record<string, PublicProfile>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -127,6 +131,7 @@ export default function PlaceDetail() {
       setPlacedStickers(stickersData);
 
       setRecommendations(data);
+      void syncRecommendationProfiles(data);
 
       // 预加载贴纸库
       if (availableStickers.length === 0) {
@@ -135,10 +140,27 @@ export default function PlaceDetail() {
       }
     } catch {
       setRecommendations([]);
+      setProfilesByUserName({});
       setLoadError('地点详情暂时没连上');
     } finally {
       setLoading(false);
     }
+  };
+
+  const syncRecommendationProfiles = async (nextRecommendations: Recommendation[]) => {
+    if (nextRecommendations.length === 0) {
+      setProfilesByUserName({});
+      return;
+    }
+
+    const profiles = await getProfilesByUserNames(nextRecommendations.map(rec => rec.user_name));
+    const nextProfilesByUserName = profiles.reduce<Record<string, PublicProfile>>((profilesByName, profile) => {
+      if (!profile.user_name) return profilesByName;
+      profilesByName[profile.user_name] = profile;
+      return profilesByName;
+    }, {});
+
+    setProfilesByUserName(nextProfilesByUserName);
   };
 
   const handleUpvote = async (recId: string) => {
@@ -750,6 +772,8 @@ export default function PlaceDetail() {
                 const guide = getPlaceGuide(rec.place_name, rec.category);
                 const isCommunityGuide = isCommunityCuratedRecommendation(rec);
                 const canEditRecommendation = Boolean(user && rec.user_id === user.id);
+                const profile = profilesByUserName[rec.user_name];
+                const displayName = isCommunityGuide ? 'CMI 社区整理' : rec.user_name;
 
                 return (
                   <Fragment key={rec.id}>
@@ -780,14 +804,6 @@ export default function PlaceDetail() {
                     <div className={`absolute right-3 z-20 rounded-full bg-primary px-3 py-1 text-xs font-black text-primary-foreground ${canEditRecommendation ? 'top-14' : 'top-3'}`}>
                       刚补充
                     </div>
-                  )}
-                  {idx === 0 && (
-                    <p className="flex items-center gap-2 text-sm font-black text-muted-foreground">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted">
-                        <PencilLine className="h-4 w-4" />
-                      </span>
-                      为什么值得来
-                    </p>
                   )}
                   {/* 已贴贴纸渲染层 */}
                   {placedStickers[rec.id]?.map((ps) => (
@@ -834,28 +850,41 @@ export default function PlaceDetail() {
                     </div>
                   )}
 
+                  {/* 推荐人头像 */}
+                  <div className={`relative z-20 flex items-center gap-2 ${canEditRecommendation ? 'pr-20' : 'pr-10'}`}>
+                    <Avatar className="h-10 w-10 border border-border bg-background shadow-sm">
+                      {profile?.avatar_url && (
+                        <AvatarImage src={profile.avatar_url} alt={`${displayName} 的头像`} className="object-cover" />
+                      )}
+                      <AvatarFallback className="bg-primary/10 text-sm font-black text-primary">
+                        {getProfileInitial(displayName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    {isCommunityGuide ? (
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-foreground">{displayName}</p>
+                        <p className="truncate text-xs font-bold text-muted-foreground">整理了这条推荐</p>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="min-w-0 text-left active:scale-[0.98]"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          navigate(getPersonMapPath(rec.user_name));
+                        }}
+                        aria-label={`查看 ${displayName} 的清迈地图`}
+                      >
+                        <span className="block truncate text-sm font-black text-foreground">{displayName}</span>
+                        <span className="block truncate text-xs font-bold text-muted-foreground">的清迈地图</span>
+                      </button>
+                    )}
+                  </div>
+
                   {/* 推荐理由 */}
                   <p className={`${idx === 0 ? 'text-lg font-bold leading-relaxed text-foreground' : 'quote-text text-lg leading-relaxed'} ${canEditRecommendation ? 'pr-20' : 'pr-10'}`}>
                     {isCommunityGuide ? guide.summary : getRecommendationReasonText(rec)}
                   </p>
-
-                  {/* 推荐人 */}
-                  {isCommunityGuide ? (
-                    <p className="text-sm font-semibold text-muted-foreground">
-                      —— CMI 社区整理
-                    </p>
-                  ) : (
-                    <button
-                      type="button"
-                      className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        navigate(getPersonMapPath(rec.user_name));
-                      }}
-                    >
-                      —— {rec.user_name} 的清迈地图
-                    </button>
-                  )}
 
                   {/* 该推荐的照片 */}
                   {idx > 0 && rec.images.length > 0 && (

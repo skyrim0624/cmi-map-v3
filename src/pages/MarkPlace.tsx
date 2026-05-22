@@ -1,20 +1,20 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { MapPin, Mic, MicOff, Check, ArrowLeft, Loader2, PencilLine, Shuffle } from 'lucide-react';
+import { ArrowLeft, Check, Loader2, MapPin, Mic, MicOff, PencilLine, Shuffle } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { LeafletMap } from '@/components/map/LeafletMap';
-import { createRecommendation, uploadImages } from '@/db/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCategoryIconUrl } from '@/types/types';
-import type { Category } from '@/types/types';
 import { getCmiInputCategoryOptions } from '@/data/cmi-taxonomy';
+import { createRecommendation, uploadImages } from '@/db/api';
 import {
   CMI_EASTER_ICON_OPTIONS,
   DEFAULT_CMI_EASTER_ICON_ID,
   getCmiEasterIconById,
 } from '@/lib/easter-icons';
 import { getPlacePath } from '@/lib/paths';
+import type { Category } from '@/types/types';
+import { getCategoryIconUrl } from '@/types/types';
 import { normalizeImageFile } from '@/utils/imageCompression';
-import { toast } from 'sonner';
 
 type Stage = 'camera' | 'analyzing' | 'voice' | 'category' | 'done' | 'map_fallback';
 type SpeechRecognitionConstructor = new () => {
@@ -22,12 +22,28 @@ type SpeechRecognitionConstructor = new () => {
   continuous: boolean;
   interimResults: boolean;
   onstart: (() => void) | null;
-  onresult: ((event: any) => void) | null;
-  onerror: ((event: any) => void) | null;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
   onend: (() => void) | null;
   start: () => void;
   stop: () => void;
 };
+type SpeechRecognitionEventLike = {
+  resultIndex?: number;
+  results?: {
+    length: number;
+    [index: number]: {
+      isFinal?: boolean;
+      [index: number]: {
+        transcript?: string;
+      } | undefined;
+    } | undefined;
+  };
+};
+type SpeechRecognitionErrorEventLike = {
+  error?: string;
+};
+type SpeechPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied' | 'checking';
 
 const MARK_PLACE_VIDEO_CONSTRAINTS: MediaTrackConstraints = {
   facingMode: { ideal: 'environment' },
@@ -42,6 +58,98 @@ const isLikelyMobileCameraDevice = () => {
     /Android|iPhone|iPad|iPod/i.test(userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
   );
+};
+
+const appendTranscript = (currentText: string, nextText: string) => {
+  const current = currentText.trim();
+  const next = nextText.trim();
+
+  if (!next) return currentText;
+  if (!current) return next;
+  if (current.endsWith(next)) return current;
+
+  return `${current} ${next}`;
+};
+
+const queryMicrophonePermission = async (): Promise<SpeechPermissionStatus> => {
+  if (!navigator.permissions?.query) return 'unknown';
+
+  try {
+    const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+    return permission.state as SpeechPermissionStatus;
+  } catch {
+    return 'unknown';
+  }
+};
+
+const getVoiceErrorHint = (error?: string) => {
+  if (error === 'not-allowed') {
+    return '浏览器没有给 cmti.uk 麦克风权限。打开地址栏权限设置，允许麦克风后再试；也可以先打字。';
+  }
+
+  if (error === 'audio-capture') {
+    return '没有找到可用麦克风。可以换个浏览器，或直接打字。';
+  }
+
+  if (error === 'no-speech') {
+    return '刚才没听到声音，靠近一点再说一次也可以。';
+  }
+
+  if (error === 'network') {
+    return '语音识别服务暂时连不上，先直接打字更稳。';
+  }
+
+  if (error === 'aborted') {
+    return '已停止收音，可以直接编辑文字。';
+  }
+
+  return '这个浏览器的语音识别不稳定，直接打字更稳。';
+};
+
+const requestMicrophoneForSpeech = async () => {
+  if (!window.isSecureContext) {
+    return {
+      ok: false,
+      permission: 'denied' as SpeechPermissionStatus,
+      hint: '当前页面不是安全连接，浏览器不会开放麦克风。请用 https://cmti.uk 再试。',
+    };
+  }
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return {
+      ok: false,
+      permission: 'unknown' as SpeechPermissionStatus,
+      hint: '当前浏览器拿不到麦克风权限，直接打字更稳。',
+    };
+  }
+
+  const permission = await queryMicrophonePermission();
+  if (permission === 'denied') {
+    return {
+      ok: false,
+      permission,
+      hint: getVoiceErrorHint('not-allowed'),
+    };
+  }
+
+  try {
+    const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioStream.getTracks().forEach(track => track.stop());
+    return {
+      ok: true,
+      permission: 'granted' as SpeechPermissionStatus,
+      hint: '麦克风已打开，开始说吧。',
+    };
+  } catch (error) {
+    const errorName = error instanceof DOMException ? error.name : '';
+    const denied = errorName === 'NotAllowedError' || errorName === 'PermissionDeniedError';
+
+    return {
+      ok: false,
+      permission: denied ? 'denied' as SpeechPermissionStatus : 'unknown' as SpeechPermissionStatus,
+      hint: denied ? getVoiceErrorHint('not-allowed') : '麦克风暂时打不开，直接打字更稳。',
+    };
+  }
 };
 
 const ScribbleSparks = ({ active }: { active: boolean }) => {
@@ -82,7 +190,9 @@ export default function MarkPlace() {
   const [flash, setFlash] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
-  const [voiceHint, setVoiceHint] = useState('也可以直接打字，不用语音。');
+  const [speechPermission, setSpeechPermission] = useState<SpeechPermissionStatus>('unknown');
+  const [voiceHint, setVoiceHint] = useState('点一下麦克风开始说，说完会自动写入。');
+  const [interimTranscript, setInterimTranscript] = useState('');
   const [scanned, setScanned] = useState(false);
 
   const [sourceType, setSourceType] = useState<'live' | 'exif' | null>(null);
@@ -93,6 +203,7 @@ export default function MarkPlace() {
   const [easterIconQuery, setEasterIconQuery] = useState('');
   const inputCategoryOptions = getCmiInputCategoryOptions();
   const selectedEasterIcon = getCmiEasterIconById(selectedEasterIconId);
+  const cameraDateLabel = `${new Date().getMonth() + 1} / ${new Date().getDate()}`;
   const filteredEasterIcons = useMemo(() => {
     const query = easterIconQuery.trim().toLocaleLowerCase();
     if (!query) return CMI_EASTER_ICON_OPTIONS;
@@ -106,12 +217,17 @@ export default function MarkPlace() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<InstanceType<SpeechRecognitionConstructor> | null>(null);
+  const speechStartingRef = useRef(false);
+  const speechHadResultRef = useRef(false);
+  const interimTranscriptRef = useRef('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const isPhotoDoneStage = stage === 'done' && Boolean(photoURL);
+  const isMapFallbackStage = stage === 'map_fallback';
   const photoAreaHeight = isPhotoDoneStage ? 'calc(100dvh - 13.5rem)' : '55dvh';
+  const voiceButtonDisabled = !speechSupported || speechPermission === 'checking';
 
   const stopCameraStream = () => {
     if (!streamRef.current) return;
@@ -119,12 +235,18 @@ export default function MarkPlace() {
     streamRef.current = null;
   };
 
+  const updateInterimTranscript = (nextTranscript: string) => {
+    interimTranscriptRef.current = nextTranscript;
+    setInterimTranscript(nextTranscript);
+  };
+
   useEffect(() => () => {
     if (photoURL) URL.revokeObjectURL(photoURL);
   }, [photoURL]);
 
-  // 初始化 Web Speech API
+  // 初始化 Web Speech API。麦克风权限在用户点击按钮时再请求，避免页面加载时打扰用户。
   useEffect(() => {
+    let alive = true;
     const speechWindow = window as typeof window & {
       SpeechRecognition?: SpeechRecognitionConstructor;
       webkitSpeechRecognition?: SpeechRecognitionConstructor;
@@ -135,48 +257,103 @@ export default function MarkPlace() {
       const recognition = new SpeechRecognition();
       recognition.lang = 'zh-CN';
       recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.interimResults = true;
       recognition.onstart = () => {
+        speechStartingRef.current = false;
+        speechHadResultRef.current = false;
+        updateInterimTranscript('');
         setIsListening(true);
-        setVoiceHint('正在听，讲完后会自动写到下面。');
+        setSpeechPermission('granted');
+        setVoiceHint('正在听，讲完会自动写到下面。');
       };
 
-      recognition.onresult = (event: any) => {
-        const transcript = event.results?.[0]?.[0]?.transcript?.trim();
-        if (!transcript) {
+      recognition.onresult = (event) => {
+        let finalText = '';
+        let interimText = '';
+        const resultIndex = event.resultIndex ?? 0;
+        const results = event.results;
+
+        if (!results) {
           setVoiceHint('没有听清，可以直接打字。');
           return;
         }
-        setDescription(prev => prev ? `${prev} ${transcript}` : transcript);
-        setVoiceHint('已写入，可以继续补充或直接下一步。');
+
+        for (let index = resultIndex; index < results.length; index += 1) {
+          const result = results[index];
+          const transcript = result?.[0]?.transcript?.trim();
+          if (!transcript) continue;
+
+          if (result?.isFinal) {
+            finalText = appendTranscript(finalText, transcript);
+          } else {
+            interimText = appendTranscript(interimText, transcript);
+          }
+        }
+
+        if (finalText) {
+          speechHadResultRef.current = true;
+          setDescription(prev => appendTranscript(prev, finalText));
+          updateInterimTranscript('');
+          setVoiceHint('已写入，可以继续补充或直接下一步。');
+          return;
+        }
+
+        if (interimText) {
+          updateInterimTranscript(interimText);
+          setVoiceHint('听到了，继续说，说完会自动写入。');
+        }
       };
 
-      recognition.onerror = (event: any) => {
+      recognition.onerror = (event) => {
         console.error('语音识别错误:', event.error);
-        const nextHint =
-          event.error === 'not-allowed'
-            ? '麦克风权限没开，直接打字也可以。'
-            : event.error === 'no-speech'
-              ? '刚才没听到声音，可以再点一次或直接打字。'
-              : '这个浏览器的语音识别不稳定，直接打字更稳。';
+        const nextHint = getVoiceErrorHint(event.error);
+        if (event.error === 'not-allowed') {
+          setSpeechPermission('denied');
+        }
+        speechStartingRef.current = false;
+        updateInterimTranscript('');
         setVoiceHint(nextHint);
         toast(nextHint);
         setIsListening(false);
       };
 
       recognition.onend = () => {
+        const pendingInterim = interimTranscriptRef.current.trim();
+        if (pendingInterim && !speechHadResultRef.current) {
+          speechHadResultRef.current = true;
+          setDescription(prev => appendTranscript(prev, pendingInterim));
+          updateInterimTranscript('');
+          setVoiceHint('已写入，可以继续补充或直接下一步。');
+          setIsListening(false);
+          return;
+        }
+
+        speechStartingRef.current = false;
         setIsListening(false);
-        setVoiceHint(prev => prev === '正在听，讲完后会自动写到下面。' ? '可以继续说，也可以直接打字。' : prev);
+        setVoiceHint(prev => {
+          if (prev === '正在听，讲完会自动写到下面。' || prev === '听到了，继续说，说完会自动写入。') {
+            return '没有听清，靠近一点再说一次，或直接打字。';
+          }
+          return prev;
+        });
       };
 
       setSpeechSupported(true);
       recognitionRef.current = recognition;
+      queryMicrophonePermission().then(permission => {
+        if (!alive) return;
+        setSpeechPermission(permission);
+        if (permission === 'denied') {
+          setVoiceHint(getVoiceErrorHint('not-allowed'));
+        }
+      });
     } else {
       setSpeechSupported(false);
       setVoiceHint('当前浏览器不支持语音识别，直接打字就行。');
     }
 
     return () => {
+      alive = false;
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
@@ -324,6 +501,9 @@ export default function MarkPlace() {
     setPhotoURL(null);
     setSourceType(null);
     setDescription('');
+    updateInterimTranscript('');
+    setIsListening(false);
+    speechStartingRef.current = false;
     setLocationName('手动选点');
     setStage('map_fallback');
   };
@@ -340,22 +520,43 @@ export default function MarkPlace() {
   }, [stage, sourceType]);
 
   // 3. 语音对话控制
-  const handleVoiceInput = () => {
+  const handleVoiceInput = async () => {
     if (!speechSupported || !recognitionRef.current) {
       toast('当前浏览器不支持语音识别，直接打字就行');
       return;
     }
+
+    if (speechStartingRef.current) return;
 
     try {
       if (isListening) {
         recognitionRef.current.stop();
         setIsListening(false);
         setVoiceHint('已停止收音，可以直接编辑文字。');
+        speechStartingRef.current = false;
       } else {
+        speechStartingRef.current = true;
+        setSpeechPermission('checking');
+        setVoiceHint('正在确认麦克风权限...');
+        updateInterimTranscript('');
+
+        const microphoneAccess = await requestMicrophoneForSpeech();
+        setSpeechPermission(microphoneAccess.permission);
+
+        if (!microphoneAccess.ok) {
+          speechStartingRef.current = false;
+          setIsListening(false);
+          setVoiceHint(microphoneAccess.hint);
+          toast(microphoneAccess.hint);
+          return;
+        }
+
+        setVoiceHint(microphoneAccess.hint);
         recognitionRef.current.start();
       }
     } catch (error) {
       console.error('语音识别启动失败:', error);
+      speechStartingRef.current = false;
       setIsListening(false);
       setVoiceHint('语音启动失败，直接打字更稳。');
       toast('语音启动失败，直接打字更稳');
@@ -478,7 +679,7 @@ export default function MarkPlace() {
             </div>
             <div className="absolute top-6 left-6 right-6 flex justify-between pointer-events-none">
               <span className="text-white/90 text-3xl drop-shadow-md" style={{ fontFamily: "'Nanum Pen Script', 'Caveat', cursive" }}>Smile! :)</span>
-              <span className="text-white/90 text-3xl drop-shadow-md" style={{ fontFamily: "'Nanum Pen Script', 'Caveat', cursive" }}>12 / 24</span>
+              <span className="text-white/90 text-3xl drop-shadow-md" style={{ fontFamily: "'Nanum Pen Script', 'Caveat', cursive" }}>{cameraDateLabel}</span>
             </div>
             <div className="absolute top-1/3 left-0 right-0 h-[1px] border-t-2 border-dashed border-white/30 pointer-events-none" />
             <div className="absolute top-2/3 left-0 right-0 h-[1px] border-t-2 border-dashed border-white/30 pointer-events-none" />
@@ -514,9 +715,6 @@ export default function MarkPlace() {
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
               </button>
             </div>
-            <span className="mt-5 text-stone-400 font-bold tracking-[0.2em] text-xs uppercase opacity-80" style={{ fontFamily: "'Inter', sans-serif" }}>
-              Push to capture
-            </span>
             <button
               onClick={startQuickTextFlow}
               className="mt-2 text-xs font-bold text-stone-500 underline underline-offset-4 active:scale-95"
@@ -532,7 +730,7 @@ export default function MarkPlace() {
         <div className="w-full h-[100dvh] flex flex-col relative">
           
           {/* 上半部分：照片区域 */}
-          {photoURL && <div className="relative flex-shrink-0 transition-all duration-500" style={{ height: photoAreaHeight }}>
+          {photoURL && !isMapFallbackStage && <div className="relative flex-shrink-0 transition-all duration-500" style={{ height: photoAreaHeight }}>
             <div className={`w-full h-full relative overflow-hidden transition-all duration-1000 ease-soft-out ${stage === 'analyzing' ? 'scale-[0.97]' : 'scale-100'}`}>
               <img src={photoURL} className="w-full h-full object-cover" alt="Captured" />
               
@@ -551,7 +749,7 @@ export default function MarkPlace() {
               )}
 
               {/* 定位条 — 照片底部暗色玻璃条 */}
-              <div className={`absolute bottom-0 left-0 right-0 flex items-center justify-between transition-all duration-700 delay-300 bg-black/50 backdrop-blur-md px-4 py-2.5 ${locationName && stage !== 'map_fallback' ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'}`}>
+              <div className={`absolute bottom-0 left-0 right-0 flex items-center justify-between transition-all duration-700 delay-300 bg-black/50 backdrop-blur-md px-4 py-2.5 ${locationName ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'}`}>
                 <div className="flex items-center gap-2 overflow-hidden">
                   <div className="p-1 bg-white/20 rounded-full text-white shrink-0">
                     <MapPin className="w-3.5 h-3.5" />
@@ -586,7 +784,11 @@ export default function MarkPlace() {
           </div>}
 
           {/* 下半部分：控件区域 */}
-          <div className={`flex-1 flex flex-col items-center px-6 pb-safe bg-stone-50 relative overflow-y-auto ${isPhotoDoneStage ? 'justify-start pt-4' : 'justify-center'}`}>
+          <div className={
+            isMapFallbackStage
+              ? 'relative flex-1 overflow-hidden bg-stone-50'
+              : `flex-1 flex flex-col items-center px-6 pb-safe bg-stone-50 relative overflow-y-auto ${isPhotoDoneStage ? 'justify-start pt-4' : 'justify-center'}`
+          }>
             {!photoURL && stage === 'done' && (
               <div className="flex flex-col items-center justify-center gap-4 text-center">
                 <div className="relative flex items-center justify-center w-36 h-36 border-[3px] border-[#da2222] border-dashed rounded-full mix-blend-multiply opacity-[0.85] bg-[#da2222]/[0.02] rotate-[-8deg]">
@@ -600,12 +802,18 @@ export default function MarkPlace() {
               </div>
             )}
             
-            {/* 描述文字便签 */}
-            {stage !== 'map_fallback' && (description || isListening) && (
+            {/* 描述文字便签：只在语音输入阶段给用户即时反馈，分类页不重复展示已输入内容。 */}
+            {stage === 'voice' && (description || interimTranscript || isListening) && (
               <div className={`w-full max-w-sm ${isPhotoDoneStage ? 'mt-3 mb-2' : 'mt-4 mb-2'}`}>
                 <div className="bg-[#fff9e6] p-3 text-stone-800 text-[15px] leading-relaxed shadow-sm border border-[#f0e6d2] rounded-lg"
                      style={{ fontFamily: "'Varela Round', 'Nunito', 'PingFang SC', 'Microsoft YaHei', ui-rounded, sans-serif", fontWeight: 500, letterSpacing: "0.02em" }}>
                   {description}
+                  {interimTranscript && (
+                    <span className="text-stone-400">
+                      {description ? ' ' : ''}
+                      {interimTranscript}
+                    </span>
+                  )}
                   {isListening && <span className="inline-block w-2.5 h-5 bg-stone-400 animate-pulse ml-1 align-middle" />}
                 </div>
                 {isPhotoDoneStage && (
@@ -617,17 +825,25 @@ export default function MarkPlace() {
             )}
 
             {stage === 'map_fallback' && (
-               <div className="w-full flex flex-col gap-3 py-4 animate-in slide-in-from-bottom-10 fade-in">
-                 <div className="text-center mb-2">
-                   <p className="text-stone-700 font-bold mb-1">手动选择地标</p>
-                   <p className="text-stone-500 text-xs">拖动地图以微调这条痕迹的位置</p>
+               <div className="absolute inset-0 animate-in fade-in duration-300">
+                 <LeafletMap
+                   mode="mark"
+                   defaultZoom={15}
+                   markTargetYRatio={0.5}
+                   onCenterChange={(lat, lng) => setCenter({lat, lng})}
+                   className="h-full w-full border-none outline-none"
+                 />
+                 <div className="pointer-events-none absolute inset-x-0 top-0 z-[1001] h-40 bg-gradient-to-b from-background/95 via-background/70 to-transparent" />
+                 <div className="pointer-events-none absolute inset-x-4 top-[calc(env(safe-area-inset-top)+4.75rem)] z-[1002] rounded-3xl border border-foreground/10 bg-background/90 px-4 py-3 text-center shadow-lg backdrop-blur-md">
+                   <p className="text-base font-black text-foreground">手动选择地标</p>
+                   <p className="mt-1 text-xs font-bold leading-relaxed text-muted-foreground">拖动地图，让准星中心对准地点；也可以直接点地图移动准星。</p>
                  </div>
-                 <div className="w-full h-64 bg-stone-300 rounded-2xl relative overflow-hidden flex items-center justify-center mb-2 shadow-inner pointer-events-auto">
-                   <LeafletMap mode="mark" onCenterChange={(lat, lng) => setCenter({lat, lng})} className="w-full h-full border-none outline-none" />
+                 <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1001] h-40 bg-gradient-to-t from-background via-background/88 to-transparent" />
+                 <div className="absolute inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-[1002]">
+                   <button onClick={handleMapConfirm} className="flex h-14 w-full items-center justify-center rounded-3xl bg-foreground text-base font-black text-background shadow-[0_14px_34px_rgba(0,0,0,0.24)] active:scale-[0.98]">
+                     确认位置，去写体验
+                   </button>
                  </div>
-                 <button onClick={handleMapConfirm} className="w-full h-12 bg-foreground text-background font-bold rounded-2xl flex items-center justify-center shadow-lg hover:scale-[1.02] transition-transform">
-                   确认位置，去写体验
-                 </button>
                </div>
             )}
 
@@ -639,18 +855,28 @@ export default function MarkPlace() {
                 <div className="flex gap-5 items-center">
                   <button
                     onClick={handleVoiceInput}
-                    disabled={!speechSupported}
+                    disabled={voiceButtonDisabled}
                     className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
                       isListening
                         ? 'bg-primary text-white scale-110 shadow-xl shadow-primary/30'
-                        : speechSupported
+                        : speechPermission === 'checking'
+                          ? 'bg-stone-100 text-stone-400 cursor-wait'
+                          : speechPermission === 'denied'
+                            ? 'border border-red-200 bg-red-50 text-red-600 shadow-sm active:scale-95'
+                            : speechSupported
                           ? 'bg-white text-stone-800 shadow-lg hover:scale-105 active:scale-95'
                           : 'bg-stone-100 text-stone-300 cursor-not-allowed'
                     }`}
                     aria-label={speechSupported ? '语音输入' : '当前浏览器不支持语音输入'}
                   >
                     <ScribbleSparks active={isListening} />
-                    {isListening ? <MicOff className="w-7 h-7 animate-pulse" /> : <Mic className="w-7 h-7" />}
+                    {speechPermission === 'checking' ? (
+                      <Loader2 className="w-7 h-7 animate-spin" />
+                    ) : isListening ? (
+                      <MicOff className="w-7 h-7 animate-pulse" />
+                    ) : (
+                      <Mic className="w-7 h-7" />
+                    )}
                   </button>
                   
                   {description && !isListening && (

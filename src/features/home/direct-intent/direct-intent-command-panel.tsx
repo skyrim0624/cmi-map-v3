@@ -1,7 +1,7 @@
-import { getCmiPrimaryIntentTags, resolveCmiDirectIntentQuery } from '@/data/cmi-taxonomy';
-import { getSceneMapPath } from '@/lib/paths';
 import { ArrowRight, Search } from 'lucide-react';
 import { type FormEvent, useMemo, useState } from 'react';
+import { getCmiPrimaryIntentTags, resolveCmiDirectIntentQuery } from '@/data/cmi-taxonomy';
+import { getSceneMapPath } from '@/lib/paths';
 
 interface DirectIntentCommandPanelProps {
   onFeatureSelect: (path: string) => void;
@@ -34,29 +34,6 @@ export function DirectIntentCommandPanel({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-4 gap-2" aria-label="直接事项">
-        {primaryIntentTags.map(tag => (
-          <button
-            key={tag.id}
-            type="button"
-            title={tag.description}
-            className="flex min-h-[108px] flex-col items-center justify-center gap-2 rounded-lg border-2 border-border bg-card/95 px-1.5 text-center shadow-[2px_3px_0_rgba(0,0,0,0.08)] transition-transform active:translate-y-0.5"
-            onClick={() => openDirectIntent(tag.sceneId)}
-          >
-            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-background p-1">
-              <img
-                src={tag.iconUrl}
-                alt=""
-                className="h-full w-full object-contain drop-shadow-sm"
-              />
-            </span>
-            <span className="w-full truncate text-[12px] font-black leading-tight text-foreground">
-              {tag.label}
-            </span>
-          </button>
-        ))}
-      </div>
-
       <form
         className="rounded-lg border border-border bg-background/78 p-2 shadow-sm"
         onSubmit={handleSubmit}
@@ -88,6 +65,29 @@ export function DirectIntentCommandPanel({
           </button>
         </label>
       </form>
+
+      <div className="grid grid-cols-4 gap-2" aria-label="直接事项">
+        {primaryIntentTags.map(tag => (
+          <button
+            key={tag.id}
+            type="button"
+            title={tag.description}
+            className="flex min-h-[108px] flex-col items-center justify-center gap-2 rounded-lg border-2 border-border bg-card/95 px-1.5 text-center shadow-[2px_3px_0_rgba(0,0,0,0.08)] transition-transform active:translate-y-0.5"
+            onClick={() => openDirectIntent(tag.sceneId)}
+          >
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-background p-1">
+              <img
+                src={tag.iconUrl}
+                alt=""
+                className="h-full w-full object-contain drop-shadow-sm"
+              />
+            </span>
+            <span className="w-full truncate text-[12px] font-black leading-tight text-foreground">
+              {tag.label}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

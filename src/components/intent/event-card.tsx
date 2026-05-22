@@ -1,14 +1,13 @@
-import {
-  CMI_EVENT_VERIFICATION_LABELS,
-  formatCmiEventDateParts,
-  formatCmiEventTime,
-  getCmiEventTimeBucketLabel,
-  getCmiEventTypeLabel,
-  type CmiEvent,
-  type CmiEventType,
-} from '@/data/cmi-events';
 import { CalendarDays, MapPin, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import {
+  CMI_EVENT_VERIFICATION_LABELS,
+  type CmiEvent,
+  type CmiEventType,
+  formatCmiEventDateParts,
+  formatCmiEventTime,
+  getCmiEventTypeLabel,
+} from '@/data/cmi-events';
 
 interface CmiEventCardProps {
   event: CmiEvent;
@@ -153,13 +152,13 @@ export function CmiEventCard({ event, to, onClick }: CmiEventCardProps) {
           </p>
 
           <div className="grid grid-cols-[1.05rem_minmax(0,1fr)] gap-x-2 gap-y-1.5 border-l border-[#e0ddd4] pl-3 text-xs font-bold text-foreground/58">
-            <CalendarDays className={`mt-0.5 h-3.5 w-3.5 ${style.icon}`} strokeWidth={2.5} />
-            <p className="min-w-0 leading-relaxed">
-              {formatCmiEventTime(event)}
-            </p>
             <MapPin className={`mt-0.5 h-3.5 w-3.5 ${style.icon}`} strokeWidth={2.5} />
             <p className="min-w-0 leading-relaxed">
               {event.venueName} · {event.area}
+            </p>
+            <CalendarDays className={`mt-0.5 h-3.5 w-3.5 ${style.icon}`} strokeWidth={2.5} />
+            <p className="min-w-0 leading-relaxed">
+              {formatCmiEventTime(event)}
             </p>
             <ShieldCheck className={`mt-0.5 h-3.5 w-3.5 ${style.icon}`} strokeWidth={2.5} />
             <p className="min-w-0 leading-relaxed">

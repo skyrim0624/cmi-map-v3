@@ -10,6 +10,7 @@ const PlaceDetail = lazy(() => import('./pages/PlaceDetail'));
 const AddTrace = lazy(() => import('./pages/AddTrace'));
 const CmiHome = lazy(() => import('./pages/CmiHome'));
 const CmiEventDetail = lazy(() => import('./pages/CmiEventDetail'));
+const SurvivalGuides = lazy(() => import('./pages/SurvivalGuides'));
 const MarkPlace = lazy(() => import('./pages/MarkPlace'));
 const PersonMap = lazy(() => import('./pages/PersonMap'));
 const PlaygroundMarkPlace = lazy(() => import('./pages/PlaygroundMarkPlace'));
@@ -69,6 +70,12 @@ export const routes: RouteConfig[] = [
     element: <AddTrace />,
   },
   {
+    name: '清迈客栈',
+    path: '/cmi-home',
+    element: <CmiHome />,
+    public: true,
+  },
+  {
     name: '活动详情',
     path: '/events/:eventId',
     element: <CmiEventDetail />,
@@ -78,6 +85,12 @@ export const routes: RouteConfig[] = [
     name: '清迈生存地图',
     path: '/survival-kit',
     element: <Navigate to={getSceneMapPath('life-rescue')} replace />,
+    public: true,
+  },
+  {
+    name: '清迈落地攻略大全',
+    path: '/survival-guides',
+    element: <SurvivalGuides />,
     public: true,
   },
   {
