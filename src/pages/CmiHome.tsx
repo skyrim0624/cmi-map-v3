@@ -28,7 +28,6 @@ import {
 } from '@/data/cmi-events';
 import { getProfilesByUserNames, getRecommendationsByPlace, type PublicProfile } from '@/db/api';
 import {
-  type CmiEventStamp,
   getCmiEventStampDeviceId,
   getCmiEventStamps,
   placeCmiEventStamp,
@@ -40,7 +39,6 @@ import type { Recommendation } from '@/types/types';
 
 const CMI_INN_PLACE_NAME = '清迈客栈';
 const CMI_INN_TIME_ZONE = 'Asia/Bangkok';
-const EVENT_STAMP_ICON_URL = '/stickers/stamp-cmi-selected.png';
 
 interface CmiHomeContact {
   id: string;
@@ -166,12 +164,6 @@ const formatEventStartClock = (event: CmiEvent) => {
   return event.recurrence?.startTime ?? '待定';
 };
 
-const groupEventStampsByEventId = (stamps: CmiEventStamp[]) =>
-  stamps.reduce<Record<string, CmiEventStamp[]>>((groups, stamp) => {
-    groups[stamp.eventId] = [...(groups[stamp.eventId] ?? []), stamp];
-    return groups;
-  }, {});
-
 function InnIntroSection() {
   return (
     <section className="mt-5" id="inn-intro">
@@ -252,80 +244,30 @@ function InnDetailSection({
   );
 }
 
-function EventInterestWall({
-  stamps,
+function EventStampButton({
   hasStamped,
   isStamping,
   onStamp,
 }: {
-  stamps: CmiEventStamp[];
   hasStamped: boolean;
   isStamping: boolean;
   onStamp: () => void;
 }) {
-  const visibleStamps = stamps.slice(-22);
-  const stampCount = stamps.length;
-
   return (
-    <div
-      className="mt-4 rounded-[1.05rem] border border-[#3f6e52]/15 bg-[#edf6ee] p-3 shadow-[0_10px_22px_rgba(63,110,82,0.10)]"
-      onClick={(event) => event.stopPropagation()}
+    <button
+      type="button"
+      disabled={hasStamped || isStamping}
+      className="ml-auto mt-3 flex min-h-9 w-fit items-center justify-center gap-1.5 rounded-full border border-[#3f6e52]/18 bg-white/88 px-3 text-sm font-black text-[#3f6e52] shadow-sm transition hover:bg-[#edf6ee] active:scale-[0.97] disabled:bg-[#e8f1e5] disabled:text-[#3f6e52] disabled:shadow-none"
+      onClick={(event) => {
+        event.stopPropagation();
+        onStamp();
+      }}
       onKeyDown={(event) => event.stopPropagation()}
+      aria-label="盖想去戳"
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[12px] font-black leading-none text-[#3f6e52]">想去墙</p>
-          <p className="mt-1 text-sm font-black leading-tight text-[#2f4034]">
-            {stampCount > 0 ? `${stampCount} 枚盖戳` : '还没人盖戳'}
-          </p>
-        </div>
-        <button
-          type="button"
-          disabled={hasStamped || isStamping}
-          className="flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-full border border-[#3f6e52]/18 bg-white/92 px-3 text-sm font-black text-[#3f6e52] shadow-sm transition active:scale-[0.97] disabled:border-[#3f6e52]/10 disabled:bg-white/68 disabled:text-[#6d8f79]"
-          onClick={(event) => {
-            event.stopPropagation();
-            onStamp();
-          }}
-          aria-label="盖想去戳"
-        >
-          <Stamp className="h-4 w-4" strokeWidth={2.5} />
-          {hasStamped ? '已盖' : isStamping ? '盖中' : '盖戳'}
-        </button>
-      </div>
-
-      <div className="relative mt-3 h-[5.7rem] overflow-hidden rounded-[0.95rem] border border-[#3f6e52]/12 bg-white/78">
-        <div
-          className="absolute inset-0 opacity-[0.16]"
-          style={{
-            backgroundImage: 'linear-gradient(#3f6e52 1px, transparent 1px), linear-gradient(90deg, #3f6e52 1px, transparent 1px)',
-            backgroundSize: '18px 18px',
-          }}
-        />
-        {visibleStamps.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center px-3 text-center text-[12px] font-black text-[#3f6e52]/70">
-            第一个想去戳，等你来盖。
-          </div>
-        )}
-        {visibleStamps.map((stamp, index) => (
-          <img
-            key={stamp.id}
-            src={EVENT_STAMP_ICON_URL}
-            alt={`${stamp.stampLabel}盖戳`}
-            className="absolute h-14 w-14 object-contain opacity-90 drop-shadow-sm"
-            style={{
-              left: `${stamp.xRatio}%`,
-              top: `${stamp.yRatio}%`,
-              transform: `translate(-50%, -50%) rotate(${stamp.rotation}deg)`,
-              mixBlendMode: 'multiply',
-              zIndex: index + 1,
-            }}
-            loading="lazy"
-            decoding="async"
-          />
-        ))}
-      </div>
-    </div>
+      <Stamp className="h-4 w-4" strokeWidth={2.5} />
+      {hasStamped ? '已盖戳' : isStamping ? '盖戳中' : '盖戳'}
+    </button>
   );
 }
 
@@ -333,7 +275,6 @@ function EventPreviewCard({
   event,
   referenceDate,
   onOpenEvent,
-  stamps,
   hasStamped,
   isStamping,
   onStampEvent,
@@ -341,7 +282,6 @@ function EventPreviewCard({
   event: CmiEvent;
   referenceDate: Date;
   onOpenEvent: () => void;
-  stamps: CmiEventStamp[];
   hasStamped: boolean;
   isStamping: boolean;
   onStampEvent: () => void;
@@ -426,8 +366,7 @@ function EventPreviewCard({
           </div>
         </div>
 
-        <EventInterestWall
-          stamps={stamps}
+        <EventStampButton
           hasStamped={hasStamped}
           isStamping={isStamping}
           onStamp={onStampEvent}
@@ -442,7 +381,6 @@ function YardNoticeWall({
   referenceDate,
   onOpenAllEvents,
   onOpenEvent,
-  eventStampsById,
   stampedEventIds,
   stampingEventIds,
   onStampEvent,
@@ -451,7 +389,6 @@ function YardNoticeWall({
   referenceDate: Date;
   onOpenAllEvents: () => void;
   onOpenEvent: (eventId: string) => void;
-  eventStampsById: Record<string, CmiEventStamp[]>;
   stampedEventIds: Record<string, boolean>;
   stampingEventIds: Record<string, boolean>;
   onStampEvent: (eventId: string) => void;
@@ -516,7 +453,6 @@ function YardNoticeWall({
                 event={event}
                 referenceDate={referenceDate}
                 onOpenEvent={() => onOpenEvent(event.id)}
-                stamps={eventStampsById[event.id] ?? []}
                 hasStamped={Boolean(stampedEventIds[event.id])}
                 isStamping={Boolean(stampingEventIds[event.id])}
                 onStampEvent={() => onStampEvent(event.id)}
@@ -704,7 +640,6 @@ export default function CmiHome() {
     () => innEvents.slice(0, 4).map(event => event.id).join('|'),
     [innEvents]
   );
-  const [eventStampsById, setEventStampsById] = useState<Record<string, CmiEventStamp[]>>({});
   const [stampedEventIds, setStampedEventIds] = useState<Record<string, boolean>>({});
   const [stampingEventIds, setStampingEventIds] = useState<Record<string, boolean>>({});
   const [innRecords, setInnRecords] = useState<Recommendation[]>([]);
@@ -779,7 +714,6 @@ export default function CmiHome() {
     const eventIds = visibleInnEventIdsKey.split('|').filter(Boolean);
 
     if (eventIds.length === 0) {
-      setEventStampsById({});
       setStampedEventIds({});
       return () => {
         isMounted = false;
@@ -791,7 +725,6 @@ export default function CmiHome() {
     getCmiEventStamps(eventIds).then(stamps => {
       if (!isMounted) return;
 
-      setEventStampsById(groupEventStampsByEventId(stamps));
       setStampedEventIds(
         eventIds.reduce<Record<string, boolean>>((state, eventId) => {
           state[eventId] = stamps.some(stamp => stamp.eventId === eventId && stamp.deviceId === deviceId);
@@ -817,10 +750,6 @@ export default function CmiHome() {
       const nextStamp = await placeCmiEventStamp(eventId);
 
       if (nextStamp) {
-        setEventStampsById(prev => ({
-          ...prev,
-          [eventId]: [...(prev[eventId] ?? []), nextStamp],
-        }));
         setStampedEventIds(prev => ({ ...prev, [eventId]: true }));
         toast.success('已盖戳');
         return;
@@ -828,10 +757,6 @@ export default function CmiHome() {
 
       const deviceId = getCmiEventStampDeviceId();
       const refreshedStamps = await getCmiEventStamps([eventId]);
-      setEventStampsById(prev => ({
-        ...prev,
-        [eventId]: refreshedStamps,
-      }));
       setStampedEventIds(prev => ({
         ...prev,
         [eventId]: refreshedStamps.some(stamp => stamp.deviceId === deviceId),
@@ -905,7 +830,6 @@ export default function CmiHome() {
           referenceDate={referenceDate}
           onOpenAllEvents={() => navigate('/list?scene=tomorrow-events')}
           onOpenEvent={(eventId) => navigate(getCmiEventPath(eventId))}
-          eventStampsById={eventStampsById}
           stampedEventIds={stampedEventIds}
           stampingEventIds={stampingEventIds}
           onStampEvent={handleStampEvent}
