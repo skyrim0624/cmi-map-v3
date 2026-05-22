@@ -4,7 +4,7 @@ export const inspirationIntentSection: CmiHomeSection = {
   id: 'inspiration-intent',
   title: '不知道去哪？',
   description: '',
-  sceneIds: ['nearby-wander', 'pick-for-me', 'weekend', 'tomorrow-events'],
+  sceneIds: ['nearby-wander', 'pick-for-me', 'tomorrow-events'],
   showRotatingIdeas: false,
   rotatingIdeas: [
     {
