@@ -10,7 +10,8 @@ export type CmiPrimaryIntentId =
   | 'play'
   | 'relax'
   | 'sport'
-  | 'errands';
+  | 'errands'
+  | 'easter';
 
 export type CmiMapFilterGroupId =
   | 'eat'
@@ -253,10 +254,17 @@ export const CMI_PRIMARY_INTENTS: CmiPrimaryIntent[] = [
     sceneId: 'life-rescue',
     inputCategory: '生存指南',
   },
+  {
+    id: 'easter',
+    label: '彩蛋',
+    description: '小猫、涂鸦、树、路灯、某个说不清但值得记住的城市小发现。',
+    sceneId: 'easter',
+    inputCategory: '彩蛋',
+  },
 ];
 
 export const CMI_INPUT_CATEGORY_OPTIONS: CmiInputCategoryOption[] = [
-  ...CMI_PRIMARY_INTENTS.map(intent => ({
+  ...CMI_PRIMARY_INTENTS.filter(intent => intent.id !== 'easter').map(intent => ({
     id: intent.id,
     label: intent.id === 'work' ? '咖啡 / 办公' : intent.label,
     description: intent.description,
@@ -270,12 +278,13 @@ export const CMI_INPUT_CATEGORY_OPTIONS: CmiInputCategoryOption[] = [
     storedCategory: '景点',
     primaryIntentId: 'play',
   },
-  {
-    id: 'easter',
-    label: '彩蛋',
-    description: '小猫、涂鸦、树、路灯、某个说不清但值得记住的城市小发现。',
-    storedCategory: '彩蛋',
-  },
+  ...CMI_PRIMARY_INTENTS.filter(intent => intent.id === 'easter').map(intent => ({
+    id: intent.id,
+    label: intent.label,
+    description: intent.description,
+    storedCategory: intent.inputCategory,
+    primaryIntentId: intent.id,
+  })),
 ];
 
 export const CMI_PLACE_TYPE_TAGS: CmiPlaceTypeTag[] = [
@@ -366,6 +375,7 @@ const PRIMARY_INTENT_ICON_URLS: Record<CmiPrimaryIntentId, string> = {
   relax: cmiFlatIcon('direct-relax'),
   sport: cmiFlatIcon('direct-sport'),
   errands: cmiFlatIcon('direct-errands'),
+  easter: '/map-icons/cmi-easter-v2/egg-v2-02-star.png',
 };
 
 const PLACE_TYPE_ICON_URLS: Partial<Record<string, string>> = {
@@ -405,6 +415,7 @@ const PRIMARY_INTENT_QUERY_KEYWORDS: Record<CmiPrimaryIntentId, string[]> = {
   relax: ['放松', '休息', '按摩', '马杀鸡', 'spa', '身体累', '泡汤'],
   sport: ['运动', '健身', '跑步', '瑜伽', '打球', '训练'],
   errands: ['办事', '救急', '买药', '看病', '换汇', '打印', '租车', '电话卡'],
+  easter: ['彩蛋', '探索', '发现', '隐藏', '小发现', '有趣', '惊喜'],
 };
 
 const FEATURED_PLACE_TYPE_IDS = [

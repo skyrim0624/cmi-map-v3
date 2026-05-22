@@ -31,6 +31,7 @@ export type CmiSceneId =
   | 'life-rescue'
   | 'night'
   | 'sport'
+  | 'easter'
   | 'explore'
   | 'community'
   | 'photo';
@@ -488,6 +489,23 @@ export const CMI_SCENES: CmiScene[] = [
     homeTitle: '运动',
     homeDescription: '健身、瑜伽、球场和跑步点。',
     homeIconCategory: '运动',
+  },
+  {
+    id: 'easter',
+    title: '彩蛋',
+    description: '小猫、涂鸦、树、路灯、某个说不清但值得记住的城市小发现。',
+    defaultView: 'map',
+    categoryFallback: '彩蛋',
+    matchKeywords: ['彩蛋', '探索', '隐藏', '小发现', '有趣', '惊喜', '猫', '涂鸦'],
+    primaryActionLabel: '看彩蛋地图',
+    mapTitle: '彩蛋地图',
+    detailTitle: '清迈小彩蛋',
+    showOnHome: false,
+    homeGroup: 'clear-need',
+    homeOrder: 9,
+    homeTitle: '彩蛋',
+    homeDescription: '小猫、涂鸦、路边小发现。',
+    homeIconCategory: '彩蛋',
   },
   {
     id: 'weekend',

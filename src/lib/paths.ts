@@ -45,6 +45,8 @@ export const getSceneListPath = (sceneId: string, input?: ScenePathInput) => {
 };
 
 export const getSceneMapPath = (sceneId: string, input?: ScenePathInput) => {
+  if (sceneId === 'easter') return '/map?easter=1';
+
   const searchParams = getScenePathParams(sceneId, input);
   return `/map?${searchParams.toString()}`;
 };
