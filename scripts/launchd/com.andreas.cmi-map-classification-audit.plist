@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.andreas.cmi-map-classification-audit</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>/Users/andreas/vibe coding/nomaday app!!/cmi map v1/scripts/run-classification-maintenance.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/andreas/vibe coding/nomaday app!!/cmi map v1</string>
+  <key>StartInterval</key>
+  <integer>3600</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/private/tmp/cmi-map-classification-audit.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/private/tmp/cmi-map-classification-audit.err.log</string>
+</dict>
+</plist>

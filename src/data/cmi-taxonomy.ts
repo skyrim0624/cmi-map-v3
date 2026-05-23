@@ -585,6 +585,9 @@ export const getCmiPrimaryIntentSceneIds = () =>
 
 export const getCmiInputCategoryOptions = () => CMI_INPUT_CATEGORY_OPTIONS;
 
+export const getCmiInputCategoryOptionById = (optionId: string | null | undefined) =>
+  optionId ? CMI_INPUT_CATEGORY_OPTIONS.find(option => option.id === optionId) ?? null : null;
+
 export const getCmiPlaceTypeTag = (tagId: string | null | undefined) => {
   if (!tagId) return null;
   const normalizedTagId = PLACE_TYPE_ID_ALIASES[tagId] ?? tagId;
@@ -595,6 +598,24 @@ export const getCmiPlaceTypeTagsByIds = (tagIds: string[]) =>
   tagIds
     .map(tagId => getCmiPlaceTypeTag(tagId))
     .filter((tag): tag is CmiPlaceTypeTag => Boolean(tag));
+
+const getPersistedPlaceTypeIds = (recommendation: Recommendation) =>
+  Array.isArray(recommendation.place_type_ids)
+    ? recommendation.place_type_ids
+      .map(tagId => PLACE_TYPE_ID_ALIASES[tagId] ?? tagId)
+      .filter(Boolean)
+    : [];
+
+const getPersistedDetailTagIds = (recommendation: Recommendation) =>
+  Array.isArray(recommendation.detail_tag_ids)
+    ? recommendation.detail_tag_ids.filter(Boolean)
+    : [];
+
+const hasPersistedTaxonomy = (recommendation: Recommendation) =>
+  getPersistedPlaceTypeIds(recommendation).length > 0
+  || getPersistedDetailTagIds(recommendation).length > 0
+  || Boolean(recommendation.classification_status)
+  || Boolean(recommendation.classified_at);
 
 export const getCmiMapFilterGroups = () => CMI_MAP_FILTER_GROUPS;
 
@@ -709,6 +730,10 @@ export const resolveCmiDirectIntentQuery = (query: string): CmiDirectIntentQuery
 };
 
 export const getCmiPlaceTypeTagsForRecommendation = (recommendation: Recommendation) => {
+  if (hasPersistedTaxonomy(recommendation)) {
+    return getCmiPlaceTypeTagsByIds(getPersistedPlaceTypeIds(recommendation));
+  }
+
   const text = getRecommendationStructuredTagText(recommendation);
   const category = normalizeCategory(recommendation.category);
   return CMI_PLACE_TYPE_TAGS.filter(tag => (
@@ -722,6 +747,11 @@ export const matchesCmiPlaceTypeTag = (
 ) => {
   const tag = getCmiPlaceTypeTag(placeTypeId);
   if (!tag) return true;
+
+  if (hasPersistedTaxonomy(recommendation)) {
+    return getPersistedPlaceTypeIds(recommendation).includes(tag.id);
+  }
+
   const text = getRecommendationStructuredTagText(recommendation);
   const category = normalizeCategory(recommendation.category);
 
@@ -749,6 +779,14 @@ export const matchesCmiRecommendationSearchQuery = (
 };
 
 export const getCmiDetailTagsForRecommendation = (recommendation: Recommendation) => {
+  if (hasPersistedTaxonomy(recommendation)) {
+    const persistedTags = CMI_DETAIL_TAGS.filter(tag => getPersistedDetailTagIds(recommendation).includes(tag.id));
+    if (isCommunityCuratedRecommendation(recommendation)) {
+      return [{ id: 'cmi-curated', label: 'CMI 推荐', keywords: [] }, ...persistedTags];
+    }
+    return persistedTags;
+  }
+
   const text = getRecommendationDetailTagText(recommendation);
   const tags = CMI_DETAIL_TAGS.filter(tag => containsAny(text, tag.keywords));
 

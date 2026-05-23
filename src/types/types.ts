@@ -28,6 +28,14 @@ export interface Recommendation {
   id: string;
   place_name: string;
   category: Category;
+  input_category_id?: string | null;
+  primary_intent_id?: string | null;
+  place_type_ids?: string[];
+  detail_tag_ids?: string[];
+  classification_status?: string | null;
+  classification_source?: string | null;
+  classification_confidence?: number | null;
+  classified_at?: string | null;
   reason: string;
   user_name: string;
   user_id: string | null;

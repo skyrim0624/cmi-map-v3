@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LeafletMap } from '@/components/map/LeafletMap';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCmiInputCategoryOptions } from '@/data/cmi-taxonomy';
+import { getCmiInputCategoryOptionById, getCmiInputCategoryOptions } from '@/data/cmi-taxonomy';
 import { createRecommendation, uploadImages } from '@/db/api';
 import {
   CMI_EASTER_ICON_OPTIONS,
@@ -630,10 +630,15 @@ export default function MarkPlace() {
       }
 
       const userName = profile?.user_name || user?.email?.split('@')[0] || '匿名用户';
+      const selectedInputCategoryOption = getCmiInputCategoryOptionById(selectedInputCategoryId)
+        ?? inputCategoryOptions.find(option => option.storedCategory === selectedCategory)
+        ?? null;
 
       const recommendationInput = {
         place_name: placeName,
         category: selectedCategory,
+        input_category_id: selectedInputCategoryOption?.id ?? null,
+        primary_intent_id: selectedInputCategoryOption?.primaryIntentId ?? null,
         reason: reason,
         user_name: userName,
         user_id: user!.id,

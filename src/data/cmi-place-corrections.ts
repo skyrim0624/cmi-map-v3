@@ -37,19 +37,19 @@ const PLACE_CORRECTION_ENTRIES: Array<[string, PlaceCorrection]> = [
     [
       'Win Cosmetics',
       {
-        category: '生存指南',
+        category: '购物',
       },
     ],
     [
       'Win Cosmetics Warorot Market',
       {
-        category: '生存指南',
+        category: '购物',
       },
     ],
     [
       'Central Chiangmai',
       {
-        category: '市集',
+        category: '购物',
       },
     ],
     [
@@ -181,7 +181,7 @@ const PLACE_CORRECTION_ENTRIES: Array<[string, PlaceCorrection]> = [
     [
       '清迈客栈',
       {
-        category: '生存指南',
+        category: CMI_INN_CATEGORY,
       },
     ],
     [
