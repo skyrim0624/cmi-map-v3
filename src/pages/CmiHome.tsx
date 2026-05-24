@@ -8,22 +8,22 @@ import {
   MessageCircle,
   QrCode,
   RefreshCw,
+  Share2,
   Sparkles,
   Stamp,
   UsersRound,
   type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { getCmiEventCardBackgroundUrl } from '@/data/cmi-event-details';
+import { getCmiEventCardBackgroundUrl, getCmiEventPosterUrl } from '@/data/cmi-event-details';
 import {
   CMI_EVENTS,
   type CmiEvent,
   formatCmiEventTime,
-  getCmiEventTimeBucketLabel,
   getUpcomingCmiEventsFromList,
 } from '@/data/cmi-events';
 import { getAvailableStickers, getProfilesByUserNames, getRecommendationsByPlace, type PublicProfile } from '@/db/api';
@@ -33,21 +33,33 @@ import {
   placeCmiEventStamp,
 } from '@/db/cmi-event-stamps';
 import { getPublishedCmiEvents } from '@/db/cmi-events';
+import { createCmiEventShareCard, type CmiEventShareCardResult } from '@/lib/cmi-event-share-card';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
-import { getAddTracePath, getCmiEventPath, getPersonMapPath } from '@/lib/paths';
-import type { Recommendation, Sticker } from '@/types/types';
+import { getAddTracePath, getCmiEventPath, getProfilePath } from '@/lib/paths';
+import { CMI_INN_PLACE_NAME, type Recommendation, type Sticker } from '@/types/types';
 
-const CMI_INN_PLACE_NAME = '清迈客栈';
-const CMI_INN_TIME_ZONE = 'Asia/Bangkok';
-const CMI_INN_PAGE_GRID_STYLE = {
-  backgroundImage:
-    'linear-gradient(rgba(63,110,82,0.075) 1px, transparent 1px), linear-gradient(90deg, rgba(63,110,82,0.06) 1px, transparent 1px)',
-  backgroundSize: '30px 30px',
+type FileShareData = {
+  files?: File[];
+  title?: string;
+  text?: string;
 };
-const CMI_INN_BOARD_GRID_STYLE = {
+
+type NavigatorWithFileShare = Navigator & {
+  canShare?: (data: FileShareData) => boolean;
+  share?: (data: FileShareData) => Promise<void>;
+};
+
+const CMI_INN_TIME_ZONE = 'Asia/Bangkok';
+const CMI_INN_DOT_STYLE = {
   backgroundImage:
-    'linear-gradient(rgba(63,110,82,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(63,110,82,0.1) 1px, transparent 1px)',
-  backgroundSize: '24px 24px',
+    'radial-gradient(circle at 1px 1px, rgba(0,0,0,0.12) 1px, transparent 0)',
+  backgroundSize: '10px 10px',
+};
+const CMI_INN_DASH_STYLE = {
+  backgroundImage:
+    'repeating-linear-gradient(90deg, currentColor 0 8px, transparent 8px 14px)',
+  backgroundSize: '100% 2px',
+  backgroundRepeat: 'repeat-x',
 };
 
 interface CmiHomeContact {
@@ -157,40 +169,141 @@ const getNewestTimestamp = (values: Array<string | undefined>) => {
 const getRecordImages = (record: Recommendation) =>
   (Array.isArray(record.images) ? record.images : []).filter(Boolean);
 
-const formatEventStartClock = (event: CmiEvent) => {
-  if (event.stableSchedule && event.tags.includes('具体时段待确认')) {
-    return '待定';
-  }
-
-  if (event.startAt) {
-    return new Intl.DateTimeFormat('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZone: 'Asia/Bangkok',
-    }).format(new Date(event.startAt));
-  }
-
-  return event.recurrence?.startTime ?? '待定';
+const downloadCmiEventShareCard = (card: CmiEventShareCardResult) => {
+  const downloadUrl = URL.createObjectURL(card.blob);
+  const anchor = document.createElement('a');
+  anchor.href = downloadUrl;
+  anchor.download = card.fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(downloadUrl);
 };
+
+function ChapterHeader({
+  chapter,
+  title,
+  align = 'left',
+}: {
+  chapter: string;
+  title: string;
+  align?: 'left' | 'right';
+}) {
+  return (
+    <div className="mb-3 text-[#161616]">
+      <div className="flex items-center justify-between gap-3 text-[12px] font-black leading-none">
+        <span>{chapter}</span>
+        <span className={align === 'right' ? 'text-right' : ''}>{title}</span>
+      </div>
+      <div className="mt-2 h-[2px] text-[#161616]/80" style={CMI_INN_DASH_STYLE} />
+    </div>
+  );
+}
+
+function QuestionAnswerBlock({
+  question,
+  answer,
+  inverted = false,
+}: {
+  question: string;
+  answer: string;
+  inverted?: boolean;
+}) {
+  return (
+    <div className={`grid grid-cols-[1.4rem_minmax(0,1fr)] gap-x-3 gap-y-3 text-sm font-black leading-relaxed ${inverted ? 'text-white' : 'text-[#161616]'}`}>
+      <p className="text-[1.05rem] leading-none">Q</p>
+      <p>{question}</p>
+      <p className="text-[1.05rem] leading-none">A</p>
+      <p className={inverted ? 'text-white/88' : 'text-[#1e1e1e]/82'}>{answer}</p>
+    </div>
+  );
+}
+
+function ChapterPill({
+  children,
+  tone = 'cream',
+}: {
+  children: ReactNode;
+  tone?: 'cream' | 'green' | 'pink' | 'yellow';
+}) {
+  const toneClass = {
+    cream: 'bg-[#fff9e8] text-[#161616]',
+    green: 'bg-[#245f3b] text-white',
+    pink: 'bg-[#ff6fba] text-[#161616]',
+    yellow: 'bg-[#ffe35b] text-[#161616]',
+  }[tone];
+
+  return (
+    <span className={`inline-flex min-h-7 items-center rounded-full border-2 border-[#161616] px-3 text-[11px] font-black leading-none shadow-[2px_3px_0_rgba(0,0,0,0.18)] ${toneClass}`}>
+      {children}
+    </span>
+  );
+}
+
+function InnHeroChapter() {
+  return (
+    <section className="relative overflow-hidden rounded-[1.45rem] border-2 border-[#161616] bg-[#2eb45e] p-3 text-[#161616] shadow-[8px_9px_0_rgba(0,0,0,0.42)]">
+      <div className="pointer-events-none absolute inset-0 opacity-[0.2]" style={CMI_INN_DOT_STYLE} />
+      <ChapterHeader chapter="Chapter One" title="CMI Inn as Living Room" />
+      <div className="overflow-hidden rounded-[0.9rem] border-2 border-[#161616] bg-[#fff9e8]">
+        <img
+          src="/cmi-home/yard-scene.jpg"
+          alt="清迈客栈院子插画"
+          className="aspect-[1/0.9] w-full object-cover object-center"
+        />
+      </div>
+
+      <div className="mt-4">
+        <h1 className="text-[3.15rem] font-black leading-[0.88] tracking-normal text-[#161616]">
+          清迈客栈
+        </h1>
+        <p className="mt-3 max-w-[18rem] text-[15px] font-black leading-relaxed text-[#161616]/82">
+          一个能住、能来坐、能参加活动，也能从这里接上清迈生活的人情入口。
+        </p>
+      </div>
+
+      <div className="mt-5 rounded-[1.1rem] border-2 border-[#161616] bg-[#fff9e8] p-4 shadow-[4px_5px_0_rgba(0,0,0,0.18)]">
+        <QuestionAnswerBlock
+          question="清迈客栈到底是什么？"
+          answer="它不是一个只负责睡觉的地方，更像 CMI 在清迈的线下客厅。先来落脚、坐一会儿，接下来要认识谁、去哪儿、参加什么活动，都会慢慢接上。"
+        />
+      </div>
+
+      <div className="relative mt-5 overflow-hidden rounded-[50%] border-2 border-[#161616] bg-white px-7 py-8 text-center shadow-[4px_5px_0_rgba(0,0,0,0.18)]">
+        <p className="absolute left-1/2 top-3 -translate-x-1/2 rounded-sm border border-[#161616] bg-[#ffe35b] px-3 py-1 text-[13px] font-black leading-none">
+          CMI Home
+        </p>
+        <div className="mx-auto flex h-[9.2rem] w-[9.2rem] items-center justify-center rounded-full bg-[#e9f4e4]">
+          <img
+            src="/cmi-home/go-inn-et-manga-button-icon.png"
+            alt=""
+            className="h-[8.5rem] w-[8.5rem] object-contain"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function InnIntroSection() {
   return (
     <section className="mt-5" id="inn-intro">
-      <div className="relative overflow-hidden rounded-[1.75rem] border-2 border-[#2e2a23]/10 bg-[#fffaf0] px-4 py-4 shadow-[4px_5px_0_rgba(46,42,35,0.10),0_14px_32px_rgba(46,42,35,0.08)]">
-        <div className="absolute inset-0 opacity-[0.35]" style={CMI_INN_BOARD_GRID_STYLE} />
-        <div className="relative">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[12px] font-black text-[#8b5f32]">客栈介绍</p>
-            <span className="rounded-full border border-[#9b8ec6]/25 bg-[#f2eefb] px-2.5 py-1 text-[10px] font-black leading-none text-[#6f629b]">
-              CMI HOME
-            </span>
+      <div className="relative overflow-hidden rounded-[1.35rem] border-2 border-[#161616] bg-[#ffe35b] p-4 shadow-[6px_7px_0_rgba(0,0,0,0.36)]">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.18]" style={CMI_INN_DOT_STYLE} />
+        <ChapterHeader chapter="CMI Note" title="first stop in Chiang Mai" />
+        <div className="relative z-10">
+          <div className="flex flex-wrap gap-2">
+            <ChapterPill tone="green">能住</ChapterPill>
+            <ChapterPill>能坐</ChapterPill>
+            <ChapterPill tone="pink">能参加活动</ChapterPill>
           </div>
-          <h2 className="mt-2 text-[1.65rem] font-black leading-tight text-[#242424]">
+          <h2 className="mt-4 text-[2.1rem] font-black leading-[0.98] text-[#161616]">
             清迈客栈是 CMI 在清迈的线下入口。
           </h2>
-          <p className="mt-2 text-[14px] font-bold leading-relaxed text-[#4a463d]">
-            能住、能来坐，也能参加社区活动；第一次到清迈，可以先从这个院子接上人和生活。
+          <p className="mt-3 text-[15px] font-black leading-relaxed text-[#161616]/78">
+            第一次到清迈，可以先从这个院子接上人和生活；住下、坐下、聊一下，再决定今晚去哪儿。
           </p>
         </div>
       </div>
@@ -207,32 +320,34 @@ function InnDetailSection({
 }) {
   return (
     <section className="mt-5" id="inn-detail">
-      <div className="relative overflow-hidden rounded-[1.8rem] border-2 border-[#2e2a23]/10 bg-[#fffaf0] shadow-[4px_5px_0_rgba(46,42,35,0.10),0_16px_38px_rgba(46,42,35,0.08)]">
-        <div className="absolute inset-0 opacity-[0.26]" style={CMI_INN_BOARD_GRID_STYLE} />
-        <div className="relative px-4 py-4">
-          <p className="text-[12px] font-black text-[#8b5f32]">更多介绍</p>
-          <h2 className="mt-1 text-[1.9rem] font-black leading-tight text-[#242424]">
+      <div className="relative overflow-hidden rounded-[1.45rem] border-2 border-[#161616] bg-[#2eb45e] p-4 shadow-[7px_8px_0_rgba(0,0,0,0.38)]">
+        <ChapterHeader chapter="Chapter Three" title="how this courtyard works" />
+        <div className="relative">
+          <h2 className="text-[2.12rem] font-black leading-[0.98] text-[#161616]">
             一个可以落脚、碰面、留下故事的清迈院子
           </h2>
-          <p className="mt-3 text-[15px] font-bold leading-relaxed text-[#4a463d]">
-            清迈客栈不是单纯的住宿点。它更像 CMI 社区在清迈的线下客厅：有人来住几晚，有人来参加一场活动，也有人只是路过院子，和桌边的人聊起接下来要做什么。
-          </p>
+          <div className="mt-4 rounded-[1.1rem] border-2 border-[#161616] bg-[#fff9e8] p-4 shadow-[4px_5px_0_rgba(0,0,0,0.18)]">
+            <QuestionAnswerBlock
+              question="为什么要把详细介绍放在活动后面？"
+              answer="先看最近有什么现场，再看这个院子适合怎么用。有人住几晚，有人参加一场活动，也有人只是路过，和桌边的人聊起接下来要做什么。"
+            />
+          </div>
 
           <div className="mt-4 grid gap-2">
             {cmiHomeIntroFacts.map(({ id, label, value, description, Icon }) => (
               <div
                 key={id}
-                className="grid grid-cols-[3.6rem_minmax(0,1fr)] items-center gap-3 rounded-[1.05rem] border border-[#2e2a23]/10 bg-white/84 p-3 shadow-sm"
+                className="grid grid-cols-[3.7rem_minmax(0,1fr)] items-center gap-3 rounded-[1.05rem] border-2 border-[#161616] bg-[#fff9e8] p-3 shadow-[3px_4px_0_rgba(0,0,0,0.16)]"
               >
-                <div className="flex h-14 w-14 items-center justify-center rounded-[1rem] bg-[#e8f1e5] text-[#3f6e52]">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-[#161616] bg-[#ffe35b] text-[#161616]">
                   <Icon className="h-6 w-6" strokeWidth={2.5} />
                 </div>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-[1.15rem] font-black leading-none text-[#242424]">{value}</p>
-                    <p className="rounded-full bg-[#fff0d5] px-2 py-0.5 text-[11px] font-black text-[#8b5f32]">{label}</p>
+                    <p className="text-[1.2rem] font-black leading-none text-[#161616]">{value}</p>
+                    <p className="rounded-full border border-[#161616]/20 bg-[#ff6fba] px-2 py-0.5 text-[11px] font-black text-[#161616]">{label}</p>
                   </div>
-                  <p className="mt-1 text-[12px] font-bold leading-relaxed text-[#6d6a62]">{description}</p>
+                  <p className="mt-1 text-[12px] font-black leading-relaxed text-[#161616]/70">{description}</p>
                 </div>
               </div>
             ))}
@@ -241,7 +356,7 @@ function InnDetailSection({
           <div className="mt-4 grid grid-cols-2 gap-2">
             <Button
               type="button"
-              className="min-h-11 rounded-full border-2 border-[#2e2a23] bg-[#3f6e52] text-sm font-black text-white shadow-[3px_4px_0_rgba(46,42,35,0.18)] transition active:translate-y-0.5 active:shadow-[2px_3px_0_rgba(46,42,35,0.16)]"
+              className="min-h-11 rounded-full border-2 border-[#161616] bg-[#245f3b] text-sm font-black text-white shadow-[3px_4px_0_rgba(0,0,0,0.24)] transition active:translate-y-0.5 active:shadow-[2px_3px_0_rgba(0,0,0,0.2)]"
               onClick={onOpenMap}
             >
               <MapPin className="mr-1.5 h-4 w-4" strokeWidth={2.5} />
@@ -250,7 +365,7 @@ function InnDetailSection({
             <Button
               type="button"
               variant="outline"
-              className="min-h-11 rounded-full border-2 border-[#2e2a23]/18 bg-white text-sm font-black text-[#5f4523] shadow-[3px_4px_0_rgba(46,42,35,0.10)] transition active:translate-y-0.5 active:shadow-[2px_3px_0_rgba(46,42,35,0.10)]"
+              className="min-h-11 rounded-full border-2 border-[#161616] bg-[#fff9e8] text-sm font-black text-[#161616] shadow-[3px_4px_0_rgba(0,0,0,0.18)] transition active:translate-y-0.5 active:shadow-[2px_3px_0_rgba(0,0,0,0.16)]"
               onClick={onLeaveTrace}
             >
               <MessageCircle className="mr-1.5 h-4 w-4" strokeWidth={2.5} />
@@ -276,7 +391,7 @@ function EventStampButton({
     <button
       type="button"
       disabled={hasStamped || isStamping}
-      className="ml-auto mt-3 flex min-h-9 w-fit items-center justify-center gap-1.5 rounded-full border-2 border-[#2e2a23]/14 bg-white/92 px-3 text-sm font-black text-[#3f6e52] shadow-[2px_3px_0_rgba(46,42,35,0.10)] transition hover:bg-[#edf6ee] active:translate-y-0.5 active:shadow-[1px_2px_0_rgba(46,42,35,0.10)] disabled:border-[#3f6e52]/18 disabled:bg-[#e8f1e5] disabled:text-[#3f6e52] disabled:shadow-none"
+      className="flex min-h-10 items-center justify-center gap-1.5 rounded-full border-2 border-[#161616] bg-[#2eb45e] px-3 text-sm font-black text-[#161616] shadow-[2px_3px_0_rgba(0,0,0,0.2)] transition hover:bg-[#36c86b] active:translate-y-0.5 active:shadow-[1px_2px_0_rgba(0,0,0,0.18)] disabled:bg-[#fff9e8] disabled:text-[#161616]/70 disabled:shadow-none"
       onClick={(event) => {
         event.stopPropagation();
         onStamp();
@@ -286,6 +401,31 @@ function EventStampButton({
     >
       <Stamp className="h-4 w-4" strokeWidth={2.5} />
       {hasStamped ? '已盖戳' : isStamping ? '盖戳中' : '盖戳'}
+    </button>
+  );
+}
+
+function EventShareButton({
+  isSharing,
+  onShare,
+}: {
+  isSharing: boolean;
+  onShare: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={isSharing}
+      className="flex min-h-10 items-center justify-center gap-1.5 rounded-full border-2 border-[#161616] bg-[#ff6fba] px-3 text-sm font-black text-[#161616] shadow-[2px_3px_0_rgba(0,0,0,0.2)] transition hover:bg-[#ff83c4] active:translate-y-0.5 active:shadow-[1px_2px_0_rgba(0,0,0,0.18)] disabled:bg-[#fff9e8] disabled:text-[#161616]/70 disabled:shadow-none"
+      onClick={(event) => {
+        event.stopPropagation();
+        onShare();
+      }}
+      onKeyDown={(event) => event.stopPropagation()}
+      aria-label="转发活动到群"
+    >
+      <Share2 className="h-4 w-4" strokeWidth={2.5} />
+      {isSharing ? '生成中' : '转发到群'}
     </button>
   );
 }
@@ -370,6 +510,8 @@ function EventPreviewCard({
   onOpenEvent,
   hasStamped,
   isStamping,
+  isSharing,
+  onShareEvent,
   onStampEvent,
 }: {
   event: CmiEvent;
@@ -377,9 +519,11 @@ function EventPreviewCard({
   onOpenEvent: () => void;
   hasStamped: boolean;
   isStamping: boolean;
+  isSharing: boolean;
+  onShareEvent: () => void;
   onStampEvent: () => void;
 }) {
-  const cardBackgroundUrl = getCmiEventCardBackgroundUrl(event.id) ?? '/cmi-home/event-ai-courtyard.png';
+  const posterUrl = getCmiEventPosterUrl(event.id) ?? getCmiEventCardBackgroundUrl(event.id) ?? '/cmi-home/event-ai-courtyard.png';
   const handleKeyDown = (keyboardEvent: KeyboardEvent<HTMLElement>) => {
     if (keyboardEvent.key !== 'Enter' && keyboardEvent.key !== ' ') return;
     keyboardEvent.preventDefault();
@@ -392,36 +536,26 @@ function EventPreviewCard({
       tabIndex={0}
       onClick={onOpenEvent}
       onKeyDown={handleKeyDown}
-      className="cursor-pointer overflow-hidden rounded-[1.55rem] border-2 border-[#2e2a23]/10 bg-[#fffdf6] shadow-[5px_6px_0_rgba(46,42,35,0.12),0_16px_34px_rgba(46,42,35,0.10)] transition hover:-translate-y-0.5 hover:shadow-[5px_8px_0_rgba(46,42,35,0.12),0_18px_38px_rgba(46,42,35,0.12)] active:scale-[0.99]"
+      className="cursor-pointer overflow-hidden rounded-[1.25rem] border-2 border-[#161616] bg-[#fff9e8] shadow-[4px_5px_0_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 hover:shadow-[4px_7px_0_rgba(0,0,0,0.22)] active:scale-[0.99]"
       aria-label={`查看${event.title}活动详情`}
     >
-      <div className="relative h-[11.2rem] overflow-hidden border-b-2 border-[#2e2a23]/10 bg-[#f6efe0]">
+      <div className="relative m-3 h-[11.2rem] overflow-hidden rounded-[0.9rem] border-2 border-[#161616] bg-[#f6efe0]">
         <img
-          src={cardBackgroundUrl}
-          alt={`${event.title}活动横幅图`}
-          className="h-full w-full object-cover object-top"
+          src={posterUrl}
+          alt={`${event.title}活动海报`}
+          className="h-full w-full object-cover object-center"
           loading="lazy"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1f2f25]/64 via-[#1f2f25]/16 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#1c1a15]/45 to-transparent" />
-        <div className="absolute right-3 top-3 rounded-full bg-[#fff8df]/95 px-3 py-1.5 text-[11px] font-black text-[#335941] shadow-sm">
+        <div className="absolute right-3 top-3 rounded-sm border-2 border-[#161616] bg-[#ff6fba] px-3 py-1.5 text-[11px] font-black text-[#161616] shadow-[2px_3px_0_rgba(0,0,0,0.2)]">
           {event.priceLabel}
-        </div>
-        <div className="absolute left-3 top-3 flex min-h-[4rem] w-[4.9rem] flex-col items-center justify-center rounded-[1.05rem] border-2 border-white/45 bg-[#3f7a60] px-3 text-center text-white shadow-[0_10px_22px_rgba(25,55,42,0.28)]">
-          <span className="text-[11px] font-black leading-none text-white/80">
-            {getCmiEventTimeBucketLabel(event, referenceDate)}
-          </span>
-          <span className="mt-1 text-[1.28rem] font-black leading-none">
-            {formatEventStartClock(event)}
-          </span>
         </div>
       </div>
 
       <div className="p-4">
-        <h3 className="text-[1.48rem] font-black leading-[1.08] text-[#242424]">
+        <h3 className="text-[1.52rem] font-black leading-[1.04] text-[#161616]">
           {event.title}
         </h3>
-        <p className="mt-2 line-clamp-2 text-sm font-bold leading-relaxed text-[#5b564d]">
+        <p className="mt-2 line-clamp-2 text-sm font-black leading-relaxed text-[#161616]/72">
           {event.summary}
         </p>
 
@@ -429,41 +563,44 @@ function EventPreviewCard({
           {event.tags.slice(0, 4).map(tag => (
             <span
               key={tag}
-              className="rounded-full border border-[#3f6e52]/15 bg-[#edf6ee] px-2.5 py-1 text-[11px] font-black leading-none text-[#3f6e52]"
+              className="rounded-full border border-[#161616]/25 bg-[#2eb45e]/18 px-2.5 py-1 text-[11px] font-black leading-none text-[#161616]"
             >
               {tag}
             </span>
           ))}
         </div>
 
-        <div className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(7.4rem,0.78fr)] gap-3 rounded-[1.05rem] border border-[#2e2a23]/8 bg-[#fff7df] p-3 text-sm font-black text-[#3d3a33]">
+        <div className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(7.4rem,0.78fr)] gap-3 rounded-[1rem] border-2 border-[#161616]/18 bg-white/58 p-3 text-sm font-black text-[#161616]">
           <div className="grid min-w-0 gap-2">
             <div className="flex min-w-0 items-center gap-2">
-              <Clock3 className="h-4 w-4 shrink-0 text-[#8b5f32]" strokeWidth={2.5} />
+              <Clock3 className="h-4 w-4 shrink-0 text-[#161616]" strokeWidth={2.5} />
               <span className="min-w-0 leading-snug">{formatCmiEventTime(event, referenceDate)}</span>
             </div>
             <div className="flex min-w-0 items-center gap-2">
-              <MapPin className="h-4 w-4 shrink-0 text-[#8b5f32]" strokeWidth={2.5} />
+              <MapPin className="h-4 w-4 shrink-0 text-[#161616]" strokeWidth={2.5} />
               <span className="min-w-0 leading-snug">{event.venueName}</span>
             </div>
           </div>
-          <div className="grid min-w-0 content-center gap-1.5 border-l border-[#8b5f32]/20 pl-3 text-right">
+          <div className="grid min-w-0 content-center gap-1.5 border-l-2 border-dashed border-[#161616]/26 pl-3 text-right">
             <div>
-              <p className="text-[10px] font-black leading-none text-[#8b5f32]/75">费用</p>
-              <p className="mt-1 text-[12px] font-black leading-tight text-[#3d3a33]">{event.priceLabel}</p>
+              <p className="text-[10px] font-black leading-none text-[#161616]/55">费用</p>
+              <p className="mt-1 text-[12px] font-black leading-tight text-[#161616]">{event.priceLabel}</p>
             </div>
             <div>
-              <p className="text-[10px] font-black leading-none text-[#8b5f32]/75">参与</p>
-              <p className="mt-1 text-[12px] font-black leading-tight text-[#3d3a33]">{event.registrationLabel}</p>
+              <p className="text-[10px] font-black leading-none text-[#161616]/55">参与</p>
+              <p className="mt-1 text-[12px] font-black leading-tight text-[#161616]">{event.registrationLabel}</p>
             </div>
           </div>
         </div>
 
-        <EventStampButton
-          hasStamped={hasStamped}
-          isStamping={isStamping}
-          onStamp={onStampEvent}
-        />
+        <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+          <EventShareButton isSharing={isSharing} onShare={onShareEvent} />
+          <EventStampButton
+            hasStamped={hasStamped}
+            isStamping={isStamping}
+            onStamp={onStampEvent}
+          />
+        </div>
       </div>
     </article>
   );
@@ -476,6 +613,8 @@ function YardNoticeWall({
   onOpenEvent,
   stampedEventIds,
   stampingEventIds,
+  sharingEventIds,
+  onShareEvent,
   onStampEvent,
 }: {
   innEvents: CmiEvent[];
@@ -484,6 +623,8 @@ function YardNoticeWall({
   onOpenEvent: (eventId: string) => void;
   stampedEventIds: Record<string, boolean>;
   stampingEventIds: Record<string, boolean>;
+  sharingEventIds: Record<string, boolean>;
+  onShareEvent: (event: CmiEvent) => void;
   onStampEvent: (eventId: string) => void;
 }) {
   const visibleInnEvents = innEvents.slice(0, 4);
@@ -494,16 +635,16 @@ function YardNoticeWall({
 
   return (
     <section className="mt-5" id="tomorrow-events">
-      <div className="relative overflow-hidden rounded-[1.8rem] border-2 border-[#2e2a23]/10 bg-[#fffaf0] p-3 shadow-[5px_6px_0_rgba(46,42,35,0.10),0_16px_38px_rgba(46,42,35,0.09)]">
-        <div className="absolute inset-0 opacity-[0.48]" style={CMI_INN_BOARD_GRID_STYLE} />
+      <div className="relative overflow-hidden rounded-[1.45rem] border-2 border-[#161616] bg-[#ffe35b] p-3 shadow-[8px_9px_0_rgba(0,0,0,0.4)]">
+        <ChapterHeader chapter="Chapter Two" title="today at CMI inn" />
         <div className="relative mb-3 flex items-center justify-between gap-3 px-1 pt-1">
           <div>
-            <p className="text-[12px] font-black text-[#3f6e52]">自动同步看板</p>
-            <h2 className="mt-1 text-[2.05rem] font-black leading-none text-[#242424]">客栈活动</h2>
+            <p className="text-[12px] font-black text-[#161616]/72">自动同步看板</p>
+            <h2 className="mt-1 text-[2.2rem] font-black leading-none text-[#161616]">客栈活动</h2>
           </div>
           <button
             type="button"
-            className="flex min-h-11 items-center gap-1.5 rounded-full border-2 border-[#2e2a23]/10 bg-white/88 px-3 text-sm font-black text-[#3f6e52] shadow-[2px_3px_0_rgba(46,42,35,0.08)] transition active:translate-y-0.5 active:shadow-[1px_2px_0_rgba(46,42,35,0.08)]"
+            className="flex min-h-11 items-center gap-1.5 rounded-full border-2 border-[#161616] bg-[#fff9e8] px-3 text-sm font-black text-[#161616] shadow-[2px_3px_0_rgba(0,0,0,0.18)] transition active:translate-y-0.5 active:shadow-[1px_2px_0_rgba(0,0,0,0.16)]"
             onClick={onOpenAllEvents}
           >
             全部
@@ -512,26 +653,26 @@ function YardNoticeWall({
         </div>
 
         <div className="relative mb-3 grid grid-cols-3 gap-2">
-          <div className="rounded-[1rem] border border-[#3f6e52]/12 bg-white/78 p-3">
-            <div className="flex items-center gap-1.5 text-[11px] font-black text-[#3f6e52]">
+          <div className="rounded-[1rem] border-2 border-[#161616] bg-[#fff9e8] p-3 shadow-[2px_3px_0_rgba(0,0,0,0.16)]">
+            <div className="flex items-center gap-1.5 text-[11px] font-black text-[#161616]">
               <CalendarDays className="h-3.5 w-3.5" strokeWidth={2.5} />
               近期
             </div>
-            <p className="mt-1 text-[1.25rem] font-black leading-none text-[#242424]">{innEvents.length} 场</p>
+            <p className="mt-1 text-[1.25rem] font-black leading-none text-[#161616]">{innEvents.length} 场</p>
           </div>
-          <div className="rounded-[1rem] border border-[#3f6e52]/12 bg-white/78 p-3">
-            <div className="flex items-center gap-1.5 text-[11px] font-black text-[#3f6e52]">
+          <div className="rounded-[1rem] border-2 border-[#161616] bg-[#fff9e8] p-3 shadow-[2px_3px_0_rgba(0,0,0,0.16)]">
+            <div className="flex items-center gap-1.5 text-[11px] font-black text-[#161616]">
               <CircleCheck className="h-3.5 w-3.5" strokeWidth={2.5} />
               已核实
             </div>
-            <p className="mt-1 text-[1.25rem] font-black leading-none text-[#242424]">{verifiedEventCount} 场</p>
+            <p className="mt-1 text-[1.25rem] font-black leading-none text-[#161616]">{verifiedEventCount} 场</p>
           </div>
-          <div className="rounded-[1rem] border border-[#3f6e52]/12 bg-white/78 p-3">
-            <div className="flex items-center gap-1.5 text-[11px] font-black text-[#3f6e52]">
+          <div className="rounded-[1rem] border-2 border-[#161616] bg-[#fff9e8] p-3 shadow-[2px_3px_0_rgba(0,0,0,0.16)]">
+            <div className="flex items-center gap-1.5 text-[11px] font-black text-[#161616]">
               <RefreshCw className="h-3.5 w-3.5" strokeWidth={2.5} />
               同步
             </div>
-            <p className="mt-1 text-[12px] font-black leading-tight text-[#242424]">{latestCheckedAtLabel}</p>
+            <p className="mt-1 text-[12px] font-black leading-tight text-[#161616]">{latestCheckedAtLabel}</p>
           </div>
         </div>
 
@@ -545,15 +686,17 @@ function YardNoticeWall({
                 onOpenEvent={() => onOpenEvent(event.id)}
                 hasStamped={Boolean(stampedEventIds[event.id])}
                 isStamping={Boolean(stampingEventIds[event.id])}
+                isSharing={Boolean(sharingEventIds[event.id])}
+                onShareEvent={() => onShareEvent(event)}
                 onStampEvent={() => onStampEvent(event.id)}
               />
             ))
           ) : (
-            <div className="rounded-[1.5rem] bg-white/90 p-4 text-sm font-black leading-relaxed text-[#5f4523] shadow-[0_14px_35px_rgba(46,42,35,0.08)]">
+            <div className="rounded-[1.2rem] border-2 border-[#161616] bg-[#fff9e8] p-4 text-sm font-black leading-relaxed text-[#161616] shadow-[3px_4px_0_rgba(0,0,0,0.18)]">
               <p>暂时还没贴新的客栈活动。晚点再来看看。</p>
               <button
                 type="button"
-                className="mt-3 min-h-11 rounded-full bg-[#3f6e52] px-4 text-sm font-black text-white shadow-[0_10px_20px_rgba(63,110,82,0.18)] transition active:scale-[0.98]"
+                className="mt-3 min-h-11 rounded-full border-2 border-[#161616] bg-[#2eb45e] px-4 text-sm font-black text-[#161616] shadow-[2px_3px_0_rgba(0,0,0,0.18)] transition active:scale-[0.98]"
                 onClick={onOpenAllEvents}
               >
                 看清迈近期活动
@@ -581,7 +724,7 @@ function InnRecordCard({
   const avatarFallback = displayName.trim().charAt(0).toUpperCase() || '?';
 
   return (
-    <article className="overflow-hidden rounded-[1.3rem] border-2 border-[#2e2a23]/10 bg-white/92 shadow-[3px_4px_0_rgba(46,42,35,0.08),0_12px_26px_rgba(46,42,35,0.07)]">
+    <article className="overflow-hidden rounded-[1.18rem] border-2 border-[#161616] bg-[#fff9e8] shadow-[4px_5px_0_rgba(0,0,0,0.2)]">
       <div className={imageUrls.length === 1 ? 'grid' : 'grid grid-cols-2 gap-1.5 p-1.5'}>
         {imageUrls.map((imageUrl, index) => (
           <img
@@ -589,26 +732,26 @@ function InnRecordCard({
             src={imageUrl}
             alt={`清迈客栈记录照片 ${index + 1}`}
             className={imageUrls.length === 1
-              ? 'h-[12rem] w-full object-cover'
-              : 'h-[8.6rem] w-full rounded-[1rem] object-cover'}
+              ? 'h-[12rem] w-full border-b-2 border-[#161616] object-cover'
+              : 'h-[8.6rem] w-full rounded-[0.85rem] border-2 border-[#161616] object-cover'}
             loading="lazy"
           />
         ))}
       </div>
       <div className="p-4">
-        <p className="text-[15px] font-black leading-relaxed text-[#242424]">
+        <p className="text-[15px] font-black leading-relaxed text-[#161616]">
           “{reasonText}”
         </p>
-        <div className="mt-3 flex items-center justify-between gap-3 text-[12px] font-black text-[#7a6b58]">
+        <div className="mt-3 flex items-center justify-between gap-3 text-[12px] font-black text-[#161616]/72">
           <button
             type="button"
-            className="flex min-w-0 items-center gap-2 rounded-full pr-2 text-left transition hover:text-[#3f6e52] active:scale-[0.98]"
+            className="flex min-w-0 items-center gap-2 rounded-full pr-2 text-left transition hover:text-[#245f3b] active:scale-[0.98]"
             onClick={onOpenProfile}
-            aria-label={`打开${displayName}的清迈地图`}
+            aria-label={`打开${displayName}的个人主页`}
           >
-            <Avatar className="h-8 w-8 border border-[#2e2a23]/10 bg-[#e8f1e5]">
+            <Avatar className="h-8 w-8 border-2 border-[#161616] bg-[#2eb45e]">
               {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={displayName} className="object-cover" />}
-              <AvatarFallback className="bg-[#e8f1e5] text-[12px] font-black text-[#3f6e52]">
+              <AvatarFallback className="bg-[#2eb45e] text-[12px] font-black text-[#161616]">
                 {avatarFallback}
               </AvatarFallback>
             </Avatar>
@@ -632,20 +775,18 @@ function InnRecordsSection({
   loading: boolean;
   error: string | null;
   profilesByUserName: Record<string, PublicProfile>;
-  onOpenProfile: (userName: string) => void;
+  onOpenProfile: () => void;
 }) {
   const visibleRecords = records.filter(record => getRecordImages(record).length > 0).slice(0, 3);
 
   return (
     <section className="mt-5" id="inn-records">
-      <div className="relative overflow-hidden rounded-[1.8rem] border-2 border-[#2e2a23]/10 bg-[#fffdf8] p-3 shadow-[5px_6px_0_rgba(46,42,35,0.08),0_16px_34px_rgba(46,42,35,0.07)]">
-        <div className="absolute inset-0 opacity-[0.22]" style={CMI_INN_BOARD_GRID_STYLE} />
+      <div className="relative overflow-hidden rounded-[1.45rem] border-2 border-[#161616] bg-[#2eb45e] p-3 shadow-[8px_9px_0_rgba(0,0,0,0.4)]">
+        <ChapterHeader chapter="Chapter Four" title="guest notes with photos" />
         <div className="relative">
           <div className="mb-3 flex items-end justify-between gap-3 px-1 pt-1">
-            <h2 className="text-[1.9rem] font-black leading-tight text-[#242424]">大家说</h2>
-            <span className="rounded-full border border-[#3f6e52]/18 bg-[#edf6ee] px-2.5 py-1 text-[11px] font-black leading-none text-[#3f6e52]">
-              照片记录
-            </span>
+            <h2 className="text-[2.1rem] font-black leading-tight text-[#161616]">大家说</h2>
+            <ChapterPill tone="yellow">照片记录</ChapterPill>
           </div>
 
           <div className="grid gap-3">
@@ -657,7 +798,7 @@ function InnRecordsSection({
                 />
               ))
             ) : error ? (
-              <div className="rounded-[1.3rem] border-2 border-[#2e2a23]/8 bg-white/86 p-4 text-sm font-black leading-relaxed text-[#5f4523] shadow-[2px_3px_0_rgba(46,42,35,0.06)]">
+              <div className="rounded-[1.15rem] border-2 border-[#161616] bg-[#fff9e8] p-4 text-sm font-black leading-relaxed text-[#161616] shadow-[3px_4px_0_rgba(0,0,0,0.18)]">
                 {error}
               </div>
             ) : visibleRecords.length > 0 ? (
@@ -666,11 +807,11 @@ function InnRecordsSection({
                   key={record.id}
                   record={record}
                   profile={profilesByUserName[record.user_name]}
-                  onOpenProfile={() => onOpenProfile(record.user_name)}
+                  onOpenProfile={onOpenProfile}
                 />
               ))
             ) : (
-              <div className="rounded-[1.3rem] border-2 border-[#2e2a23]/8 bg-white/86 p-4 text-sm font-black leading-relaxed text-[#5f4523] shadow-[2px_3px_0_rgba(46,42,35,0.06)]">
+              <div className="rounded-[1.15rem] border-2 border-[#161616] bg-[#fff9e8] p-4 text-sm font-black leading-relaxed text-[#161616] shadow-[3px_4px_0_rgba(0,0,0,0.18)]">
                 暂时还没有带照片的清迈客栈记录。
               </div>
             )}
@@ -687,21 +828,21 @@ function ContactQrCard({ contact }: { contact: CmiHomeContact }) {
       href={contact.imageUrl}
       target="_blank"
       rel="noreferrer"
-      className="group flex min-h-[10.2rem] flex-col items-center rounded-[1.1rem] border-2 border-[#2e2a23]/8 bg-white/86 px-1.5 py-2 text-center shadow-[2px_3px_0_rgba(46,42,35,0.07)] transition active:translate-y-0.5 active:shadow-[1px_2px_0_rgba(46,42,35,0.07)]"
+      className="group flex min-h-[10.2rem] flex-col items-center rounded-[1rem] border-2 border-[#161616] bg-[#fff9e8] px-1.5 py-2 text-center shadow-[3px_4px_0_rgba(0,0,0,0.18)] transition active:translate-y-0.5 active:shadow-[1px_2px_0_rgba(0,0,0,0.16)]"
       aria-label={`打开${contact.name}的微信二维码`}
     >
       <div className="shrink-0">
         <img
           src={contact.imageUrl}
           alt={`${contact.name}微信二维码`}
-          className="h-[4.65rem] w-[4.65rem] rounded-[0.4rem] object-cover"
+          className="h-[4.65rem] w-[4.65rem] rounded-[0.4rem] border border-[#161616]/18 object-cover"
           loading="lazy"
         />
       </div>
       <div className="mt-2 min-w-0">
-        <h3 className="text-[1.05rem] font-black leading-tight text-[#242424]">{contact.name}</h3>
-        <p className="mt-1 text-[10.5px] font-black leading-tight text-[#5f4523]">{contact.role}</p>
-        <p className="mt-1 text-[10px] font-bold leading-snug text-[#6d6a62]">{contact.hint}</p>
+        <h3 className="text-[1.05rem] font-black leading-tight text-[#161616]">{contact.name}</h3>
+        <p className="mt-1 text-[10.5px] font-black leading-tight text-[#161616]/72">{contact.role}</p>
+        <p className="mt-1 text-[10px] font-bold leading-snug text-[#161616]/58">{contact.hint}</p>
       </div>
     </a>
   );
@@ -710,15 +851,15 @@ function ContactQrCard({ contact }: { contact: CmiHomeContact }) {
 function ContactQrSection() {
   return (
     <section className="mt-5" id="wechat-contact">
-      <div className="relative overflow-hidden rounded-[1.8rem] border-2 border-[#2e2a23]/10 bg-[#fffaf0] p-3 shadow-[5px_6px_0_rgba(46,42,35,0.08),0_16px_34px_rgba(46,42,35,0.07)]">
-        <div className="absolute inset-0 opacity-[0.24]" style={CMI_INN_BOARD_GRID_STYLE} />
+      <div className="relative overflow-hidden rounded-[1.45rem] border-2 border-[#161616] bg-[#ff6fba] p-3 shadow-[8px_9px_0_rgba(0,0,0,0.4)]">
+        <ChapterHeader chapter="Extra" title="wechat contact" />
         <div className="relative">
           <div className="mb-3 flex items-end justify-between gap-3 px-1 pt-1">
             <div>
-              <p className="text-[12px] font-black text-[#8b5f32]">微信联系</p>
-              <h2 className="mt-1 text-[1.7rem] font-black leading-tight text-[#242424]">欢迎添加</h2>
+              <p className="text-[12px] font-black text-[#161616]/72">微信联系</p>
+              <h2 className="mt-1 text-[1.9rem] font-black leading-tight text-[#161616]">欢迎添加</h2>
             </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#2e2a23]/8 bg-white/86 text-[#8b5f32] shadow-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#161616] bg-[#ffe35b] text-[#161616] shadow-[2px_3px_0_rgba(0,0,0,0.18)]">
               <QrCode className="h-[1.05rem] w-[1.05rem]" strokeWidth={2.5} />
             </div>
           </div>
@@ -745,6 +886,7 @@ export default function CmiHome() {
   );
   const [stampedEventIds, setStampedEventIds] = useState<Record<string, boolean>>({});
   const [stampingEventIds, setStampingEventIds] = useState<Record<string, boolean>>({});
+  const [sharingEventIds, setSharingEventIds] = useState<Record<string, boolean>>({});
   const [availableStickers, setAvailableStickers] = useState<Sticker[]>([]);
   const [stickersLoading, setStickersLoading] = useState(true);
   const [activeStampEventId, setActiveStampEventId] = useState<string | null>(null);
@@ -829,9 +971,8 @@ export default function CmiHome() {
     };
   }, [innRecords]);
 
-  const handleOpenProfile = (userName: string) => {
-    if (!userName) return;
-    navigate(getPersonMapPath(userName));
+  const handleOpenProfile = () => {
+    navigate(getProfilePath());
   };
 
   useEffect(() => {
@@ -902,22 +1043,60 @@ export default function CmiHome() {
     void handleStampEvent(activeStampEventId, sticker);
   };
 
+  const handleShareEvent = async (event: CmiEvent) => {
+    const posterUrl = getCmiEventPosterUrl(event.id) ?? getCmiEventCardBackgroundUrl(event.id);
+
+    if (!posterUrl) {
+      toast.error('这个活动还没有可分享的海报');
+      return;
+    }
+
+    setSharingEventIds(prev => ({ ...prev, [event.id]: true }));
+
+    try {
+      const card = await createCmiEventShareCard({
+        event,
+        posterUrl,
+        referenceDate,
+      });
+      const file = new File([card.blob], card.fileName, { type: 'image/png' });
+      const shareData: FileShareData = {
+        files: [file],
+        title: `CMI Map · ${event.title}`,
+        text: `${event.title}｜${formatCmiEventTime(event, referenceDate)}，${event.venueName}`,
+      };
+      const navigatorWithFileShare = navigator as NavigatorWithFileShare;
+
+      if (navigatorWithFileShare.share && (!navigatorWithFileShare.canShare || navigatorWithFileShare.canShare(shareData))) {
+        try {
+          await navigatorWithFileShare.share(shareData);
+          return;
+        } catch (error) {
+          if (error instanceof DOMException && error.name === 'AbortError') return;
+          console.error('Failed to share CMI event card:', error);
+        }
+      }
+
+      downloadCmiEventShareCard(card);
+      toast.success('当前浏览器不支持直接分享，已改为下载活动图片');
+    } catch (error) {
+      console.error('Failed to create CMI event share card:', error);
+      toast.error('活动卡片生成失败，请稍后再试');
+    } finally {
+      setSharingEventIds(prev => ({ ...prev, [event.id]: false }));
+    }
+  };
+
   return (
-    <div className="relative h-[100dvh] overflow-hidden bg-[#fffdf8] text-[#242424]">
-      <div className="absolute inset-0 z-0 bg-[#fffdf8]" style={CMI_INN_PAGE_GRID_STYLE} />
-      <div className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(135deg,rgba(255,255,255,0.88),rgba(255,250,242,0.74)_46%,rgba(238,246,234,0.84))]" />
-      <img
-        src="/brand/page-curl-corner.png"
-        alt=""
-        className="pointer-events-none absolute right-[-1rem] top-0 z-[2] w-28 opacity-55 drop-shadow-[0_8px_16px_rgba(46,42,35,0.12)]"
-        draggable={false}
-      />
+    <div className="relative h-[100dvh] overflow-hidden bg-[#050505] text-[#161616]">
+      <div className="pointer-events-none absolute left-[-3.4rem] top-[45%] h-24 w-24 rounded-full border-[5px] border-white/95" />
+      <div className="pointer-events-none absolute right-[-2.4rem] top-[52%] h-20 w-20 rounded-full border-[5px] border-white/95" />
 
       <header className="pointer-events-none absolute left-0 right-0 top-0 z-30 px-4 pt-[calc(env(safe-area-inset-top)+14px)]">
-        <div className="mx-auto flex max-w-[520px] items-center justify-between gap-3">
+        <div className="mx-auto flex max-w-[440px] items-center justify-between gap-3">
           <button
             type="button"
-            className="pointer-events-auto min-h-12 rounded-full border border-[#2e2a23]/10 bg-white/92 px-5 text-2xl font-black text-[#242424] shadow-[0_8px_20px_rgba(46,42,35,0.10)] backdrop-blur-md transition active:scale-[0.98]"
+            className="pointer-events-auto min-h-12 rounded-full border-2 border-white/20 bg-white px-5 text-2xl font-black text-[#161616] shadow-[4px_5px_0_rgba(255,255,255,0.18)] transition active:scale-[0.98]"
             onClick={() => navigate('/')}
             aria-label="返回 CMI Map 首页"
           >
@@ -925,14 +1104,14 @@ export default function CmiHome() {
           </button>
           <button
             type="button"
-            className="pointer-events-auto group flex min-h-12 items-center rounded-full border border-[#3f6e52]/25 bg-white/92 py-1 pl-1 pr-4 font-black text-[#335941] shadow-[0_8px_18px_rgba(63,110,82,0.12)] backdrop-blur-md transition active:scale-[0.98]"
+            className="pointer-events-auto group flex min-h-12 items-center rounded-full border-2 border-[#ffe35b] bg-[#ffe35b] py-1 pl-1 pr-4 font-black text-[#161616] shadow-[4px_5px_0_rgba(255,227,91,0.2)] transition active:scale-[0.98]"
             onClick={() => navigate('/map?scene=community')}
             aria-label="在地图上查看清迈客栈"
           >
             <img
               src="/cmi-home/go-inn-et-manga-button-icon.png"
               alt=""
-              className="mr-2 h-10 w-10 rounded-full border border-[#3f6e52]/15 object-cover shadow-sm transition group-active:scale-95"
+              className="mr-2 h-10 w-10 rounded-full border-2 border-[#161616] object-cover transition group-active:scale-95"
               loading="eager"
               decoding="async"
             />
@@ -941,26 +1120,8 @@ export default function CmiHome() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto h-full max-w-[520px] overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+34px)] pt-[calc(env(safe-area-inset-top)+88px)]">
-        <section className="relative overflow-hidden rounded-[2rem] border-2 border-[#2e2a23]/12 bg-[#eef6ea] shadow-[5px_6px_0_rgba(46,42,35,0.12),0_18px_45px_rgba(63,110,82,0.14)]">
-          <img
-            src="/cmi-home/yard-scene.jpg"
-            alt="清迈客栈院子插画"
-            className="aspect-[1/0.92] w-full object-cover object-center"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/70" />
-          <div className="absolute left-4 top-4 rounded-full border border-white/45 bg-white/88 px-3 py-1 text-[11px] font-black leading-none text-[#335941] shadow-sm">
-            CMI 在清迈的院子
-          </div>
-          <div className="absolute bottom-4 left-4 right-4">
-            <h1 className="text-[2.65rem] font-black leading-[0.95] text-white drop-shadow-sm">
-              清迈客栈
-            </h1>
-            <p className="mt-2 max-w-[330px] text-sm font-bold leading-relaxed text-white/90">
-              一个能住、能来坐、能参加活动，也能从这里接上清迈生活的人情入口。
-            </p>
-          </div>
-        </section>
+      <main className="relative z-10 mx-auto h-full max-w-[440px] overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+42px)] pt-[calc(env(safe-area-inset-top)+92px)]">
+        <InnHeroChapter />
 
         <InnIntroSection />
 
@@ -971,6 +1132,8 @@ export default function CmiHome() {
           onOpenEvent={(eventId) => navigate(getCmiEventPath(eventId))}
           stampedEventIds={stampedEventIds}
           stampingEventIds={stampingEventIds}
+          sharingEventIds={sharingEventIds}
+          onShareEvent={handleShareEvent}
           onStampEvent={handleOpenStampDrawer}
         />
 

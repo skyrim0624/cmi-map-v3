@@ -84,7 +84,11 @@ export const getPublishedCmiEvents = async (): Promise<CmiEvent[]> => {
     return CMI_EVENTS;
   }
 
-  return Array.isArray(data) && data.length > 0
-    ? (data as CmiEventRow[]).map(toCmiEvent)
-    : CMI_EVENTS;
+  if (!Array.isArray(data) || data.length === 0) return CMI_EVENTS;
+
+  const remoteEvents = (data as CmiEventRow[]).map(toCmiEvent);
+  const remoteEventIds = new Set(remoteEvents.map(event => event.id));
+  const localOnlyEvents = CMI_EVENTS.filter(event => !remoteEventIds.has(event.id));
+
+  return [...remoteEvents, ...localOnlyEvents];
 };

@@ -33,6 +33,8 @@ export const CMI_EVENT_POSTER_BY_ID: Partial<Record<string, string>> = {
   'cmi-song-of-the-sea-screening-2026-05-23': '/cmi-home/event-posters/cmi-song-of-the-sea-screening-2026-05-23.jpg',
   'cmi-swap-market-2026-05-24': '/cmi-home/event-posters/cmi-swap-market-2026-05-24.jpg',
   'cmi-ai-open-mic-vol-04-2026-05-24': '/cmi-home/event-posters/cmi-ai-open-mic-vol-04-2026-05-24.jpg',
+  'cmi-financial-literacy-sharing-2026-05-29':
+    '/cmi-home/event-posters/cmi-financial-literacy-sharing-2026-05-29.png',
 };
 
 export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = {
@@ -43,6 +45,8 @@ export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = 
   'cmi-swap-market-2026-05-24': '/cmi-home/event-card-backgrounds/cmi-swap-market-2026-05-24.jpg',
   'cmi-ai-open-mic-vol-04-2026-05-24':
     '/cmi-home/event-card-backgrounds/cmi-ai-open-mic-vol-04-2026-05-24.jpg',
+  'cmi-financial-literacy-sharing-2026-05-29':
+    '/cmi-home/event-card-backgrounds/cmi-financial-literacy-sharing-2026-05-29.jpg',
 };
 
 export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailContent> = {
@@ -245,6 +249,50 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
           '活动主题：本周 AI 使用 / 工具 / 项目 / 案例 / 踩坑 / 问题',
           '场地费用：免费参与',
           '参与方式：无需报名，直接空降即可',
+        ],
+      },
+    ],
+  },
+  'cmi-financial-literacy-sharing-2026-05-29': {
+    eventId: 'cmi-financial-literacy-sharing-2026-05-29',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-financial-literacy-sharing-2026-05-29']!,
+    postTitle: '穷姐姐财商分享大会｜在清迈可以“摆烂”，但钱包不能真的烂',
+    postBlocks: [
+      {
+        kind: 'paragraph',
+        text: '在清迈生活可以慢下来，但收入、汇率、保险、基金、股票、黄金和银行理财这些问题不会自动消失。',
+      },
+      {
+        kind: 'paragraph',
+        text: '这次分享会不卖课、不推产品，也不制造财务焦虑，只把真实踩过的坑、用过的工具和见过的套路放到桌面上聊清楚。',
+      },
+      {
+        kind: 'heading',
+        text: '本次会聊什么',
+      },
+      {
+        kind: 'list',
+        items: [
+          '理财工具红黑榜：保险、基金、股票、银行理财、黄金等常见工具',
+          '富人怎么搞钱：信息差、规则意识和游戏规则',
+          '世界这么乱，跟普通人的钱包有什么关系',
+          '小钱如何建立基本安全垫',
+          '不上班之后，如何让自己更值钱',
+          '常见骗局、理财陷阱和看起来很美的赚钱机会',
+        ],
+      },
+      {
+        kind: 'heading',
+        text: '活动信息',
+      },
+      {
+        kind: 'list',
+        items: [
+          '分享嘉宾：Pink，前全女空间创始人，随性派财迷',
+          '活动时间：5 月 29 日（周五）19:00，空想食堂后',
+          '活动地点：清迈客栈',
+          '场地费用：免费参与，可随喜支持',
+          '参与方式：无需报名，直接空降即可；Luma 链接待补充',
         ],
       },
     ],

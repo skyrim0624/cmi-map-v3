@@ -66,7 +66,7 @@
 
 Time Out 的本周末专题可以作为及时线索源；如果只用 Time Out，`reliabilityNote` 必须写明“出发前仍建议复核场地方动态”。Citylife、主办方官网、场地方页面和 CMI 自有公告优先级更高。
 
-最新一次维护：2026-05-22 17:22 ICT，已归档 2026-05-20 与 2026-05-21 已结束的清迈客栈活动，刷新 2026-05-22 至 2026-05-24 仍可参加的客栈活动核验时间，并补发布 2026-05-24 19:00 的 AI 开放麦第四期；`5.23 AI+3D创意主题活动` 当前素材目录为空，暂不公开发布。
+最新一次维护：2026-05-24 19:07 ICT，发现并发布 `/Users/andreas/CMI/活动宣传内容/五月活动/5.29 穷姐姐财商分享大会`，本地新增 `cmi-financial-literacy-sharing-2026-05-29`，同步生成详情页海报和首页横幅图。本轮审计迁移为 `supabase/migrations/20260524190713_publish_cmi_financial_literacy_sharing.sql`，内容包含归档已结束的 `cmi-swap-market-2026-05-24`、刷新仍可参加的 `cmi-ai-open-mic-vol-04-2026-05-24`，以及 upsert 5.29 财商分享会。远程 Supabase 写入暂未完成：MCP 对 linked CMI_MAP 项目无执行权限，本地网络解析 `sfpcpxlxslnulzlmjcby.supabase.co` 失败，CLI 迁移 push 仍需 `SUPABASE_ACCESS_TOKEN`；待网络和 CLI 登录恢复后执行 dry-run / push。`5.23 AI+3D创意主题活动` 目录仍为空，继续保持待人工补料状态。
 
 ## 类型标签
 
