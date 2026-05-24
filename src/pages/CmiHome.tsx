@@ -258,7 +258,7 @@ function InnHeroChapter() {
           清迈客栈
         </h1>
         <p className="mt-3 max-w-[18rem] text-[15px] font-black leading-relaxed text-[#161616]/82">
-          一个能住、能来坐、能参加活动，也能从这里接上清迈生活的人情入口。
+          一个运营三年的清迈华人社区，用温暖和安心照顾每一个到来的朋友。
         </p>
       </div>
 
