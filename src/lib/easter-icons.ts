@@ -1,4 +1,4 @@
-import type { Recommendation } from '@/types/types';
+import { isEasterEggRecommendation, type Recommendation } from '@/types/types';
 
 export type CmiEasterIcon = {
   id: string;
@@ -102,7 +102,7 @@ export const getRecommendationEasterIconId = (recommendation: Pick<Recommendatio
   const metadataIconId = extractEasterIconIdFromReason(recommendation.reason);
   if (metadataIconId) return metadataIconId;
 
-  return recommendation.category === '彩蛋' ? DEFAULT_CMI_EASTER_ICON_ID : null;
+  return isEasterEggRecommendation(recommendation) ? DEFAULT_CMI_EASTER_ICON_ID : null;
 };
 
 export const getRecommendationReasonText = (recommendation: Pick<Recommendation, 'reason'>): string => (

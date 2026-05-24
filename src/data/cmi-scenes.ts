@@ -1,15 +1,16 @@
 import { getRecommendationIntentScore } from '@/data/cmi-scene-tags';
 import { matchesCmiSurvivalKitRecommendation } from '@/data/cmi-survival-kit';
 import {
-  getCmiDetailTagsForRecommendation,
-  getCmiPlaceTypeTagsForRecommendation,
   type CmiMapFilterGroupId,
+  getCmiDetailTagsForRecommendation,
+  getCmiMapFilterGroup,
+  getCmiPlaceTypeTagsForRecommendation,
   matchesCmiMapFilterGroup,
 } from '@/data/cmi-taxonomy';
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
 import type { Category, Recommendation } from '@/types/types';
-import { normalizeCategory } from '@/types/types';
+import { isEasterEggRecommendation, normalizeCategory } from '@/types/types';
 
 export type CmiSceneView = 'detail' | 'map';
 export type CmiSceneHomeGroupId = 'clear-need' | 'nearby' | 'inspiration';
@@ -695,6 +696,9 @@ const DIRECT_SCENE_MAP_FILTER_GROUPS: Partial<Record<CmiSceneId, CmiMapFilterGro
   'massage-relax': 'relax',
   sport: 'sport',
 };
+const DIRECT_SCENE_ALLOWED_CATEGORIES: Partial<Record<CmiMapFilterGroupId, Category[]>> = {
+  play: ['景点', '户外'],
+};
 const SCENE_ID_ALIASES: Record<string, CmiSceneId> = {
   today: 'pick-for-me',
   tonight: 'night',
@@ -787,11 +791,41 @@ export const getRecommendationSceneText = (recommendation: Recommendation) => {
 
 export const isDecisionReadyRecommendation = (recommendation: Recommendation) => {
   if (!isCommunityCuratedRecommendation(recommendation)) {
+    const placeKey = normalizePlaceKey(recommendation.place_name);
+    const reasonKey = normalizePlaceKey(getRecommendationReasonText(recommendation));
+
+    if (reasonKey && placeKey === reasonKey) {
+      return false;
+    }
+
     return getRecommendationReasonText(recommendation).length >= 18;
   }
 
   const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
   return !guide.tags.includes('待确认') && guide.kind !== '坐标点' && guide.summary.trim().length >= 30;
+};
+
+const isDirectSceneRecommendationReady = (recommendation: Recommendation) =>
+  isCommunityCuratedRecommendation(recommendation);
+
+const hasExplicitPlaceTypeForMapGroup = (
+  recommendation: Recommendation,
+  groupId: CmiMapFilterGroupId
+) => {
+  const group = getCmiMapFilterGroup(groupId);
+  if (!group || !Array.isArray(recommendation.place_type_ids)) return false;
+  return recommendation.place_type_ids.some(placeTypeId => group.placeTypeIds.includes(placeTypeId));
+};
+
+const matchesDirectSceneCategoryBoundary = (
+  recommendation: Recommendation,
+  groupId: CmiMapFilterGroupId
+) => {
+  const allowedCategories = DIRECT_SCENE_ALLOWED_CATEGORIES[groupId];
+  if (!allowedCategories) return true;
+
+  return allowedCategories.includes(normalizeCategory(recommendation.category))
+    || hasExplicitPlaceTypeForMapGroup(recommendation, groupId);
 };
 
 export const getCmiSceneRecommendationPresentation = (
@@ -813,6 +847,10 @@ export const getCmiSceneRecommendationPresentation = (
 };
 
 export const matchesCmiScene = (recommendation: Recommendation, scene: CmiScene) => {
+  if (isEasterEggRecommendation(recommendation)) {
+    return scene.id === 'easter';
+  }
+
   if (COMMUNITY_SCENE_IDS.has(scene.id)) {
     return isCommunityCuratedRecommendation(recommendation);
   }
@@ -823,7 +861,9 @@ export const matchesCmiScene = (recommendation: Recommendation, scene: CmiScene)
 
   const directSceneMapFilterGroup = DIRECT_SCENE_MAP_FILTER_GROUPS[scene.id];
   if (directSceneMapFilterGroup) {
-    return matchesCmiMapFilterGroup(recommendation, directSceneMapFilterGroup);
+    return isDirectSceneRecommendationReady(recommendation)
+      && matchesDirectSceneCategoryBoundary(recommendation, directSceneMapFilterGroup)
+      && matchesCmiMapFilterGroup(recommendation, directSceneMapFilterGroup);
   }
 
   if (getRecommendationIntentScore(recommendation, scene.id) > 0) {

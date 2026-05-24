@@ -2,11 +2,12 @@ import type { CmiSceneId } from '@/data/cmi-scenes';
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
 import {
+  type Category,
   CMI_INN_CATEGORY,
   CMI_INN_LOGO_ICON_URL,
   CMI_INN_PLACE_NAME,
-  type Category,
   getCategoryIconUrl,
+  isEasterEggRecommendation,
   normalizeCategory,
   type Recommendation,
 } from '@/types/types';
@@ -730,6 +731,8 @@ export const resolveCmiDirectIntentQuery = (query: string): CmiDirectIntentQuery
 };
 
 export const getCmiPlaceTypeTagsForRecommendation = (recommendation: Recommendation) => {
+  if (isEasterEggRecommendation(recommendation)) return [];
+
   if (hasPersistedTaxonomy(recommendation)) {
     return getCmiPlaceTypeTagsByIds(getPersistedPlaceTypeIds(recommendation));
   }
@@ -747,6 +750,7 @@ export const matchesCmiPlaceTypeTag = (
 ) => {
   const tag = getCmiPlaceTypeTag(placeTypeId);
   if (!tag) return true;
+  if (isEasterEggRecommendation(recommendation)) return false;
 
   if (hasPersistedTaxonomy(recommendation)) {
     return getPersistedPlaceTypeIds(recommendation).includes(tag.id);
@@ -764,6 +768,8 @@ export const matchesCmiMapFilterGroup = (
 ) => {
   const group = getCmiMapFilterGroup(groupId);
   if (!group) return true;
+  if (isEasterEggRecommendation(recommendation)) return false;
+
   const category = normalizeCategory(recommendation.category);
   if (group.categoryFallbacks?.includes(category)) return true;
   return group.placeTypeIds.some(placeTypeId => matchesCmiPlaceTypeTag(recommendation, placeTypeId));

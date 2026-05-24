@@ -1,4 +1,4 @@
-import { CMI_INN_CATEGORY, type Category, type Recommendation, normalizeCategory } from '@/types/types';
+import { type Category, CMI_INN_CATEGORY, normalizeCategory, type Recommendation } from '@/types/types';
 
 type PlaceCorrection = {
   category?: Category;
@@ -158,6 +158,18 @@ const PLACE_CORRECTION_ENTRIES: Array<[string, PlaceCorrection]> = [
       'Mae Kampong Village',
       {
         category: '户外',
+      },
+    ],
+    [
+      'Auf der Au Garden German buffet',
+      {
+        category: '吃饭',
+      },
+    ],
+    [
+      'Hummus Garden Chiang Mai',
+      {
+        category: '吃饭',
       },
     ],
     [

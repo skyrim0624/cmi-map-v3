@@ -200,6 +200,10 @@ export const isCmiInnCheckInRecommendation = (
   recommendation: Pick<Recommendation, 'category'>
 ) => normalizeCategory(recommendation.category) === CMI_INN_CATEGORY;
 
+export const isEasterEggRecommendation = (
+  recommendation: Pick<Recommendation, 'category'>
+) => normalizeCategory(recommendation.category) === '彩蛋';
+
 export const isPublicMapRecommendation = (
   recommendation: Pick<Recommendation, 'category'>
 ) => !isCmiInnCheckInRecommendation(recommendation);

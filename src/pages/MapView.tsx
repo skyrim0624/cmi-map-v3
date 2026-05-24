@@ -61,7 +61,12 @@ import {
 import { warmupImages } from '@/lib/image-warmup';
 import { getMapMarkerVisual } from '@/lib/map-marker-visual';
 import { getPersonMapPath, getPlacePath, getSceneListPath, getSceneMapPath } from '@/lib/paths';
-import { isPublicMapRecommendation, type MapMarker as MapMarkerType, type Recommendation } from '@/types/types';
+import {
+  isEasterEggRecommendation,
+  isPublicMapRecommendation,
+  type MapMarker as MapMarkerType,
+  type Recommendation,
+} from '@/types/types';
 
 type ActiveFilter = `place:${string}`;
 type MapCategoryFilter = {
@@ -146,7 +151,7 @@ const getStableHash = (value: string) => {
 const withoutEasterEggRecommendations = (sourceMarkers: MapMarkerType[]): MapMarkerType[] =>
   sourceMarkers.flatMap((marker) => {
     const recommendations = marker.recommendations.filter(recommendation =>
-      recommendation.category !== '彩蛋' && isPublicMapRecommendation(recommendation)
+      !isEasterEggRecommendation(recommendation) && isPublicMapRecommendation(recommendation)
     );
     if (recommendations.length === 0) return [];
 
@@ -155,13 +160,13 @@ const withoutEasterEggRecommendations = (sourceMarkers: MapMarkerType[]): MapMar
       id: recommendations[0].id,
       category: recommendations[0].category,
       recommendations,
-      visualOverride: marker.category === '彩蛋' ? undefined : marker.visualOverride,
+      visualOverride: isEasterEggRecommendation(marker) ? undefined : marker.visualOverride,
     }];
   });
 
 const createEasterEggMarkers = (sourceMarkers: MapMarkerType[]): MapMarkerType[] => {
   const realEasterEggMarkers = sourceMarkers.flatMap((marker) => {
-    const easterRecommendations = marker.recommendations.filter(recommendation => recommendation.category === '彩蛋');
+    const easterRecommendations = marker.recommendations.filter(isEasterEggRecommendation);
     if (easterRecommendations.length === 0) return [];
 
     const icon = getCmiEasterIconById(getRecommendationEasterIconId(easterRecommendations[0]));
@@ -582,7 +587,7 @@ export default function MapView() {
       return;
     }
     if (selectedEvent) return;
-    if (selectedMarker?.category === '彩蛋') return;
+    if (selectedMarker && isEasterEggRecommendation(selectedMarker)) return;
     if (selectedMarker) {
       navigate(getPlacePath(selectedMarker.place_name));
     }
@@ -936,7 +941,7 @@ export default function MapView() {
 
     return markers.flatMap((marker) => {
       const visibleRecommendations = marker.recommendations.filter(recommendation =>
-        recommendation.category !== '彩蛋' && isPublicMapRecommendation(recommendation)
+        !isEasterEggRecommendation(recommendation) && isPublicMapRecommendation(recommendation)
       );
       const matchingRecommendations = visibleRecommendations.filter((recommendation) => {
         const matchesPlaceType = activeMapPlaceTypeId
@@ -1841,7 +1846,7 @@ export default function MapView() {
         </div>
       )}
 
-      {selectedMarker && !selectedEvent && isEasterEggMode && selectedMarker.category === '彩蛋' && selectedRecommendation && (
+      {selectedMarker && !selectedEvent && isEasterEggMode && isEasterEggRecommendation(selectedMarker) && selectedRecommendation && (
         <div
           className="absolute bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-border/20 bg-card p-6 shadow-2xl slide-up"
           {...selectedCardSwipeHandlers}
