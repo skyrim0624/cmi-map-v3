@@ -1,15 +1,11 @@
 import { CalendarDays, Copy, ExternalLink, List, LocateFixed, LogIn, Map as MapIcon, MapPinned, Navigation, Plus, Search, ShieldCheck, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type MouseEvent, type PointerEvent, type TouchEvent } from 'react';
+import { type ChangeEvent, type FormEvent, type MouseEvent, type PointerEvent, type TouchEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LeafletMap } from '@/components/map/LeafletMap';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  filterCmiNearbyWanderRecommendations,
-  isCmiNearbyWanderPlaceTypeId,
-} from '@/data/cmi-nearby-wander';
 import {
   CMI_EVENT_VERIFICATION_LABELS,
   type CmiEvent,
@@ -20,6 +16,10 @@ import {
   getCmiEventsForScene,
   getCmiEventTimeBucketLabel,
 } from '@/data/cmi-events';
+import {
+  filterCmiNearbyWanderRecommendations,
+  isCmiNearbyWanderPlaceTypeId,
+} from '@/data/cmi-nearby-wander';
 import {
   getCmiIntentSecondaryFilters,
   matchesCmiIntentSecondaryFilter,
@@ -37,9 +37,9 @@ import {
   getCmiMapFilterGroup,
   getCmiMapFilterGroupForPlaceType,
   getCmiMapFilterGroups,
-  getCmiPrimaryIntentSceneIds,
   getCmiPlaceTypeTag,
   getCmiPlaceTypeTagsByIds,
+  getCmiPrimaryIntentSceneIds,
   matchesCmiMapFilterGroup,
   matchesCmiPlaceTypeTag,
   matchesCmiRecommendationSearchQuery,
@@ -51,7 +51,6 @@ import {
   isCommunityCuratedRecommendation,
 } from '@/data/place-guides';
 import { getAllRecommendations } from '@/db/api';
-import { warmupImages } from '@/lib/image-warmup';
 import {
   DEFAULT_CMI_EASTER_ICON_ID,
   getCmiEasterIconById,
@@ -59,6 +58,7 @@ import {
   getRecommendationEasterIconId,
   getRecommendationReasonText,
 } from '@/lib/easter-icons';
+import { warmupImages } from '@/lib/image-warmup';
 import { getMapMarkerVisual } from '@/lib/map-marker-visual';
 import { getPersonMapPath, getPlacePath, getSceneListPath, getSceneMapPath } from '@/lib/paths';
 import { isPublicMapRecommendation, type MapMarker as MapMarkerType, type Recommendation } from '@/types/types';
@@ -1503,8 +1503,8 @@ export default function MapView() {
             ? 'bottom-[calc(env(safe-area-inset-bottom)+92px)]'
             : 'bottom-[calc(env(safe-area-inset-bottom)+88px)]'
         }`}>
-          <section className={`overflow-hidden rounded-lg border-2 border-foreground bg-background/95 shadow-[4px_5px_0_rgba(0,0,0,0.18)] backdrop-blur-md transition-[max-height,transform] duration-200 ease-out ${
-            isScenePanelExpanded ? 'max-h-[46dvh] p-2.5' : 'max-h-[92px] p-2'
+          <section className={`flex flex-col overflow-hidden rounded-lg border-2 border-foreground bg-background/95 shadow-[4px_5px_0_rgba(0,0,0,0.18)] backdrop-blur-md transition-[max-height,transform] duration-200 ease-out ${
+            isScenePanelExpanded ? 'max-h-[50dvh] p-2.5' : 'max-h-[92px] p-2'
           }`}>
             <div className={`flex items-center justify-between gap-2 ${isScenePanelExpanded ? 'mb-1.5' : ''}`}>
               <button
@@ -1559,7 +1559,7 @@ export default function MapView() {
 
             {isScenePanelExpanded && (
               <div
-                className="max-h-[34dvh] space-y-2 overflow-y-auto overscroll-contain pr-1 touch-pan-y [-webkit-overflow-scrolling:touch]"
+                className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1 touch-pan-y [-webkit-overflow-scrolling:touch]"
                 onTouchMove={event => event.stopPropagation()}
                 onWheel={event => event.stopPropagation()}
               >
@@ -1588,7 +1588,7 @@ export default function MapView() {
                   </div>
                 ) : (
                   <>
-                    {isEventScene && sceneEvents.slice(0, SCENE_PANEL_PREVIEW_LIMIT).map(event => (
+                    {isEventScene && sceneEvents.map(event => (
                       <button
                         key={event.id}
                         type="button"
@@ -1617,7 +1617,7 @@ export default function MapView() {
                       </button>
                     ))}
 
-                    {!isEventScene && sceneRecommendations.slice(0, SCENE_PANEL_PREVIEW_LIMIT).map(recommendation => {
+                    {!isEventScene && sceneRecommendations.map(recommendation => {
                       const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
                       const isCommunityGuide = isCommunityCuratedRecommendation(recommendation);
                       const presentation = getCmiSceneRecommendationPresentation(recommendation);
@@ -1639,6 +1639,8 @@ export default function MapView() {
                             <img
                               src={cardImage}
                               alt=""
+                              loading="lazy"
+                              decoding="async"
                               className="h-14 w-14 shrink-0 rounded-lg object-cover"
                             />
                           ) : (
