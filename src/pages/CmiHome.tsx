@@ -36,7 +36,7 @@ import { getPublishedCmiEvents } from '@/db/cmi-events';
 import { createCmiEventShareCard, type CmiEventShareCardResult } from '@/lib/cmi-event-share-card';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
 import { getAddTracePath, getCmiEventPath, getProfilePath } from '@/lib/paths';
-import { CMI_INN_PLACE_NAME, type Recommendation, type Sticker } from '@/types/types';
+import { CMI_INN_LOGO_ICON_URL, CMI_INN_PLACE_NAME, type Recommendation, type Sticker } from '@/types/types';
 
 type FileShareData = {
   files?: File[];
@@ -273,11 +273,11 @@ function InnHeroChapter() {
         <p className="absolute left-1/2 top-3 -translate-x-1/2 rounded-sm border border-[#161616] bg-[#ffe35b] px-3 py-1 text-[13px] font-black leading-none">
           CMI Home
         </p>
-        <div className="mx-auto flex h-[9.2rem] w-[9.2rem] items-center justify-center rounded-full bg-[#e9f4e4]">
+        <div className="mx-auto flex h-[10.5rem] w-full max-w-[17rem] items-center justify-center">
           <img
-            src="/cmi-home/go-inn-et-manga-button-icon.png"
-            alt=""
-            className="h-[8.5rem] w-[8.5rem] object-contain"
+            src={CMI_INN_LOGO_ICON_URL}
+            alt="清迈客栈 logo"
+            className="h-full w-full object-contain drop-shadow-[0_6px_0_rgba(0,0,0,0.08)]"
             loading="lazy"
             decoding="async"
           />
