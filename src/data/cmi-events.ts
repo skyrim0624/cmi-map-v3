@@ -109,7 +109,7 @@ export const CMI_EVENT_TIME_BUCKET_LABELS: Record<CmiEventTimeBucket, string> = 
   stable: '稳定活动',
 };
 
-export const CMI_EVENTS_LAST_MAINTAINED_AT = '2026-05-24T19:07:13+07:00';
+export const CMI_EVENTS_LAST_MAINTAINED_AT = '2026-05-25T10:09:38+07:00';
 
 export const CMI_EVENTS: CmiEvent[] = [
   {
@@ -246,7 +246,7 @@ export const CMI_EVENTS: CmiEvent[] = [
     isCmiRelated: true,
     isVerified: true,
     verificationStatus: 'verified',
-    lastCheckedAt: '2026-05-24T19:07:13+07:00',
+    lastCheckedAt: '2026-05-25T10:09:38+07:00',
     reliabilityNote:
       '信息直接来自 5.24 旧物交换市场海报；海报明确写明周日下午两点到五点、地点为清迈客栈，并附带进群二维码。',
     tags: ['CMI', '旧物交换', '市集', '技能分享', '周末'],
@@ -269,8 +269,7 @@ export const CMI_EVENTS: CmiEvent[] = [
     isCmiRelated: true,
     isVerified: true,
     verificationStatus: 'verified',
-    lastCheckedAt: '2026-05-24T19:07:13+07:00',
-    nextCheckBefore: '2026-05-24T21:00:00+07:00',
+    lastCheckedAt: '2026-05-25T10:09:38+07:00',
     reliabilityNote: '信息来自 5.24 AI 开放麦 04 推文 Markdown 与海报，时间、地点、费用和参与方式均明确。',
     tags: ['CMI', 'AI开放麦', 'AI', '工具实践', '免费', '周日'],
     summary: '清迈客栈的第四期 AI 开放麦，围绕本周 AI 使用、工具、项目、案例、踩坑和问题做现场交流。',
@@ -298,6 +297,31 @@ export const CMI_EVENTS: CmiEvent[] = [
       '信息来自 5.29 穷姐姐财商分享大会推文 Markdown 与同目录海报；时间、地点、费用和直接参与方式明确，Luma 链接仍待补充但不影响空降参与。',
     tags: ['CMI', '财商', '理财', '数字游民', '分享会', '免费'],
     summary: '一场面向清迈旅居者和数字游民的财商分享，围绕理财工具、收入安全垫、风险识别和个人价值展开。',
+  },
+  {
+    id: 'cmi-waytoagi-codex-maker-lab-2026-05-31',
+    title: 'WaytoAGI 第24期「AI切磋大会」Codex 轻造物局 · 清迈站',
+    type: 'tech',
+    startAt: '2026-05-31T12:30:00+07:00',
+    endAt: '2026-05-31T17:00:00+07:00',
+    venueName: '清迈客栈',
+    area: 'CMI / 清迈客栈',
+    priceLabel: '免费参与',
+    registrationLabel: 'Luma 报名',
+    sourceType: 'cmi',
+    sourceLabel: 'CMI 活动宣传内容文件夹',
+    sourceUrl: 'https://mp.weixin.qq.com/s/J2VmewGaqC9liepHmUpoiw',
+    hostName: 'WaytoAGI × 清迈客栈',
+    language: '中文',
+    suitableFor: ['AI 开发者', 'Codex 初学者', '内容创作者', '想做 AI 小作品的人'],
+    isCmiRelated: true,
+    isVerified: true,
+    verificationStatus: 'verified',
+    lastCheckedAt: '2026-05-25T10:09:38+07:00',
+    nextCheckBefore: '2026-05-31T10:30:00+07:00',
+    reliabilityNote: '信息来自来源说明、公众号推文 Markdown、公众号离线提取和同目录海报；时间、地点、费用、参与方式和报名链接均明确。',
+    tags: ['CMI', 'WaytoAGI', 'AI切磋大会', 'Codex', '工作坊', '免费'],
+    summary: 'WaytoAGI 第24期 AI 切磋大会清迈站，在清迈客栈用 Codex 现场做出可演示的小作品。',
   },
   {
     id: 'jing-jai-weekend-market',

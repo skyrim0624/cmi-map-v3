@@ -35,6 +35,8 @@ export const CMI_EVENT_POSTER_BY_ID: Partial<Record<string, string>> = {
   'cmi-ai-open-mic-vol-04-2026-05-24': '/cmi-home/event-posters/cmi-ai-open-mic-vol-04-2026-05-24.jpg',
   'cmi-financial-literacy-sharing-2026-05-29':
     '/cmi-home/event-posters/cmi-financial-literacy-sharing-2026-05-29.png',
+  'cmi-waytoagi-codex-maker-lab-2026-05-31':
+    '/cmi-home/event-posters/cmi-waytoagi-codex-maker-lab-2026-05-31.png',
 };
 
 export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = {
@@ -47,6 +49,8 @@ export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = 
     '/cmi-home/event-card-backgrounds/cmi-ai-open-mic-vol-04-2026-05-24.jpg',
   'cmi-financial-literacy-sharing-2026-05-29':
     '/cmi-home/event-card-backgrounds/cmi-financial-literacy-sharing-2026-05-29.jpg',
+  'cmi-waytoagi-codex-maker-lab-2026-05-31':
+    '/cmi-home/event-card-backgrounds/cmi-waytoagi-codex-maker-lab-2026-05-31.jpg',
 };
 
 export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailContent> = {
@@ -293,6 +297,48 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
           '活动地点：清迈客栈',
           '场地费用：免费参与，可随喜支持',
           '参与方式：无需报名，直接空降即可；Luma 链接待补充',
+        ],
+      },
+    ],
+  },
+  'cmi-waytoagi-codex-maker-lab-2026-05-31': {
+    eventId: 'cmi-waytoagi-codex-maker-lab-2026-05-31',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-waytoagi-codex-maker-lab-2026-05-31']!,
+    postTitle: '「AI切磋大会」清迈站：Codex 轻造物局',
+    postBlocks: [
+      {
+        kind: 'paragraph',
+        text: 'WaytoAGI 第24期「AI切磋大会」来到清迈，清迈客栈会作为线下站点，一起加入这场全国多城市联动的 Codex 轻造物局。',
+      },
+      {
+        kind: 'paragraph',
+        text: '这次不是只聊 AI，而是带上电脑和一个小想法，在现场用 Codex 写代码、调试、搭功能，做出一个能演示的小作品。',
+      },
+      {
+        kind: 'heading',
+        text: '现场怎么玩',
+      },
+      {
+        kind: 'list',
+        items: [
+          '90 分钟自由造物：独立完成或 1-3 人自由组队，用 Codex 做小工具、小游戏、效率脚本或脑洞产品',
+          '造物集市：每人或每组把作品摆出来，大家自由参观、体验和投票',
+          '互助冲刺：每个人至少帮一位陌生人解决一个问题，可以 debug、给想法、提建议或给反馈',
+          '现场奖项：最好玩奖、最实用奖、最脑洞奖、最佳助攻奖',
+        ],
+      },
+      {
+        kind: 'heading',
+        text: '活动信息',
+      },
+      {
+        kind: 'list',
+        items: [
+          '活动主题：WaytoAGI 第24期「AI切磋大会」Codex 轻造物局 · 清迈站',
+          '活动时间：2026 年 5 月 31 日（周日）12:30-17:00（清迈时间）',
+          '活动地点：清迈客栈',
+          '活动形式：全国多城市联动 · 清迈线下动手 · 全国连线开场',
+          '参与方式：免费参与，请尽量在 Luma 报名：https://luma.com/kl2aa0qz',
         ],
       },
     ],

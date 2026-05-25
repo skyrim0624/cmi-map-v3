@@ -4,6 +4,7 @@ import {
   CircleCheck,
   Clock3,
   Home,
+  type LucideIcon,
   MapPin,
   MessageCircle,
   QrCode,
@@ -12,9 +13,8 @@ import {
   Sparkles,
   Stamp,
   UsersRound,
-  type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -33,7 +33,7 @@ import {
   placeCmiEventStamp,
 } from '@/db/cmi-event-stamps';
 import { getPublishedCmiEvents } from '@/db/cmi-events';
-import { createCmiEventShareCard, type CmiEventShareCardResult } from '@/lib/cmi-event-share-card';
+import { type CmiEventShareCardResult, createCmiEventShareCard } from '@/lib/cmi-event-share-card';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
 import { getAddTracePath, getCmiEventPath, getProfilePath } from '@/lib/paths';
 import { CMI_INN_LOGO_ICON_URL, CMI_INN_PLACE_NAME, type Recommendation, type Sticker } from '@/types/types';
@@ -524,6 +524,9 @@ function EventPreviewCard({
   onStampEvent: () => void;
 }) {
   const posterUrl = getCmiEventPosterUrl(event.id) ?? getCmiEventCardBackgroundUrl(event.id) ?? '/cmi-home/event-ai-courtyard.png';
+  const registrationPreviewLabel = event.registrationLabel.includes('http')
+    ? event.registrationLabel.split(/[；。]/)[0]?.trim() || '查看详情报名'
+    : event.registrationLabel;
   const handleKeyDown = (keyboardEvent: KeyboardEvent<HTMLElement>) => {
     if (keyboardEvent.key !== 'Enter' && keyboardEvent.key !== ' ') return;
     keyboardEvent.preventDefault();
@@ -570,7 +573,7 @@ function EventPreviewCard({
           ))}
         </div>
 
-        <div className="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(7.4rem,0.78fr)] gap-3 rounded-[1rem] border-2 border-[#161616]/18 bg-white/58 p-3 text-sm font-black text-[#161616]">
+        <div className="mt-4 grid gap-3 rounded-[1rem] border-2 border-[#161616]/18 bg-white/58 p-3 text-sm font-black text-[#161616]">
           <div className="grid min-w-0 gap-2">
             <div className="flex min-w-0 items-center gap-2">
               <Clock3 className="h-4 w-4 shrink-0 text-[#161616]" strokeWidth={2.5} />
@@ -581,14 +584,14 @@ function EventPreviewCard({
               <span className="min-w-0 leading-snug">{event.venueName}</span>
             </div>
           </div>
-          <div className="grid min-w-0 content-center gap-1.5 border-l-2 border-dashed border-[#161616]/26 pl-3 text-right">
+          <div className="grid min-w-0 grid-cols-2 gap-2 border-t-2 border-dashed border-[#161616]/18 pt-3">
             <div>
               <p className="text-[10px] font-black leading-none text-[#161616]/55">费用</p>
-              <p className="mt-1 text-[12px] font-black leading-tight text-[#161616]">{event.priceLabel}</p>
+              <p className="mt-1 break-words text-[12px] font-black leading-tight text-[#161616]">{event.priceLabel}</p>
             </div>
             <div>
               <p className="text-[10px] font-black leading-none text-[#161616]/55">参与</p>
-              <p className="mt-1 text-[12px] font-black leading-tight text-[#161616]">{event.registrationLabel}</p>
+              <p className="mt-1 break-words text-[12px] font-black leading-tight text-[#161616]">{registrationPreviewLabel}</p>
             </div>
           </div>
         </div>
