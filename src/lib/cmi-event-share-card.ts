@@ -220,15 +220,15 @@ const drawHeader = (context: CanvasRenderingContext2D) => {
   context.font = `1000 86px ${FONT_FAMILY}`;
   context.fillText('CMI Map', CONTENT_X, 130);
 
-  drawHandwrittenSlogan(context, '清迈活动和好去处，都在这里', CONTENT_X, 202);
+  drawHandwrittenSlogan(context, '清迈活动和好去处，都在这里', CONTENT_X, 214);
 
   context.save();
   context.strokeStyle = 'rgba(5, 5, 5, 0.58)';
   context.lineWidth = 4;
   context.setLineDash([18, 14]);
   context.beginPath();
-  context.moveTo(CONTENT_X + 4, 236);
-  context.bezierCurveTo(CONTENT_X + 226, 218, CONTENT_X + 512, 242, CONTENT_X + 738, 230);
+  context.moveTo(CONTENT_X + 4, 254);
+  context.bezierCurveTo(CONTENT_X + 226, 236, CONTENT_X + 512, 260, CONTENT_X + 738, 248);
   context.stroke();
 
   context.setLineDash([]);
@@ -236,8 +236,8 @@ const drawHeader = (context: CanvasRenderingContext2D) => {
   context.lineWidth = 12;
   context.lineCap = 'round';
   context.beginPath();
-  context.moveTo(CONTENT_X, 232);
-  context.bezierCurveTo(CONTENT_X + 228, 214, CONTENT_X + 512, 238, CONTENT_X + 740, 226);
+  context.moveTo(CONTENT_X, 250);
+  context.bezierCurveTo(CONTENT_X + 228, 232, CONTENT_X + 512, 256, CONTENT_X + 740, 244);
   context.stroke();
   context.restore();
 };
@@ -368,7 +368,7 @@ export const createCmiEventShareCard = async ({
   const introLines = wrapText(measureContext, event.summary || event.title, introMaxWidth, 4);
 
   const posterHeight = Math.round(POSTER_WIDTH * (posterImage.naturalHeight / posterImage.naturalWidth));
-  const headerHeight = 260;
+  const headerHeight = 280;
   const posterY = CARD_PADDING_TOP + headerHeight;
   const introY = posterY + posterHeight + MODULE_GAP;
   const introHeight = 118 + introLines.length * INTRO_LINE_HEIGHT;
