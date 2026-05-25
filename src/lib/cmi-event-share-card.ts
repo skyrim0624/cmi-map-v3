@@ -23,7 +23,8 @@ const POSTER_WIDTH = CONTENT_WIDTH;
 const POSTER_RADIUS = 38;
 const MODULE_GAP = 28;
 const FONT_FAMILY = '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif';
-const SLOGAN_FONT_FAMILY = '"HanziPen SC", "Hannotate SC", "Xingkai SC", "Kaiti SC", "STKaiti", "KaiTi", cursive';
+const SLOGAN_FONT_FAMILY =
+  '"HanziPenSC-W5", "HanziPen SC", "翩翩体-简", "HanziPen TC", "Hannotate SC", "Kaiti SC", "STKaiti", "KaiTi", "Marker Felt", cursive';
 const MAP_QR_URL = '/cmi-home/qr-cmi-map-root.png';
 const MAP_URL_LABEL = 'cmti.uk';
 const INTRO_FONT = `1000 54px ${FONT_FAMILY}`;
@@ -184,29 +185,50 @@ const drawCardBackground = (
   context.stroke();
 };
 
+const drawHandwrittenSlogan = (
+  context: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number
+) => {
+  context.save();
+  context.translate(x, y);
+  context.rotate(-0.014);
+  context.fillStyle = 'rgba(30, 24, 56, 0.88)';
+  context.font = `400 58px ${SLOGAN_FONT_FAMILY}`;
+  context.textBaseline = 'alphabetic';
+  context.shadowColor = 'rgba(255, 227, 91, 0.22)';
+  context.shadowOffsetY = 2;
+  context.shadowBlur = 0;
+
+  let cursorX = 0;
+  Array.from(text).forEach((character, index) => {
+    const yOffset = Math.sin(index * 0.9) * 3;
+    const rotation = ((index % 5) - 2) * 0.003;
+    context.save();
+    context.translate(cursorX, yOffset);
+    context.rotate(rotation);
+    context.fillText(character, 0, 0);
+    context.restore();
+    cursorX += context.measureText(character).width + (character === '，' ? 2 : 1);
+  });
+  context.restore();
+};
+
 const drawHeader = (context: CanvasRenderingContext2D) => {
   context.fillStyle = '#050505';
   context.font = `1000 86px ${FONT_FAMILY}`;
   context.fillText('CMI Map', CONTENT_X, 130);
 
-  context.save();
-  context.translate(CONTENT_X, 178);
-  context.rotate(-0.018);
-  context.fillStyle = 'rgba(5, 5, 5, 0.72)';
-  context.font = `900 48px ${SLOGAN_FONT_FAMILY}`;
-  context.strokeStyle = 'rgba(142, 98, 239, 0.18)';
-  context.lineWidth = 3;
-  context.strokeText('清迈活动和好去处，都在这里', 0, 0);
-  context.fillText('清迈活动和好去处，都在这里', 0, 0);
-  context.restore();
+  drawHandwrittenSlogan(context, '清迈活动和好去处，都在这里', CONTENT_X, 202);
 
   context.save();
   context.strokeStyle = 'rgba(5, 5, 5, 0.58)';
   context.lineWidth = 4;
   context.setLineDash([18, 14]);
   context.beginPath();
-  context.moveTo(CONTENT_X + 4, 205);
-  context.bezierCurveTo(CONTENT_X + 230, 186, CONTENT_X + 512, 211, CONTENT_X + 736, 198);
+  context.moveTo(CONTENT_X + 4, 236);
+  context.bezierCurveTo(CONTENT_X + 226, 218, CONTENT_X + 512, 242, CONTENT_X + 738, 230);
   context.stroke();
 
   context.setLineDash([]);
@@ -214,8 +236,8 @@ const drawHeader = (context: CanvasRenderingContext2D) => {
   context.lineWidth = 12;
   context.lineCap = 'round';
   context.beginPath();
-  context.moveTo(CONTENT_X, 201);
-  context.bezierCurveTo(CONTENT_X + 228, 184, CONTENT_X + 512, 207, CONTENT_X + 740, 196);
+  context.moveTo(CONTENT_X, 232);
+  context.bezierCurveTo(CONTENT_X + 228, 214, CONTENT_X + 512, 238, CONTENT_X + 740, 226);
   context.stroke();
   context.restore();
 };
@@ -346,7 +368,7 @@ export const createCmiEventShareCard = async ({
   const introLines = wrapText(measureContext, event.summary || event.title, introMaxWidth, 4);
 
   const posterHeight = Math.round(POSTER_WIDTH * (posterImage.naturalHeight / posterImage.naturalWidth));
-  const headerHeight = 220;
+  const headerHeight = 260;
   const posterY = CARD_PADDING_TOP + headerHeight;
   const introY = posterY + posterHeight + MODULE_GAP;
   const introHeight = 118 + introLines.length * INTRO_LINE_HEIGHT;
