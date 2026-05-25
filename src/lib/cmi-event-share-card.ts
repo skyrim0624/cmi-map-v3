@@ -1,14 +1,10 @@
-import {
-  formatCmiEventTime,
-  getCmiEventTypeLabel,
-  type CmiEvent,
-} from '@/data/cmi-events';
+import type { CmiEvent } from '@/data/cmi-events';
 
 export interface CmiEventShareCardInput {
   event: CmiEvent;
   posterUrl: string;
   referenceDate: Date;
-  officialQrUrl?: string;
+  mapQrUrl?: string;
 }
 
 export interface CmiEventShareCardResult {
@@ -18,15 +14,23 @@ export interface CmiEventShareCardResult {
 }
 
 const CARD_WIDTH = 1200;
-const CARD_PADDING = 64;
-const POSTER_WIDTH = 1040;
+const OUTER_RADIUS = 56;
+const CONTENT_X = 80;
+const CONTENT_WIDTH = CARD_WIDTH - CONTENT_X * 2;
+const CARD_PADDING_TOP = 64;
+const CARD_PADDING_BOTTOM = 64;
+const POSTER_WIDTH = CONTENT_WIDTH;
 const POSTER_RADIUS = 38;
+const MODULE_GAP = 28;
 const FONT_FAMILY = '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif';
-const OFFICIAL_QR_URL = '/cmi-home/qr-cmi-official.jpg';
-const TITLE_FONT = `1000 48px ${FONT_FAMILY}`;
-const TITLE_LINE_HEIGHT = 58;
-const SUMMARY_FONT = `850 30px ${FONT_FAMILY}`;
-const SUMMARY_LINE_HEIGHT = 42;
+const SLOGAN_FONT_FAMILY = '"HanziPen SC", "Hannotate SC", "Xingkai SC", "Kaiti SC", "STKaiti", "KaiTi", cursive';
+const MAP_QR_URL = '/cmi-home/qr-cmi-map-root.png';
+const MAP_URL_LABEL = 'cmti.uk';
+const INTRO_FONT = `1000 54px ${FONT_FAMILY}`;
+const INTRO_LINE_HEIGHT = 68;
+const FACT_LABEL_FONT = `950 32px ${FONT_FAMILY}`;
+const FACT_VALUE_FONT = `1000 50px ${FONT_FAMILY}`;
+const FACT_VALUE_LINE_HEIGHT = 56;
 
 const sanitizeFileName = (value: string) =>
   value
@@ -53,6 +57,11 @@ const drawRoundRect = (
   context.closePath();
 };
 
+const getAbsoluteAssetUrl = (url: string) => {
+  if (/^https?:\/\//.test(url) || url.startsWith('data:')) return url;
+  return new URL(url, window.location.origin).toString();
+};
+
 const loadImage = (src: string) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
@@ -61,11 +70,6 @@ const loadImage = (src: string) =>
     image.onerror = () => reject(new Error(`Cannot load image: ${src}`));
     image.src = getAbsoluteAssetUrl(src);
   });
-
-const getAbsoluteAssetUrl = (url: string) => {
-  if (/^https?:\/\//.test(url) || url.startsWith('data:')) return url;
-  return new URL(url, window.location.origin).toString();
-};
 
 const wrapText = (
   context: CanvasRenderingContext2D,
@@ -130,24 +134,43 @@ const canvasToBlob = (canvas: HTMLCanvasElement) =>
     }, 'image/png');
   });
 
+const formatShareEventTime = (event: CmiEvent) => {
+  const match = event.startAt?.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (match) {
+    const [, , month, day, hour, minute] = match;
+    return `${Number(month)}/${Number(day)} ${hour}:${minute}`;
+  }
+
+  return event.stableSchedule || event.recurrence?.label || '时间待定';
+};
+
+const getCompactPriceLabel = (priceLabel: string) => {
+  const normalized = priceLabel.replace(/\s+/g, ' ').trim();
+  if (!normalized) return '费用待定';
+  if (normalized.includes('免费') && normalized.includes('随喜')) return '免费/随喜';
+  if (normalized.includes('免费')) return '免费';
+  if (normalized.includes('带一道菜') || normalized.includes('带菜')) return '带菜分享';
+  return normalized.replace(/^场地费\s*/, '').replace(/^费用\s*/, '');
+};
+
 const drawCardBackground = (
   context: CanvasRenderingContext2D,
   width: number,
   height: number
 ) => {
   const gradient = context.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, '#9a72f2');
-  gradient.addColorStop(0.52, '#8f66ee');
-  gradient.addColorStop(1, '#8359e5');
+  gradient.addColorStop(0, '#9b74f4');
+  gradient.addColorStop(0.5, '#8b61ee');
+  gradient.addColorStop(1, '#8359e7');
   context.fillStyle = gradient;
-  drawRoundRect(context, 26, 26, width - 52, height - 52, 56);
+  drawRoundRect(context, 26, 26, width - 52, height - 52, OUTER_RADIUS);
   context.fill();
 
   context.save();
   context.globalAlpha = 0.08;
   context.fillStyle = '#050505';
-  for (let x = 48; x < width - 48; x += 22) {
-    for (let y = 48; y < height - 48; y += 22) {
+  for (let x = 48; x < width - 48; x += 24) {
+    for (let y = 48; y < height - 48; y += 24) {
       context.beginPath();
       context.arc(x, y, 1.4, 0, Math.PI * 2);
       context.fill();
@@ -157,8 +180,44 @@ const drawCardBackground = (
 
   context.lineWidth = 7;
   context.strokeStyle = '#050505';
-  drawRoundRect(context, 26, 26, width - 52, height - 52, 56);
+  drawRoundRect(context, 26, 26, width - 52, height - 52, OUTER_RADIUS);
   context.stroke();
+};
+
+const drawHeader = (context: CanvasRenderingContext2D) => {
+  context.fillStyle = '#050505';
+  context.font = `1000 86px ${FONT_FAMILY}`;
+  context.fillText('CMI Map', CONTENT_X, 130);
+
+  context.save();
+  context.translate(CONTENT_X, 178);
+  context.rotate(-0.018);
+  context.fillStyle = 'rgba(5, 5, 5, 0.72)';
+  context.font = `900 48px ${SLOGAN_FONT_FAMILY}`;
+  context.strokeStyle = 'rgba(142, 98, 239, 0.18)';
+  context.lineWidth = 3;
+  context.strokeText('清迈活动和好去处，都在这里', 0, 0);
+  context.fillText('清迈活动和好去处，都在这里', 0, 0);
+  context.restore();
+
+  context.save();
+  context.strokeStyle = 'rgba(5, 5, 5, 0.58)';
+  context.lineWidth = 4;
+  context.setLineDash([18, 14]);
+  context.beginPath();
+  context.moveTo(CONTENT_X + 4, 205);
+  context.bezierCurveTo(CONTENT_X + 230, 186, CONTENT_X + 512, 211, CONTENT_X + 736, 198);
+  context.stroke();
+
+  context.setLineDash([]);
+  context.strokeStyle = '#ffe35b';
+  context.lineWidth = 12;
+  context.lineCap = 'round';
+  context.beginPath();
+  context.moveTo(CONTENT_X, 201);
+  context.bezierCurveTo(CONTENT_X + 228, 184, CONTENT_X + 512, 207, CONTENT_X + 740, 196);
+  context.stroke();
+  context.restore();
 };
 
 const drawPoster = (
@@ -181,70 +240,119 @@ const drawPoster = (
   context.stroke();
 };
 
-const drawInfoCell = (
+const drawIntroCard = (
   context: CanvasRenderingContext2D,
-  label: string,
-  value: string,
+  lines: string[],
   x: number,
   y: number,
   width: number,
-  options: {
-    valueFontSize?: number;
-    lineHeight?: number;
-    maxLines?: number;
-  } = {}
+  height: number
 ) => {
-  const {
-    valueFontSize = 32,
-    lineHeight = 38,
-    maxLines = 2,
-  } = options;
+  drawRoundRect(context, x, y, width, height, 34);
+  context.fillStyle = '#160f25';
+  context.fill();
+  context.lineWidth = 5;
+  context.strokeStyle = '#050505';
+  context.stroke();
 
-  context.fillStyle = 'rgba(0, 0, 0, 0.48)';
-  context.font = `900 23px ${FONT_FAMILY}`;
-  context.fillText(label, x, y);
+  context.shadowColor = 'rgba(0, 0, 0, 0.26)';
+  context.shadowOffsetY = 8;
+  context.shadowBlur = 0;
+  context.fillStyle = 'rgba(255, 255, 255, 0.94)';
+  context.font = INTRO_FONT;
+  lines.forEach((line, index) => {
+    context.fillText(line, x + 48, y + 88 + index * INTRO_LINE_HEIGHT);
+  });
+  context.shadowColor = 'transparent';
+};
+
+const drawFactRow = (
+  context: CanvasRenderingContext2D,
+  label: string,
+  value: string,
+  y: number,
+  maxWidth: number
+) => {
+  context.fillStyle = 'rgba(5, 5, 5, 0.5)';
+  context.font = FACT_LABEL_FONT;
+  context.fillText(label, CONTENT_X + 38, y);
 
   context.fillStyle = '#050505';
-  context.font = `900 ${valueFontSize}px ${FONT_FAMILY}`;
-  drawWrappedText(context, value, x, y + 44, width, lineHeight, maxLines);
+  context.font = FACT_VALUE_FONT;
+  drawWrappedText(context, value, CONTENT_X + 190, y, maxWidth, FACT_VALUE_LINE_HEIGHT, 1);
+};
+
+const drawFooter = (
+  context: CanvasRenderingContext2D,
+  event: CmiEvent,
+  qrImage: HTMLImageElement,
+  y: number,
+  height: number
+) => {
+  drawRoundRect(context, CONTENT_X, y, CONTENT_WIDTH, height, 34);
+  context.fillStyle = 'rgba(255, 247, 223, 0.2)';
+  context.fill();
+  context.lineWidth = 3;
+  context.strokeStyle = 'rgba(0, 0, 0, 0.18)';
+  context.stroke();
+
+  const dividerX = CONTENT_X + 704;
+  context.save();
+  context.strokeStyle = 'rgba(0, 0, 0, 0.22)';
+  context.lineWidth = 3;
+  context.setLineDash([9, 12]);
+  context.beginPath();
+  context.moveTo(dividerX, y + 38);
+  context.lineTo(dividerX, y + height - 38);
+  context.stroke();
+  context.restore();
+
+  const factMaxWidth = dividerX - (CONTENT_X + 190) - 36;
+  drawFactRow(context, '时间', formatShareEventTime(event), y + 110, factMaxWidth);
+  drawFactRow(context, '地点', event.venueName, y + 194, factMaxWidth);
+  drawFactRow(context, '费用', getCompactPriceLabel(event.priceLabel), y + 278, factMaxWidth);
+
+  const qrSize = 238;
+  const qrX = CONTENT_X + CONTENT_WIDTH - 72 - qrSize;
+  const qrY = y + 38;
+  drawRoundRect(context, qrX, qrY, qrSize, qrSize, 18);
+  context.fillStyle = '#ffffff';
+  context.fill();
+  context.drawImage(qrImage, qrX + 8, qrY + 8, qrSize - 16, qrSize - 16);
+
+  context.fillStyle = 'rgba(5, 5, 5, 0.72)';
+  context.font = `950 34px ${FONT_FAMILY}`;
+  context.textAlign = 'center';
+  context.fillText(MAP_URL_LABEL, qrX + qrSize / 2, y + height - 40);
+  context.textAlign = 'left';
 };
 
 export const createCmiEventShareCard = async ({
   event,
   posterUrl,
-  referenceDate,
-  officialQrUrl = OFFICIAL_QR_URL,
+  mapQrUrl = MAP_QR_URL,
 }: CmiEventShareCardInput): Promise<CmiEventShareCardResult> => {
   const [posterImage, qrImage] = await Promise.all([
     loadImage(posterUrl),
-    loadImage(officialQrUrl),
+    loadImage(mapQrUrl),
   ]);
 
-  const contentX = 80;
-  const contentWidth = CARD_WIDTH - contentX * 2;
-  const textInset = 40;
-  const textMaxWidth = contentWidth - textInset * 2;
   const measureCanvas = document.createElement('canvas');
   const measureContext = measureCanvas.getContext('2d');
   if (!measureContext) throw new Error('当前浏览器不支持生成活动卡片');
-  measureContext.font = TITLE_FONT;
-  const titleLines = wrapText(measureContext, event.title, textMaxWidth, 2);
-  measureContext.font = SUMMARY_FONT;
-  const summaryLines = wrapText(measureContext, event.summary, textMaxWidth, 2);
+
+  const introMaxWidth = CONTENT_WIDTH - 96;
+  measureContext.font = INTRO_FONT;
+  const introLines = wrapText(measureContext, event.summary || event.title, introMaxWidth, 4);
 
   const posterHeight = Math.round(POSTER_WIDTH * (posterImage.naturalHeight / posterImage.naturalWidth));
-  const headerHeight = 150;
-  const copyHeight =
-    44 +
-    titleLines.length * TITLE_LINE_HEIGHT +
-    22 +
-    summaryLines.length * SUMMARY_LINE_HEIGHT +
-    40;
-  const footerHeight = 324;
-  const posterY = CARD_PADDING + headerHeight + 24;
-  const copyY = posterY + posterHeight + 28;
-  const footerY = copyY + copyHeight + 26;
-  const cardHeight = footerY + footerHeight + CARD_PADDING;
+  const headerHeight = 220;
+  const posterY = CARD_PADDING_TOP + headerHeight;
+  const introY = posterY + posterHeight + MODULE_GAP;
+  const introHeight = 118 + introLines.length * INTRO_LINE_HEIGHT;
+  const footerHeight = 352;
+  const footerY = introY + introHeight + MODULE_GAP;
+  const cardHeight = footerY + footerHeight + CARD_PADDING_BOTTOM;
 
   const canvas = document.createElement('canvas');
   canvas.width = CARD_WIDTH;
@@ -257,101 +365,10 @@ export const createCmiEventShareCard = async ({
   context.fillStyle = '#050505';
   context.fillRect(0, 0, CARD_WIDTH, cardHeight);
   drawCardBackground(context, CARD_WIDTH, cardHeight);
-
-  context.fillStyle = '#050505';
-  context.font = `1000 78px ${FONT_FAMILY}`;
-  context.fillText('CMI Map', contentX, 130);
-
-  context.fillStyle = 'rgba(0, 0, 0, 0.56)';
-  context.font = `900 28px ${FONT_FAMILY}`;
-  context.fillText('清迈活动和好去处，都在这里', contentX, 172);
-
-  drawRoundRect(context, 832, 76, 250, 72, 36);
-  context.fillStyle = '#050505';
-  context.fill();
-  context.fillStyle = '#ffffff';
-  context.font = `900 30px ${FONT_FAMILY}`;
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillText(getCmiEventTypeLabel(event.type), 957, 112);
-  context.textAlign = 'left';
-  context.textBaseline = 'alphabetic';
-
-  drawPoster(context, posterImage, contentX, posterY, POSTER_WIDTH, posterHeight);
-
-  drawRoundRect(context, contentX, copyY, contentWidth, copyHeight, 34);
-  context.fillStyle = 'rgba(5, 5, 5, 0.86)';
-  context.fill();
-
-  const titleStartY = copyY + 66;
-  context.fillStyle = '#ffffff';
-  context.font = TITLE_FONT;
-  titleLines.forEach((line, index) => {
-    context.fillText(line, contentX + textInset, titleStartY + index * TITLE_LINE_HEIGHT);
-  });
-
-  const summaryStartY = titleStartY + titleLines.length * TITLE_LINE_HEIGHT + 22;
-  context.fillStyle = 'rgba(255, 255, 255, 0.78)';
-  context.font = SUMMARY_FONT;
-  summaryLines.forEach((line, index) => {
-    context.fillText(line, contentX + textInset, summaryStartY + index * SUMMARY_LINE_HEIGHT);
-  });
-
-  drawRoundRect(context, contentX, footerY, contentWidth, footerHeight, 34);
-  context.fillStyle = 'rgba(172, 131, 255, 0.52)';
-  context.fill();
-  context.lineWidth = 3;
-  context.strokeStyle = 'rgba(0, 0, 0, 0.18)';
-  context.stroke();
-
-  context.save();
-  context.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-  context.lineWidth = 2;
-  context.setLineDash([10, 12]);
-  context.beginPath();
-  context.moveTo(contentX + 394, footerY + 36);
-  context.lineTo(contentX + 394, footerY + footerHeight - 36);
-  context.moveTo(contentX + 28, footerY + 160);
-  context.lineTo(contentX + 750, footerY + 160);
-  context.stroke();
-  context.restore();
-
-  drawInfoCell(context, '时间', formatCmiEventTime(event, referenceDate), contentX + 30, footerY + 56, 320);
-  drawInfoCell(context, '地点', event.venueName, contentX + 430, footerY + 56, 290);
-  drawInfoCell(context, '费用', event.priceLabel, contentX + 30, footerY + 198, 320, {
-    maxLines: 3,
-  });
-  drawInfoCell(context, '参与', event.registrationLabel, contentX + 430, footerY + 198, 290, {
-    valueFontSize: 29,
-    lineHeight: 35,
-    maxLines: 3,
-  });
-
-  const qrPanelX = contentX + 790;
-  const qrPanelY = footerY + 24;
-  const qrPanelWidth = 222;
-  const qrPanelHeight = footerHeight - 48;
-  drawRoundRect(context, qrPanelX, qrPanelY, qrPanelWidth, qrPanelHeight, 28);
-  context.fillStyle = 'rgba(255, 255, 255, 0.22)';
-  context.fill();
-  context.strokeStyle = 'rgba(0, 0, 0, 0.16)';
-  context.lineWidth = 3;
-  context.stroke();
-
-  context.fillStyle = '#050505';
-  context.font = `900 26px ${FONT_FAMILY}`;
-  context.textAlign = 'center';
-  context.fillText('扫码关注', qrPanelX + qrPanelWidth / 2, qrPanelY + 44);
-
-  drawRoundRect(context, qrPanelX + 24, qrPanelY + 62, 174, 174, 18);
-  context.fillStyle = '#ffffff';
-  context.fill();
-  context.drawImage(qrImage, qrPanelX + 34, qrPanelY + 72, 154, 154);
-
-  context.fillStyle = 'rgba(0, 0, 0, 0.68)';
-  context.font = `850 20px ${FONT_FAMILY}`;
-  context.fillText('CMI 清迈客栈公众号', qrPanelX + qrPanelWidth / 2, qrPanelY + 256);
-  context.textAlign = 'left';
+  drawHeader(context);
+  drawPoster(context, posterImage, CONTENT_X, posterY, POSTER_WIDTH, posterHeight);
+  drawIntroCard(context, introLines, CONTENT_X, introY, CONTENT_WIDTH, introHeight);
+  drawFooter(context, event, qrImage, footerY, footerHeight);
 
   const blob = await canvasToBlob(canvas);
 
