@@ -4,8 +4,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { formatCmiEventTime, getCmiEventById } from '@/data/cmi-events';
 import { type BlackboardDraft, CmiBlackboard } from '@/features/home/blackboard/cmi-blackboard';
 
-const BLACKBOARD_TITLE_LIMIT = 24;
-const BLACKBOARD_BODY_LIMIT = 120;
+const BLACKBOARD_TITLE_LIMIT = 48;
+const BLACKBOARD_BODY_LIMIT = 600;
 
 const trimForBlackboard = (value: string, limit: number) =>
   value.length > limit ? `${value.slice(0, Math.max(0, limit - 1))}…` : value;
@@ -46,10 +46,10 @@ export default function CmiBlackboardPage() {
           </button>
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-black leading-tight text-foreground">
-              一起出发！
+              清迈生活板
             </h1>
             <p className="truncate text-xs font-black text-muted-foreground">
-              约搭子、求助、拼车，先放在这里。
+              找搭子、求助、分享，先放在这里。
             </p>
           </div>
         </div>

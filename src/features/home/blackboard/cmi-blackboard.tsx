@@ -1,115 +1,118 @@
 import type { LucideIcon } from 'lucide-react';
 import {
-  CarFront,
-  Check,
-  Clock3,
+  CalendarDays,
+  Edit3,
   HelpCircle,
+  ImagePlus,
   MapPin,
+  MessageCircle,
   Plus,
+  Send,
   Sparkles,
-  Sun,
-  Users,
+  Trash2,
+  UsersRound,
   X,
 } from 'lucide-react';
-import type { FormEvent, ReactNode } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import type { ChangeEvent, FormEvent, ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+  createBlackboardComment,
   createBlackboardPost,
+  deleteBlackboardPost,
   getBlackboardPosts,
+  type BlackboardCommentRecord,
   type BlackboardPostCategory,
   type BlackboardPostRecord,
+  updateBlackboardPost,
+  uploadBlackboardImages,
 } from '@/db/blackboard-posts';
-import { getCmiEventPath, getPlacePath, getProfilePath } from '@/lib/paths';
+import {
+  BLACKBOARD_CATEGORY_LABELS,
+  BLACKBOARD_CATEGORY_OPTIONS,
+  coerceBlackboardCategory,
+  formatBlackboardCreatedLabel,
+  getBlackboardDateGroupLabel,
+  type BlackboardPostFilter,
+} from '@/features/home/blackboard/blackboard-model';
+import { getCmiEventPath, getPersonMapPath, getPlacePath } from '@/lib/paths';
 import { cn } from '@/lib/utils';
+import { normalizeImageFile } from '@/utils/imageCompression';
 
-type BlackboardCategory = BlackboardPostCategory;
-type BlackboardFilter = 'all' | BlackboardCategory;
+type DraftImage = {
+  id: string;
+  file: File;
+  previewUrl: string;
+};
 
 interface BlackboardPost {
   id: string;
-  category: BlackboardCategory;
+  category: BlackboardPostCategory;
   title: string;
   body: string;
   linkedEventId?: string;
   linkedEventTitle?: string;
   linkedPlaceName?: string;
+  authorId: string;
   author: string;
   authorInitial: string;
+  createdAt: string;
   createdLabel: string;
+  dateGroupLabel: string;
   timeLabel: string;
   locationLabel: string;
   peopleLabel: string;
-  confirmedCount?: number;
-  interestedCount: number;
+  contactLabel: string;
+  imageUrls: string[];
+  comments: BlackboardCommentRecord[];
 }
 
 export interface BlackboardDraft {
-  category: BlackboardCategory;
+  category: BlackboardPostCategory;
   title: string;
   body: string;
   timeLabel: string;
   locationLabel: string;
   peopleLabel: string;
+  contactLabel: string;
+  imageUrls: string[];
+  imageFiles: DraftImage[];
   linkedEventId?: string;
   linkedEventTitle?: string;
   linkedPlaceName?: string;
 }
 
 interface CategoryMeta {
-  id: BlackboardFilter;
+  id: BlackboardPostFilter;
   label: string;
   Icon: LucideIcon;
 }
 
-const POST_TITLE_LIMIT = 24;
-const POST_BODY_LIMIT = 120;
+const POST_TITLE_LIMIT = 48;
+const POST_BODY_LIMIT = 600;
+const COMMENT_BODY_LIMIT = 500;
 const BLACKBOARD_ICON_URL = '/cmi-home/blackboard-together.svg';
 
 const CATEGORY_META: CategoryMeta[] = [
   { id: 'all', label: '全部', Icon: Sparkles },
-  { id: 'companion', label: '找搭子', Icon: Sun },
+  { id: 'companion', label: '找搭子', Icon: UsersRound },
   { id: 'help', label: '求助', Icon: HelpCircle },
-  { id: 'ride', label: '拼车', Icon: CarFront },
+  { id: 'share', label: '分享', Icon: MessageCircle },
 ];
 
-const CATEGORY_LABELS: Record<BlackboardCategory, string> = {
-  companion: '找搭子',
-  help: '求助',
-  ride: '拼车',
+const CATEGORY_ICON_BY_ID: Record<BlackboardPostCategory, LucideIcon> = {
+  companion: UsersRound,
+  help: HelpCircle,
+  share: MessageCircle,
 };
 
-const CATEGORY_TONES: Record<BlackboardCategory, string> = {
+const CATEGORY_TONES: Record<BlackboardPostCategory, string> = {
   companion: 'bg-primary/10 text-primary border-primary/20',
   help: 'bg-[#eef3ff] text-[#4a6a9e] border-[#4a6a9e]/15',
-  ride: 'bg-[#fff2cf] text-[#8a641b] border-[#8a641b]/15',
+  share: 'bg-[#ecf7f1] text-[#2f7651] border-[#2f7651]/15',
 };
-
-const QR_ENTRIES = [
-  {
-    id: 'andreas',
-    title: '子扬微信',
-    action: '扫码添加',
-    imageUrl: '/cmi-home/qr-andreas.jpg',
-    alt: '子扬微信二维码',
-  },
-  {
-    id: 'community-group',
-    title: '社区群 #5',
-    action: '扫码进群',
-    imageUrl: '/cmi-home/qr-community-group-5.jpg',
-    alt: '清迈客栈社区群 #5 群聊二维码',
-  },
-  {
-    id: 'linke',
-    title: '林可微信',
-    action: '扫码添加',
-    imageUrl: '/cmi-home/qr-linke.jpg',
-    alt: '林可微信二维码',
-  },
-];
 
 const createEmptyDraft = (): BlackboardDraft => ({
   category: 'companion',
@@ -118,98 +121,94 @@ const createEmptyDraft = (): BlackboardDraft => ({
   timeLabel: '',
   locationLabel: '',
   peopleLabel: '',
+  contactLabel: '',
+  imageUrls: [],
+  imageFiles: [],
 });
 
-function getActionLabel(category: BlackboardCategory) {
-  if (category === 'help') return '我能帮';
-  return '我也想去';
-}
+const getAuthorInitial = (author: string) => author.trim().charAt(0).toUpperCase() || '?';
 
-function getPostCount(posts: BlackboardPost[], filter: BlackboardFilter) {
-  if (filter === 'all') return posts.length;
-  return posts.filter(post => post.category === filter).length;
-}
+const EMPTY_META_VALUES = new Set(['时间待定', '地点待定', '0']);
 
-function formatCreatedLabel(value: string) {
-  const createdAt = new Date(value);
-  if (Number.isNaN(createdAt.getTime())) return '刚刚';
+const getDisplayValue = (value: string | null | undefined) => {
+  const displayValue = value?.trim() || '';
+  return EMPTY_META_VALUES.has(displayValue) ? '' : displayValue;
+};
 
-  const diffMs = Date.now() - createdAt.getTime();
-  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
-  if (diffMinutes < 1) return '刚刚';
-  if (diffMinutes < 60) return `${diffMinutes} 分钟前`;
+const mapBlackboardPost = (record: BlackboardPostRecord): BlackboardPost => {
+  const author = record.author_name || 'CMI 朋友';
 
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours} 小时前`;
-
-  return new Intl.DateTimeFormat('zh-CN', {
-    month: 'numeric',
-    day: 'numeric',
-    timeZone: 'Asia/Bangkok',
-  }).format(createdAt);
-}
-
-function getAuthorInitial(author: string) {
-  return author.trim().charAt(0).toUpperCase() || '?';
-}
-
-function mapBlackboardPost(record: BlackboardPostRecord): BlackboardPost {
   return {
     id: record.id,
-    category: record.category,
+    category: coerceBlackboardCategory(record.category),
     title: record.title,
     body: record.body,
     linkedEventId: record.linked_event_id ?? undefined,
     linkedEventTitle: record.linked_event_title ?? undefined,
     linkedPlaceName: record.linked_place_name ?? undefined,
-    author: record.author_name,
-    authorInitial: getAuthorInitial(record.author_name),
-    createdLabel: formatCreatedLabel(record.created_at),
-    timeLabel: record.time_label || '时间待定',
-    locationLabel: record.location_label || '地点待定',
-    peopleLabel: record.people_label || '0',
-    interestedCount: 0,
+    authorId: record.author_id,
+    author,
+    authorInitial: getAuthorInitial(author),
+    createdAt: record.created_at,
+    createdLabel: formatBlackboardCreatedLabel(record.created_at),
+    dateGroupLabel: getBlackboardDateGroupLabel(record.created_at),
+    timeLabel: getDisplayValue(record.time_label),
+    locationLabel: getDisplayValue(record.location_label),
+    peopleLabel: getDisplayValue(record.people_label),
+    contactLabel: getDisplayValue(record.contact_label),
+    imageUrls: Array.isArray(record.image_urls) ? record.image_urls.filter(Boolean) : [],
+    comments: record.comments || [],
   };
+};
+
+const revokeDraftImages = (images: DraftImage[]) => {
+  images.forEach(image => URL.revokeObjectURL(image.previewUrl));
+};
+
+function getPostCount(posts: BlackboardPost[], filter: BlackboardPostFilter) {
+  if (filter === 'all') return posts.length;
+  return posts.filter(post => post.category === filter).length;
 }
 
-function CommunityQrCard({ entry }: { entry: (typeof QR_ENTRIES)[number] }) {
+function SheetShell({
+  title,
+  children,
+  onClose,
+}: {
+  title: string;
+  children: ReactNode;
+  onClose: () => void;
+}) {
   return (
-    <a
-      href={entry.imageUrl}
-      target="_blank"
-      rel="noreferrer"
-      className="flex min-h-[8.9rem] flex-col items-center justify-start rounded-[0.95rem] border border-primary/15 bg-white px-2 py-2 text-center shadow-[0_10px_24px_rgba(65,51,112,0.08)] transition-transform active:scale-[0.99]"
-      aria-label={entry.alt}
-    >
-      <img
-        src={entry.imageUrl}
-        alt={entry.alt}
-        loading="lazy"
-        className="h-[5.55rem] w-[5.55rem] rounded-[0.55rem] border border-primary/10 object-cover"
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/35 px-0" role="presentation">
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        aria-label="关闭"
+        onClick={onClose}
       />
-      <strong className="mt-1.5 text-[12px] font-black leading-tight text-foreground">
-        {entry.title}
-      </strong>
-      <span className="mt-0.5 text-[10.5px] font-bold leading-none text-muted-foreground">
-        {entry.action}
-      </span>
-    </a>
-  );
-}
-
-function CommunityEntry() {
-  return (
-    <section className="rounded-[1.35rem] border border-primary/15 bg-white/90 p-3 shadow-[0_16px_38px_rgba(65,51,112,0.10)]">
-      <div className="mb-2.5 flex items-center justify-between gap-3">
-        <h3 className="text-base font-black text-foreground">社区入口</h3>
-        <span className="text-xs font-black text-muted-foreground">加微信 / 进群</span>
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        {QR_ENTRIES.map(entry => (
-          <CommunityQrCard key={entry.id} entry={entry} />
-        ))}
-      </div>
-    </section>
+      <section
+        className="relative flex max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] w-full max-w-[520px] flex-col overflow-hidden rounded-t-[1.6rem] border border-border bg-background shadow-[0_-18px_48px_rgba(32,25,54,0.22)]"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
+        <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-3 pt-4">
+          <h3 className="text-[1.55rem] font-black leading-tight text-foreground">{title}</h3>
+          <button
+            type="button"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-border bg-white text-foreground"
+            onClick={onClose}
+            aria-label="关闭"
+          >
+            <X className="h-5 w-5" strokeWidth={2.4} />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+          {children}
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -227,25 +226,40 @@ function PostMeta({
   const content = (
     <>
       <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />
-      {children}
+      <span className="min-w-0 truncate">{children}</span>
     </>
   );
 
   if (to) {
     return (
-      <Link
-        to={to}
-        className={cn(className, 'transition active:scale-[0.98] active:bg-primary/10')}
-      >
+      <Link to={to} className={cn(className, 'transition active:scale-[0.98] active:bg-primary/10')}>
         {content}
       </Link>
     );
   }
 
+  return <span className={className}>{content}</span>;
+}
+
+function PostImages({ imageUrls }: { imageUrls: string[] }) {
+  if (imageUrls.length === 0) return null;
+
   return (
-    <span className={className}>
-      {content}
-    </span>
+    <div className={cn('grid gap-2', imageUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2')}>
+      {imageUrls.map((imageUrl, index) => (
+        <img
+          key={`${imageUrl}-${index}`}
+          src={imageUrl}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className={cn(
+            'w-full rounded-[1rem] border border-border object-cover',
+            imageUrls.length === 1 ? 'max-h-[19rem]' : 'aspect-square'
+          )}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -275,13 +289,20 @@ function renderPostBody(post: BlackboardPost) {
 
 function BlackboardPostCard({
   post,
-  onJoin,
+  userId,
+  onOpen,
+  onEdit,
+  onDelete,
 }: {
   post: BlackboardPost;
-  onJoin: (post: BlackboardPost) => void;
+  userId?: string;
+  onOpen: (post: BlackboardPost) => void;
+  onEdit: (post: BlackboardPost) => void;
+  onDelete: (post: BlackboardPost) => void;
 }) {
+  const CategoryIcon = CATEGORY_ICON_BY_ID[post.category];
   const placePath = post.linkedPlaceName ? getPlacePath(post.linkedPlaceName) : undefined;
-  const authorPath = getProfilePath();
+  const canManagePost = Boolean(userId && post.authorId === userId);
 
   return (
     <article className="rounded-[1.35rem] border border-border bg-white p-4 shadow-[0_12px_30px_rgba(32,25,54,0.08)]">
@@ -289,33 +310,35 @@ function BlackboardPostCard({
         <h3 className="min-w-0 text-xl font-black leading-tight text-foreground">{post.title}</h3>
         <span
           className={cn(
-            'shrink-0 rounded-full border px-3 py-1 text-xs font-black',
+            'inline-flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 text-xs font-black',
             CATEGORY_TONES[post.category]
           )}
         >
-          {CATEGORY_LABELS[post.category]}
+          <CategoryIcon className="h-3.5 w-3.5" strokeWidth={2.4} />
+          {BLACKBOARD_CATEGORY_LABELS[post.category]}
         </span>
       </div>
 
-      <p className="mt-3 text-[15px] font-semibold leading-relaxed text-foreground/80">
+      <p className="mt-3 whitespace-pre-wrap text-[15px] font-semibold leading-relaxed text-foreground/82">
         {renderPostBody(post)}
       </p>
 
+      <div className="mt-3">
+        <PostImages imageUrls={post.imageUrls} />
+      </div>
+
       <div className="mt-3 flex flex-wrap gap-2">
-        <PostMeta icon={Clock3}>{post.timeLabel}</PostMeta>
-        <PostMeta icon={MapPin} to={placePath}>{post.locationLabel}</PostMeta>
-        <PostMeta icon={Users}>人 {post.peopleLabel}</PostMeta>
-        {typeof post.confirmedCount === 'number' && (
-          <PostMeta icon={Check}>已确认 {post.confirmedCount}</PostMeta>
-        )}
+        {post.timeLabel && <PostMeta icon={CalendarDays}>{post.timeLabel}</PostMeta>}
+        {post.locationLabel && <PostMeta icon={MapPin} to={placePath}>{post.locationLabel}</PostMeta>}
+        <PostMeta icon={MessageCircle}>评论 {post.comments.length}</PostMeta>
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <Link
-            to={authorPath}
+            to={getPersonMapPath(post.author)}
             className="flex min-w-0 items-center gap-2 rounded-full pr-1 transition active:scale-[0.98] active:bg-primary/5"
-            aria-label={`查看${post.author}的个人主页`}
+            aria-label={`查看${post.author}的清迈地图`}
           >
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-black text-primary">
               {post.authorInitial}
@@ -324,77 +347,66 @@ function BlackboardPostCard({
               {post.author}
             </span>
           </Link>
-          <span className="shrink-0 text-sm font-black text-muted-foreground">
-            · {post.createdLabel}
-          </span>
+          <span className="shrink-0 text-sm font-black text-muted-foreground">· {post.createdLabel}</span>
         </div>
-        <button
-          type="button"
-          className="shrink-0 rounded-full bg-primary px-4 py-2.5 text-sm font-black text-primary-foreground shadow-[0_10px_22px_rgba(111,90,168,0.22)] transition-transform active:scale-[0.98]"
-          onClick={() => onJoin(post)}
-        >
-          {getActionLabel(post.category)}
-        </button>
+
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            className="shrink-0 rounded-full bg-primary px-4 py-2.5 text-sm font-black text-primary-foreground shadow-[0_10px_22px_rgba(111,90,168,0.22)] transition-transform active:scale-[0.98]"
+            onClick={() => onOpen(post)}
+          >
+            看评论
+          </button>
+
+          {canManagePost && (
+            <div className="flex shrink-0 gap-1">
+              <button
+                type="button"
+                className="grid h-9 w-9 place-items-center rounded-full border border-border bg-white text-muted-foreground active:scale-[0.98]"
+                onClick={() => onEdit(post)}
+                aria-label="编辑帖子"
+              >
+                <Edit3 className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                className="grid h-9 w-9 place-items-center rounded-full border border-destructive/20 bg-white text-destructive active:scale-[0.98]"
+                onClick={() => onDelete(post)}
+                aria-label="删除帖子"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </article>
   );
 }
 
-function SheetShell({
-  title,
-  children,
-  onClose,
-}: {
-  title: string;
-  children: ReactNode;
-  onClose: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/35 px-0" role="presentation">
-      <button
-        type="button"
-        className="absolute inset-0 cursor-default"
-        aria-label="关闭"
-        onClick={onClose}
-      />
-      <section
-        className="relative flex max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] w-full max-w-[480px] flex-col overflow-hidden rounded-t-[1.6rem] border border-border bg-background shadow-[0_-18px_48px_rgba(32,25,54,0.22)]"
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-      >
-        <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-3 pt-4">
-          <h3 className="text-[1.7rem] font-black leading-tight text-foreground">{title}</h3>
-          <button
-            type="button"
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-border bg-white text-foreground"
-            onClick={onClose}
-            aria-label="关闭"
-          >
-            <X className="h-5 w-5" strokeWidth={2.4} />
-          </button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
-          {children}
-        </div>
-      </section>
-    </div>
-  );
-}
-
 function ComposerSheet({
   draft,
+  title,
   submitting,
   onDraftChange,
+  onAddImages,
+  onRemoveExistingImage,
+  onRemoveDraftImage,
   onSubmit,
   onClose,
 }: {
   draft: BlackboardDraft;
+  title: string;
   submitting: boolean;
   onDraftChange: (draft: BlackboardDraft) => void;
+  onAddImages: (files: File[]) => Promise<void>;
+  onRemoveExistingImage: (imageUrl: string) => void;
+  onRemoveDraftImage: (imageId: string) => void;
   onSubmit: () => Promise<void>;
   onClose: () => void;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isValid = draft.title.trim().length > 0 && draft.body.trim().length > 0;
 
   const updateDraft = <Field extends keyof BlackboardDraft>(
@@ -410,12 +422,20 @@ function ComposerSheet({
     void onSubmit();
   };
 
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length > 0) {
+      void onAddImages(files);
+    }
+    event.target.value = '';
+  };
+
   return (
-    <SheetShell title="发一条" onClose={onClose}>
+    <SheetShell title={title} onClose={onClose}>
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div className="grid grid-cols-3 gap-2">
-          {CATEGORY_META.filter(item => item.id !== 'all').map(({ id, label, Icon }) => {
-            const categoryId = id as BlackboardCategory;
+          {BLACKBOARD_CATEGORY_OPTIONS.map(({ id, label }) => {
+            const CategoryIcon = CATEGORY_ICON_BY_ID[id];
 
             return (
               <button
@@ -423,13 +443,13 @@ function ComposerSheet({
                 type="button"
                 className={cn(
                   'flex min-h-11 items-center justify-center gap-1.5 rounded-full border px-3 text-sm font-black transition-colors',
-                  draft.category === categoryId
+                  draft.category === id
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-border bg-white text-muted-foreground'
                 )}
-                onClick={() => updateDraft('category', categoryId)}
+                onClick={() => updateDraft('category', id)}
               >
-                <Icon className="h-4 w-4" strokeWidth={2.4} />
+                <CategoryIcon className="h-4 w-4" strokeWidth={2.4} />
                 {label}
               </button>
             );
@@ -437,13 +457,16 @@ function ComposerSheet({
         </div>
 
         <label className="block">
-          <span className="text-sm font-black text-foreground">标题</span>
+          <span className="flex items-center justify-between gap-3 text-sm font-black text-foreground">
+            标题
+            <span className="text-xs text-muted-foreground">{draft.title.length}/{POST_TITLE_LIMIT}</span>
+          </span>
           <input
             value={draft.title}
             maxLength={POST_TITLE_LIMIT}
             onChange={event => updateDraft('title', event.target.value)}
             className="mt-2 h-12 w-full rounded-2xl border border-border bg-white px-4 text-base font-bold text-foreground outline-none focus:border-primary"
-            placeholder="比如：周末一起逛市集"
+            placeholder="比如：今晚有人去北门听爵士吗"
           />
         </label>
 
@@ -456,39 +479,89 @@ function ComposerSheet({
             value={draft.body}
             maxLength={POST_BODY_LIMIT}
             onChange={event => updateDraft('body', event.target.value)}
-            className="mt-2 min-h-[7.4rem] w-full resize-none rounded-2xl border border-border bg-white px-4 py-3 text-base font-semibold leading-relaxed text-foreground outline-none focus:border-primary"
-            placeholder="写清楚时间、地点、人数和大概安排。"
+            className="mt-2 min-h-[8.75rem] w-full resize-none rounded-2xl border border-border bg-white px-4 py-3 text-base font-semibold leading-relaxed text-foreground outline-none focus:border-primary"
+            placeholder="直接写你想说的事。可以约人、求助，也可以随手分享清迈生活。"
           />
         </label>
 
+        <div className="space-y-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <button
+            type="button"
+            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-white text-sm font-black text-muted-foreground active:scale-[0.99]"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <ImagePlus className="h-4 w-4" />
+            加照片
+          </button>
+
+          {(draft.imageUrls.length > 0 || draft.imageFiles.length > 0) && (
+            <div className="grid grid-cols-3 gap-2">
+              {draft.imageUrls.map(imageUrl => (
+                <div key={imageUrl} className="relative">
+                  <img src={imageUrl} alt="" className="aspect-square w-full rounded-xl border border-border object-cover" />
+                  <button
+                    type="button"
+                    className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full bg-background/90 text-foreground shadow"
+                    onClick={() => onRemoveExistingImage(imageUrl)}
+                    aria-label="移除已有照片"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+              {draft.imageFiles.map(image => (
+                <div key={image.id} className="relative">
+                  <img src={image.previewUrl} alt="" className="aspect-square w-full rounded-xl border border-border object-cover" />
+                  <button
+                    type="button"
+                    className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full bg-background/90 text-foreground shadow"
+                    onClick={() => onRemoveDraftImage(image.id)}
+                    aria-label="移除待上传照片"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
-            <span className="text-xs font-black text-muted-foreground">时间</span>
+            <span className="text-xs font-black text-muted-foreground">时间，可不填</span>
             <input
               value={draft.timeLabel}
               onChange={event => updateDraft('timeLabel', event.target.value)}
               className="mt-1.5 h-11 w-full rounded-2xl border border-border bg-white px-3 text-sm font-bold outline-none focus:border-primary"
-              placeholder="明天 10:00"
+              placeholder="今晚 / 周末"
             />
           </label>
           <label className="block">
-            <span className="text-xs font-black text-muted-foreground">人数</span>
+            <span className="text-xs font-black text-muted-foreground">地点 / 区域，可不填</span>
             <input
-              value={draft.peopleLabel}
-              onChange={event => updateDraft('peopleLabel', event.target.value)}
+              value={draft.locationLabel}
+              onChange={event => updateDraft('locationLabel', event.target.value)}
               className="mt-1.5 h-11 w-full rounded-2xl border border-border bg-white px-3 text-sm font-bold outline-none focus:border-primary"
-              placeholder="2"
+              placeholder="宁曼 / 北门"
             />
           </label>
         </div>
 
         <label className="block">
-          <span className="text-xs font-black text-muted-foreground">地点</span>
+          <span className="text-xs font-black text-muted-foreground">联系方式或联系说明，可不填</span>
           <input
-            value={draft.locationLabel}
-            onChange={event => updateDraft('locationLabel', event.target.value)}
+            value={draft.contactLabel}
+            onChange={event => updateDraft('contactLabel', event.target.value)}
             className="mt-1.5 h-11 w-full rounded-2xl border border-border bg-white px-3 text-sm font-bold outline-none focus:border-primary"
-            placeholder="地点 / 区域"
+            placeholder="比如：评论里说 / 到群里找我"
           />
         </label>
 
@@ -504,26 +577,155 @@ function ComposerSheet({
   );
 }
 
-function ContactSheet({
+function PostDetailSheet({
   post,
+  commentText,
+  commentSubmitting,
+  userId,
+  onCommentChange,
+  onSubmitComment,
+  onEdit,
+  onDelete,
   onClose,
 }: {
   post: BlackboardPost;
+  commentText: string;
+  commentSubmitting: boolean;
+  userId?: string;
+  onCommentChange: (value: string) => void;
+  onSubmitComment: () => Promise<void>;
+  onEdit: (post: BlackboardPost) => void;
+  onDelete: (post: BlackboardPost) => void;
   onClose: () => void;
 }) {
+  const CategoryIcon = CATEGORY_ICON_BY_ID[post.category];
+  const canManagePost = Boolean(userId && post.authorId === userId);
+
+  const handleSubmitComment = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!commentText.trim() || commentSubmitting) return;
+    void onSubmitComment();
+  };
+
   return (
-    <SheetShell title={getActionLabel(post.category)} onClose={onClose}>
-      <div className="rounded-[1.2rem] border border-primary/15 bg-primary/5 p-4">
-        <p className="text-sm font-black text-primary">{post.title}</p>
-        <p className="mt-1 text-sm font-semibold leading-relaxed text-foreground/75">
-          {post.author} · {post.timeLabel} · {post.locationLabel}
+    <SheetShell title="帖子详情" onClose={onClose}>
+      <article className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-black',
+                CATEGORY_TONES[post.category]
+              )}
+            >
+              <CategoryIcon className="h-3.5 w-3.5" strokeWidth={2.4} />
+              {BLACKBOARD_CATEGORY_LABELS[post.category]}
+            </span>
+            <h2 className="mt-3 text-2xl font-black leading-tight text-foreground">{post.title}</h2>
+          </div>
+
+          {canManagePost && (
+            <div className="flex shrink-0 gap-1">
+              <button
+                type="button"
+                className="grid h-9 w-9 place-items-center rounded-full border border-border bg-white text-muted-foreground"
+                onClick={() => onEdit(post)}
+                aria-label="编辑帖子"
+              >
+                <Edit3 className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                className="grid h-9 w-9 place-items-center rounded-full border border-destructive/20 bg-white text-destructive"
+                onClick={() => onDelete(post)}
+                aria-label="删除帖子"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        <p className="whitespace-pre-wrap text-[16px] font-semibold leading-relaxed text-foreground/82">
+          {renderPostBody(post)}
         </p>
-      </div>
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        {QR_ENTRIES.map(entry => (
-          <CommunityQrCard key={entry.id} entry={entry} />
-        ))}
-      </div>
+
+        <PostImages imageUrls={post.imageUrls} />
+
+        <div className="flex flex-wrap gap-2">
+          <PostMeta icon={CalendarDays}>{post.createdLabel}</PostMeta>
+          {post.timeLabel && <PostMeta icon={CalendarDays}>{post.timeLabel}</PostMeta>}
+          {post.locationLabel && <PostMeta icon={MapPin}>{post.locationLabel}</PostMeta>}
+        </div>
+
+        {post.contactLabel && (
+          <div className="rounded-[1rem] border border-primary/15 bg-primary/5 p-3">
+            <p className="text-xs font-black text-primary">联系说明</p>
+            <p className="mt-1 whitespace-pre-wrap text-sm font-bold leading-relaxed text-foreground/80">
+              {post.contactLabel}
+            </p>
+          </div>
+        )}
+
+        <div className="flex min-w-0 items-center gap-2 rounded-[1rem] border border-border bg-white p-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-black text-primary">
+            {post.authorInitial}
+          </span>
+          <div className="min-w-0">
+            <Link to={getPersonMapPath(post.author)} className="block truncate text-sm font-black text-foreground">
+              {post.author}
+            </Link>
+            <p className="text-xs font-bold text-muted-foreground">{post.dateGroupLabel}发布</p>
+          </div>
+        </div>
+      </article>
+
+      <section className="mt-5 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-lg font-black text-foreground">评论</h3>
+          <span className="text-sm font-black text-muted-foreground">{post.comments.length}</span>
+        </div>
+
+        {post.comments.length > 0 ? (
+          <div className="space-y-2">
+            {post.comments.map(comment => (
+              <article key={comment.id} className="rounded-[1rem] border border-border bg-white p-3">
+                <div className="mb-1 flex items-center justify-between gap-3">
+                  <p className="min-w-0 truncate text-sm font-black text-foreground">{comment.author_name}</p>
+                  <span className="shrink-0 text-xs font-bold text-muted-foreground">
+                    {formatBlackboardCreatedLabel(comment.created_at)}
+                  </span>
+                </div>
+                <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed text-foreground/80">
+                  {comment.body}
+                </p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-[1rem] border border-dashed border-border bg-white/70 p-4 text-center text-sm font-bold text-muted-foreground">
+            还没有评论。
+          </div>
+        )}
+
+        <form className="flex gap-2" onSubmit={handleSubmitComment}>
+          <input
+            value={commentText}
+            onChange={event => onCommentChange(event.target.value)}
+            maxLength={COMMENT_BODY_LIMIT}
+            className="min-h-11 min-w-0 flex-1 rounded-full border border-border bg-white px-4 text-sm font-bold outline-none focus:border-primary"
+            placeholder="写评论"
+          />
+          <button
+            type="submit"
+            disabled={!commentText.trim() || commentSubmitting}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-45"
+            aria-label="发送评论"
+          >
+            <Send className="h-4 w-4" strokeWidth={2.6} />
+          </button>
+        </form>
+      </section>
     </SheetShell>
   );
 }
@@ -536,38 +738,43 @@ export function CmiBlackboard({
   initialDraft?: Partial<BlackboardDraft>;
 } = {}) {
   const { user, profile, loading: authLoading } = useAuth();
-  const [activeFilter, setActiveFilter] = useState<BlackboardFilter>('all');
+  const [activeFilter, setActiveFilter] = useState<BlackboardPostFilter>('all');
   const [posts, setPosts] = useState<BlackboardPost[]>([]);
   const [draft, setDraft] = useState<BlackboardDraft>(() => createEmptyDraft());
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [postsError, setPostsError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
-  const [contactPost, setContactPost] = useState<BlackboardPost | null>(null);
+  const draftImageFilesRef = useRef<DraftImage[]>([]);
 
-  useEffect(() => {
-    let isMounted = true;
-
+  const loadPosts = async () => {
     setLoadingPosts(true);
     setPostsError(null);
 
-    getBlackboardPosts()
-      .then(records => {
-        if (!isMounted) return;
-        setPosts(records.map(mapBlackboardPost));
-      })
-      .catch(() => {
-        if (!isMounted) return;
-        setPostsError('一起出发加载失败，稍后再试。');
-      })
-      .finally(() => {
-        if (!isMounted) return;
-        setLoadingPosts(false);
-      });
+    try {
+      const records = await getBlackboardPosts();
+      setPosts(records.map(mapBlackboardPost));
+    } catch {
+      setPostsError('论坛加载失败，稍后再试。');
+    } finally {
+      setLoadingPosts(false);
+    }
+  };
 
-    return () => {
-      isMounted = false;
-    };
+  useEffect(() => {
+    void loadPosts();
+  }, []);
+
+  useEffect(() => {
+    draftImageFilesRef.current = draft.imageFiles;
+  }, [draft.imageFiles]);
+
+  useEffect(() => () => {
+    revokeDraftImages(draftImageFilesRef.current);
   }, []);
 
   useEffect(() => {
@@ -576,10 +783,14 @@ export function CmiBlackboard({
     const nextDraft = {
       ...createEmptyDraft(),
       ...initialDraft,
+      category: initialDraft.category ? coerceBlackboardCategory(initialDraft.category) : 'companion',
+      imageUrls: initialDraft.imageUrls || [],
+      imageFiles: [],
     };
 
     setDraft(nextDraft);
     setActiveFilter(nextDraft.category);
+    setEditingPostId(null);
     setComposerOpen(true);
   }, [
     autoOpenComposer,
@@ -589,6 +800,7 @@ export function CmiBlackboard({
     initialDraft?.timeLabel,
     initialDraft?.locationLabel,
     initialDraft?.peopleLabel,
+    initialDraft?.contactLabel,
     initialDraft?.linkedEventId,
     initialDraft?.linkedEventTitle,
     initialDraft?.linkedPlaceName,
@@ -599,9 +811,100 @@ export function CmiBlackboard({
     return posts.filter(post => post.category === activeFilter);
   }, [activeFilter, posts]);
 
-  const handleCreatePost = async () => {
+  const groupedPosts = useMemo(() => {
+    const groups: Array<{ label: string; posts: BlackboardPost[] }> = [];
+
+    visiblePosts.forEach(post => {
+      const latestGroup = groups[groups.length - 1];
+      if (latestGroup?.label === post.dateGroupLabel) {
+        latestGroup.posts.push(post);
+        return;
+      }
+
+      groups.push({ label: post.dateGroupLabel, posts: [post] });
+    });
+
+    return groups;
+  }, [visiblePosts]);
+
+  const selectedPost = selectedPostId
+    ? posts.find(post => post.id === selectedPostId) || null
+    : null;
+
+  const openCreateComposer = () => {
+    revokeDraftImages(draft.imageFiles);
+    setDraft(createEmptyDraft());
+    setEditingPostId(null);
+    setComposerOpen(true);
+  };
+
+  const openEditComposer = (post: BlackboardPost) => {
+    revokeDraftImages(draft.imageFiles);
+    setDraft({
+      category: post.category,
+      title: post.title,
+      body: post.body,
+      timeLabel: post.timeLabel,
+      locationLabel: post.locationLabel,
+      peopleLabel: post.peopleLabel,
+      contactLabel: post.contactLabel,
+      imageUrls: post.imageUrls,
+      imageFiles: [],
+      linkedEventId: post.linkedEventId,
+      linkedEventTitle: post.linkedEventTitle,
+      linkedPlaceName: post.linkedPlaceName,
+    });
+    setEditingPostId(post.id);
+    setComposerOpen(true);
+  };
+
+  const closeComposer = () => {
+    revokeDraftImages(draft.imageFiles);
+    setDraft(createEmptyDraft());
+    setEditingPostId(null);
+    setComposerOpen(false);
+  };
+
+  const handleAddDraftImages = async (files: File[]) => {
+    const normalizedImages = await Promise.all(
+      files.map(async file => {
+        const normalizedFile = await normalizeImageFile(file).catch(() => file);
+        return {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          file: normalizedFile,
+          previewUrl: URL.createObjectURL(normalizedFile),
+        };
+      })
+    );
+
+    setDraft(currentDraft => ({
+      ...currentDraft,
+      imageFiles: [...currentDraft.imageFiles, ...normalizedImages],
+    }));
+  };
+
+  const handleRemoveExistingImage = (imageUrl: string) => {
+    setDraft(currentDraft => ({
+      ...currentDraft,
+      imageUrls: currentDraft.imageUrls.filter(candidate => candidate !== imageUrl),
+    }));
+  };
+
+  const handleRemoveDraftImage = (imageId: string) => {
+    setDraft(currentDraft => {
+      const imageToRemove = currentDraft.imageFiles.find(image => image.id === imageId);
+      if (imageToRemove) URL.revokeObjectURL(imageToRemove.previewUrl);
+
+      return {
+        ...currentDraft,
+        imageFiles: currentDraft.imageFiles.filter(image => image.id !== imageId),
+      };
+    });
+  };
+
+  const handleSubmitPost = async () => {
     if (authLoading || !user) {
-      toast('登录后才能发布一起出发');
+      toast('登录后才能发帖');
       return;
     }
 
@@ -614,45 +917,104 @@ export function CmiBlackboard({
     setSubmitting(true);
 
     try {
-      const record = await createBlackboardPost({
+      const uploadedImageUrls = draft.imageFiles.length > 0
+        ? await uploadBlackboardImages(draft.imageFiles.map(image => image.file))
+        : [];
+
+      if (uploadedImageUrls.length !== draft.imageFiles.length) {
+        toast.error('有照片没有传上去，请重试或先移除失败照片');
+        return;
+      }
+
+      const imageUrls = [...draft.imageUrls, ...uploadedImageUrls];
+      const input = {
         category: draft.category,
         title,
         body,
-        timeLabel: draft.timeLabel.trim() || '时间待定',
-        locationLabel: draft.locationLabel.trim() || '地点待定',
-        peopleLabel: draft.peopleLabel.trim() || '0',
+        timeLabel: draft.timeLabel.trim(),
+        locationLabel: draft.locationLabel.trim(),
+        peopleLabel: draft.peopleLabel.trim(),
+        contactLabel: draft.contactLabel.trim(),
+        imageUrls,
         linkedEventId: draft.linkedEventId,
         linkedEventTitle: draft.linkedEventTitle,
         linkedPlaceName: draft.linkedPlaceName,
         authorId: user.id,
         authorName,
-      });
+      };
 
-      setPosts(currentPosts => [mapBlackboardPost(record), ...currentPosts]);
+      const record = editingPostId
+        ? await updateBlackboardPost({ ...input, id: editingPostId })
+        : await createBlackboardPost(input);
+
+      const mappedPost = mapBlackboardPost(record);
+      setPosts(currentPosts => {
+        if (!editingPostId) return [mappedPost, ...currentPosts];
+        return currentPosts.map(post => post.id === mappedPost.id ? mappedPost : post);
+      });
+      setSelectedPostId(mappedPost.id);
       setActiveFilter('all');
-      setDraft(createEmptyDraft());
-      setComposerOpen(false);
-      toast.success('已发布到一起出发');
+      toast.success(editingPostId ? '帖子已更新' : '已发布到生活板');
+      closeComposer();
     } catch {
-      toast.error('发布失败：没有写入数据库，请稍后再试');
+      toast.error(editingPostId ? '更新失败，请稍后再试' : '发布失败，请稍后再试');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleJoinPost = (post: BlackboardPost) => {
-    setPosts(currentPosts =>
-      currentPosts.map(item =>
-        item.id === post.id
-          ? { ...item, interestedCount: item.interestedCount + 1 }
-          : item
-      )
-    );
-    setContactPost(post);
+  const handleDeletePost = async (post: BlackboardPost) => {
+    if (!user || post.authorId !== user.id) return;
+    if (!window.confirm('确定删除这条帖子吗？')) return;
+
+    try {
+      await deleteBlackboardPost(post.id, user.id);
+      setPosts(currentPosts => currentPosts.filter(candidate => candidate.id !== post.id));
+      if (selectedPostId === post.id) setSelectedPostId(null);
+      toast.success('帖子已删除');
+    } catch {
+      toast.error('删除失败，请稍后再试');
+    }
+  };
+
+  const handleSubmitComment = async (post: BlackboardPost) => {
+    if (authLoading || !user) {
+      toast('登录后才能评论');
+      return;
+    }
+
+    const body = (commentDrafts[post.id] || '').trim();
+    if (!body) return;
+
+    const authorName = profile?.user_name?.trim() || user.email?.split('@')[0] || 'CMI 朋友';
+    setCommentSubmitting(true);
+
+    try {
+      const comment = await createBlackboardComment({
+        postId: post.id,
+        body,
+        authorId: user.id,
+        authorName,
+      });
+
+      setPosts(currentPosts =>
+        currentPosts.map(candidate =>
+          candidate.id === post.id
+            ? { ...candidate, comments: [...candidate.comments, comment] }
+            : candidate
+        )
+      );
+      setCommentDrafts(currentDrafts => ({ ...currentDrafts, [post.id]: '' }));
+      toast.success('评论已发出');
+    } catch {
+      toast.error('评论失败，请稍后再试');
+    } finally {
+      setCommentSubmitting(false);
+    }
   };
 
   return (
-    <section className="space-y-3" aria-label="一起出发看板">
+    <section className="space-y-3" aria-label="清迈生活板">
       <div className="rounded-[1.65rem] border border-primary/15 bg-[#fbfaff]/95 p-3 shadow-[0_18px_44px_rgba(65,51,112,0.12)] backdrop-blur-md">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -661,26 +1023,24 @@ export function CmiBlackboard({
             </div>
             <div className="min-w-0">
               <h2 className="truncate text-[1.45rem] font-black leading-tight text-foreground">
-                一起出发！
+                清迈生活板
               </h2>
               <p className="truncate text-xs font-black text-muted-foreground">
-                约搭子、求助、拼车
+                找搭子、求助、分享
               </p>
             </div>
           </div>
           <button
             type="button"
             className="flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-black text-primary-foreground shadow-[0_10px_22px_rgba(111,90,168,0.24)] active:scale-[0.98]"
-            onClick={() => setComposerOpen(true)}
+            onClick={openCreateComposer}
           >
             <Plus className="h-[1.125rem] w-[1.125rem]" strokeWidth={2.8} />
-            发一条
+            发帖
           </button>
         </div>
 
-        <CommunityEntry />
-
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {CATEGORY_META.map(({ id, label, Icon }) => {
             const active = activeFilter === id;
             return (
@@ -703,29 +1063,45 @@ export function CmiBlackboard({
           })}
         </div>
 
-        <div className="mt-3 space-y-3">
+        <div className="mt-3 space-y-4">
           {loadingPosts ? (
             <div className="rounded-[1.2rem] border border-dashed border-primary/20 bg-white/70 p-5 text-center">
-              <p className="text-base font-black text-foreground">正在加载真实发布</p>
+              <p className="text-base font-black text-foreground">正在加载论坛</p>
               <p className="mt-1 text-sm font-bold leading-relaxed text-muted-foreground">
-                这里现在会读取 Supabase，不再只看本地缓存。
+                会按今天、昨天、前天往下排。
               </p>
             </div>
           ) : postsError ? (
             <div className="rounded-[1.2rem] border border-dashed border-destructive/30 bg-white/70 p-5 text-center">
               <p className="text-base font-black text-foreground">{postsError}</p>
             </div>
-          ) : visiblePosts.length > 0 ? (
-            visiblePosts.map(post => (
-              <BlackboardPostCard key={post.id} post={post} onJoin={handleJoinPost} />
+          ) : groupedPosts.length > 0 ? (
+            groupedPosts.map(group => (
+              <section key={group.label} className="space-y-3">
+                <div className="sticky top-0 z-10 flex items-center gap-2 bg-[#fbfaff]/92 py-1 backdrop-blur">
+                  <span className="h-px flex-1 bg-border" />
+                  <span className="rounded-full border border-border bg-white px-3 py-1 text-xs font-black text-muted-foreground">
+                    {group.label}
+                  </span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+                {group.posts.map(post => (
+                  <BlackboardPostCard
+                    key={post.id}
+                    post={post}
+                    userId={user?.id}
+                    onOpen={selectedPost => setSelectedPostId(selectedPost.id)}
+                    onEdit={openEditComposer}
+                    onDelete={postToDelete => void handleDeletePost(postToDelete)}
+                  />
+                ))}
+              </section>
             ))
           ) : (
             <div className="rounded-[1.2rem] border border-dashed border-primary/20 bg-white/70 p-5 text-center">
-              <p className="text-base font-black text-foreground">
-                还没有真实发布
-              </p>
+              <p className="text-base font-black text-foreground">还没有帖子</p>
               <p className="mt-1 text-sm font-bold leading-relaxed text-muted-foreground">
-                有人发出发、求助或拼车后，会显示在这里。
+                有人找搭子、求助或分享清迈现场后，会显示在这里。
               </p>
             </div>
           )}
@@ -735,15 +1111,29 @@ export function CmiBlackboard({
       {composerOpen && (
         <ComposerSheet
           draft={draft}
+          title={editingPostId ? '编辑帖子' : '发一条'}
           submitting={submitting}
           onDraftChange={setDraft}
-          onSubmit={handleCreatePost}
-          onClose={() => setComposerOpen(false)}
+          onAddImages={handleAddDraftImages}
+          onRemoveExistingImage={handleRemoveExistingImage}
+          onRemoveDraftImage={handleRemoveDraftImage}
+          onSubmit={handleSubmitPost}
+          onClose={closeComposer}
         />
       )}
 
-      {contactPost && (
-        <ContactSheet post={contactPost} onClose={() => setContactPost(null)} />
+      {selectedPost && (
+        <PostDetailSheet
+          post={selectedPost}
+          userId={user?.id}
+          commentText={commentDrafts[selectedPost.id] || ''}
+          commentSubmitting={commentSubmitting}
+          onCommentChange={value => setCommentDrafts(currentDrafts => ({ ...currentDrafts, [selectedPost.id]: value }))}
+          onSubmitComment={() => handleSubmitComment(selectedPost)}
+          onEdit={openEditComposer}
+          onDelete={postToDelete => void handleDeletePost(postToDelete)}
+          onClose={() => setSelectedPostId(null)}
+        />
       )}
     </section>
   );
@@ -751,7 +1141,7 @@ export function CmiBlackboard({
 
 export function CmiBlackboardEntry({ onOpen }: { onOpen: () => void }) {
   return (
-    <section aria-label="一起出发看板入口">
+    <section aria-label="清迈生活板入口">
       <button
         type="button"
         className="group flex w-full items-center gap-3 rounded-[1.35rem] border border-primary/20 bg-[#fbfaff]/95 p-3 text-left shadow-[0_16px_36px_rgba(65,51,112,0.12)] transition-transform active:scale-[0.99]"
@@ -763,17 +1153,14 @@ export function CmiBlackboardEntry({ onOpen }: { onOpen: () => void }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-3">
             <h2 className="truncate text-[1.35rem] font-black leading-tight text-foreground">
-              一起出发！
+              清迈生活板
             </h2>
             <span className="shrink-0 rounded-full bg-primary px-3 py-1.5 text-xs font-black text-primary-foreground">
-              进入看板
+              进入
             </span>
           </div>
           <p className="mt-1 line-clamp-2 text-xs font-black leading-snug text-muted-foreground">
-            约搭子、求助、拼车，先放在这里。
-          </p>
-          <p className="mt-2 text-[11px] font-black text-primary">
-            只显示真实发布内容
+            找搭子、求助、分享清迈现场。
           </p>
         </div>
       </button>
@@ -787,16 +1174,16 @@ export function CmiBlackboardHomeCard({ onOpen }: { onOpen: () => void }) {
       type="button"
       className="min-h-[124px] rounded-lg border-2 border-primary bg-[#fbfaff]/95 p-3 text-left text-foreground shadow-[3px_4px_0_rgba(0,0,0,0.16)] transition-transform active:translate-y-0.5 active:shadow-[2px_3px_0_rgba(0,0,0,0.14)]"
       onClick={onOpen}
-      aria-label="打开一起出发看板"
+      aria-label="打开清迈生活板"
     >
       <div className="mb-3 flex items-start gap-3">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
           <img src={BLACKBOARD_ICON_URL} alt="" className="h-10 w-10 object-contain" />
         </div>
       </div>
-      <p className="text-base font-black leading-tight">一起出发！</p>
+      <p className="text-base font-black leading-tight">清迈生活板</p>
       <p className="mt-1 line-clamp-2 text-xs font-semibold leading-snug text-muted-foreground">
-        约搭子、求助、拼车。
+        找搭子、求助、分享。
       </p>
     </button>
   );
