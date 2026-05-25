@@ -23,10 +23,9 @@ const POSTER_WIDTH = CONTENT_WIDTH;
 const POSTER_RADIUS = 38;
 const MODULE_GAP = 28;
 const FONT_FAMILY = '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif';
-const SLOGAN_FONT_FAMILY =
-  '"HanziPenSC-W5", "HanziPen SC", "翩翩体-简", "HanziPen TC", "Hannotate SC", "Kaiti SC", "STKaiti", "KaiTi", "Marker Felt", cursive';
 const MAP_QR_URL = '/cmi-home/qr-cmi-map-root.png';
-const MAP_URL_LABEL = 'cmti.uk';
+const SLOGAN_ART_URL = '/cmi-home/cmi-map-slogan-handwritten.png';
+const MAP_URL_LABEL = 'cmimap.com';
 const INTRO_FONT = `1000 54px ${FONT_FAMILY}`;
 const INTRO_LINE_HEIGHT = 68;
 const FACT_LABEL_FONT = `950 32px ${FONT_FAMILY}`;
@@ -185,61 +184,14 @@ const drawCardBackground = (
   context.stroke();
 };
 
-const drawHandwrittenSlogan = (
-  context: CanvasRenderingContext2D,
-  text: string,
-  x: number,
-  y: number
-) => {
-  context.save();
-  context.translate(x, y);
-  context.rotate(-0.014);
-  context.fillStyle = 'rgba(30, 24, 56, 0.88)';
-  context.font = `400 58px ${SLOGAN_FONT_FAMILY}`;
-  context.textBaseline = 'alphabetic';
-  context.shadowColor = 'rgba(255, 227, 91, 0.22)';
-  context.shadowOffsetY = 2;
-  context.shadowBlur = 0;
-
-  let cursorX = 0;
-  Array.from(text).forEach((character, index) => {
-    const yOffset = Math.sin(index * 0.9) * 3;
-    const rotation = ((index % 5) - 2) * 0.003;
-    context.save();
-    context.translate(cursorX, yOffset);
-    context.rotate(rotation);
-    context.fillText(character, 0, 0);
-    context.restore();
-    cursorX += context.measureText(character).width + (character === '，' ? 2 : 1);
-  });
-  context.restore();
-};
-
-const drawHeader = (context: CanvasRenderingContext2D) => {
+const drawHeader = (context: CanvasRenderingContext2D, sloganImage: HTMLImageElement) => {
   context.fillStyle = '#050505';
   context.font = `1000 86px ${FONT_FAMILY}`;
   context.fillText('CMI Map', CONTENT_X, 130);
 
-  drawHandwrittenSlogan(context, '清迈活动和好去处，都在这里', CONTENT_X, 214);
-
-  context.save();
-  context.strokeStyle = 'rgba(5, 5, 5, 0.58)';
-  context.lineWidth = 4;
-  context.setLineDash([18, 14]);
-  context.beginPath();
-  context.moveTo(CONTENT_X + 4, 254);
-  context.bezierCurveTo(CONTENT_X + 226, 236, CONTENT_X + 512, 260, CONTENT_X + 738, 248);
-  context.stroke();
-
-  context.setLineDash([]);
-  context.strokeStyle = '#ffe35b';
-  context.lineWidth = 12;
-  context.lineCap = 'round';
-  context.beginPath();
-  context.moveTo(CONTENT_X, 250);
-  context.bezierCurveTo(CONTENT_X + 228, 232, CONTENT_X + 512, 256, CONTENT_X + 740, 244);
-  context.stroke();
-  context.restore();
+  const sloganWidth = 880;
+  const sloganHeight = Math.round(sloganWidth * (sloganImage.naturalHeight / sloganImage.naturalWidth));
+  context.drawImage(sloganImage, CONTENT_X - 6, 172, sloganWidth, sloganHeight);
 };
 
 const drawPoster = (
@@ -354,9 +306,10 @@ export const createCmiEventShareCard = async ({
   posterUrl,
   mapQrUrl = MAP_QR_URL,
 }: CmiEventShareCardInput): Promise<CmiEventShareCardResult> => {
-  const [posterImage, qrImage] = await Promise.all([
+  const [posterImage, qrImage, sloganImage] = await Promise.all([
     loadImage(posterUrl),
     loadImage(mapQrUrl),
+    loadImage(SLOGAN_ART_URL),
   ]);
 
   const measureCanvas = document.createElement('canvas');
@@ -368,7 +321,7 @@ export const createCmiEventShareCard = async ({
   const introLines = wrapText(measureContext, event.summary || event.title, introMaxWidth, 4);
 
   const posterHeight = Math.round(POSTER_WIDTH * (posterImage.naturalHeight / posterImage.naturalWidth));
-  const headerHeight = 280;
+  const headerHeight = 330;
   const posterY = CARD_PADDING_TOP + headerHeight;
   const introY = posterY + posterHeight + MODULE_GAP;
   const introHeight = 118 + introLines.length * INTRO_LINE_HEIGHT;
@@ -387,7 +340,7 @@ export const createCmiEventShareCard = async ({
   context.fillStyle = '#050505';
   context.fillRect(0, 0, CARD_WIDTH, cardHeight);
   drawCardBackground(context, CARD_WIDTH, cardHeight);
-  drawHeader(context);
+  drawHeader(context, sloganImage);
   drawPoster(context, posterImage, CONTENT_X, posterY, POSTER_WIDTH, posterHeight);
   drawIntroCard(context, introLines, CONTENT_X, introY, CONTENT_WIDTH, introHeight);
   drawFooter(context, event, qrImage, footerY, footerHeight);
