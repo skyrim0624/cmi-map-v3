@@ -303,83 +303,120 @@ function BlackboardPostCard({
   const CategoryIcon = CATEGORY_ICON_BY_ID[post.category];
   const placePath = post.linkedPlaceName ? getPlacePath(post.linkedPlaceName) : undefined;
   const canManagePost = Boolean(userId && post.authorId === userId);
+  const metaItems = [
+    post.timeLabel ? { id: 'time', value: post.timeLabel } : null,
+    post.locationLabel ? { id: 'location', value: post.locationLabel, to: placePath } : null,
+  ].filter(Boolean) as Array<{ id: string; value: string; to?: string }>;
 
   return (
-    <article className="rounded-[1.35rem] border border-border bg-white p-4 shadow-[0_12px_30px_rgba(32,25,54,0.08)]">
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="min-w-0 text-xl font-black leading-tight text-foreground">{post.title}</h3>
-        <span
-          className={cn(
-            'inline-flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 text-xs font-black',
-            CATEGORY_TONES[post.category]
-          )}
+    <article className="bg-white px-5 pb-5 pt-6">
+      <div className="flex items-start gap-3">
+        <Link
+          to={getPersonMapPath(post.author)}
+          className="grid h-[3.15rem] w-[3.15rem] shrink-0 place-items-center overflow-hidden rounded-full bg-[#eef0f4] text-[1.15rem] font-black text-[#6f86a0]"
+          aria-label={`查看${post.author}的清迈地图`}
         >
-          <CategoryIcon className="h-3.5 w-3.5" strokeWidth={2.4} />
-          {BLACKBOARD_CATEGORY_LABELS[post.category]}
-        </span>
+          {post.authorInitial}
+        </Link>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <Link
+              to={getPersonMapPath(post.author)}
+              className="min-w-0 truncate text-[1.06rem] font-black leading-tight text-[#6d839b] active:opacity-70"
+            >
+              {post.author}
+            </Link>
+            <span
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1 rounded-[0.35rem] px-1.5 py-0.5 text-[0.72rem] font-black leading-none',
+                CATEGORY_TONES[post.category]
+              )}
+            >
+              <CategoryIcon className="h-3 w-3" strokeWidth={2.4} />
+              {BLACKBOARD_CATEGORY_LABELS[post.category]}
+            </span>
+          </div>
+          <p className="mt-1 text-[0.94rem] font-semibold leading-none text-[#9b9b9b]">
+            {post.createdLabel}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[#9c9c9c] active:bg-[#f2f2f2]"
+          onClick={() => onOpen(post)}
+          aria-label="打开帖子详情"
+        >
+          <span className="text-[1.6rem] font-black leading-none">...</span>
+        </button>
       </div>
 
-      <p className="mt-3 whitespace-pre-wrap text-[15px] font-semibold leading-relaxed text-foreground/82">
-        {renderPostBody(post)}
-      </p>
+      <div className="mt-4 space-y-2">
+        <h3 className="text-[1.32rem] font-medium leading-snug text-[#5c5c5c]">{post.title}</h3>
+        <p className="whitespace-pre-wrap text-[1.08rem] font-normal leading-[1.58] text-[#5f5f5f]">
+          {renderPostBody(post)}
+        </p>
+      </div>
+
+      {metaItems.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.94rem] font-semibold text-[#8c8c8c]">
+          {metaItems.map((item, index) => (
+            <span key={item.id} className="inline-flex min-w-0 items-center gap-2">
+              {index > 0 && <span className="text-[#c3c3c3]">·</span>}
+              {item.to ? (
+                <Link to={item.to} className="min-w-0 truncate active:opacity-70">
+                  {item.value}
+                </Link>
+              ) : (
+                <span className="min-w-0 truncate">{item.value}</span>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {post.contactLabel && (
+        <p className="mt-2 whitespace-pre-wrap text-[0.94rem] font-semibold leading-relaxed text-[#8c8c8c]">
+          {post.contactLabel}
+        </p>
+      )}
 
       <div className="mt-3">
         <PostImages imageUrls={post.imageUrls} />
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        {post.timeLabel && <PostMeta icon={CalendarDays}>{post.timeLabel}</PostMeta>}
-        {post.locationLabel && <PostMeta icon={MapPin} to={placePath}>{post.locationLabel}</PostMeta>}
-        <PostMeta icon={MessageCircle}>评论 {post.comments.length}</PostMeta>
-      </div>
+      <div className="mt-5 flex items-center justify-end gap-4 text-[#525252]">
+        <button
+          type="button"
+          className="inline-flex h-10 items-center gap-1.5 rounded-full px-1 text-[0.95rem] font-bold active:bg-[#f2f2f2]"
+          onClick={() => onOpen(post)}
+          aria-label="查看评论"
+        >
+          <MessageCircle className="h-5 w-5" strokeWidth={2.1} />
+          {post.comments.length > 0 && <span>{post.comments.length}</span>}
+        </button>
 
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <Link
-            to={getPersonMapPath(post.author)}
-            className="flex min-w-0 items-center gap-2 rounded-full pr-1 transition active:scale-[0.98] active:bg-primary/5"
-            aria-label={`查看${post.author}的清迈地图`}
-          >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-black text-primary">
-              {post.authorInitial}
-            </span>
-            <span className="min-w-0 truncate text-sm font-black text-muted-foreground">
-              {post.author}
-            </span>
-          </Link>
-          <span className="shrink-0 text-sm font-black text-muted-foreground">· {post.createdLabel}</span>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1">
-          <button
-            type="button"
-            className="shrink-0 rounded-full bg-primary px-4 py-2.5 text-sm font-black text-primary-foreground shadow-[0_10px_22px_rgba(111,90,168,0.22)] transition-transform active:scale-[0.98]"
-            onClick={() => onOpen(post)}
-          >
-            看评论
-          </button>
-
-          {canManagePost && (
-            <div className="flex shrink-0 gap-1">
-              <button
-                type="button"
-                className="grid h-9 w-9 place-items-center rounded-full border border-border bg-white text-muted-foreground active:scale-[0.98]"
-                onClick={() => onEdit(post)}
-                aria-label="编辑帖子"
-              >
-                <Edit3 className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                className="grid h-9 w-9 place-items-center rounded-full border border-destructive/20 bg-white text-destructive active:scale-[0.98]"
-                onClick={() => onDelete(post)}
-                aria-label="删除帖子"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-        </div>
+        {canManagePost && (
+          <>
+            <button
+              type="button"
+              className="grid h-10 w-10 place-items-center rounded-full text-[#606060] active:bg-[#f2f2f2]"
+              onClick={() => onEdit(post)}
+              aria-label="编辑帖子"
+            >
+              <Edit3 className="h-5 w-5" strokeWidth={2.1} />
+            </button>
+            <button
+              type="button"
+              className="grid h-10 w-10 place-items-center rounded-full text-destructive active:bg-destructive/10"
+              onClick={() => onDelete(post)}
+              aria-label="删除帖子"
+            >
+              <Trash2 className="h-5 w-5" strokeWidth={2.1} />
+            </button>
+          </>
+        )}
       </div>
     </article>
   );
@@ -811,22 +848,6 @@ export function CmiBlackboard({
     return posts.filter(post => post.category === activeFilter);
   }, [activeFilter, posts]);
 
-  const groupedPosts = useMemo(() => {
-    const groups: Array<{ label: string; posts: BlackboardPost[] }> = [];
-
-    visiblePosts.forEach(post => {
-      const latestGroup = groups[groups.length - 1];
-      if (latestGroup?.label === post.dateGroupLabel) {
-        latestGroup.posts.push(post);
-        return;
-      }
-
-      groups.push({ label: post.dateGroupLabel, posts: [post] });
-    });
-
-    return groups;
-  }, [visiblePosts]);
-
   const selectedPost = selectedPostId
     ? posts.find(post => post.id === selectedPostId) || null
     : null;
@@ -1014,33 +1035,9 @@ export function CmiBlackboard({
   };
 
   return (
-    <section className="space-y-3" aria-label="清迈生活板">
-      <div className="rounded-[1.65rem] border border-primary/15 bg-[#fbfaff]/95 p-3 shadow-[0_18px_44px_rgba(65,51,112,0.12)] backdrop-blur-md">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-[0.9rem] bg-primary/10">
-              <img src={BLACKBOARD_ICON_URL} alt="" className="h-9 w-9 object-contain" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="truncate text-[1.45rem] font-black leading-tight text-foreground">
-                清迈生活板
-              </h2>
-              <p className="truncate text-xs font-black text-muted-foreground">
-                找搭子、求助、分享
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-black text-primary-foreground shadow-[0_10px_22px_rgba(111,90,168,0.24)] active:scale-[0.98]"
-            onClick={openCreateComposer}
-          >
-            <Plus className="h-[1.125rem] w-[1.125rem]" strokeWidth={2.8} />
-            发帖
-          </button>
-        </div>
-
-        <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <section className="-mx-4 min-h-[calc(100dvh-6.5rem)] bg-[#f2f2f2]" aria-label="清迈生活板">
+      <div className="sticky top-[calc(env(safe-area-inset-top)+4.6rem)] z-20 border-b border-[#eeeeee] bg-white px-4 py-3">
+        <div className="flex gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {CATEGORY_META.map(({ id, label, Icon }) => {
             const active = activeFilter === id;
             return (
@@ -1048,65 +1045,63 @@ export function CmiBlackboard({
                 key={id}
                 type="button"
                 className={cn(
-                  'flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm font-black transition-colors',
+                  'flex h-10 shrink-0 items-center gap-1.5 rounded-[0.65rem] px-3.5 text-[1rem] font-medium transition-colors',
                   active
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border bg-white/80 text-muted-foreground'
+                    ? 'bg-[#353535] text-white'
+                    : 'bg-[#eeeeee] text-[#222222]'
                 )}
                 onClick={() => setActiveFilter(id)}
               >
-                <Icon className="h-4 w-4" strokeWidth={2.4} />
+                <Icon className={cn('h-4 w-4', !active && id !== 'all' && 'hidden')} strokeWidth={2.4} />
                 {label}
                 <span>{getPostCount(posts, id)}</span>
               </button>
             );
           })}
         </div>
-
-        <div className="mt-3 space-y-4">
-          {loadingPosts ? (
-            <div className="rounded-[1.2rem] border border-dashed border-primary/20 bg-white/70 p-5 text-center">
-              <p className="text-base font-black text-foreground">正在加载论坛</p>
-              <p className="mt-1 text-sm font-bold leading-relaxed text-muted-foreground">
-                会按今天、昨天、前天往下排。
-              </p>
-            </div>
-          ) : postsError ? (
-            <div className="rounded-[1.2rem] border border-dashed border-destructive/30 bg-white/70 p-5 text-center">
-              <p className="text-base font-black text-foreground">{postsError}</p>
-            </div>
-          ) : groupedPosts.length > 0 ? (
-            groupedPosts.map(group => (
-              <section key={group.label} className="space-y-3">
-                <div className="sticky top-0 z-10 flex items-center gap-2 bg-[#fbfaff]/92 py-1 backdrop-blur">
-                  <span className="h-px flex-1 bg-border" />
-                  <span className="rounded-full border border-border bg-white px-3 py-1 text-xs font-black text-muted-foreground">
-                    {group.label}
-                  </span>
-                  <span className="h-px flex-1 bg-border" />
-                </div>
-                {group.posts.map(post => (
-                  <BlackboardPostCard
-                    key={post.id}
-                    post={post}
-                    userId={user?.id}
-                    onOpen={selectedPost => setSelectedPostId(selectedPost.id)}
-                    onEdit={openEditComposer}
-                    onDelete={postToDelete => void handleDeletePost(postToDelete)}
-                  />
-                ))}
-              </section>
-            ))
-          ) : (
-            <div className="rounded-[1.2rem] border border-dashed border-primary/20 bg-white/70 p-5 text-center">
-              <p className="text-base font-black text-foreground">还没有帖子</p>
-              <p className="mt-1 text-sm font-bold leading-relaxed text-muted-foreground">
-                有人找搭子、求助或分享清迈现场后，会显示在这里。
-              </p>
-            </div>
-          )}
-        </div>
       </div>
+
+      <div className="divide-y-[0.65rem] divide-[#f2f2f2]">
+        {loadingPosts ? (
+          <div className="bg-white px-5 py-10 text-center">
+            <p className="text-[1.05rem] font-bold text-[#555555]">正在加载论坛</p>
+            <p className="mt-1 text-[0.95rem] font-medium leading-relaxed text-[#8c8c8c]">
+              会按最新发布往下排。
+            </p>
+          </div>
+        ) : postsError ? (
+          <div className="bg-white px-5 py-10 text-center">
+            <p className="text-[1.05rem] font-bold text-[#555555]">{postsError}</p>
+          </div>
+        ) : visiblePosts.length > 0 ? (
+          visiblePosts.map(post => (
+            <BlackboardPostCard
+              key={post.id}
+              post={post}
+              userId={user?.id}
+              onOpen={selectedPost => setSelectedPostId(selectedPost.id)}
+              onEdit={openEditComposer}
+              onDelete={postToDelete => void handleDeletePost(postToDelete)}
+            />
+          ))
+        ) : (
+          <div className="bg-white px-5 py-10 text-center">
+            <p className="text-[1.05rem] font-bold text-[#555555]">还没有帖子</p>
+            <p className="mt-1 text-[0.95rem] font-medium leading-relaxed text-[#8c8c8c]">
+              有人找搭子、求助或分享清迈现场后，会显示在这里。
+            </p>
+          </div>
+        )}
+      </div>
+
+      <button
+        type="button"
+        className="fixed bottom-[calc(env(safe-area-inset-bottom)+4.25rem)] right-5 z-40 grid h-[4.5rem] w-[4.5rem] place-items-center rounded-full bg-[#18b99c] text-white shadow-[0_10px_28px_rgba(0,0,0,0.24)] active:scale-[0.97]"
+        onClick={openCreateComposer}
+        aria-label="发帖"
+      >
+        <Plus className="h-10 w-10" strokeWidth={2.2} />
+      </button>
 
       {composerOpen && (
         <ComposerSheet

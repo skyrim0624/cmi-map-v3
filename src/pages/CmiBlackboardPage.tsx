@@ -33,29 +33,29 @@ export default function CmiBlackboardPage() {
   }, [eventId]);
 
   return (
-    <div className="min-h-[100dvh] bg-[linear-gradient(180deg,#fbfaff_0%,#f8f7fb_55%,#ffffff_100%)]">
-      <header className="sticky top-0 z-30 border-b border-border/80 bg-background/95 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.85rem)] backdrop-blur-md">
+    <div className="min-h-[100dvh] bg-[#f2f2f2]">
+      <header className="sticky top-0 z-30 border-b border-[#eeeeee] bg-white px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.85rem)]">
         <div className="flex items-center gap-3">
           <button
             type="button"
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-border bg-white text-foreground shadow-sm"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-[#262626] shadow-[0_2px_8px_rgba(0,0,0,0.12)]"
             onClick={() => navigate('/')}
             aria-label="返回首页"
           >
             <ArrowLeft className="h-5 w-5" strokeWidth={2.5} />
           </button>
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-black leading-tight text-foreground">
+            <h1 className="truncate text-[1.8rem] font-black leading-tight text-[#262626]">
               清迈生活板
             </h1>
-            <p className="truncate text-xs font-black text-muted-foreground">
+            <p className="truncate text-[0.92rem] font-black text-[#8c8c8c]">
               找搭子、求助、分享，先放在这里。
             </p>
           </div>
         </div>
       </header>
 
-      <main className="px-4 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-4">
+      <main className="px-4 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-0">
         <CmiBlackboard autoOpenComposer={shouldOpenComposer} initialDraft={eventDraft} />
       </main>
     </div>
