@@ -4,9 +4,11 @@ import {
   buildAuthRedirectTo,
   getEmailCodeRetrySeconds,
   normalizeEmailCode,
+  validateEmailCodeSignInForm,
   validatePasswordResetRequestForm,
   validatePasswordSignInForm,
   validatePasswordUpdateForm,
+  validateRegistrationForm,
   validateAuthForm,
 } from './auth-flow.ts';
 
@@ -70,6 +72,68 @@ test('password sign in requires email and password', () => {
   assert.equal(validatePasswordSignInForm({ email: '', password: 'secret123' }), '请输入邮箱');
   assert.equal(validatePasswordSignInForm({ email: 'andreas@example.com', password: '' }), '请输入密码');
   assert.equal(validatePasswordSignInForm({ email: 'andreas@example.com', password: 'secret123' }), null);
+});
+
+test('registration requires email nickname matching password and confirmation code', () => {
+  assert.equal(
+    validateRegistrationForm({
+      step: 'request-code',
+      email: 'andreas@example.com',
+      userName: '子扬',
+      password: 'secret123',
+      confirmPassword: 'secret123',
+    }),
+    null
+  );
+  assert.equal(
+    validateRegistrationForm({
+      step: 'request-code',
+      email: 'andreas@example.com',
+      userName: '子扬',
+      password: 'short',
+      confirmPassword: 'short',
+    }),
+    '密码至少 6 位'
+  );
+  assert.equal(
+    validateRegistrationForm({
+      step: 'request-code',
+      email: 'andreas@example.com',
+      userName: '子扬',
+      password: 'secret123',
+      confirmPassword: 'secret124',
+    }),
+    '两次输入的密码不一致'
+  );
+  assert.equal(
+    validateRegistrationForm({
+      step: 'verify-code',
+      email: 'andreas@example.com',
+      userName: '子扬',
+      password: 'secret123',
+      confirmPassword: 'secret123',
+      code: '12345',
+    }),
+    '请输入 6 位邮箱验证码'
+  );
+});
+
+test('email code sign in treats OTP as an optional login fallback', () => {
+  assert.equal(
+    validateEmailCodeSignInForm({
+      step: 'request-code',
+      email: 'andreas@example.com',
+    }),
+    null
+  );
+  assert.equal(
+    validateEmailCodeSignInForm({
+      step: 'verify-code',
+      email: 'andreas@example.com',
+      code: '123456',
+    }),
+    null
+  );
 });
 
 test('password reset request only requires an email', () => {

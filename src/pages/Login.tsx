@@ -16,15 +16,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+  type AuthMode,
   type AuthStep,
   buildAuthRedirectTo,
   getEmailCodeRetrySeconds,
-  type AuthMode,
+  type LoginMethod,
   normalizeEmailCode,
-  validateAuthForm,
+  validateEmailCodeSignInForm,
   validatePasswordResetRequestForm,
   validatePasswordSignInForm,
   validatePasswordUpdateForm,
+  validateRegistrationForm,
 } from '@/features/auth/auth-flow';
 import { cn } from '@/lib/utils';
 
@@ -32,9 +34,10 @@ type LoginLocationState = {
   from?: string;
 };
 
-type PasswordPanel = 'none' | 'sign-in' | 'forgot' | 'update';
+type PasswordPanel = 'none' | 'forgot' | 'update';
 
-const getRedirectOrigin = () => (typeof window === 'undefined' ? 'https://cmimap.com' : window.location.origin);
+const getRedirectOrigin = () =>
+  typeof window === 'undefined' ? 'https://cmimap.com' : window.location.origin;
 
 export default function Login() {
   const navigate = useNavigate();
@@ -45,6 +48,7 @@ export default function Login() {
     verifyEmailCode,
     signInWithEmail,
     signInWithGoogle,
+    signUpWithEmail,
     sendPasswordResetEmail,
     updatePassword,
   } = useAuth();
@@ -52,17 +56,19 @@ export default function Login() {
   const isPasswordResetCallback = new URLSearchParams(location.search).get('auth') === 'reset-password';
 
   const [mode, setMode] = useState<AuthMode>('login');
+  const [loginMethod, setLoginMethod] = useState<LoginMethod>('password');
   const [authStep, setAuthStep] = useState<AuthStep>('request-code');
   const [email, setEmail] = useState('');
   const [userName, setUserName] = useState('');
+  const [password, setPassword] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [confirmRegisterPassword, setConfirmRegisterPassword] = useState('');
   const [emailCode, setEmailCode] = useState('');
   const [pendingEmail, setPendingEmail] = useState('');
   const [lastCodeSentAt, setLastCodeSentAt] = useState(0);
   const [passwordPanel, setPasswordPanel] = useState<PasswordPanel>(() =>
     isPasswordResetCallback ? 'update' : 'none'
   );
-  const [passwordEmail, setPasswordEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [lastPasswordResetSentAt, setLastPasswordResetSentAt] = useState(0);
@@ -71,6 +77,7 @@ export default function Login() {
   const isRegister = mode === 'register';
   const isVerifyingCode = authStep === 'verify-code';
   const isUpdatingPassword = passwordPanel === 'update';
+  const isEmailCodeLogin = mode === 'login' && loginMethod === 'code';
   const redirectTo = useMemo(
     () => buildAuthRedirectTo(getRedirectOrigin(), redirectPath),
     [redirectPath]
@@ -96,21 +103,74 @@ export default function Login() {
     if (errorDescription) toast.error(`登录失败: ${errorDescription}`);
   }, [location.hash]);
 
-  const switchMode = (nextMode: AuthMode) => {
-    setMode(nextMode);
+  const resetCodeState = () => {
     setAuthStep('request-code');
     setEmailCode('');
     setPendingEmail('');
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const switchMode = (nextMode: AuthMode) => {
+    setMode(nextMode);
+    setLoginMethod('password');
+    setPasswordPanel('none');
+    resetCodeState();
+  };
 
-    const validationError = validateAuthForm({
-      mode,
+  const heading = isUpdatingPassword
+    ? '设置新密码'
+    : isRegister
+      ? isVerifyingCode
+        ? '输入注册验证码'
+        : '注册 CMI Map'
+      : isEmailCodeLogin
+        ? isVerifyingCode
+          ? '输入登录验证码'
+          : '验证码登录'
+        : '登录 CMI Map';
+
+  const description = isUpdatingPassword
+    ? '从找回密码邮件回来后，在这里输入新密码。'
+    : isRegister
+      ? isVerifyingCode
+        ? `我们已经把 6 位验证码发到 ${pendingEmail || email.trim()}。`
+        : '设置昵称、邮箱和密码，邮箱验证后再进入。'
+      : isEmailCodeLogin
+        ? isVerifyingCode
+          ? `我们已经把 6 位验证码发到 ${pendingEmail || email.trim()}。`
+          : '不用密码时，可以临时用邮箱验证码登录。'
+        : '用邮箱和密码登录，也可以改用邮箱验证码。';
+
+  const submitPasswordSignIn = async () => {
+    const validationError = validatePasswordSignInForm({
+      email,
+      password,
+    });
+
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error } = await signInWithEmail(email.trim(), password);
+      if (error) {
+        toast.error(`登录失败: ${error.message}`);
+        return;
+      }
+
+      toast.success('登录成功');
+      navigate(redirectPath, { replace: true });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitEmailCodeSignIn = async () => {
+    const validationError = validateEmailCodeSignInForm({
       step: authStep,
       email,
-      userName,
       code: emailCode,
     });
 
@@ -131,9 +191,8 @@ export default function Login() {
 
         const { error } = await sendEmailCode({
           email,
-          userName: isRegister ? userName : undefined,
           redirectTo,
-          shouldCreateUser: isRegister,
+          shouldCreateUser: false,
         });
 
         if (error) {
@@ -160,11 +219,96 @@ export default function Login() {
         return;
       }
 
-      toast.success(isRegister ? '加入成功' : '登录成功');
+      toast.success('登录成功');
       navigate(redirectPath, { replace: true });
     } finally {
       setLoading(false);
     }
+  };
+
+  const submitRegistration = async () => {
+    const validationError = validateRegistrationForm({
+      step: authStep,
+      email,
+      userName,
+      password: registerPassword,
+      confirmPassword: confirmRegisterPassword,
+      code: emailCode,
+    });
+
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (authStep === 'request-code') {
+        const retrySeconds = getEmailCodeRetrySeconds(lastCodeSentAt, Date.now());
+        if (retrySeconds > 0) {
+          toast.error(`验证码刚刚发过，${retrySeconds} 秒后再试`);
+          return;
+        }
+
+        const { error, needsEmailConfirmation } = await signUpWithEmail(
+          email.trim(),
+          registerPassword,
+          userName,
+          redirectTo
+        );
+
+        if (error) {
+          toast.error(`注册失败: ${error.message}`);
+          return;
+        }
+
+        if (!needsEmailConfirmation) {
+          toast.success('注册成功');
+          navigate(redirectPath, { replace: true });
+          return;
+        }
+
+        setPendingEmail(email.trim());
+        setEmailCode('');
+        setAuthStep('verify-code');
+        setLastCodeSentAt(Date.now());
+        toast.success('注册验证码已发送');
+        return;
+      }
+
+      const { error } = await verifyEmailCode({
+        email: pendingEmail || email.trim(),
+        code: normalizeEmailCode(emailCode),
+        redirectTo,
+      });
+
+      if (error) {
+        toast.error(`验证码错误或已过期: ${error.message}`);
+        return;
+      }
+
+      toast.success('注册成功');
+      navigate(redirectPath, { replace: true });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMainSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (isRegister) {
+      await submitRegistration();
+      return;
+    }
+
+    if (loginMethod === 'code') {
+      await submitEmailCodeSignIn();
+      return;
+    }
+
+    await submitPasswordSignIn();
   };
 
   const handleGoogleSignIn = async () => {
@@ -183,40 +327,10 @@ export default function Login() {
     }
   };
 
-  const handlePasswordSignIn = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const signInEmail = passwordEmail.trim() || email.trim();
-    const validationError = validatePasswordSignInForm({
-      email: signInEmail,
-      password,
-    });
-
-    if (validationError) {
-      toast.error(validationError);
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const { error } = await signInWithEmail(signInEmail, password);
-      if (error) {
-        toast.error(`密码登录失败: ${error.message}`);
-        return;
-      }
-
-      toast.success('登录成功');
-      navigate(redirectPath, { replace: true });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handlePasswordResetRequest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const resetEmail = passwordEmail.trim() || email.trim();
+    const resetEmail = email.trim();
     const validationError = validatePasswordResetRequestForm({ email: resetEmail });
 
     if (validationError) {
@@ -279,6 +393,51 @@ export default function Login() {
     }
   };
 
+  const renderEmailField = () => (
+    <div className="space-y-2">
+      <Label htmlFor="email" className="text-sm font-black text-[#3f3f42]">
+        邮箱
+      </Label>
+      <div className="relative">
+        <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#92928d]" />
+        <Input
+          id="email"
+          type="email"
+          placeholder="your@email.com"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          disabled={loading || isVerifyingCode}
+          autoComplete="email"
+          className="h-12 rounded-2xl pl-10 text-base font-semibold"
+        />
+      </div>
+    </div>
+  );
+
+  const renderCodeField = () => (
+    <div className="space-y-2">
+      <Label htmlFor="emailCode" className="text-sm font-black text-[#3f3f42]">
+        邮箱验证码
+      </Label>
+      <div className="relative">
+        <CheckCircle2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#92928d]" />
+        <Input
+          id="emailCode"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          placeholder="6 位数字"
+          value={emailCode}
+          onChange={(event) => setEmailCode(normalizeEmailCode(event.target.value))}
+          disabled={loading}
+          autoComplete="one-time-code"
+          maxLength={6}
+          className="h-12 rounded-2xl pl-10 text-base font-semibold"
+        />
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#f6f6f2] px-4 py-8">
       <Card className="w-full max-w-[26rem] overflow-hidden rounded-[1.35rem] border-[#deded8] bg-white shadow-[0_18px_50px_rgba(31,31,35,0.08)]">
@@ -298,22 +457,10 @@ export default function Login() {
               CMI Map
             </p>
             <CardTitle className="text-[1.85rem] font-black leading-tight text-[#2f2f33]">
-              {isUpdatingPassword
-                ? '设置新密码'
-                : isVerifyingCode
-                  ? '输入邮箱验证码'
-                  : isRegister
-                    ? '加入清迈生活地图'
-                    : '回到你的清迈地图'}
+              {heading}
             </CardTitle>
             <CardDescription className="mt-2 text-[0.98rem] font-semibold leading-relaxed text-[#777777]">
-              {isUpdatingPassword
-                ? '从找回密码邮件回来后，在这里输入新密码。'
-                : isVerifyingCode
-                  ? `我们已经把 6 位验证码发到 ${pendingEmail || email.trim()}。`
-                  : isRegister
-                    ? '先留一个昵称和邮箱，收到验证码后就可以开始发帖、报名活动、补一句推荐。'
-                    : '输入邮箱，收到验证码后回到你的清迈地图。'}
+              {description}
             </CardDescription>
           </div>
 
@@ -321,7 +468,7 @@ export default function Login() {
             <div className="grid grid-cols-2 rounded-full bg-[#f0f0ec] p-1">
               {([
                 ['login', '登录'],
-                ['register', '快速加入'],
+                ['register', '注册'],
               ] as const).map(([nextMode, label]) => (
                 <button
                   key={nextMode}
@@ -381,10 +528,6 @@ export default function Login() {
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-[#f5f6f3] px-4 py-3 text-sm font-semibold leading-relaxed text-[#6d6d68]">
-                这个入口只用于找回密码邮件回跳后设置新密码。平时仍然可以直接用邮箱验证码登录。
-              </div>
-
               <Button
                 type="submit"
                 className="h-12 w-full rounded-full text-base font-black"
@@ -399,12 +542,12 @@ export default function Login() {
                 onClick={() => setPasswordPanel('none')}
                 disabled={loading}
               >
-                返回验证码登录
+                返回登录
               </button>
             </form>
           ) : (
             <>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleMainSubmit} className="space-y-4">
                 {isRegister && !isVerifyingCode && (
                   <div className="space-y-2">
                     <Label htmlFor="userName" className="text-sm font-black text-[#3f3f42]">
@@ -427,77 +570,176 @@ export default function Login() {
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-black text-[#3f3f42]">
-                    邮箱
-                  </Label>
-                  <div className="relative">
-                    <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#92928d]" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="your@email.com"
-                      value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      disabled={loading || isVerifyingCode}
-                      autoComplete="email"
-                      className="h-12 rounded-2xl pl-10 text-base font-semibold"
-                    />
-                  </div>
-                </div>
+                {!isVerifyingCode && renderEmailField()}
 
-                {isVerifyingCode && (
+                {!isRegister && loginMethod === 'password' && (
                   <div className="space-y-2">
-                    <Label htmlFor="emailCode" className="text-sm font-black text-[#3f3f42]">
-                      邮箱验证码
+                    <Label htmlFor="password" className="text-sm font-black text-[#3f3f42]">
+                      密码
                     </Label>
                     <div className="relative">
-                      <CheckCircle2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#92928d]" />
+                      <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#92928d]" />
                       <Input
-                        id="emailCode"
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        placeholder="6 位数字"
-                        value={emailCode}
-                        onChange={(event) => setEmailCode(normalizeEmailCode(event.target.value))}
+                        id="password"
+                        type="password"
+                        placeholder="输入密码"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
                         disabled={loading}
-                        autoComplete="one-time-code"
-                        maxLength={6}
+                        autoComplete="current-password"
                         className="h-12 rounded-2xl pl-10 text-base font-semibold"
                       />
                     </div>
                   </div>
                 )}
 
-                <div className="rounded-2xl bg-[#f5f6f3] px-4 py-3 text-sm font-semibold leading-relaxed text-[#6d6d68]">
-                  {isVerifyingCode
-                    ? '验证码通常 1 小时内有效。没收到的话，等 60 秒后可以返回上一步重新发送。'
-                    : '默认使用邮箱验证码，不需要设置或记住密码。邮箱只用于登录、活动报名和必要通知。'}
-                </div>
+                {isRegister && !isVerifyingCode && (
+                  <>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="registerPassword"
+                        className="text-sm font-black text-[#3f3f42]"
+                      >
+                        设置密码
+                      </Label>
+                      <div className="relative">
+                        <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#92928d]" />
+                        <Input
+                          id="registerPassword"
+                          type="password"
+                          placeholder="至少 6 位"
+                          value={registerPassword}
+                          onChange={(event) => setRegisterPassword(event.target.value)}
+                          disabled={loading}
+                          autoComplete="new-password"
+                          className="h-12 rounded-2xl pl-10 text-base font-semibold"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="confirmRegisterPassword"
+                        className="text-sm font-black text-[#3f3f42]"
+                      >
+                        确认密码
+                      </Label>
+                      <div className="relative">
+                        <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#92928d]" />
+                        <Input
+                          id="confirmRegisterPassword"
+                          type="password"
+                          placeholder="再输入一次"
+                          value={confirmRegisterPassword}
+                          onChange={(event) => setConfirmRegisterPassword(event.target.value)}
+                          disabled={loading}
+                          autoComplete="new-password"
+                          className="h-12 rounded-2xl pl-10 text-base font-semibold"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {(isVerifyingCode || isEmailCodeLogin) && isVerifyingCode && renderCodeField()}
 
                 <Button
                   type="submit"
                   className="h-12 w-full rounded-full text-base font-black"
                   disabled={loading}
                 >
-                  {loading ? '处理中...' : isVerifyingCode ? '验证并进入' : '发送验证码'}
+                  {loading
+                    ? '处理中...'
+                    : isRegister
+                      ? isVerifyingCode
+                        ? '验证并完成注册'
+                        : '发送注册验证码'
+                      : loginMethod === 'code'
+                        ? isVerifyingCode
+                          ? '验证并登录'
+                          : '发送登录验证码'
+                        : '登录'}
                 </Button>
 
-                {isVerifyingCode && (
+                {!isRegister && loginMethod === 'password' && (
+                  <div className="flex items-center justify-between text-sm font-black">
+                    <button
+                      type="button"
+                      className="text-[#12967e]"
+                      onClick={() => setPasswordPanel('forgot')}
+                      disabled={loading}
+                    >
+                      忘记密码？
+                    </button>
+                    <button
+                      type="button"
+                      className="text-[#6f6f69]"
+                      onClick={() => {
+                        setLoginMethod('code');
+                        setPasswordPanel('none');
+                        resetCodeState();
+                      }}
+                      disabled={loading}
+                    >
+                      用验证码登录
+                    </button>
+                  </div>
+                )}
+
+                {loginMethod === 'code' && (
                   <button
                     type="button"
                     className="w-full rounded-full py-2 text-sm font-black text-[#12967e] active:bg-[#18b99c]/8"
                     onClick={() => {
-                      setAuthStep('request-code');
-                      setEmailCode('');
+                      setLoginMethod('password');
+                      resetCodeState();
                     }}
                     disabled={loading}
                   >
-                    换邮箱或重新发送
+                    改用密码登录
+                  </button>
+                )}
+
+                {isRegister && isVerifyingCode && (
+                  <button
+                    type="button"
+                    className="w-full rounded-full py-2 text-sm font-black text-[#12967e] active:bg-[#18b99c]/8"
+                    onClick={resetCodeState}
+                    disabled={loading}
+                  >
+                    修改注册信息
                   </button>
                 )}
               </form>
+
+              {passwordPanel === 'forgot' && (
+                <form
+                  onSubmit={handlePasswordResetRequest}
+                  className="mt-4 space-y-3 rounded-[1.2rem] border border-[#e5e5df] bg-[#fbfbf8] p-4"
+                >
+                  <div className="text-sm font-semibold leading-relaxed text-[#777771]">
+                    输入上面的邮箱，我们会发送一封设置新密码的邮件。
+                  </div>
+
+                  <Button
+                    type="submit"
+                    variant="secondary"
+                    className="h-11 w-full rounded-full text-sm font-black"
+                    disabled={loading}
+                  >
+                    {loading ? '处理中...' : '发送找回邮件'}
+                  </Button>
+
+                  <button
+                    type="button"
+                    className="w-full rounded-full py-1.5 text-sm font-black text-[#8a8a84]"
+                    onClick={() => setPasswordPanel('none')}
+                    disabled={loading}
+                  >
+                    收起
+                  </button>
+                </form>
+              )}
 
               <div className="my-5 flex items-center gap-3 text-xs font-black text-[#aaa9a3]">
                 <span className="h-px flex-1 bg-[#ecece6]" />
@@ -505,155 +747,18 @@ export default function Login() {
                 <span className="h-px flex-1 bg-[#ecece6]" />
               </div>
 
-              <div className="space-y-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-12 w-full rounded-full border-[#deded8] text-base font-black"
-                  onClick={handleGoogleSignIn}
-                  disabled={loading}
-                >
-                  <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-black text-[#4285f4] shadow-sm">
-                    G
-                  </span>
-                  用 Google 登录
-                </Button>
-
-                {passwordPanel === 'none' && (
-                  <button
-                    type="button"
-                    className="w-full rounded-full py-2 text-sm font-black text-[#6f6f69] active:bg-[#f2f2ed]"
-                    onClick={() => {
-                      setPasswordPanel('sign-in');
-                      setPasswordEmail((currentEmail) => currentEmail || email.trim());
-                    }}
-                    disabled={loading}
-                  >
-                    使用密码登录或找回密码
-                  </button>
-                )}
-
-                {passwordPanel === 'sign-in' && (
-                  <form
-                    onSubmit={handlePasswordSignIn}
-                    className="space-y-3 rounded-[1.2rem] border border-[#e5e5df] bg-[#fbfbf8] p-4"
-                  >
-                    <div className="space-y-2">
-                      <Label htmlFor="passwordEmail" className="text-sm font-black text-[#3f3f42]">
-                        邮箱
-                      </Label>
-                      <div className="relative">
-                        <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#92928d]" />
-                        <Input
-                          id="passwordEmail"
-                          type="email"
-                          placeholder="your@email.com"
-                          value={passwordEmail}
-                          onChange={(event) => setPasswordEmail(event.target.value)}
-                          disabled={loading}
-                          autoComplete="email"
-                          className="h-11 rounded-2xl pl-10 text-base font-semibold"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="password" className="text-sm font-black text-[#3f3f42]">
-                        密码
-                      </Label>
-                      <div className="relative">
-                        <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#92928d]" />
-                        <Input
-                          id="password"
-                          type="password"
-                          placeholder="输入密码"
-                          value={password}
-                          onChange={(event) => setPassword(event.target.value)}
-                          disabled={loading}
-                          autoComplete="current-password"
-                          className="h-11 rounded-2xl pl-10 text-base font-semibold"
-                        />
-                      </div>
-                    </div>
-
-                    <Button
-                      type="submit"
-                      variant="secondary"
-                      className="h-11 w-full rounded-full text-sm font-black"
-                      disabled={loading}
-                    >
-                      {loading ? '处理中...' : '密码登录'}
-                    </Button>
-
-                    <div className="flex items-center justify-between text-sm font-black">
-                      <button
-                        type="button"
-                        className="text-[#12967e]"
-                        onClick={() => setPasswordPanel('forgot')}
-                        disabled={loading}
-                      >
-                        忘记密码？
-                      </button>
-                      <button
-                        type="button"
-                        className="text-[#8a8a84]"
-                        onClick={() => setPasswordPanel('none')}
-                        disabled={loading}
-                      >
-                        收起
-                      </button>
-                    </div>
-                  </form>
-                )}
-
-                {passwordPanel === 'forgot' && (
-                  <form
-                    onSubmit={handlePasswordResetRequest}
-                    className="space-y-3 rounded-[1.2rem] border border-[#e5e5df] bg-[#fbfbf8] p-4"
-                  >
-                    <div className="space-y-2">
-                      <Label htmlFor="resetEmail" className="text-sm font-black text-[#3f3f42]">
-                        接收找回邮件的邮箱
-                      </Label>
-                      <div className="relative">
-                        <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#92928d]" />
-                        <Input
-                          id="resetEmail"
-                          type="email"
-                          placeholder="your@email.com"
-                          value={passwordEmail}
-                          onChange={(event) => setPasswordEmail(event.target.value)}
-                          disabled={loading}
-                          autoComplete="email"
-                          className="h-11 rounded-2xl pl-10 text-base font-semibold"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="text-sm font-semibold leading-relaxed text-[#777771]">
-                      如果这个邮箱对应已有账户，我们会发送一封设置新密码的邮件。
-                    </div>
-
-                    <Button
-                      type="submit"
-                      variant="secondary"
-                      className="h-11 w-full rounded-full text-sm font-black"
-                      disabled={loading}
-                    >
-                      {loading ? '处理中...' : '发送找回邮件'}
-                    </Button>
-
-                    <button
-                      type="button"
-                      className="w-full rounded-full py-1.5 text-sm font-black text-[#8a8a84]"
-                      onClick={() => setPasswordPanel('sign-in')}
-                      disabled={loading}
-                    >
-                      返回密码登录
-                    </button>
-                  </form>
-                )}
-              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 w-full rounded-full border-[#deded8] text-base font-black"
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+              >
+                <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-black text-[#4285f4] shadow-sm">
+                  G
+                </span>
+                用 Google 登录
+              </Button>
             </>
           )}
         </CardContent>

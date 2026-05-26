@@ -1,5 +1,6 @@
 export type AuthMode = 'login' | 'register';
 export type AuthStep = 'request-code' | 'verify-code';
+export type LoginMethod = 'password' | 'code';
 
 export interface AuthFormState {
   mode: AuthMode;
@@ -12,6 +13,21 @@ export interface AuthFormState {
 export interface PasswordSignInFormState {
   email: string;
   password: string;
+}
+
+export interface RegistrationFormState {
+  step: AuthStep;
+  email: string;
+  userName: string;
+  password: string;
+  confirmPassword: string;
+  code?: string;
+}
+
+export interface EmailCodeSignInFormState {
+  step: AuthStep;
+  email: string;
+  code?: string;
 }
 
 export interface PasswordResetRequestFormState {
@@ -54,6 +70,30 @@ export const validateAuthForm = (state: AuthFormState) => {
 export const validatePasswordSignInForm = (state: PasswordSignInFormState) => {
   if (!state.email.trim()) return '请输入邮箱';
   if (!state.password) return '请输入密码';
+  return null;
+};
+
+export const validateRegistrationForm = (state: RegistrationFormState) => {
+  if (!state.email.trim()) return '请输入邮箱';
+
+  if (state.step === 'verify-code') {
+    if (normalizeEmailCode(state.code ?? '').length !== 6) return '请输入 6 位邮箱验证码';
+    return null;
+  }
+
+  if (!state.userName.trim()) return '请输入昵称';
+  if (state.password.length < MIN_PASSWORD_LENGTH) return `密码至少 ${MIN_PASSWORD_LENGTH} 位`;
+  if (state.password !== state.confirmPassword) return '两次输入的密码不一致';
+  return null;
+};
+
+export const validateEmailCodeSignInForm = (state: EmailCodeSignInFormState) => {
+  if (!state.email.trim()) return '请输入邮箱';
+
+  if (state.step === 'verify-code') {
+    if (normalizeEmailCode(state.code ?? '').length !== 6) return '请输入 6 位邮箱验证码';
+  }
+
   return null;
 };
 
