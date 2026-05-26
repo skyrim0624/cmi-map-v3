@@ -1,10 +1,15 @@
 export type BlackboardPostCategory = 'companion' | 'help' | 'share';
-export type BlackboardPostFilter = 'all' | BlackboardPostCategory;
+export type BlackboardPostFilter = 'all' | 'featured' | BlackboardPostCategory;
 
 export interface BlackboardCategoryOption {
   id: BlackboardPostCategory;
   label: string;
   description: string;
+}
+
+export interface BlackboardFeedFilterOption {
+  id: BlackboardPostFilter;
+  label: string;
 }
 
 export const BLACKBOARD_CATEGORY_OPTIONS: BlackboardCategoryOption[] = [
@@ -33,6 +38,12 @@ export const BLACKBOARD_CATEGORY_LABELS: Record<BlackboardPostCategory, string> 
 
 export const getPublishableBlackboardCategories = (): BlackboardPostCategory[] =>
   BLACKBOARD_CATEGORY_OPTIONS.map(option => option.id);
+
+export const getBlackboardFeedFilters = (): BlackboardFeedFilterOption[] => [
+  { id: 'all', label: '全部' },
+  { id: 'featured', label: '精选' },
+  ...BLACKBOARD_CATEGORY_OPTIONS.map(({ id, label }) => ({ id, label })),
+];
 
 export const coerceBlackboardCategory = (category: string | null | undefined): BlackboardPostCategory => {
   if (category === 'companion' || category === 'help' || category === 'share') return category;
