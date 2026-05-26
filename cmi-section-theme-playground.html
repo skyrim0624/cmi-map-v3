@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CMI Map 板块主题色 Playground</title>
+    <style>
+      :root {
+        --ink: #171513;
+        --muted: #6f6a61;
+        --line: rgba(23, 21, 19, 0.16);
+        --radius: 22px;
+        --shadow-hard: 5px 6px 0 rgba(23, 21, 19, 0.22);
+        --shadow-soft: 0 18px 45px rgba(23, 21, 19, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #eeeae2;
+        color: var(--ink);
+        font-family:
+          ui-rounded,
+          "PingFang SC",
+          "Hiragino Sans GB",
+          "Microsoft YaHei",
+          system-ui,
+          sans-serif;
+      }
+
+      .page {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 34px 18px 56px;
+      }
+
+      .intro {
+        display: grid;
+        gap: 14px;
+        margin-bottom: 22px;
+      }
+
+      .eyebrow {
+        width: fit-content;
+        border: 2px solid var(--ink);
+        border-radius: 999px;
+        background: #ffffff;
+        padding: 7px 13px;
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        max-width: 760px;
+        font-size: clamp(30px, 6vw, 64px);
+        line-height: 0.98;
+        font-weight: 950;
+        letter-spacing: 0;
+      }
+
+      .intro p {
+        max-width: 760px;
+        color: #46413a;
+        font-size: 16px;
+        font-weight: 800;
+        line-height: 1.65;
+      }
+
+      .theme-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .theme-panel {
+        min-height: 680px;
+        overflow: hidden;
+        border: 3px solid var(--ink);
+        border-radius: 30px;
+        box-shadow: var(--shadow-hard);
+      }
+
+      .theme-shell {
+        min-height: 100%;
+        padding: 18px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .brand-pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 42px;
+        border: 2px solid currentColor;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.88);
+        padding: 0 15px;
+        font-size: 16px;
+        font-weight: 950;
+        box-shadow: 2px 3px 0 rgba(23, 21, 19, 0.16);
+      }
+
+      .icon-button {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        place-items: center;
+        border: 2px solid currentColor;
+        border-radius: 15px;
+        background: rgba(255, 255, 255, 0.82);
+        font-size: 20px;
+        font-weight: 950;
+      }
+
+      .section-title {
+        margin-bottom: 16px;
+      }
+
+      .mock-note {
+        width: fit-content;
+        margin: 0 0 12px;
+        border: 2px dashed rgba(23, 21, 19, 0.28);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.72);
+        padding: 7px 11px;
+        color: #605b53;
+        font-size: 12px;
+        font-weight: 950;
+      }
+
+      .section-title h2 {
+        font-size: clamp(28px, 4vw, 44px);
+        line-height: 0.98;
+        font-weight: 950;
+      }
+
+      .section-title p {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 850;
+        line-height: 1.45;
+      }
+
+      .chips {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        scrollbar-width: none;
+      }
+
+      .chips::-webkit-scrollbar {
+        display: none;
+      }
+
+      .chip {
+        flex: 0 0 auto;
+        border: 2px solid var(--chip-line, var(--line));
+        border-radius: 999px;
+        background: var(--chip-bg, rgba(255, 255, 255, 0.72));
+        padding: 9px 13px;
+        color: var(--chip-ink, var(--ink));
+        font-size: 13px;
+        font-weight: 950;
+      }
+
+      .chip.active {
+        background: var(--accent);
+        color: var(--accent-ink, #ffffff);
+        border-color: var(--accent);
+      }
+
+      .stack {
+        display: grid;
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .guide-card,
+      .forum-card,
+      .event-card,
+      .inn-card {
+        border-radius: var(--radius);
+      }
+
+      .guide-card {
+        border: 1px solid rgba(25, 25, 25, 0.1);
+        background: #ffffff;
+        box-shadow: var(--shadow-soft);
+        padding: 16px;
+      }
+
+      .guide-card h3,
+      .forum-card h3,
+      .event-card h3,
+      .inn-card h3 {
+        font-size: 22px;
+        line-height: 1.08;
+        font-weight: 950;
+      }
+
+      .guide-meta,
+      .forum-meta,
+      .event-meta {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 1.45;
+      }
+
+      .guide-card .reason {
+        margin-top: 14px;
+        border-left: 4px solid #26b99b;
+        padding-left: 12px;
+        color: #302d28;
+        font-size: 15px;
+        font-weight: 850;
+        line-height: 1.55;
+      }
+
+      .guide-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .avatar-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #5c574e;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .avatar {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: 50%;
+        background: #ece8df;
+        color: #748da4;
+        font-weight: 950;
+      }
+
+      .small-action {
+        border: 0;
+        border-radius: 999px;
+        background: #f1f0ec;
+        padding: 9px 12px;
+        color: #37332e;
+        font-size: 12px;
+        font-weight: 950;
+      }
+
+      .event-card {
+        border: 2px solid var(--ink);
+        background: #fff8e7;
+        box-shadow: var(--shadow-hard);
+        padding: 12px;
+      }
+
+      .poster {
+        position: relative;
+        height: 190px;
+        overflow: hidden;
+        border: 2px solid var(--ink);
+        border-radius: 18px;
+        background: #f8edda;
+      }
+
+      .poster img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .poster-badge,
+      .price-badge {
+        position: absolute;
+        top: 12px;
+        border: 2px solid var(--ink);
+        box-shadow: 2px 3px 0 rgba(23, 21, 19, 0.18);
+        font-size: 12px;
+        font-weight: 950;
+      }
+
+      .poster-badge {
+        left: 12px;
+        border-radius: 999px;
+        background: #ffffff;
+        padding: 8px 12px;
+      }
+
+      .price-badge {
+        right: 12px;
+        border-radius: 8px;
+        background: #f35fae;
+        padding: 8px 12px;
+      }
+
+      .event-body {
+        padding: 15px 6px 4px;
+      }
+
+      .event-card h3 {
+        font-size: 26px;
+      }
+
+      .event-info-box,
+      .inn-info-box {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+        border: 2px solid rgba(23, 21, 19, 0.14);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.5);
+        padding: 13px;
+        font-size: 14px;
+        font-weight: 900;
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        border-top: 2px dashed rgba(23, 21, 19, 0.16);
+        padding-top: 10px;
+      }
+
+      .split small {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 950;
+      }
+
+      .forum-card {
+        background: rgba(255, 255, 255, 0.88);
+        border-bottom: 10px solid rgba(136, 108, 191, 0.12);
+        padding: 17px 16px 18px;
+      }
+
+      .forum-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .author {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .name {
+        color: #6d86a1;
+        font-size: 15px;
+        font-weight: 950;
+      }
+
+      .time {
+        margin-top: 2px;
+        color: #8b8790;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .dots {
+        color: #8d8891;
+        font-size: 26px;
+        font-weight: 950;
+        letter-spacing: 2px;
+      }
+
+      .forum-card p {
+        margin-top: 9px;
+        color: #4d4a4f;
+        font-size: 15px;
+        font-weight: 850;
+        line-height: 1.58;
+      }
+
+      .forum-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 24px;
+      }
+
+      .tag {
+        width: fit-content;
+        border-radius: 999px;
+        background: rgba(136, 108, 191, 0.13);
+        padding: 5px 9px;
+        color: #8569bb;
+        font-size: 12px;
+        font-weight: 950;
+      }
+
+      .comment {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        border: 2px solid #545055;
+        border-radius: 999px;
+        color: #545055;
+        font-weight: 950;
+      }
+
+      .inn-card {
+        border: 3px solid var(--ink);
+        background: #fff8dd;
+        box-shadow: var(--shadow-hard);
+        padding: 14px;
+      }
+
+      .inn-hero {
+        position: relative;
+        min-height: 120px;
+        overflow: hidden;
+        border: 2px solid var(--ink);
+        border-radius: 18px;
+        background:
+          linear-gradient(90deg, rgba(255, 241, 171, 0.88), rgba(255, 255, 255, 0.62)),
+          url("public/cmi-home/event-posters/cmi-waytoagi-codex-maker-lab-2026-05-31.png");
+        background-position: center;
+        background-size: cover;
+      }
+
+      .inn-hero strong {
+        position: absolute;
+        left: 14px;
+        bottom: 14px;
+        display: inline-flex;
+        border: 2px solid var(--ink);
+        border-radius: 999px;
+        background: #ffffff;
+        padding: 8px 13px;
+        font-size: 22px;
+        font-weight: 950;
+      }
+
+      .inn-card h3 {
+        margin-top: 18px;
+        font-size: 30px;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .big-action {
+        min-height: 48px;
+        border: 3px solid var(--ink);
+        border-radius: 999px;
+        background: var(--button-bg);
+        box-shadow: 3px 4px 0 rgba(23, 21, 19, 0.2);
+        color: var(--button-ink, var(--ink));
+        font-size: 16px;
+        font-weight: 950;
+      }
+
+      .theme-guide {
+        --accent: #1f1d1a;
+        --accent-ink: #ffffff;
+        --chip-bg: #ffffff;
+        --chip-line: rgba(23, 21, 19, 0.16);
+        --button-bg: #20b8a7;
+        background: #ffffff;
+      }
+
+      .theme-guide .theme-shell {
+        background: #ffffff;
+      }
+
+      .theme-guide .brand-pill,
+      .theme-guide .icon-button {
+        background: rgba(255, 255, 255, 0.9);
+      }
+
+      .theme-guide .section-title p,
+      .theme-guide .guide-meta {
+        color: #6f6a61;
+      }
+
+      .theme-guide .guide-card {
+        border: 1px solid rgba(25, 25, 25, 0.1);
+        background: #ffffff;
+        box-shadow: var(--shadow-soft);
+      }
+
+      .theme-guide .reason {
+        border-left-color: #20b8a7;
+      }
+
+      .theme-guide .small-action {
+        background: rgba(32, 184, 167, 0.12);
+        color: #126f66;
+      }
+
+      .theme-event {
+        --accent: #171513;
+        --accent-ink: #fff5de;
+        --button-bg: #f35fae;
+        background: #ffe45f;
+      }
+
+      .theme-event .theme-shell {
+        background:
+          linear-gradient(rgba(255, 228, 95, 0.92), rgba(255, 228, 95, 0.92)),
+          repeating-linear-gradient(90deg, transparent 0 18px, rgba(23, 21, 19, 0.06) 18px 20px);
+      }
+
+      .theme-forum {
+        --accent: #9579ca;
+        --accent-ink: #ffffff;
+        --button-bg: #9579ca;
+        --chip-bg: rgba(255, 255, 255, 0.76);
+        background: #f1edfa;
+      }
+
+      .theme-forum .theme-shell {
+        background: #f1edfa;
+      }
+
+      .theme-inn {
+        --accent: #ffe04f;
+        --accent-ink: #171513;
+        --button-bg: #30bd65;
+        --button-ink: #171513;
+        background: #ffe04f;
+      }
+
+      .theme-inn .theme-shell {
+        background:
+          radial-gradient(circle at 12% 10%, rgba(255, 255, 255, 0.7) 0 0.16rem, transparent 0.18rem),
+          linear-gradient(#ffe04f, #ffe04f);
+        background-size: 22px 22px, auto;
+      }
+
+      @media (max-width: 1040px) {
+        .theme-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .theme-panel {
+          min-height: auto;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .page {
+          padding: 18px 10px 34px;
+        }
+
+        .theme-shell {
+          padding: 14px;
+        }
+
+        .poster {
+          height: 160px;
+        }
+
+        .event-card h3,
+        .inn-card h3 {
+          font-size: 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="intro" aria-labelledby="page-title">
+        <div class="eyebrow">CMI MAP / SECTION THEME PLAYGROUND</div>
+        <h1 id="page-title">三个大板块的背景色和页面语气实验</h1>
+        <p>
+          这不是正式页面，但下面的内容改用 CMI Map 里已经存在的 Scene、地点 guide、活动和本地黑板样例，不再编造新路线。这里只看“板块主题色”落地后的空间感：攻略回到白底，活动保持黄色海报墙，论坛保持紫色社区感。
+        </p>
+      </section>
+
+      <section class="theme-grid" aria-label="CMI Map 三个板块主题色样张">
+        <article class="theme-panel theme-guide">
+          <div class="theme-shell">
+            <header class="topbar">
+              <div class="brand-pill">现有 Scene：办公</div>
+              <div class="icon-button" aria-hidden="true">⌕</div>
+            </header>
+            <div class="mock-note">真实口径：/list?scene=coffee-work · 非正式样张</div>
+            <div class="section-title">
+              <h2>适合办公和坐下来的地方</h2>
+              <p>来自现有 `CMI_SCENES`：找一个能坐下来处理事情的地方，先从咖啡馆、Coworking 和安静空间开始。</p>
+            </div>
+            <div class="chips">
+              <span class="chip active">全部</span>
+              <span class="chip">咖啡</span>
+              <span class="chip">办公</span>
+              <span class="chip">安静</span>
+            </div>
+            <div class="stack">
+              <section class="guide-card">
+                <h3>Asama Coffee &amp; Roastery</h3>
+                <p class="guide-meta">真实 guide：咖啡烘焙馆 · 咖啡 / 烘焙 / 认真喝一杯</p>
+                <p class="reason">偏认真喝咖啡的点位，适合想试试清迈本地咖啡、手冲或烘焙风味的人。它更适合专门去喝一杯，而不是随便找个地方久坐办公。</p>
+                <div class="guide-row">
+                  <div class="avatar-row">
+                    <span class="avatar">CMI</span>
+                    <span>来自 place-guides.ts</span>
+                  </div>
+                  <button class="small-action">看地图</button>
+                </div>
+              </section>
+              <section class="guide-card">
+                <h3>Bays Coffee Co.</h3>
+                <p class="guide-meta">真实 guide：社区咖啡馆 · 咖啡 / 日常 / 见朋友</p>
+                <p class="reason">适合日常喝咖啡、短暂停留、和朋友简单见面。不是每个咖啡馆都需要成为网红点，有些点位的意义就是稳定、顺路、好用。</p>
+              </section>
+            </div>
+          </div>
+        </article>
+
+        <article class="theme-panel theme-event">
+          <div class="theme-shell">
+            <header class="topbar">
+              <div class="brand-pill">活动 / 今天去哪</div>
+              <div class="icon-button" aria-hidden="true">＋</div>
+            </header>
+            <div class="section-title">
+              <h2>暖黄，海报墙感</h2>
+              <p>适合官方、非官方、民间活动混合展示。页面本身有节庆感，但卡片内部仍要清楚。</p>
+            </div>
+            <div class="chips">
+              <span class="chip active">全部</span>
+              <span class="chip">CMI</span>
+              <span class="chip">音乐</span>
+              <span class="chip">市集</span>
+            </div>
+            <div class="stack">
+              <section class="event-card">
+                <div class="poster">
+                  <img src="public/cmi-home/event-posters/cmi-financial-literacy-sharing-2026-05-29.png" alt="活动海报样张" />
+                  <span class="poster-badge">CMI EVENT</span>
+                  <span class="price-badge">免费参与</span>
+                </div>
+                <div class="event-body">
+                  <h3>穷姐姐财商分享大会</h3>
+                  <p class="event-meta">一场面向清迈旅居者和数字游民的财商分享，围绕理财工具、收入安全垫和个人价值展开。</p>
+                  <div class="chips">
+                    <span class="chip">CMI</span>
+                    <span class="chip">财商</span>
+                    <span class="chip">理财</span>
+                  </div>
+                  <div class="event-info-box">
+                    <div>◷ 5/29 周五 19:00</div>
+                    <div>⌖ 清迈客栈</div>
+                    <div class="split">
+                      <span><small>费用</small>免费参与</span>
+                      <span><small>参与</small>直接空降即可</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </article>
+
+        <article class="theme-panel theme-forum">
+          <div class="theme-shell">
+            <header class="topbar">
+              <div class="brand-pill">论坛 / 清迈生活板</div>
+              <div class="icon-button" aria-hidden="true">＋</div>
+            </header>
+            <div class="section-title">
+              <h2>轻紫，读帖不累</h2>
+              <p>这里不能太花。颜色主要给筛选、按钮和页面气质，帖子正文仍然接近白底信息流。</p>
+            </div>
+            <div class="chips">
+              <span class="chip active">全部 12</span>
+              <span class="chip">精选 3</span>
+              <span class="chip">找搭子</span>
+              <span class="chip">求助</span>
+            </div>
+            <div class="stack">
+              <section class="forum-card">
+                <div class="forum-head">
+                  <div class="author">
+                    <span class="avatar">林</span>
+                    <div>
+                      <div class="name">林可 <span class="tag">找搭子</span></div>
+                      <div class="time">前天</div>
+                    </div>
+                  </div>
+                  <div class="dots">···</div>
+                </div>
+                <h3>测试一条</h3>
+                <p>测试地点，测试时间，测试人物</p>
+                <div class="forum-foot">
+                  <span class="tag">找搭子</span>
+                  <span class="comment">⌕</span>
+                </div>
+              </section>
+              <section class="forum-card">
+                <div class="forum-head">
+                  <div class="author">
+                    <span class="avatar">子</span>
+                    <div>
+                      <div class="name">子扬 <span class="tag">分享</span></div>
+                      <div class="time">1 小时前</div>
+                    </div>
+                  </div>
+                  <div class="dots">···</div>
+                </div>
+                <h3>周二大家都做点啥？</h3>
+                <p>好奇</p>
+                <div class="forum-foot">
+                  <span class="tag">分享</span>
+                  <span class="comment">⌕</span>
+                </div>
+              </section>
+            </div>
+          </div>
+        </article>
+
+      </section>
+    </main>
+  </body>
+</html>

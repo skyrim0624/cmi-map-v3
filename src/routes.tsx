@@ -10,6 +10,9 @@ const PlaceDetail = lazy(() => import('./pages/PlaceDetail'));
 const AddTrace = lazy(() => import('./pages/AddTrace'));
 const CmiHome = lazy(() => import('./pages/CmiHome'));
 const CmiEventDetail = lazy(() => import('./pages/CmiEventDetail'));
+const CmiEventCreate = lazy(() => import('./pages/CmiEventCreate'));
+const CmiEventManage = lazy(() => import('./pages/CmiEventManage'));
+const AdminAgentTokens = lazy(() => import('./pages/AdminAgentTokens'));
 const SurvivalGuides = lazy(() => import('./pages/SurvivalGuides'));
 const MarkPlace = lazy(() => import('./pages/MarkPlace'));
 const PersonMap = lazy(() => import('./pages/PersonMap'));
@@ -82,6 +85,21 @@ export const routes: RouteConfig[] = [
     public: true,
   },
   {
+    name: '发布活动',
+    path: '/events/new',
+    element: <CmiEventCreate />,
+  },
+  {
+    name: '活动管理',
+    path: '/events/:eventId/manage',
+    element: <CmiEventManage />,
+  },
+  {
+    name: 'Agent Token',
+    path: '/admin/agent-tokens',
+    element: <AdminAgentTokens />,
+  },
+  {
     name: '清迈生存地图',
     path: '/survival-kit',
     element: <Navigate to={getSceneMapPath('life-rescue')} replace />,
@@ -95,7 +113,7 @@ export const routes: RouteConfig[] = [
   },
   {
     name: '推荐人地图',
-    path: '/people/:userName',
+    path: '/people/:profileIdentity',
     element: <PersonMap />,
     public: true,
   },

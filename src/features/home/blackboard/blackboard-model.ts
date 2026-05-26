@@ -28,6 +28,66 @@ export interface BlackboardActivityTitleLevel {
   title: string;
 }
 
+export const BLACKBOARD_ACHIEVEMENT_TITLE_OPTIONS = [
+  {
+    id: 'sports-student',
+    title: '体育生',
+    description: '运动场、球局、户外局常客',
+  },
+  {
+    id: 'sports-maniac',
+    title: '运动狂魔',
+    description: '比天气预报更关心今天能不能动起来',
+  },
+  {
+    id: 'muay-thai-fighter',
+    title: '泰拳战士',
+    description: '拳馆、沙袋和护手绷带爱好者',
+  },
+  {
+    id: 'northern-thai-stomach',
+    title: '泰北胃',
+    description: '清迈吃饭地图长期更新中',
+  },
+  {
+    id: 'coffee-lifeline',
+    title: '咖啡续命人',
+    description: '靠冰美式和小店咖啡续航',
+  },
+  {
+    id: 'survival-master',
+    title: '生存大师',
+    description: '签证、租房、修车、办事都略懂一点',
+  },
+] as const;
+
+export type BlackboardAchievementTitleId = typeof BLACKBOARD_ACHIEVEMENT_TITLE_OPTIONS[number]['id'];
+
+export interface BlackboardAchievementTitleOption {
+  id: BlackboardAchievementTitleId;
+  title: string;
+  description: string;
+}
+
+const BLACKBOARD_ACHIEVEMENT_TITLE_IDS = new Set<string>(
+  BLACKBOARD_ACHIEVEMENT_TITLE_OPTIONS.map(option => option.id)
+);
+
+export const coerceBlackboardAchievementTitleId = (
+  titleId: string | null | undefined
+): BlackboardAchievementTitleId | null => {
+  if (!titleId || !BLACKBOARD_ACHIEVEMENT_TITLE_IDS.has(titleId)) return null;
+  return titleId as BlackboardAchievementTitleId;
+};
+
+export const getBlackboardAchievementTitleById = (
+  titleId: string | null | undefined
+): BlackboardAchievementTitleOption | null => {
+  const safeTitleId = coerceBlackboardAchievementTitleId(titleId);
+  if (!safeTitleId) return null;
+  return BLACKBOARD_ACHIEVEMENT_TITLE_OPTIONS.find(option => option.id === safeTitleId) ?? null;
+};
+
 export const BLACKBOARD_ACTIVITY_TITLE_LEVELS: BlackboardActivityTitleLevel[] = [
   { level: 1, minScore: 0, title: '刚落地' },
   { level: 2, minScore: 1, title: '冒泡中' },

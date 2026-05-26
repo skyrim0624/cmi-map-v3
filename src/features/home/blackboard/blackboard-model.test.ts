@@ -3,6 +3,9 @@ import test from 'node:test';
 import {
   BLACKBOARD_CATEGORY_OPTIONS,
   BLACKBOARD_ACTIVITY_TITLE_LEVELS,
+  BLACKBOARD_ACHIEVEMENT_TITLE_OPTIONS,
+  coerceBlackboardAchievementTitleId,
+  getBlackboardAchievementTitleById,
   getBlackboardActivityScore,
   getBlackboardActivityTitle,
   getBlackboardFeedFilters,
@@ -89,4 +92,23 @@ test('blackboard activity titles use lower thresholds for short-stay users', () 
       [8, '泰北接头人'],
     ],
   );
+});
+
+test('blackboard achievement titles are selectable with a stable id', () => {
+  assert.deepEqual(
+    BLACKBOARD_ACHIEVEMENT_TITLE_OPTIONS.map(option => option.id),
+    [
+      'sports-student',
+      'sports-maniac',
+      'muay-thai-fighter',
+      'northern-thai-stomach',
+      'coffee-lifeline',
+      'survival-master',
+    ],
+  );
+
+  assert.equal(getBlackboardAchievementTitleById('muay-thai-fighter')?.title, '泰拳战士');
+  assert.equal(coerceBlackboardAchievementTitleId('northern-thai-stomach'), 'northern-thai-stomach');
+  assert.equal(coerceBlackboardAchievementTitleId('unknown-title'), null);
+  assert.equal(getBlackboardAchievementTitleById(null), null);
 });

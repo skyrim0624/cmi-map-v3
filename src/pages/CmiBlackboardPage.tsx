@@ -48,8 +48,8 @@ export default function CmiBlackboardPage() {
   const initialDraft = eventDraft ?? placeDraft;
 
   return (
-    <div className="min-h-[100dvh] bg-[#f2f2f2]">
-      <header className="sticky top-0 z-30 border-b border-[#eeeeee] bg-white px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.85rem)]">
+    <div className="min-h-[100dvh] bg-[#f1edfa]">
+      <header className="sticky top-0 z-30 border-b border-[#ded4f1] bg-[#f7f3ff] px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.85rem)]">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -63,7 +63,7 @@ export default function CmiBlackboardPage() {
             <h1 className="truncate text-[1.8rem] font-black leading-tight text-[#262626]">
               清迈生活板
             </h1>
-            <p className="truncate text-[0.92rem] font-black text-[#8c8c8c]">
+            <p className="truncate text-[0.92rem] font-black text-[#8a7aa6]">
               找搭子、求助、分享，先放在这里。
             </p>
           </div>

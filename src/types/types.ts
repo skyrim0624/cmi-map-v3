@@ -16,6 +16,7 @@ export type UserRole = 'user' | 'admin';
 export interface Profile {
   id: string;
   email: string | null;
+  handle: string | null;
   user_name: string | null;
   role: UserRole;
   avatar_url: string | null;

@@ -33,10 +33,13 @@ export const CMI_EVENT_POSTER_BY_ID: Partial<Record<string, string>> = {
   'cmi-song-of-the-sea-screening-2026-05-23': '/cmi-home/event-posters/cmi-song-of-the-sea-screening-2026-05-23.jpg',
   'cmi-swap-market-2026-05-24': '/cmi-home/event-posters/cmi-swap-market-2026-05-24.jpg',
   'cmi-ai-open-mic-vol-04-2026-05-24': '/cmi-home/event-posters/cmi-ai-open-mic-vol-04-2026-05-24.jpg',
+  'cmi-mindfulness-hour-2026-05-28': '/cmi-home/event-posters/cmi-mindfulness-hour-2026-05-28.png',
   'cmi-financial-literacy-sharing-2026-05-29':
     '/cmi-home/event-posters/cmi-financial-literacy-sharing-2026-05-29.png',
   'cmi-waytoagi-codex-maker-lab-2026-05-31':
     '/cmi-home/event-posters/cmi-waytoagi-codex-maker-lab-2026-05-31.png',
+  'cmi-talk-fathers-day-speaker-call-2026-06-07':
+    '/cmi-home/event-posters/cmi-talk-fathers-day-speaker-call-2026-06-07.png',
 };
 
 export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = {
@@ -47,10 +50,14 @@ export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = 
   'cmi-swap-market-2026-05-24': '/cmi-home/event-card-backgrounds/cmi-swap-market-2026-05-24.jpg',
   'cmi-ai-open-mic-vol-04-2026-05-24':
     '/cmi-home/event-card-backgrounds/cmi-ai-open-mic-vol-04-2026-05-24.jpg',
+  'cmi-mindfulness-hour-2026-05-28':
+    '/cmi-home/event-card-backgrounds/cmi-mindfulness-hour-2026-05-28.jpg',
   'cmi-financial-literacy-sharing-2026-05-29':
     '/cmi-home/event-card-backgrounds/cmi-financial-literacy-sharing-2026-05-29.jpg',
   'cmi-waytoagi-codex-maker-lab-2026-05-31':
     '/cmi-home/event-card-backgrounds/cmi-waytoagi-codex-maker-lab-2026-05-31.jpg',
+  'cmi-talk-fathers-day-speaker-call-2026-06-07':
+    '/cmi-home/event-card-backgrounds/cmi-talk-fathers-day-speaker-call-2026-06-07.jpg',
 };
 
 export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailContent> = {
@@ -257,6 +264,47 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
       },
     ],
   },
+  'cmi-mindfulness-hour-2026-05-28': {
+    eventId: 'cmi-mindfulness-hour-2026-05-28',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-mindfulness-hour-2026-05-28']!,
+    postTitle: '正念一小时｜一切都是最好的安排',
+    postBlocks: [
+      {
+        kind: 'paragraph',
+        text: '这周四的正念一小时，把主题放在“变化”与“稳定感”上。',
+      },
+      {
+        kind: 'paragraph',
+        text: '当生活安排被打乱、变化突然出现，焦虑很容易先跑出来。这一小时会通过静坐冥想、智慧引领和开放分享，练习在无常里重新回到当下。',
+      },
+      {
+        kind: 'heading',
+        text: '本期会聊什么',
+      },
+      {
+        kind: 'list',
+        items: [
+          '为什么一变化，我们就会焦虑',
+          '无常来了，如何让心不慌',
+          '面对变化，如何找回内在的稳定感',
+        ],
+      },
+      {
+        kind: 'heading',
+        text: '活动信息',
+      },
+      {
+        kind: 'list',
+        items: [
+          '活动时间：5 月 28 日（周四）19:00-20:30',
+          '活动地点：清迈客栈',
+          '活动形式：静坐冥想｜智慧引领｜开放分享',
+          '场地费用：免费参与',
+          '参与方式：通过 CMI Map 一键报名',
+        ],
+      },
+    ],
+  },
   'cmi-financial-literacy-sharing-2026-05-29': {
     eventId: 'cmi-financial-literacy-sharing-2026-05-29',
     posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-financial-literacy-sharing-2026-05-29']!,
@@ -296,7 +344,7 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
           '活动时间：5 月 29 日（周五）19:00，空想食堂后',
           '活动地点：清迈客栈',
           '场地费用：免费参与，可随喜支持',
-          '参与方式：无需报名，直接空降即可；Luma 链接待补充',
+          '参与方式：Luma 报名（https://luma.com/ahw83ofe），也可直接空降',
         ],
       },
     ],
@@ -339,6 +387,49 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
           '活动地点：清迈客栈',
           '活动形式：全国多城市联动 · 清迈线下动手 · 全国连线开场',
           '参与方式：免费参与，请尽量在 Luma 报名：https://luma.com/kl2aa0qz',
+        ],
+      },
+    ],
+  },
+  'cmi-talk-fathers-day-speaker-call-2026-06-07': {
+    eventId: 'cmi-talk-fathers-day-speaker-call-2026-06-07',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-talk-fathers-day-speaker-call-2026-06-07']!,
+    postTitle: 'CMI Talk 「父亲节特辑」分享嘉宾招募',
+    postBlocks: [
+      {
+        kind: 'paragraph',
+        text: '这个父亲节，CMI Talk 想邀请几位在清迈生活的爸爸，聊聊真实的困惑、陪伴、成长和家庭选择。',
+      },
+      {
+        kind: 'paragraph',
+        text: '不需要“完美父亲”的标准答案。我们更想听见那些愿意陪孩子玩、听孩子说话、和孩子一起成长的人生故事。',
+      },
+      {
+        kind: 'heading',
+        text: '本期想听见什么',
+      },
+      {
+        kind: 'list',
+        items: [
+          '作为父亲，你有哪些真实的困惑与成长',
+          '你如何理解“陪伴”',
+          '你和孩子之间有哪些特别的相处方式',
+          '在事业、家庭与自我之间，你经历过怎样的选择',
+          '今天这个时代，爸爸这个角色还能有哪些新的打开方式',
+        ],
+      },
+      {
+        kind: 'heading',
+        text: '活动信息',
+      },
+      {
+        kind: 'list',
+        items: [
+          '活动时间：6 月 7 日（周日）16:30-18:30',
+          '活动地点：清迈客栈',
+          '招募对象：想分享真实故事的爸爸们',
+          '费用说明：来源未单列收费项，本次按免费报名记录',
+          '参与方式：通过 CMI Map 一键报名；也可扫描海报二维码或填写腾讯问卷：https://wj.qq.com/s2/23583596/8e2a/',
         ],
       },
     ],

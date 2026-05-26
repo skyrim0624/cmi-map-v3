@@ -7,17 +7,40 @@ import {
   applyRecommendationsCorrections,
   correctedRecommendationMatchesCategory,
 } from '@/data/cmi-place-corrections';
+import { normalizeProfileHandle } from '@/features/profiles/profile-identity';
 import { supabase } from './supabase';
 
 type ReadOptions = {
   throwOnError?: boolean;
 };
 
-export type PublicProfile = Pick<Profile, 'id' | 'user_name' | 'avatar_url'>;
+export type PublicProfile = Pick<Profile, 'id' | 'handle' | 'user_name' | 'avatar_url'>;
+export const USER_NAME_TAKEN_ERROR_MESSAGE = '这个昵称已经被用过了，请换一个';
+
+export const normalizeProfileUserName = (userName: string) => userName.normalize('NFKC').trim();
+
+export interface UserNameAvailabilityResult {
+  available: boolean;
+  error: Error | null;
+}
 
 const handleReadError = (message: string, error: unknown, options?: ReadOptions) => {
   console.error(message, error);
   if (options?.throwOnError) throw error;
+};
+
+const isMissingPublicProfilesError = (error: { code?: string; message?: string }) => {
+  const message = error.message?.toLocaleLowerCase() ?? '';
+  return error.code === '42P01' || error.code === 'PGRST205' || message.includes('public_profiles');
+};
+
+const handlePublicProfileReadError = (message: string, error: unknown, options?: ReadOptions) => {
+  if (typeof error === 'object' && error !== null && isMissingPublicProfilesError(error as { code?: string; message?: string })) {
+    if (options?.throwOnError) throw error;
+    return;
+  }
+
+  handleReadError(message, error, options);
 };
 
 const activeStampIconUrls = [
@@ -131,16 +154,180 @@ export const getProfilesByUserNames = async (
   if (uniqueUserNames.length === 0) return [];
 
   const { data, error } = await supabase
-    .from('profiles')
-    .select('id,user_name,avatar_url')
+    .from('public_profiles')
+    .select('id,handle,user_name,avatar_url')
     .in('user_name', uniqueUserNames);
 
   if (error) {
-    handleReadError('获取用户头像失败:', error, options);
+    if (isMissingPublicProfilesError(error)) {
+      return getProfilesFallbackByUserNames(uniqueUserNames, options);
+    }
+
+    handlePublicProfileReadError('获取公开用户资料失败:', error, options);
     return [];
   }
 
   return Array.isArray(data) ? data as PublicProfile[] : [];
+};
+
+export const getProfilesByUserIds = async (
+  userIds: Array<string | null | undefined>,
+  options?: ReadOptions
+): Promise<PublicProfile[]> => {
+  const uniqueUserIds = Array.from(new Set(userIds.filter((id): id is string => Boolean(id))));
+  if (uniqueUserIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('public_profiles')
+    .select('id,handle,user_name,avatar_url')
+    .in('id', uniqueUserIds);
+
+  if (error) {
+    if (isMissingPublicProfilesError(error)) {
+      return getProfilesFallbackByUserIds(uniqueUserIds, options);
+    }
+
+    handlePublicProfileReadError('获取公开用户资料失败:', error, options);
+    return [];
+  }
+
+  return Array.isArray(data) ? data as PublicProfile[] : [];
+};
+
+const isUuidLike = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
+const mapProfileFallbackRows = (
+  rows: Array<Pick<Profile, 'id' | 'user_name' | 'avatar_url'>>
+): PublicProfile[] =>
+  rows.map(row => ({
+    id: row.id,
+    handle: null,
+    user_name: row.user_name,
+    avatar_url: row.avatar_url,
+  }));
+
+const getProfilesFallbackByUserIds = async (
+  userIds: string[],
+  options?: ReadOptions
+): Promise<PublicProfile[]> => {
+  if (userIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id,user_name,avatar_url')
+    .in('id', userIds);
+
+  if (error) {
+    handleReadError('获取公开用户资料失败:', error, options);
+    return [];
+  }
+
+  return Array.isArray(data)
+    ? mapProfileFallbackRows(data as Array<Pick<Profile, 'id' | 'user_name' | 'avatar_url'>>)
+    : [];
+};
+
+const getProfilesFallbackByUserNames = async (
+  userNames: string[],
+  options?: ReadOptions
+): Promise<PublicProfile[]> => {
+  if (userNames.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id,user_name,avatar_url')
+    .in('user_name', userNames);
+
+  if (error) {
+    handleReadError('获取公开用户资料失败:', error, options);
+    return [];
+  }
+
+  return Array.isArray(data)
+    ? mapProfileFallbackRows(data as Array<Pick<Profile, 'id' | 'user_name' | 'avatar_url'>>)
+    : [];
+};
+
+const getPublicProfileFallbackByIdentity = async (
+  identity: string,
+  options?: ReadOptions
+): Promise<PublicProfile | null> => {
+  const queries: Array<{ column: 'id' | 'user_name'; value: string }> = [];
+  if (isUuidLike(identity)) queries.push({ column: 'id', value: identity });
+  queries.push({ column: 'user_name', value: identity });
+
+  for (const query of queries) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id,user_name,avatar_url')
+      .eq(query.column, query.value)
+      .maybeSingle();
+
+    if (error) {
+      handleReadError('获取公开用户资料失败:', error, options);
+      return null;
+    }
+
+    if (data) return mapProfileFallbackRows([data as Pick<Profile, 'id' | 'user_name' | 'avatar_url'>])[0];
+  }
+
+  return null;
+};
+
+export const getPublicProfileByIdentity = async (
+  identity: string,
+  options?: ReadOptions
+): Promise<PublicProfile | null> => {
+  const normalizedIdentity = identity.normalize('NFKC').trim();
+  if (!normalizedIdentity) return null;
+
+  const handle = normalizeProfileHandle(normalizedIdentity);
+  const queries: Array<{ column: 'handle' | 'id' | 'user_name'; value: string }> = [];
+  if (handle) queries.push({ column: 'handle', value: handle });
+  if (isUuidLike(normalizedIdentity)) queries.push({ column: 'id', value: normalizedIdentity });
+  queries.push({ column: 'user_name', value: normalizedIdentity });
+
+  for (const query of queries) {
+    const { data, error } = await supabase
+      .from('public_profiles')
+      .select('id,handle,user_name,avatar_url')
+      .eq(query.column, query.value)
+      .maybeSingle();
+
+    if (error) {
+      if (isMissingPublicProfilesError(error)) {
+        return getPublicProfileFallbackByIdentity(normalizedIdentity, options);
+      }
+
+      handlePublicProfileReadError('获取公开用户资料失败:', error, options);
+      return null;
+    }
+
+    if (data) return data as PublicProfile;
+  }
+
+  return null;
+};
+
+export const checkUserNameAvailability = async (
+  userName: string,
+  currentUserId?: string
+): Promise<UserNameAvailabilityResult> => {
+  const normalizedName = normalizeProfileUserName(userName);
+  if (!normalizedName) return { available: false, error: null };
+
+  const { data, error } = await supabase.rpc('is_user_name_available', {
+    target_user_name: normalizedName,
+    current_user_id: currentUserId ?? null,
+  });
+
+  if (error) {
+    console.error('检查昵称是否可用失败:', error);
+    return { available: false, error: new Error(error.message) };
+  }
+
+  return { available: data === true, error: null };
 };
 
 /**
@@ -359,7 +546,7 @@ export const ensureProfile = async (userId: string, fallbackName?: string, email
 
   const { error } = await supabase
     .from('profiles')
-    .insert({ id: userId, user_name: fallbackName || '新用户', email: email ?? null });
+    .insert({ id: userId, user_name: fallbackName ? normalizeProfileUserName(fallbackName) : '新用户', email: email ?? null });
 
   if (error) {
     console.error('创建用户 profile 失败:', error);
@@ -388,9 +575,12 @@ export const updateUserAvatar = async (userId: string, avatarUrl: string): Promi
  * 更新用户名（upsert：不存在则创建）
  */
 export const updateUserName = async (userId: string, userName: string): Promise<boolean> => {
+  const normalizedName = normalizeProfileUserName(userName);
+  if (!normalizedName) return false;
+
   const { error } = await supabase
     .from('profiles')
-    .upsert({ id: userId, user_name: userName }, { onConflict: 'id' });
+    .upsert({ id: userId, user_name: normalizedName }, { onConflict: 'id' });
 
   if (error) {
     console.error('更新用户名失败:', error);

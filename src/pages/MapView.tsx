@@ -51,6 +51,8 @@ import {
   isCommunityCuratedRecommendation,
 } from '@/data/place-guides';
 import { getAllRecommendations } from '@/db/api';
+import { searchExternalPlaceCandidates, type ExternalPlaceCandidate } from '@/features/places/external-place-search';
+import { useDebounce } from '@/hooks/use-debounce';
 import {
   DEFAULT_CMI_EASTER_ICON_ID,
   getCmiEasterIconById,
@@ -60,7 +62,7 @@ import {
 } from '@/lib/easter-icons';
 import { warmupImages } from '@/lib/image-warmup';
 import { getMapMarkerVisual } from '@/lib/map-marker-visual';
-import { getPersonMapPath, getPlacePath, getSceneListPath, getSceneMapPath } from '@/lib/paths';
+import { getCmiBlackboardPath, getCmiEventCreatePath, getPersonMapPath, getPlacePath, getSceneListPath, getSceneMapPath } from '@/lib/paths';
 import {
   isEasterEggRecommendation,
   isPublicMapRecommendation,
@@ -238,6 +240,40 @@ const toMarkerVisualOverride = (tag: CmiPlaceTypeTag | null | undefined) => (
     : undefined
 );
 
+const getExternalPlaceMarkerId = (place: ExternalPlaceCandidate) =>
+  `external-place-${place.externalPlaceId}`;
+
+const createExternalPlaceMapMarker = (place: ExternalPlaceCandidate): MapMarkerType => {
+  const recommendation: Recommendation = {
+    id: getExternalPlaceMarkerId(place),
+    place_name: place.placeName,
+    category: '景点',
+    reason: '这个地点来自外部地图，还没有 CMI 社区痕迹。可以从这里发起活动，或者补录一条真实体验。',
+    user_name: place.providerLabel,
+    user_id: null,
+    latitude: place.latitude,
+    longitude: place.longitude,
+    images: [],
+    created_at: '',
+    upvotes: [],
+    wishlists: [],
+    placed_stickers: [],
+  };
+
+  return {
+    id: recommendation.id,
+    place_name: place.placeName,
+    category: '景点',
+    latitude: place.latitude,
+    longitude: place.longitude,
+    recommendations: [recommendation],
+    visualOverride: {
+      label: '待补录',
+      iconUrl: '/map-icons/cmi-flat-v2/place-landmark.png',
+    },
+  };
+};
+
 const renderFilterIcon = (
   item: { iconUrl?: string; label: string; needsIcon?: boolean },
   className = 'h-6 w-6'
@@ -270,6 +306,10 @@ export default function MapView() {
   const [isMapFilterExpanded, setIsMapFilterExpanded] = useState(false);
   const [activeMapPlaceTypeId, setActiveMapPlaceTypeId] = useState<string | null>(null);
   const [mapSearchQuery, setMapSearchQuery] = useState('');
+  const debouncedMapSearchQuery = useDebounce(mapSearchQuery, 520);
+  const [externalPlaceCandidates, setExternalPlaceCandidates] = useState<ExternalPlaceCandidate[]>([]);
+  const [externalPlaceSearchStatus, setExternalPlaceSearchStatus] = useState<'idle' | 'searching' | 'error'>('idle');
+  const [selectedExternalPlace, setSelectedExternalPlace] = useState<ExternalPlaceCandidate | null>(null);
   const [isEasterEggMode, setIsEasterEggMode] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>('idle');
@@ -338,6 +378,30 @@ export default function MapView() {
   const mapSearchMatch = useMemo(
     () => resolveCmiMapFilterQuery(mapSearchQuery),
     [mapSearchQuery]
+  );
+  const hasInternalMapSearchResults = useMemo(() => {
+    const query = mapSearchQuery.trim();
+    if (!query || mapSearchMatch) return false;
+
+    return markers.some(marker => {
+      const visibleRecommendations = marker.recommendations.filter(recommendation =>
+        !isEasterEggRecommendation(recommendation) && isPublicMapRecommendation(recommendation)
+      );
+
+      return visibleRecommendations.some(recommendation =>
+        normalizeMapPlaceName(marker.place_name).includes(normalizeMapPlaceName(query)) ||
+        matchesCmiRecommendationSearchQuery(recommendation, query)
+      );
+    });
+  }, [mapSearchMatch, mapSearchQuery, markers]);
+  const shouldSearchExternalPlaces =
+    !activeScene &&
+    !mapSearchMatch &&
+    !hasInternalMapSearchResults &&
+    debouncedMapSearchQuery.trim().length >= 2;
+  const selectedExternalPlaceMarker = useMemo(
+    () => selectedExternalPlace ? createExternalPlaceMapMarker(selectedExternalPlace) : null,
+    [selectedExternalPlace]
   );
   const nearbySecondaryTags = useMemo(
     () => activeNearbyMapGroup ? getCmiPlaceTypeTagsByIds(activeNearbyMapGroup.placeTypeIds) : [],
@@ -452,6 +516,7 @@ export default function MapView() {
     setSelectedMarker(null);
     setSelectedEvent(null);
     setSelectedRecommendations([]);
+    setSelectedExternalPlace(null);
     setIsScenePanelExpanded(Boolean(activeScene && !isNearbyScene));
   }, [activeScene, activePlaceTypeId, activeSceneFilterId, isNearbyScene]);
 
@@ -508,6 +573,35 @@ export default function MapView() {
 
     setLocationStatus(userLocation ? 'ready' : 'locating');
   }, [isNearbyScene, userLocation]);
+
+  useEffect(() => {
+    if (!shouldSearchExternalPlaces) {
+      setExternalPlaceCandidates([]);
+      setExternalPlaceSearchStatus('idle');
+      return;
+    }
+
+    const controller = new AbortController();
+    setExternalPlaceSearchStatus('searching');
+
+    searchExternalPlaceCandidates(debouncedMapSearchQuery, {
+      signal: controller.signal,
+      limit: 5,
+    })
+      .then(places => {
+        setExternalPlaceCandidates(places);
+        setExternalPlaceSearchStatus('idle');
+      })
+      .catch(error => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setExternalPlaceCandidates([]);
+        setExternalPlaceSearchStatus('error');
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [debouncedMapSearchQuery, shouldSearchExternalPlaces]);
 
   const loadRecommendations = async () => {
     setIsLoadingRecommendations(true);
@@ -587,6 +681,7 @@ export default function MapView() {
       return;
     }
     if (selectedEvent) return;
+    if (selectedExternalPlace) return;
     if (selectedMarker && isEasterEggRecommendation(selectedMarker)) return;
     if (selectedMarker) {
       navigate(getPlacePath(selectedMarker.place_name));
@@ -619,6 +714,69 @@ export default function MapView() {
     } catch {
       toast('复制失败，可以先点导航打开地图');
     }
+  };
+
+  const getSelectedExternalPlaceInput = () => {
+    if (!selectedExternalPlace) return null;
+
+    return {
+      placeName: selectedExternalPlace.placeName,
+      area: selectedExternalPlace.areaLabel,
+      category: '景点',
+      latitude: selectedExternalPlace.latitude,
+      longitude: selectedExternalPlace.longitude,
+    };
+  };
+
+  const handleExternalPlaceSelect = (place: ExternalPlaceCandidate) => {
+    const marker = createExternalPlaceMapMarker(place);
+    setSelectedExternalPlace(place);
+    setSelectedEvent(null);
+    setSelectedMarker(marker);
+    setSelectedRecommendations(marker.recommendations);
+    setMapSearchQuery(place.placeName);
+    setActiveMapFilterGroupId('all');
+    setActiveMapPlaceTypeId(null);
+    setIsMapFilterExpanded(false);
+  };
+
+  const handleSelectedExternalPlaceTrace = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    const input = getSelectedExternalPlaceInput();
+    if (!input) return;
+
+    const search = new URLSearchParams({
+      place: input.placeName,
+      area: input.area,
+      category: input.category,
+      lat: String(input.latitude),
+      lng: String(input.longitude),
+    });
+
+    if (!user) {
+      toast('登录后才能补录地点');
+      navigate('/login', { state: { from: `/mark?${search.toString()}` } });
+      return;
+    }
+
+    navigate(`/mark?${search.toString()}`);
+  };
+
+  const handleSelectedExternalPlaceEvent = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    const input = getSelectedExternalPlaceInput();
+    if (!input) return;
+    navigate(getCmiEventCreatePath(input));
+  };
+
+  const handleSelectedExternalPlacePost = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    if (!selectedExternalPlace) return;
+    navigate(getCmiBlackboardPath({
+      compose: true,
+      placeName: selectedExternalPlace.placeName,
+      locationLabel: `${selectedExternalPlace.placeName} · ${selectedExternalPlace.areaLabel}`,
+    }));
   };
 
   // 点击地图空白区域，关闭预览卡片
@@ -743,6 +901,7 @@ export default function MapView() {
     setSelectedMarker(null);
     setSelectedEvent(null);
     setSelectedRecommendations([]);
+    setSelectedExternalPlace(null);
     setMapSearchQuery('');
     setActiveMapFilterGroupId('all');
     setActiveMapPlaceTypeId(null);
@@ -843,6 +1002,8 @@ export default function MapView() {
     setIsEasterEggMode(false);
     setSelectedMarker(null);
     setSelectedRecommendations([]);
+    setSelectedExternalPlace(null);
+    setExternalPlaceCandidates([]);
   };
 
   const handleMapGroupSelect = (group: CmiMapFilterGroup | null) => {
@@ -850,6 +1011,7 @@ export default function MapView() {
     setIsEasterEggMode(false);
     setSelectedMarker(null);
     setSelectedRecommendations([]);
+    setSelectedExternalPlace(null);
 
     if (!group) {
       setActiveMapFilterGroupId('all');
@@ -889,6 +1051,7 @@ export default function MapView() {
     setIsEasterEggMode(false);
     setSelectedMarker(null);
     setSelectedRecommendations([]);
+    setSelectedExternalPlace(null);
 
     const match = resolveCmiMapFilterQuery(nextQuery);
     if (match) {
@@ -921,6 +1084,11 @@ export default function MapView() {
 
   // 过滤当前需要显示的标记点
   const displayedMarkers = useMemo(() => {
+    const withSelectedExternalMarker = (sourceMarkers: MapMarkerType[]) =>
+      selectedExternalPlaceMarker
+        ? [selectedExternalPlaceMarker, ...sourceMarkers.filter(marker => marker.id !== selectedExternalPlaceMarker.id)]
+        : sourceMarkers;
+
     if (activeScene) {
       const activeSceneMarkers = isEventScene
         ? sceneEventMarkers
@@ -937,9 +1105,9 @@ export default function MapView() {
       activeMapFilterGroupId !== 'all' ||
       isRawSearchActive;
 
-    if (!isFilteredMap) return withoutEasterEggRecommendations(markers);
+    if (!isFilteredMap) return withSelectedExternalMarker(withoutEasterEggRecommendations(markers));
 
-    return markers.flatMap((marker) => {
+    const filteredMarkers = markers.flatMap((marker) => {
       const visibleRecommendations = marker.recommendations.filter(recommendation =>
         !isEasterEggRecommendation(recommendation) && isPublicMapRecommendation(recommendation)
       );
@@ -976,6 +1144,8 @@ export default function MapView() {
         visualOverride: toMarkerVisualOverride(visualTag),
       }];
     });
+
+    return withSelectedExternalMarker(filteredMarkers);
   }, [
     activeMapFilterGroup,
     activeMapFilterGroupId,
@@ -991,6 +1161,7 @@ export default function MapView() {
     markers,
     sceneEventMarkers,
     sceneMarkers,
+    selectedExternalPlaceMarker,
   ]);
   const mapWarmupImageUrls = useMemo(() => {
     const urls = new Set<string>();
@@ -1040,6 +1211,13 @@ export default function MapView() {
         : undefined,
     [selectedMarkerFromParams]
   );
+  const activeMapFocusTarget = selectedExternalPlace
+    ? {
+      lat: selectedExternalPlace.latitude,
+      lng: selectedExternalPlace.longitude,
+    }
+    : defaultMapCenter;
+  const activeMapFocusZoom = selectedExternalPlace ? 16 : selectedMarkerZoom;
 
   const selectedRecommendation = selectedRecommendations[0] || null;
   const selectedGuide = selectedRecommendation
@@ -1085,10 +1263,10 @@ export default function MapView() {
           onMapClick={handleMapClick}
           onMapInteraction={handleMapInteraction}
           mode="view"
-          defaultCenter={defaultMapCenter}
-          defaultZoom={selectedMarkerZoom}
-          focusTarget={defaultMapCenter}
-          focusTargetZoom={selectedMarkerZoom}
+          defaultCenter={activeMapFocusTarget}
+          defaultZoom={activeMapFocusZoom}
+          focusTarget={activeMapFocusTarget}
+          focusTargetZoom={activeMapFocusZoom}
           focusTargetOffsetYRatio={0.14}
           focusUserLocation={isNearbyScene}
           constrainToChiangMai
@@ -1138,6 +1316,44 @@ export default function MapView() {
               </button>
             )}
           </label>
+          {mapSearchQuery.trim() && !selectedExternalPlace && !mapSearchMatch && !hasInternalMapSearchResults && (
+            <div className="mt-2 overflow-hidden rounded-2xl border border-border/60 bg-background/95 p-2 shadow-xl backdrop-blur-md">
+              <div className="px-2 pb-1 text-[11px] font-black text-muted-foreground">
+                CMI 暂无这个地点，试试外部清迈地点
+              </div>
+              {externalPlaceSearchStatus === 'searching' ? (
+                <p className="px-2 py-2 text-xs font-bold text-muted-foreground">正在查清迈地点...</p>
+              ) : externalPlaceCandidates.length > 0 ? (
+                <div className="space-y-1">
+                  {externalPlaceCandidates.map(place => (
+                    <button
+                      key={place.externalPlaceId}
+                      type="button"
+                      className="flex w-full items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-left shadow-sm transition active:scale-[0.99]"
+                      onClick={() => handleExternalPlaceSelect(place)}
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-black text-foreground">{place.placeName}</span>
+                        <span className="mt-0.5 block truncate text-[11px] font-bold text-muted-foreground">
+                          {place.areaLabel} · 外部地点
+                        </span>
+                      </span>
+                      <span className="shrink-0 rounded-full bg-primary px-2.5 py-1 text-[11px] font-black text-primary-foreground">
+                        定位
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : externalPlaceSearchStatus === 'error' ? (
+                <p className="px-2 py-2 text-xs font-bold text-muted-foreground">外部地点暂时搜不到，可以换个英文名或区域。</p>
+              ) : (
+                <p className="px-2 py-2 text-xs font-bold text-muted-foreground">输入至少 2 个字后会查外部地点。</p>
+              )}
+              <p className="px-2 pt-2 text-[10px] font-bold text-muted-foreground/80">
+                数据源：OpenStreetMap / Photon
+              </p>
+            </div>
+          )}
         </form>
       )}
 
@@ -1878,8 +2094,75 @@ export default function MapView() {
         </div>
       )}
 
+      {selectedExternalPlace && selectedMarker && !selectedEvent && (
+        <div
+          className="absolute bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-border/20 bg-card p-6 shadow-2xl slide-up"
+          {...selectedCardSwipeHandlers}
+        >
+          <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-muted-foreground/20" aria-hidden="true" />
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 p-2">
+                <MapPinned className="h-6 w-6 text-primary" strokeWidth={2.6} />
+              </div>
+              <div className="min-w-0">
+                <p className="break-words text-2xl font-black leading-tight text-foreground">
+                  {selectedExternalPlace.placeName}
+                </p>
+                <p className="mt-1 text-sm font-bold text-muted-foreground">
+                  {selectedExternalPlace.areaLabel}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-primary/15 bg-primary/5 px-3 py-2 text-sm font-bold leading-relaxed text-foreground/85">
+              这个地点还没有 CMI 痕迹。可以先用它发活动、发帖，或补录一条真实体验。
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                className="flex h-11 items-center justify-center gap-1.5 rounded-full bg-primary px-3 text-sm font-black text-primary-foreground shadow-sm transition-transform active:scale-[0.97]"
+                onClick={handleSelectedExternalPlaceTrace}
+              >
+                <Plus className="h-4 w-4" strokeWidth={2.5} />
+                补录
+              </button>
+              <button
+                type="button"
+                className="flex h-11 items-center justify-center gap-1.5 rounded-full border border-border bg-background px-3 text-sm font-black text-foreground transition-transform active:scale-[0.97]"
+                onClick={handleSelectedExternalPlaceEvent}
+              >
+                <CalendarDays className="h-4 w-4" strokeWidth={2.5} />
+                活动
+              </button>
+              <button
+                type="button"
+                className="flex h-11 items-center justify-center gap-1.5 rounded-full border border-border bg-background px-3 text-sm font-black text-foreground transition-transform active:scale-[0.97]"
+                onClick={handleSelectedExternalPlacePost}
+              >
+                <List className="h-4 w-4" strokeWidth={2.5} />
+                发帖
+              </button>
+              <button
+                type="button"
+                className="flex h-11 items-center justify-center gap-1.5 rounded-full border border-border bg-background px-3 text-sm font-black text-foreground transition-transform active:scale-[0.97]"
+                onClick={handleSelectedNavigation}
+              >
+                <Navigation className="h-4 w-4" strokeWidth={2.5} />
+                导航
+              </button>
+            </div>
+
+            <p className="text-[10px] font-bold text-muted-foreground">
+              数据源：{selectedExternalPlace.attributionLabel}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 预览卡片 - z-index 最高 */}
-      {selectedMarker && !selectedEvent && !isEasterEggMode && selectedRecommendations.length > 0 && (
+      {selectedMarker && !selectedEvent && !selectedExternalPlace && !isEasterEggMode && selectedRecommendations.length > 0 && (
         <div
           className="absolute bottom-0 left-0 right-0 z-50 cursor-pointer rounded-t-3xl border-t border-border/20 bg-card p-6 card-shadow slide-up press-feedback"
           onClick={handleCardClick}
@@ -1948,7 +2231,7 @@ export default function MapView() {
                   className="font-semibold text-primary underline-offset-4 hover:underline"
                   onClick={(event) => {
                     event.stopPropagation();
-                    navigate(getPersonMapPath(selectedRecommendations[0].user_name));
+                    navigate(getPersonMapPath(selectedRecommendations[0].user_id || selectedRecommendations[0].user_name));
                   }}
                 >
                   {selectedRecommendations[0].user_name} 的清迈地图

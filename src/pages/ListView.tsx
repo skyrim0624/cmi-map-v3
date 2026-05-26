@@ -13,8 +13,9 @@ import {
 } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, LogIn, MapPinned } from 'lucide-react';
-import { getPersonMapPath, getPlacePath, getSceneMapPath } from '@/lib/paths';
+import { ArrowLeft, LogIn, MapPinned, PlusCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { getCmiEventCreatePath, getCmiEventPath, getPersonMapPath, getPlacePath, getSceneMapPath } from '@/lib/paths';
 import {
   getPlaceGuide,
   isCommunityCuratedRecommendation,
@@ -23,11 +24,20 @@ import { getCmiScene, getCmiSceneRecommendations } from '@/data/cmi-scenes';
 import {
   CMI_EVENT_TYPE_OPTIONS,
   CMI_EVENTS,
+  formatCmiEventTime,
   getCmiEventsForSceneFromList,
+  type CmiEvent,
   type CmiEventType,
 } from '@/data/cmi-events';
-import { getPublishedCmiEvents } from '@/db/cmi-events';
+import {
+  cancelCmiEventRegistration,
+  getCurrentUserCmiEventRegistrations,
+  getPublishedCmiEvents,
+  registerForCmiEvent,
+} from '@/db/cmi-events';
 import { CmiEventCard } from '@/components/intent/event-card';
+import { getCmiEventCardImageUrl } from '@/components/intent/event-card-presentation';
+import { createCmiEventShareCard } from '@/lib/cmi-event-share-card';
 import { getCmiIntentSecondaryFilters, matchesCmiIntentSecondaryFilter } from '@/data/cmi-scene-tags';
 import { getCmiInspirationCards } from '@/data/cmi-inspirations';
 import { CmiInspirationCard } from '@/components/intent/inspiration-card';
@@ -53,6 +63,28 @@ type UserLocation = {
   longitude: number;
 };
 
+type FileShareData = {
+  files?: File[];
+  title?: string;
+  text?: string;
+};
+
+type NavigatorWithFileShare = Navigator & {
+  canShare?: (data: FileShareData) => boolean;
+  share?: (data: FileShareData) => Promise<void>;
+};
+
+const downloadEventShareCard = (card: { blob: Blob; fileName: string }) => {
+  const downloadUrl = URL.createObjectURL(card.blob);
+  const anchor = document.createElement('a');
+  anchor.href = downloadUrl;
+  anchor.download = card.fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(downloadUrl);
+};
+
 const renderListFilterIcon = (
   item: { iconUrl?: string; label: string; needsIcon?: boolean },
   className = 'h-6 w-6'
@@ -74,6 +106,7 @@ export default function ListView() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { user, profile } = useAuth();
+  const referenceDate = useMemo(() => new Date(), []);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollRafRef = useRef<number | null>(null);
   const restoredScrollKeyRef = useRef<string | null>(null);
@@ -82,6 +115,9 @@ export default function ListView() {
   const [selectedIntentFilter, setSelectedIntentFilter] = useState('all');
   const [selectedEventType, setSelectedEventType] = useState<'all' | CmiEventType>('all');
   const [events, setEvents] = useState(CMI_EVENTS);
+  const [registeredEventIds, setRegisteredEventIds] = useState<Record<string, boolean>>({});
+  const [registeringEventIds, setRegisteringEventIds] = useState<Record<string, boolean>>({});
+  const [sharingEventIds, setSharingEventIds] = useState<Record<string, boolean>>({});
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
   const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
@@ -142,6 +178,10 @@ export default function ListView() {
       Boolean(selectedOption && event.tags.includes(selectedOption.label))
     );
   }, [sceneEvents, selectedEventType]);
+  const visibleSceneEventIdsKey = useMemo(
+    () => visibleSceneEvents.map(event => event.id).join('|'),
+    [visibleSceneEvents]
+  );
   const intentFilters = activeScene ? getCmiIntentSecondaryFilters(activeScene.id) : [];
   const selectedIntentFilterLabel =
     intentFilters.find(filter => filter.id === selectedIntentFilter)?.label ?? null;
@@ -187,6 +227,20 @@ export default function ListView() {
         empty: '这个分类还没有已核实地点。运营库补录后会自动出现在这里。',
       };
   const displayName = profile?.user_name || user?.email?.split('@')[0] || '游客';
+  const pageShellClassName = isEventScene
+    ? 'relative flex h-[100dvh] w-full flex-col overflow-hidden bg-[#ffe45f]'
+    : 'relative flex h-[100dvh] w-full flex-col overflow-hidden bg-background';
+  const pageHeaderClassName = isEventScene
+    ? 'shrink-0 border-b-2 border-[#171513] bg-[#ffe45f]'
+    : 'shrink-0 border-b border-border bg-background';
+  const scrollBodyClassName = isEventScene
+    ? 'w-full flex-1 overflow-y-auto overflow-x-hidden bg-[#ffe45f]'
+    : 'w-full flex-1 overflow-y-auto overflow-x-hidden';
+  const listInnerClassName = isEventScene
+    ? 'w-full max-w-full space-y-4 px-4 pb-[calc(9rem+env(safe-area-inset-bottom))] py-4'
+    : 'w-full max-w-full space-y-4 px-4 pb-[calc(9rem+env(safe-area-inset-bottom))] py-6';
+  const eventFilterBarClassName =
+    'sticky top-0 z-10 -mx-4 flex gap-2 overflow-x-auto bg-[#ffe45f]/95 px-4 pb-3 pt-1 backdrop-blur hide-scrollbar';
 
   // 加载推荐数据
   useEffect(() => {
@@ -279,6 +333,33 @@ export default function ListView() {
     }
   }, [eventTypeOptions, isEventScene, selectedEventType]);
 
+  useEffect(() => {
+    let isMounted = true;
+    const eventIds = visibleSceneEventIdsKey.split('|').filter(Boolean);
+
+    if (!isEventScene || eventIds.length === 0 || !user?.id) {
+      setRegisteredEventIds({});
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    getCurrentUserCmiEventRegistrations(eventIds, user.id).then(registrations => {
+      if (!isMounted) return;
+
+      setRegisteredEventIds(
+        eventIds.reduce<Record<string, boolean>>((state, eventId) => {
+          state[eventId] = registrations.some(registration => registration.eventId === eventId);
+          return state;
+        }, {})
+      );
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isEventScene, user?.id, visibleSceneEventIdsKey]);
+
   const handleIntentFilterSelect = (filterId: string) => {
     setSelectedIntentFilter(filterId);
     if (!activeScene) return;
@@ -347,6 +428,127 @@ export default function ListView() {
   const handleOpenPlace = (placeName: string) => {
     saveListScrollPosition();
     navigate(getPlacePath(placeName));
+  };
+
+  const handleOpenEvent = (event: CmiEvent) => {
+    saveListScrollPosition();
+
+    if (isEventScene) {
+      navigate(getCmiEventPath(event.id));
+      return;
+    }
+
+    if (event.mapLocation && activeScene) {
+      navigate(getSceneMapPath(activeScene.id, {
+        eventId: event.id,
+        filterId: selectedIntentFilter === 'all' ? null : selectedIntentFilter,
+        placeTypeId: activePlaceTypeId,
+      }));
+    }
+  };
+
+  const handleQuickRegisterEvent = async (event: CmiEvent) => {
+    if (!user?.id || !user.email) {
+      toast('登录后可以一键报名', { description: '注册只需要一个邮箱。' });
+      navigate('/login', { state: { from: `${location.pathname}${location.search}` } });
+      return;
+    }
+
+    if (registeredEventIds[event.id]) {
+      const confirmed = window.confirm(`确定要取消「${event.title}」的报名吗？`);
+      if (!confirmed) return;
+
+      setRegisteringEventIds(prev => ({ ...prev, [event.id]: true }));
+      try {
+        await cancelCmiEventRegistration({
+          eventId: event.id,
+          userId: user.id,
+        });
+        setRegisteredEventIds(prev => ({ ...prev, [event.id]: false }));
+        toast.success('已取消报名');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '请稍后重试';
+        toast.error('取消报名失败', { description: message });
+      } finally {
+        setRegisteringEventIds(prev => ({ ...prev, [event.id]: false }));
+      }
+      return;
+    }
+
+    if (!event.registrationEnabled || event.registrationStatus !== 'open') {
+      toast.error('这个活动暂时不能一键报名');
+      return;
+    }
+
+    const attendeeName = profile?.user_name?.trim() || user.email.split('@')[0] || 'CMI 朋友';
+
+    setRegisteringEventIds(prev => ({ ...prev, [event.id]: true }));
+    try {
+      const result = await registerForCmiEvent({
+        eventId: event.id,
+        attendeeName,
+        attendeeEmail: user.email,
+        note: '从活动列表一键报名',
+        userId: user.id,
+      });
+
+      setRegisteredEventIds(prev => ({ ...prev, [event.id]: true }));
+
+      if (result.notificationError) {
+        toast.warning('报名成功，邮件通知稍后需要补发');
+      } else {
+        toast.success('报名成功');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '请稍后重试';
+      if (message.toLowerCase().includes('duplicate')) {
+        setRegisteredEventIds(prev => ({ ...prev, [event.id]: true }));
+        toast('你已经报名这个活动了');
+        return;
+      }
+
+      toast.error('报名失败', { description: message });
+    } finally {
+      setRegisteringEventIds(prev => ({ ...prev, [event.id]: false }));
+    }
+  };
+
+  const handleShareEvent = async (event: CmiEvent) => {
+    const posterUrl = getCmiEventCardImageUrl(event);
+    setSharingEventIds(prev => ({ ...prev, [event.id]: true }));
+
+    try {
+      const card = await createCmiEventShareCard({
+        event,
+        posterUrl,
+        referenceDate,
+      });
+      const file = new File([card.blob], card.fileName, { type: 'image/png' });
+      const shareData: FileShareData = {
+        files: [file],
+        title: `CMI Map · ${event.title}`,
+        text: `${event.title}｜${formatCmiEventTime(event, referenceDate)}，${event.venueName}`,
+      };
+      const navigatorWithFileShare = navigator as NavigatorWithFileShare;
+
+      if (navigatorWithFileShare.share && (!navigatorWithFileShare.canShare || navigatorWithFileShare.canShare(shareData))) {
+        try {
+          await navigatorWithFileShare.share(shareData);
+          return;
+        } catch (error) {
+          if (error instanceof DOMException && error.name === 'AbortError') return;
+          console.error('Failed to share CMI event card:', error);
+        }
+      }
+
+      downloadEventShareCard(card);
+      toast.success('当前浏览器不支持直接分享，已改为下载活动图片');
+    } catch (error) {
+      console.error('Failed to create CMI event share card:', error);
+      toast.error('活动卡片生成失败，请稍后再试');
+    } finally {
+      setSharingEventIds(prev => ({ ...prev, [event.id]: false }));
+    }
   };
 
   const loadRecommendations = async () => {
@@ -424,9 +626,9 @@ export default function ListView() {
   };
 
   return (
-    <div className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-background">
+    <div className={pageShellClassName}>
       {/* 顶部标题栏 */}
-      <div className="shrink-0 border-b border-border bg-background">
+      <div className={pageHeaderClassName}>
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
             <Button
@@ -443,18 +645,31 @@ export default function ListView() {
             </h1>
           </div>
           {activeScene ? (
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => navigate(getSceneMapPath(activeScene.id, {
-                filterId: activeNearbyMapGroupId,
-                placeTypeId: activePlaceTypeId,
-              }))}
-              className="press-feedback"
-              aria-label="查看地图视角"
-            >
-              <MapPinned className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-2">
+              {isEventScene && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => navigate(getCmiEventCreatePath())}
+                  className="press-feedback"
+                  aria-label="发布活动"
+                >
+                  <PlusCircle className="h-5 w-5" />
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => navigate(getSceneMapPath(activeScene.id, {
+                  filterId: activeNearbyMapGroupId,
+                  placeTypeId: activePlaceTypeId,
+                }))}
+                className="press-feedback"
+                aria-label="查看地图视角"
+              >
+                <MapPinned className="h-5 w-5" />
+              </Button>
+            </div>
           ) : (
             <div className="w-10" />
           )}
@@ -589,11 +804,9 @@ export default function ListView() {
       <div
         ref={scrollContainerRef}
         onScroll={handleListScroll}
-        className={`w-full flex-1 overflow-y-auto overflow-x-hidden ${
-        isEventScene ? 'bg-[#f8f6f0]' : ''
-      }`}
+        className={scrollBodyClassName}
       >
-        <div className={`w-full max-w-full space-y-4 px-4 pb-[calc(9rem+env(safe-area-inset-bottom))] ${isEventScene ? 'py-4' : 'py-6'}`}>
+        <div className={listInnerClassName}>
           {sceneEvents.length > 0 && (
             <section className="space-y-3">
               {!isEventScene && (
@@ -610,7 +823,7 @@ export default function ListView() {
                 </div>
               )}
               {isEventScene && eventTypeOptions.length > 1 && (
-                <div className="sticky top-0 z-10 -mx-4 flex gap-2 overflow-x-auto border-b border-[#e7e1d6] bg-[#f8f6f0]/95 px-4 pb-3 pt-1 backdrop-blur hide-scrollbar">
+                <div className={eventFilterBarClassName}>
                   {eventTypeOptions.map(option => (
                     <button
                       key={option.id}
@@ -636,15 +849,13 @@ export default function ListView() {
                 <CmiEventCard
                   key={event.id}
                   event={event}
-                  to={
-                    event.mapLocation && activeScene
-                      ? getSceneMapPath(activeScene.id, {
-                        eventId: event.id,
-                        filterId: selectedIntentFilter === 'all' ? null : selectedIntentFilter,
-                        placeTypeId: activePlaceTypeId,
-                      })
-                      : undefined
-                  }
+                  onClick={() => handleOpenEvent(event)}
+                  showActions={isEventScene}
+                  hasRegistered={Boolean(registeredEventIds[event.id])}
+                  isRegistering={Boolean(registeringEventIds[event.id])}
+                  isSharing={Boolean(sharingEventIds[event.id])}
+                  onShare={() => handleShareEvent(event)}
+                  onRegister={() => handleQuickRegisterEvent(event)}
                 />
               ))}
               {visibleSceneEvents.length === 0 && (
@@ -778,7 +989,7 @@ export default function ListView() {
                               className="font-semibold text-primary underline-offset-4 hover:underline"
                               onClick={(event) => {
                                 event.stopPropagation();
-                                navigate(getPersonMapPath(rec.user_name));
+                                navigate(getPersonMapPath(rec.user_id || rec.user_name));
                               }}
                             >
                               {rec.user_name}

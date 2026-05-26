@@ -14,8 +14,11 @@ const SYSTEM_PUBLIC_ROUTES = ['/login', '/403', '/404'];
 const routePublicPaths = routes.filter(r => r.public).map(r => r.path);
 
 const PUBLIC_ROUTES = [...SYSTEM_PUBLIC_ROUTES, ...routePublicPaths];
+const PRIVATE_ROUTE_EXCEPTIONS = ['/events/new'];
 
 function matchPublicRoute(path: string, patterns: string[]) {
+  if (PRIVATE_ROUTE_EXCEPTIONS.includes(path)) return false;
+
   return patterns.some(pattern => {
     // 处理 React Router 的 :param 和 * 通配符
     if (pattern.includes(':') || pattern.includes('*')) {
@@ -40,9 +43,9 @@ export function RouteGuard({ children }: RouteGuardProps) {
     const isPublic = matchPublicRoute(location.pathname, PUBLIC_ROUTES);
 
     if (!user && !isPublic) {
-      navigate('/login', { state: { from: location.pathname }, replace: true });
+      navigate('/login', { state: { from: `${location.pathname}${location.search}` }, replace: true });
     }
-  }, [user, loading, location.pathname, navigate]);
+  }, [user, loading, location.pathname, location.search, navigate]);
 
   if (loading) {
     return (

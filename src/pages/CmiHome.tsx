@@ -11,7 +11,6 @@ import {
   RefreshCw,
   Share2,
   Sparkles,
-  Stamp,
   UsersRound,
 } from 'lucide-react';
 import { type KeyboardEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
@@ -19,6 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 import { getCmiEventCardBackgroundUrl, getCmiEventPosterUrl } from '@/data/cmi-event-details';
 import {
   CMI_EVENTS,
@@ -26,17 +26,23 @@ import {
   formatCmiEventTime,
   getUpcomingCmiEventsFromList,
 } from '@/data/cmi-events';
-import { getAvailableStickers, getProfilesByUserNames, getRecommendationsByPlace, type PublicProfile } from '@/db/api';
 import {
-  getCmiEventStampDeviceId,
-  getCmiEventStamps,
-  placeCmiEventStamp,
-} from '@/db/cmi-event-stamps';
-import { getPublishedCmiEvents } from '@/db/cmi-events';
+  getProfilesByUserIds,
+  getProfilesByUserNames,
+  getRecommendationsByPlace,
+  type PublicProfile,
+} from '@/db/api';
+import {
+  cancelCmiEventRegistration,
+  getCurrentUserCmiEventRegistrations,
+  getPublishedCmiEvents,
+  registerForCmiEvent,
+} from '@/db/cmi-events';
+import { getStableProfileIdentity } from '@/features/profiles/profile-identity';
 import { type CmiEventShareCardResult, createCmiEventShareCard } from '@/lib/cmi-event-share-card';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
-import { getAddTracePath, getCmiEventPath, getProfilePath } from '@/lib/paths';
-import { CMI_INN_LOGO_ICON_URL, CMI_INN_PLACE_NAME, type Recommendation, type Sticker } from '@/types/types';
+import { getAddTracePath, getCmiEventPath, getPersonMapPath } from '@/lib/paths';
+import { CMI_INN_LOGO_ICON_URL, CMI_INN_PLACE_NAME, type Recommendation } from '@/types/types';
 
 type FileShareData = {
   files?: File[];
@@ -378,29 +384,40 @@ function InnDetailSection({
   );
 }
 
-function EventStampButton({
-  hasStamped,
-  isStamping,
-  onStamp,
+function EventRegisterButton({
+  hasRegistered,
+  isRegistering,
+  onRegister,
 }: {
-  hasStamped: boolean;
-  isStamping: boolean;
-  onStamp: () => void;
+  hasRegistered: boolean;
+  isRegistering: boolean;
+  onRegister: () => void;
 }) {
+  const label = hasRegistered
+    ? isRegistering
+      ? '取消中'
+      : '已报名'
+    : isRegistering
+      ? '报名中'
+      : '报名';
+  const buttonClassName = hasRegistered
+    ? 'bg-[#fff9e8] hover:bg-[#fff1d2]'
+    : 'bg-[#2eb45e] hover:bg-[#36c86b]';
+
   return (
     <button
       type="button"
-      disabled={hasStamped || isStamping}
-      className="flex min-h-10 items-center justify-center gap-1.5 rounded-full border-2 border-[#161616] bg-[#2eb45e] px-3 text-sm font-black text-[#161616] shadow-[2px_3px_0_rgba(0,0,0,0.2)] transition hover:bg-[#36c86b] active:translate-y-0.5 active:shadow-[1px_2px_0_rgba(0,0,0,0.18)] disabled:bg-[#fff9e8] disabled:text-[#161616]/70 disabled:shadow-none"
+      disabled={isRegistering}
+      className={`flex min-h-10 items-center justify-center gap-1.5 rounded-full border-2 border-[#161616] px-3 text-sm font-black text-[#161616] shadow-[2px_3px_0_rgba(0,0,0,0.2)] transition active:translate-y-0.5 active:shadow-[1px_2px_0_rgba(0,0,0,0.18)] disabled:bg-[#fff9e8] disabled:text-[#161616]/70 disabled:shadow-none ${buttonClassName}`}
       onClick={(event) => {
         event.stopPropagation();
-        onStamp();
+        onRegister();
       }}
       onKeyDown={(event) => event.stopPropagation()}
-      aria-label="盖戳"
+      aria-label={hasRegistered ? '取消报名活动' : '报名活动'}
     >
-      <Stamp className="h-4 w-4" strokeWidth={2.5} />
-      {hasStamped ? '已盖戳' : isStamping ? '盖戳中' : '盖戳'}
+      <CircleCheck className="h-4 w-4" strokeWidth={2.5} />
+      {label}
     </button>
   );
 }
@@ -430,98 +447,24 @@ function EventShareButton({
   );
 }
 
-function EventStickerDrawer({
-  stickers,
-  loading,
-  onClose,
-  onSelect,
-}: {
-  stickers: Sticker[];
-  loading: boolean;
-  onClose: () => void;
-  onSelect: (sticker: Sticker) => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end bg-black/32 px-4"
-      onClick={onClose}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') onClose();
-      }}
-    >
-      <div
-        className="mx-auto w-full max-w-[520px] rounded-t-[1.55rem] border-2 border-[#2e2a23]/10 bg-[#fffdf8] p-5 pb-[calc(1.1rem+env(safe-area-inset-bottom))] shadow-[0_-18px_48px_rgba(46,42,35,0.18)]"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[12px] font-black text-[#8b5f32]">选择图章</p>
-            <h2 className="mt-1 text-lg font-black leading-tight text-[#242424]">盖一个喜欢的戳</h2>
-          </div>
-          <button
-            type="button"
-            className="rounded-full border-2 border-[#2e2a23]/12 bg-white px-3 py-1.5 text-sm font-black text-[#5f4523] shadow-sm transition active:scale-[0.98]"
-            onClick={onClose}
-          >
-            关闭
-          </button>
-        </div>
-
-        <div className="grid grid-cols-4 gap-3">
-          {loading ? (
-            Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="h-[5.8rem] animate-pulse rounded-[1rem] bg-[#edf6ee]" />
-            ))
-          ) : stickers.length > 0 ? (
-            stickers.map(sticker => (
-              <button
-                key={sticker.id}
-                type="button"
-                className="flex min-h-[5.8rem] flex-col items-center justify-center gap-1.5 rounded-[1rem] border-2 border-[#2e2a23]/10 bg-white/88 p-2 text-center shadow-[2px_3px_0_rgba(46,42,35,0.08)] transition hover:bg-[#edf6ee] active:translate-y-0.5 active:shadow-[1px_2px_0_rgba(46,42,35,0.08)]"
-                onClick={() => onSelect(sticker)}
-              >
-                <img
-                  src={sticker.icon_url}
-                  alt=""
-                  className="h-12 w-12 object-contain saturate-[0.85] contrast-[1.08]"
-                  style={{ mixBlendMode: 'multiply' }}
-                  loading="lazy"
-                  decoding="async"
-                />
-                <span className="max-w-full truncate text-[11px] font-black leading-none text-[#5f4523]">
-                  {sticker.name}
-                </span>
-              </button>
-            ))
-          ) : (
-            <div className="col-span-4 rounded-[1rem] border border-[#2e2a23]/8 bg-white/86 p-4 text-sm font-black text-[#5f4523]">
-              图章暂时没加载出来，稍后再试。
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function EventPreviewCard({
   event,
   referenceDate,
   onOpenEvent,
-  hasStamped,
-  isStamping,
+  hasRegistered,
+  isRegistering,
   isSharing,
   onShareEvent,
-  onStampEvent,
+  onRegisterEvent,
 }: {
   event: CmiEvent;
   referenceDate: Date;
   onOpenEvent: () => void;
-  hasStamped: boolean;
-  isStamping: boolean;
+  hasRegistered: boolean;
+  isRegistering: boolean;
   isSharing: boolean;
   onShareEvent: () => void;
-  onStampEvent: () => void;
+  onRegisterEvent: () => void;
 }) {
   const posterUrl = getCmiEventPosterUrl(event.id) ?? getCmiEventCardBackgroundUrl(event.id) ?? '/cmi-home/event-ai-courtyard.png';
   const registrationPreviewLabel = event.registrationLabel.includes('http')
@@ -598,10 +541,10 @@ function EventPreviewCard({
 
         <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
           <EventShareButton isSharing={isSharing} onShare={onShareEvent} />
-          <EventStampButton
-            hasStamped={hasStamped}
-            isStamping={isStamping}
-            onStamp={onStampEvent}
+          <EventRegisterButton
+            hasRegistered={hasRegistered}
+            isRegistering={isRegistering}
+            onRegister={onRegisterEvent}
           />
         </div>
       </div>
@@ -614,21 +557,21 @@ function YardNoticeWall({
   referenceDate,
   onOpenAllEvents,
   onOpenEvent,
-  stampedEventIds,
-  stampingEventIds,
+  registeredEventIds,
+  registeringEventIds,
   sharingEventIds,
   onShareEvent,
-  onStampEvent,
+  onRegisterEvent,
 }: {
   innEvents: CmiEvent[];
   referenceDate: Date;
   onOpenAllEvents: () => void;
   onOpenEvent: (eventId: string) => void;
-  stampedEventIds: Record<string, boolean>;
-  stampingEventIds: Record<string, boolean>;
+  registeredEventIds: Record<string, boolean>;
+  registeringEventIds: Record<string, boolean>;
   sharingEventIds: Record<string, boolean>;
   onShareEvent: (event: CmiEvent) => void;
-  onStampEvent: (eventId: string) => void;
+  onRegisterEvent: (event: CmiEvent) => void;
 }) {
   const visibleInnEvents = innEvents.slice(0, 4);
   const latestCheckedAtLabel = formatBangkokDateTime(
@@ -687,11 +630,11 @@ function YardNoticeWall({
                 event={event}
                 referenceDate={referenceDate}
                 onOpenEvent={() => onOpenEvent(event.id)}
-                hasStamped={Boolean(stampedEventIds[event.id])}
-                isStamping={Boolean(stampingEventIds[event.id])}
+                hasRegistered={Boolean(registeredEventIds[event.id])}
+                isRegistering={Boolean(registeringEventIds[event.id])}
                 isSharing={Boolean(sharingEventIds[event.id])}
                 onShareEvent={() => onShareEvent(event)}
-                onStampEvent={() => onStampEvent(event.id)}
+                onRegisterEvent={() => onRegisterEvent(event)}
               />
             ))
           ) : (
@@ -719,7 +662,7 @@ function InnRecordCard({
 }: {
   record: Recommendation;
   profile?: PublicProfile;
-  onOpenProfile: () => void;
+  onOpenProfile: (record: Recommendation, profile?: PublicProfile) => void;
 }) {
   const imageUrls = getRecordImages(record);
   const reasonText = getRecommendationReasonText(record);
@@ -749,7 +692,7 @@ function InnRecordCard({
           <button
             type="button"
             className="flex min-w-0 items-center gap-2 rounded-full pr-2 text-left transition hover:text-[#245f3b] active:scale-[0.98]"
-            onClick={onOpenProfile}
+            onClick={() => onOpenProfile(record, profile)}
             aria-label={`打开${displayName}的个人主页`}
           >
             <Avatar className="h-8 w-8 border-2 border-[#161616] bg-[#2eb45e]">
@@ -771,14 +714,16 @@ function InnRecordsSection({
   records,
   loading,
   error,
+  profilesByUserId,
   profilesByUserName,
   onOpenProfile,
 }: {
   records: Recommendation[];
   loading: boolean;
   error: string | null;
+  profilesByUserId: Record<string, PublicProfile>;
   profilesByUserName: Record<string, PublicProfile>;
-  onOpenProfile: () => void;
+  onOpenProfile: (record: Recommendation, profile?: PublicProfile) => void;
 }) {
   const visibleRecords = records.filter(record => getRecordImages(record).length > 0).slice(0, 3);
 
@@ -809,7 +754,7 @@ function InnRecordsSection({
                 <InnRecordCard
                   key={record.id}
                   record={record}
-                  profile={profilesByUserName[record.user_name]}
+                  profile={(record.user_id && profilesByUserId[record.user_id]) || profilesByUserName[record.user_name]}
                   onOpenProfile={onOpenProfile}
                 />
               ))
@@ -880,6 +825,7 @@ function ContactQrSection() {
 
 export default function CmiHome() {
   const navigate = useNavigate();
+  const { user, profile } = useAuth();
   const referenceDate = useMemo(() => new Date(), []);
   const [events, setEvents] = useState<CmiEvent[]>(CMI_EVENTS);
   const innEvents = useMemo(() => getPrimaryInnEvents(events, referenceDate), [events, referenceDate]);
@@ -887,15 +833,13 @@ export default function CmiHome() {
     () => innEvents.slice(0, 4).map(event => event.id).join('|'),
     [innEvents]
   );
-  const [stampedEventIds, setStampedEventIds] = useState<Record<string, boolean>>({});
-  const [stampingEventIds, setStampingEventIds] = useState<Record<string, boolean>>({});
+  const [registeredEventIds, setRegisteredEventIds] = useState<Record<string, boolean>>({});
+  const [registeringEventIds, setRegisteringEventIds] = useState<Record<string, boolean>>({});
   const [sharingEventIds, setSharingEventIds] = useState<Record<string, boolean>>({});
-  const [availableStickers, setAvailableStickers] = useState<Sticker[]>([]);
-  const [stickersLoading, setStickersLoading] = useState(true);
-  const [activeStampEventId, setActiveStampEventId] = useState<string | null>(null);
   const [innRecords, setInnRecords] = useState<Recommendation[]>([]);
   const [innRecordsLoading, setInnRecordsLoading] = useState(true);
   const [innRecordsError, setInnRecordsError] = useState<string | null>(null);
+  const [profilesByUserId, setProfilesByUserId] = useState<Record<string, PublicProfile>>({});
   const [profilesByUserName, setProfilesByUserName] = useState<Record<string, PublicProfile>>({});
 
   useEffect(() => {
@@ -905,25 +849,6 @@ export default function CmiHome() {
       if (!isMounted) return;
       setEvents(data);
     });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-    setStickersLoading(true);
-
-    getAvailableStickers()
-      .then(stickers => {
-        if (!isMounted) return;
-        setAvailableStickers(stickers);
-      })
-      .finally(() => {
-        if (!isMounted) return;
-        setStickersLoading(false);
-      });
 
     return () => {
       isMounted = false;
@@ -957,12 +882,20 @@ export default function CmiHome() {
 
   useEffect(() => {
     let isMounted = true;
-    const userNames = innRecords.map(record => record.user_name);
 
-    getProfilesByUserNames(userNames).then(profiles => {
+    Promise.all([
+      getProfilesByUserIds(innRecords.map(record => record.user_id)),
+      getProfilesByUserNames(innRecords.filter(record => !record.user_id).map(record => record.user_name)),
+    ]).then(([profilesById, profilesByLegacyName]) => {
       if (!isMounted) return;
+      setProfilesByUserId(
+        profilesById.reduce<Record<string, PublicProfile>>((profilesByIdMap, profile) => {
+          profilesByIdMap[profile.id] = profile;
+          return profilesByIdMap;
+        }, {})
+      );
       setProfilesByUserName(
-        profiles.reduce<Record<string, PublicProfile>>((profilesByName, profile) => {
+        [...profilesById, ...profilesByLegacyName].reduce<Record<string, PublicProfile>>((profilesByName, profile) => {
           if (profile.user_name) profilesByName[profile.user_name] = profile;
           return profilesByName;
         }, {})
@@ -974,29 +907,28 @@ export default function CmiHome() {
     };
   }, [innRecords]);
 
-  const handleOpenProfile = () => {
-    navigate(getProfilePath());
+  const handleOpenProfile = (record: Recommendation, profile?: PublicProfile) => {
+    const identity = profile ? getStableProfileIdentity(profile) : record.user_id || record.user_name;
+    navigate(getPersonMapPath(identity));
   };
 
   useEffect(() => {
     let isMounted = true;
     const eventIds = visibleInnEventIdsKey.split('|').filter(Boolean);
 
-    if (eventIds.length === 0) {
-      setStampedEventIds({});
+    if (eventIds.length === 0 || !user?.id) {
+      setRegisteredEventIds({});
       return () => {
         isMounted = false;
       };
     }
 
-    const deviceId = getCmiEventStampDeviceId();
-
-    getCmiEventStamps(eventIds).then(stamps => {
+    getCurrentUserCmiEventRegistrations(eventIds, user.id).then(registrations => {
       if (!isMounted) return;
 
-      setStampedEventIds(
+      setRegisteredEventIds(
         eventIds.reduce<Record<string, boolean>>((state, eventId) => {
-          state[eventId] = stamps.some(stamp => stamp.eventId === eventId && stamp.deviceId === deviceId);
+          state[eventId] = registrations.some(registration => registration.eventId === eventId);
           return state;
         }, {})
       );
@@ -1005,45 +937,72 @@ export default function CmiHome() {
     return () => {
       isMounted = false;
     };
-  }, [visibleInnEventIdsKey]);
+  }, [user?.id, visibleInnEventIdsKey]);
 
-  const handleOpenStampDrawer = (eventId: string) => {
-    if (stampedEventIds[eventId]) {
-      toast('你已经给这个活动盖过戳了');
+  const handleQuickRegisterEvent = async (event: CmiEvent) => {
+    if (!user?.id || !user.email) {
+      toast('登录后可以一键报名', { description: '注册只需要一个邮箱。' });
+      navigate('/login', { state: { from: '/cmi-home' } });
       return;
     }
 
-    setActiveStampEventId(eventId);
-  };
+    if (registeredEventIds[event.id]) {
+      const confirmed = window.confirm(`确定要取消「${event.title}」的报名吗？`);
+      if (!confirmed) return;
 
-  const handleStampEvent = async (eventId: string, sticker: Sticker) => {
-    setStampingEventIds(prev => ({ ...prev, [eventId]: true }));
-    setActiveStampEventId(null);
+      setRegisteringEventIds(prev => ({ ...prev, [event.id]: true }));
+      try {
+        await cancelCmiEventRegistration({
+          eventId: event.id,
+          userId: user.id,
+        });
+        setRegisteredEventIds(prev => ({ ...prev, [event.id]: false }));
+        toast.success('已取消报名');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '请稍后重试';
+        toast.error('取消报名失败', { description: message });
+      } finally {
+        setRegisteringEventIds(prev => ({ ...prev, [event.id]: false }));
+      }
+      return;
+    }
 
+    if (!event.registrationEnabled || event.registrationStatus !== 'open') {
+      toast.error('这个活动暂时不能一键报名');
+      return;
+    }
+
+    const attendeeName = profile?.user_name?.trim() || user.email.split('@')[0] || 'CMI 朋友';
+
+    setRegisteringEventIds(prev => ({ ...prev, [event.id]: true }));
     try {
-      const nextStamp = await placeCmiEventStamp(eventId, { stampLabel: sticker.name });
+      const result = await registerForCmiEvent({
+        eventId: event.id,
+        attendeeName,
+        attendeeEmail: user.email,
+        note: '从清迈客栈主页一键报名',
+        userId: user.id,
+      });
 
-      if (nextStamp) {
-        setStampedEventIds(prev => ({ ...prev, [eventId]: true }));
-        toast.success(`已盖上「${sticker.name}」`);
+      setRegisteredEventIds(prev => ({ ...prev, [event.id]: true }));
+
+      if (result.notificationError) {
+        toast.warning('报名成功，邮件通知稍后需要补发');
+      } else {
+        toast.success('报名成功');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '请稍后重试';
+      if (message.toLowerCase().includes('duplicate')) {
+        setRegisteredEventIds(prev => ({ ...prev, [event.id]: true }));
+        toast('你已经报名这个活动了');
         return;
       }
 
-      const deviceId = getCmiEventStampDeviceId();
-      const refreshedStamps = await getCmiEventStamps([eventId]);
-      setStampedEventIds(prev => ({
-        ...prev,
-        [eventId]: refreshedStamps.some(stamp => stamp.deviceId === deviceId),
-      }));
-      toast('这个活动已经有你的盖戳了');
+      toast.error('报名失败', { description: message });
     } finally {
-      setStampingEventIds(prev => ({ ...prev, [eventId]: false }));
+      setRegisteringEventIds(prev => ({ ...prev, [event.id]: false }));
     }
-  };
-
-  const handleSelectEventSticker = (sticker: Sticker) => {
-    if (!activeStampEventId) return;
-    void handleStampEvent(activeStampEventId, sticker);
   };
 
   const handleShareEvent = async (event: CmiEvent) => {
@@ -1133,11 +1092,11 @@ export default function CmiHome() {
           referenceDate={referenceDate}
           onOpenAllEvents={() => navigate('/list?scene=tomorrow-events')}
           onOpenEvent={(eventId) => navigate(getCmiEventPath(eventId))}
-          stampedEventIds={stampedEventIds}
-          stampingEventIds={stampingEventIds}
+          registeredEventIds={registeredEventIds}
+          registeringEventIds={registeringEventIds}
           sharingEventIds={sharingEventIds}
           onShareEvent={handleShareEvent}
-          onStampEvent={handleOpenStampDrawer}
+          onRegisterEvent={handleQuickRegisterEvent}
         />
 
         <InnDetailSection
@@ -1149,21 +1108,13 @@ export default function CmiHome() {
           records={innRecords}
           loading={innRecordsLoading}
           error={innRecordsError}
+          profilesByUserId={profilesByUserId}
           profilesByUserName={profilesByUserName}
           onOpenProfile={handleOpenProfile}
         />
 
         <ContactQrSection />
       </main>
-
-      {activeStampEventId && (
-        <EventStickerDrawer
-          stickers={availableStickers}
-          loading={stickersLoading}
-          onClose={() => setActiveStampEventId(null)}
-          onSelect={handleSelectEventSticker}
-        />
-      )}
     </div>
   );
 }

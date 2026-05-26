@@ -1,4 +1,4 @@
-import { ArrowLeft, Camera, Check, LogOut, Pencil, X } from 'lucide-react';
+import { ArrowLeft, Camera, Check, KeyRound, LogOut, Pencil, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -7,7 +7,15 @@ import BadgeWall from '@/components/BadgeWall';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAllRecommendations, updateUserAvatar, updateUserName, uploadAvatar } from '@/db/api';
+import {
+  checkUserNameAvailability,
+  getAllRecommendations,
+  normalizeProfileUserName,
+  updateUserAvatar,
+  updateUserName,
+  uploadAvatar,
+  USER_NAME_TAKEN_ERROR_MESSAGE,
+} from '@/db/api';
 import { syncAchievementProgress } from '@/features/achievements/achievement-service';
 import { getCmiEasterIconUrl, getRecommendationEasterIconId, getRecommendationReasonText } from '@/lib/easter-icons';
 import type { Badge } from '@/types/badges';
@@ -95,9 +103,22 @@ export default function Profile() {
   };
   const handleCancelEdit = () => setIsEditingName(false);
   const handleSaveName = async () => {
-    if (!newName.trim() || !user) return;
+    const normalizedName = normalizeProfileUserName(newName);
+    if (!normalizedName || !user) return;
     setSavingName(true);
-    const success = await updateUserName(user.id, newName.trim());
+    const availability = await checkUserNameAvailability(normalizedName, user.id);
+    if (availability.error) {
+      toast.error('暂时无法确认昵称是否可用，请稍后再试');
+      setSavingName(false);
+      return;
+    }
+    if (!availability.available) {
+      toast.error(USER_NAME_TAKEN_ERROR_MESSAGE);
+      setSavingName(false);
+      return;
+    }
+
+    const success = await updateUserName(user.id, normalizedName);
     if (success) {
       toast.success('昵称修改成功');
       if (refreshProfile) await refreshProfile();
@@ -284,6 +305,7 @@ export default function Profile() {
                 onChange={(e) => setNewName(e.target.value)}
                 className="text-xl font-black text-foreground bg-transparent border-b-2 border-primary focus:outline-none w-32"
                 autoFocus
+                maxLength={24}
                 disabled={savingName}
               />
               <Button size="icon" variant="ghost" className="w-7 h-7 rounded-full text-green-600" onClick={handleSaveName} disabled={savingName}>
@@ -320,6 +342,19 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {profile?.role === 'admin' && (
+        <div className="px-5 pb-4">
+          <Button
+            variant="outline"
+            className="h-11 w-full rounded-2xl border-[#2e2a23]/12 bg-[#f8f1df] font-black text-[#2f553e]"
+            onClick={() => navigate('/admin/agent-tokens')}
+          >
+            <KeyRound className="h-4 w-4" />
+            Agent Token
+          </Button>
+        </div>
+      )}
 
       {/* ======== Tab 栏 ======== */}
       <div className="flex border-b border-border/50 px-5 sticky top-[52px] bg-background z-40">

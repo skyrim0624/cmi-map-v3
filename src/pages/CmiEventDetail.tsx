@@ -5,19 +5,22 @@ import {
   Check,
   Clock3,
   Loader2,
+  Mail,
   type LucideIcon,
   MapPin,
   MapPinned,
   MessageSquareText,
   Navigation,
+  Send,
   Stamp,
   Ticket,
   UsersRound,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -38,8 +41,21 @@ import {
   getCmiEventTimeBucketLabel,
   getCmiEventTypeLabel,
 } from '@/data/cmi-events';
-import { getPublishedCmiEvents } from '@/db/cmi-events';
-import { getCmiBlackboardPath, getCmiHomePath, getPlaceMapPath, getSceneMapPath } from '@/lib/paths';
+import {
+  getPublicCmiEventRegistrations,
+  getPublishedCmiEvents,
+  registerForCmiEvent,
+  type CmiEventPublicRegistration,
+} from '@/db/cmi-events';
+import { isCmiEventManager } from '@/features/cmi-events/event-management';
+import {
+  getCmiBlackboardPath,
+  getCmiEventManagePath,
+  getCmiHomePath,
+  getPlaceMapPath,
+  getSceneMapPath,
+} from '@/lib/paths';
+import { getVisibleEventAttendees, summarizeEventRegistrations } from '@/features/cmi-events/event-rsvp-utils';
 import { cn } from '@/lib/utils';
 
 const WANT_TO_GO_STORAGE_PREFIX = 'cmi-map:event-want-to-go:';
@@ -129,22 +145,53 @@ export default function CmiEventDetail() {
   const { eventId: eventIdParam } = useParams<{ eventId: string }>();
   const eventId = useMemo(() => decodeRouteParam(eventIdParam), [eventIdParam]);
   const navigate = useNavigate();
+  const { user, profile } = useAuth();
   const referenceDate = useMemo(() => new Date(), []);
   const [event, setEvent] = useState<CmiEvent | null>(() => getCmiEventById(eventId));
   const [loading, setLoading] = useState(true);
   const [rideDialogOpen, setRideDialogOpen] = useState(false);
   const [wantToGo, setWantToGo] = useState(false);
+  const [publicRegistrations, setPublicRegistrations] = useState<CmiEventPublicRegistration[]>([]);
+  const [attendeeName, setAttendeeName] = useState(profile?.user_name ?? '');
+  const [attendeeEmail, setAttendeeEmail] = useState(user?.email ?? '');
+  const [registrationNote, setRegistrationNote] = useState('');
+  const [submittingRegistration, setSubmittingRegistration] = useState(false);
 
   const detailContent = getCmiEventDetailContent(eventId);
-  const posterUrl = detailContent?.posterUrl ?? getCmiEventPosterUrl(eventId) ?? '/cmi-home/event-ai-courtyard.png';
+  const posterUrl = event?.coverImageUrl ?? detailContent?.posterUrl ?? getCmiEventPosterUrl(eventId) ?? '/cmi-home/event-ai-courtyard.png';
   const postTitle = detailContent?.postTitle ?? event?.title ?? '活动详情';
-  const postBlocks = detailContent?.postBlocks ?? [
-    {
-      kind: 'paragraph' as const,
-      text: event?.summary ?? '这场活动的完整推文还在整理中，先放上已经核实的时间、地点和参与方式。',
-    },
-  ];
+  const postBlocks = event?.detailBody
+    ? event.detailBody
+      .split(/\n{2,}/)
+      .map(text => text.trim())
+      .filter(Boolean)
+      .map(text => ({ kind: 'paragraph' as const, text }))
+    : detailContent?.postBlocks ?? [
+      {
+        kind: 'paragraph' as const,
+        text: event?.summary ?? '这场活动的完整推文还在整理中，先放上已经核实的时间、地点和参与方式。',
+      },
+    ];
   const locationLabel = event ? `${event.venueName}${event.area ? ` · ${event.area}` : ''}` : '';
+  const registrationSummary = useMemo(
+    () => summarizeEventRegistrations(publicRegistrations, event?.capacity),
+    [event?.capacity, publicRegistrations]
+  );
+  const visibleAttendees = useMemo(
+    () => getVisibleEventAttendees(publicRegistrations, event?.attendeeVisibility ?? 'count-only'),
+    [event?.attendeeVisibility, publicRegistrations]
+  );
+  const isInternalRegistrationEnabled = Boolean(event?.registrationEnabled);
+  const isRegistrationOpen =
+    isInternalRegistrationEnabled &&
+    event?.registrationStatus === 'open' &&
+    !registrationSummary.isFull;
+  const canManageEvent =
+    isCmiEventManager(event, {
+      userId: user?.id,
+      email: user?.email,
+      role: profile?.role,
+    });
 
   const navigationTarget = useMemo(() => {
     if (event?.mapLocation) {
@@ -189,6 +236,22 @@ export default function CmiEventDetail() {
     setWantToGo(window.localStorage.getItem(`${WANT_TO_GO_STORAGE_PREFIX}${eventId}`) === '1');
   }, [eventId]);
 
+  useEffect(() => {
+    if (!eventId || !event?.registrationEnabled) {
+      setPublicRegistrations([]);
+      return;
+    }
+
+    getPublicCmiEventRegistrations(eventId)
+      .then(setPublicRegistrations)
+      .catch(() => setPublicRegistrations([]));
+  }, [event?.registrationEnabled, eventId]);
+
+  useEffect(() => {
+    if (!attendeeName && profile?.user_name) setAttendeeName(profile.user_name);
+    if (!attendeeEmail && user?.email) setAttendeeEmail(user.email);
+  }, [attendeeEmail, attendeeName, profile?.user_name, user?.email]);
+
   const handleToggleWantToGo = () => {
     if (!eventId) return;
 
@@ -216,6 +279,48 @@ export default function CmiEventDetail() {
   const handleOpenBlackboardComposer = () => {
     if (!event) return;
     navigate(getCmiBlackboardPath({ compose: true, eventId: event.id }));
+  };
+
+  const handleRegistrationSubmit = async (submitEvent: FormEvent<HTMLFormElement>) => {
+    submitEvent.preventDefault();
+    if (!event) return;
+    if (!isRegistrationOpen) {
+      toast.error(registrationSummary.isFull ? '这个活动名额已满' : '这个活动暂时关闭报名');
+      return;
+    }
+    if (!attendeeName.trim() || !attendeeEmail.trim()) {
+      toast.error('请填写报名昵称和邮箱');
+      return;
+    }
+
+    setSubmittingRegistration(true);
+    try {
+      const result = await registerForCmiEvent({
+        eventId: event.id,
+        attendeeName,
+        attendeeEmail,
+        note: registrationNote,
+        userId: user?.id,
+      });
+      const nextRegistrations = await getPublicCmiEventRegistrations(event.id);
+      setPublicRegistrations(nextRegistrations);
+      setRegistrationNote('');
+
+      if (result.notificationError) {
+        toast.warning('报名成功，邮件通知稍后需要补发', {
+          description: result.notificationError.message,
+        });
+      } else {
+        toast.success('报名成功');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '请稍后重试';
+      toast.error(message.includes('duplicate') ? '这个邮箱已经报名过了' : '报名失败', {
+        description: message.includes('duplicate') ? undefined : message,
+      });
+    } finally {
+      setSubmittingRegistration(false);
+    }
   };
 
   const handleOpenGoogleMaps = () => {
@@ -319,6 +424,15 @@ export default function CmiEventDetail() {
           <span className="rounded-full bg-[#e8f2e7] px-3 py-1.5 text-[12px] font-black text-[#3f6e52]">
             活动详情
           </span>
+          {canManageEvent && (
+            <Button
+              variant="ghost"
+              className="min-h-10 rounded-full border border-[#2e2a23]/12 bg-white/90 px-3 text-xs font-black text-[#242424]"
+              onClick={() => navigate(getCmiEventManagePath(event.id))}
+            >
+              管理
+            </Button>
+          )}
         </div>
       </header>
 
@@ -357,23 +471,17 @@ export default function CmiEventDetail() {
             </p>
           </div>
 
-          <button
-            type="button"
-            className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-[1.15rem] bg-[#3f6e52] px-5 text-lg font-black text-white shadow-[0_14px_28px_rgba(63,110,82,0.24)] transition active:scale-[0.98]"
-            onClick={handleOpenBlackboardComposer}
-          >
-            <UsersRound className="h-5 w-5" strokeWidth={2.7} />
-            一起去
-            <span className="text-sm font-black text-white/78">发到看板找搭子</span>
-          </button>
-
           <div className="mt-3 grid gap-2 rounded-[1.2rem] border border-[#2e2a23]/8 bg-[#fff7df] p-3 text-sm font-black text-[#3d3a33]">
             <EventInfoRow Icon={MapPin} label="活动地点" value={locationLabel} />
             <EventInfoRow Icon={Clock3} label="活动时间" value={formatCmiEventTime(event, referenceDate)} />
-            <div className="grid grid-cols-2 gap-2">
-              <EventInfoTile Icon={MessageSquareText} label="参与/报名" value={event.registrationLabel} />
-              <EventInfoTile Icon={Ticket} label="价格" value={event.priceLabel} />
-            </div>
+            {isInternalRegistrationEnabled ? (
+              <EventInfoRow Icon={Ticket} label="价格" value={event.priceLabel} />
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <EventInfoTile Icon={MessageSquareText} label="参与/报名" value={event.registrationLabel} />
+                <EventInfoTile Icon={Ticket} label="价格" value={event.priceLabel} />
+              </div>
+            )}
           </div>
         </section>
 
@@ -387,6 +495,86 @@ export default function CmiEventDetail() {
             {postBlocks.map(renderPostBlock)}
           </div>
         </section>
+
+        {isInternalRegistrationEnabled && (
+          <section className="mt-5 rounded-[1.4rem] border border-[#2e2a23]/8 bg-[#edf6ee] p-4 shadow-[0_14px_34px_rgba(63,110,82,0.10)]">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[12px] font-black text-[#3f6e52]">活动报名</p>
+                <h2 className="mt-1 text-xl font-black leading-tight text-[#242424]">
+                  {registrationSummary.goingCount} 人已报名
+                </h2>
+                <p className="mt-1 text-sm font-bold leading-relaxed text-[#53705b]">
+                  {registrationSummary.capacity
+                    ? `名额 ${registrationSummary.capacity}，剩余 ${registrationSummary.remainingSpots} 个`
+                    : '不限人数'}
+                </p>
+              </div>
+              <span className={cn(
+                'shrink-0 rounded-full px-3 py-1.5 text-[12px] font-black',
+                isRegistrationOpen
+                  ? 'bg-white text-[#3f6e52]'
+                  : 'bg-[#f7e7e4] text-[#b44c40]'
+              )}>
+                {isRegistrationOpen ? '报名中' : registrationSummary.isFull ? '已满' : '已关闭'}
+              </span>
+            </div>
+
+            {visibleAttendees.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {visibleAttendees.slice(0, 12).map(attendee => (
+                  <span key={attendee.id} className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-[#3f6e52] shadow-sm">
+                    {attendee.name}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {isRegistrationOpen ? (
+              <form className="mt-4 space-y-3" onSubmit={handleRegistrationSubmit}>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    value={attendeeName}
+                    onChange={inputEvent => setAttendeeName(inputEvent.target.value)}
+                    className="min-h-12 rounded-2xl border border-[#3f6e52]/18 bg-white px-4 text-sm font-bold outline-none focus:border-[#3f6e52]"
+                    placeholder="昵称 / 姓名"
+                    maxLength={80}
+                  />
+                  <input
+                    value={attendeeEmail}
+                    onChange={inputEvent => setAttendeeEmail(inputEvent.target.value)}
+                    className="min-h-12 rounded-2xl border border-[#3f6e52]/18 bg-white px-4 text-sm font-bold outline-none focus:border-[#3f6e52]"
+                    placeholder="邮箱"
+                    type="email"
+                  />
+                </div>
+                <textarea
+                  value={registrationNote}
+                  onChange={inputEvent => setRegistrationNote(inputEvent.target.value)}
+                  className="min-h-20 w-full rounded-2xl border border-[#3f6e52]/18 bg-white px-4 py-3 text-sm font-bold leading-relaxed outline-none focus:border-[#3f6e52]"
+                  maxLength={500}
+                  placeholder="备注，可选"
+                />
+                <Button
+                  type="submit"
+                  disabled={submittingRegistration}
+                  className="min-h-12 w-full rounded-full bg-[#3f6e52] text-base font-black text-white"
+                >
+                  {submittingRegistration ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  我要报名
+                </Button>
+                <p className="flex items-center gap-1.5 text-xs font-bold leading-relaxed text-[#53705b]">
+                  <Mail className="h-3.5 w-3.5 shrink-0" />
+                  报名后会通知活动发起人和 CMI 管理邮箱。
+                </p>
+              </form>
+            ) : (
+              <p className="mt-4 rounded-2xl bg-white/78 p-3 text-sm font-bold leading-relaxed text-[#53705b]">
+                {registrationSummary.isFull ? '这个活动已经满员。' : '发起人暂时关闭了报名。'}
+              </p>
+            )}
+          </section>
+        )}
 
         <section className="mt-5 rounded-[1.4rem] border border-[#2e2a23]/8 bg-[#f5f0ff] p-4 shadow-[0_14px_34px_rgba(46,42,35,0.08)]">
           <div className="flex items-start justify-between gap-4">

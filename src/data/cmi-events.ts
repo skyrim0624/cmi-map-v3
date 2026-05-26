@@ -33,6 +33,8 @@ export type CmiEventVerificationStatus =
   | 'rejected';
 
 export type CmiEventTimeBucket = 'today-afternoon' | 'tonight' | 'tomorrow' | 'this-week' | 'later' | 'stable';
+export type CmiEventRegistrationStatus = 'open' | 'closed';
+export type CmiEventAttendeeVisibility = 'public' | 'count-only';
 
 export interface CmiEventRecurrence {
   weekdays: number[];
@@ -74,6 +76,17 @@ export interface CmiEvent {
   reliabilityNote: string;
   tags: string[];
   summary: string;
+  organizerId?: string;
+  organizerName?: string;
+  organizerEmail?: string;
+  contactEmail?: string;
+  capacity?: number;
+  registrationEnabled?: boolean;
+  registrationStatus?: CmiEventRegistrationStatus;
+  attendeeVisibility?: CmiEventAttendeeVisibility;
+  coverImageUrl?: string;
+  detailBody?: string;
+  createdBy?: string;
 }
 
 export const CMI_EVENT_TYPE_OPTIONS: Array<{ id: 'all' | CmiEventType; label: string }> = [
@@ -109,7 +122,7 @@ export const CMI_EVENT_TIME_BUCKET_LABELS: Record<CmiEventTimeBucket, string> = 
   stable: '稳定活动',
 };
 
-export const CMI_EVENTS_LAST_MAINTAINED_AT = '2026-05-25T10:09:38+07:00';
+export const CMI_EVENTS_LAST_MAINTAINED_AT = '2026-05-26T17:30:52+07:00';
 
 export const CMI_EVENTS: CmiEvent[] = [
   {
@@ -275,6 +288,37 @@ export const CMI_EVENTS: CmiEvent[] = [
     summary: '清迈客栈的第四期 AI 开放麦，围绕本周 AI 使用、工具、项目、案例、踩坑和问题做现场交流。',
   },
   {
+    id: 'cmi-mindfulness-hour-2026-05-28',
+    title: '正念一小时｜一切都是最好的安排',
+    type: 'meditation',
+    startAt: '2026-05-28T19:00:00+07:00',
+    endAt: '2026-05-28T20:30:00+07:00',
+    venueName: '清迈客栈',
+    area: 'CMI / 清迈客栈',
+    priceLabel: '免费参与',
+    registrationLabel: 'CMI Map 一键报名',
+    sourceType: 'cmi',
+    sourceLabel: 'CMI 活动宣传内容文件夹',
+    hostName: 'CMI 社区',
+    language: '中文',
+    suitableFor: ['正念练习', '冥想', '面对变化', '社区分享'],
+    isCmiRelated: true,
+    isVerified: true,
+    verificationStatus: 'verified',
+    lastCheckedAt: '2026-05-26T14:42:45+07:00',
+    nextCheckBefore: '2026-05-28T12:00:00+07:00',
+    reliabilityNote:
+      '信息来自 5.28 正念一小时推文 Markdown 与同目录官方海报；时间、地点、费用和活动内容明确，参与方式按 CMI Map 内置报名系统发布。',
+    tags: ['CMI', '正念', '冥想', '免费', '中文友好'],
+    summary: '周四晚在清迈客栈的一小时正念活动，围绕变化、焦虑和内在稳定感，通过静坐冥想、智慧引领与开放分享展开。',
+    organizerName: 'CMI 社区',
+    organizerEmail: 'events@cmimap.com',
+    registrationEnabled: true,
+    registrationStatus: 'open',
+    attendeeVisibility: 'public',
+    coverImageUrl: '/cmi-home/event-posters/cmi-mindfulness-hour-2026-05-28.png',
+  },
+  {
     id: 'cmi-financial-literacy-sharing-2026-05-29',
     title: '穷姐姐财商分享大会｜在清迈可以“摆烂”，但钱包不能真的烂',
     type: 'cmi',
@@ -282,19 +326,20 @@ export const CMI_EVENTS: CmiEvent[] = [
     venueName: '清迈客栈',
     area: 'CMI / 清迈客栈',
     priceLabel: '免费参与，可随喜支持',
-    registrationLabel: '无需报名，直接空降即可；Luma 链接待补充',
+    registrationLabel: 'Luma 报名，也可直接空降',
     sourceType: 'cmi',
     sourceLabel: 'CMI 活动宣传内容文件夹',
+    sourceUrl: 'https://luma.com/ahw83ofe',
     hostName: 'Pink × CMI 社区',
     language: '中文',
     suitableFor: ['数字游民', '自由职业者', '长期旅居者', '想理清个人财务的人'],
     isCmiRelated: true,
     isVerified: true,
     verificationStatus: 'verified',
-    lastCheckedAt: '2026-05-24T19:07:13+07:00',
+    lastCheckedAt: '2026-05-25T15:15:13+07:00',
     nextCheckBefore: '2026-05-29T12:00:00+07:00',
     reliabilityNote:
-      '信息来自 5.29 穷姐姐财商分享大会推文 Markdown 与同目录海报；时间、地点、费用和直接参与方式明确，Luma 链接仍待补充但不影响空降参与。',
+      '信息来自更新后的 5.29 穷姐姐财商分享大会推文 Markdown 与同目录海报；时间、地点、费用、Luma 报名链接和空降参与方式均明确。',
     tags: ['CMI', '财商', '理财', '数字游民', '分享会', '免费'],
     summary: '一场面向清迈旅居者和数字游民的财商分享，围绕理财工具、收入安全垫、风险识别和个人价值展开。',
   },
@@ -322,6 +367,38 @@ export const CMI_EVENTS: CmiEvent[] = [
     reliabilityNote: '信息来自来源说明、公众号推文 Markdown、公众号离线提取和同目录海报；时间、地点、费用、参与方式和报名链接均明确。',
     tags: ['CMI', 'WaytoAGI', 'AI切磋大会', 'Codex', '工作坊', '免费'],
     summary: 'WaytoAGI 第24期 AI 切磋大会清迈站，在清迈客栈用 Codex 现场做出可演示的小作品。',
+  },
+  {
+    id: 'cmi-talk-fathers-day-speaker-call-2026-06-07',
+    title: 'CMI Talk 父亲节特辑｜分享嘉宾招募',
+    type: 'cmi',
+    startAt: '2026-06-07T16:30:00+07:00',
+    endAt: '2026-06-07T18:30:00+07:00',
+    venueName: '清迈客栈',
+    area: 'CMI / 清迈客栈',
+    priceLabel: '免费报名',
+    registrationLabel: 'CMI Map 一键报名；海报二维码为腾讯问卷',
+    sourceType: 'cmi',
+    sourceLabel: 'CMI 活动宣传内容文件夹',
+    sourceUrl: 'https://mp.weixin.qq.com/s/W_3OLja85TkTw0E1eP1qgw',
+    hostName: 'CMI Talk',
+    language: '中文',
+    suitableFor: ['在清迈生活的爸爸', '亲子陪伴', '真实故事分享', 'CMI Talk 嘉宾'],
+    isCmiRelated: true,
+    isVerified: true,
+    verificationStatus: 'verified',
+    lastCheckedAt: '2026-05-26T17:11:56+07:00',
+    nextCheckBefore: '2026-06-07T12:00:00+07:00',
+    reliabilityNote:
+      '信息来自 6 月 7 日 CMI Talk 父亲节特辑公众号推文 Markdown、离线 HTML 与同目录官方海报；时间、地点和报名方式明确。来源未单列收费项，本次按分享嘉宾招募记录为免费报名，并保留腾讯问卷链接供复核。',
+    tags: ['CMI', 'CMI Talk', '父亲节', '亲子', '嘉宾招募', '中文友好'],
+    summary: '父亲节前的 CMI Talk 分享嘉宾招募，邀请在清迈生活的爸爸聊真实的陪伴、成长和家庭选择。',
+    organizerName: 'CMI Talk',
+    organizerEmail: 'events@cmimap.com',
+    registrationEnabled: true,
+    registrationStatus: 'open',
+    attendeeVisibility: 'count-only',
+    coverImageUrl: '/cmi-home/event-posters/cmi-talk-fathers-day-speaker-call-2026-06-07.png',
   },
   {
     id: 'jing-jai-weekend-market',

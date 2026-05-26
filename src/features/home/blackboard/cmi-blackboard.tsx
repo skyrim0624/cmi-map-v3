@@ -34,6 +34,7 @@ import {
   getBlackboardActivityStats,
   getBlackboardPosts,
   getBlackboardAnnouncements,
+  getBlackboardTitlePreferences,
   hideBlackboardAnnouncement,
   type BlackboardAnnouncementRecord,
   type BlackboardCommentRecord,
@@ -57,10 +58,12 @@ import {
   BLACKBOARD_CATEGORY_OPTIONS,
   coerceBlackboardCategory,
   formatBlackboardCreatedLabel,
+  getBlackboardAchievementTitleById,
   getBlackboardActivityTitle,
   getBlackboardFeedFilters,
   getBlackboardDateGroupLabel,
   sortBlackboardFeedPosts,
+  type BlackboardAchievementTitleId,
   type BlackboardPostFilter,
 } from '@/features/home/blackboard/blackboard-model';
 import { searchExternalPlaceCandidates } from '@/features/places/external-place-search';
@@ -80,6 +83,7 @@ type BlackboardComment = BlackboardCommentRecord & {
   authorAvatarUrl: string;
   authorActivityLevel: number;
   authorActivityTitle: string;
+  authorAchievementTitle: string;
 };
 
 interface BlackboardPublicProfile {
@@ -102,6 +106,7 @@ interface BlackboardPost {
   authorAvatarUrl: string;
   authorActivityLevel: number;
   authorActivityTitle: string;
+  authorAchievementTitle: string;
   createdAt: string;
   createdLabel: string;
   dateGroupLabel: string;
@@ -256,9 +261,10 @@ const hydratePostProfiles = async (posts: BlackboardPost[]): Promise<BlackboardP
     post.authorId,
     ...post.comments.map(comment => comment.author_id),
   ]);
-  const [profiles, activityStats] = await Promise.all([
+  const [profiles, activityStats, titlePreferences] = await Promise.all([
     getBlackboardProfilesByUserIds(authorIds),
     getBlackboardActivityStats(authorIds),
+    getBlackboardTitlePreferences(authorIds),
   ]);
   const profilesById = indexPublicProfilesById(profiles);
   const activityTitlesByAuthorId = activityStats.reduce<Record<string, typeof DEFAULT_BLACKBOARD_ACTIVITY_TITLE>>(
@@ -273,17 +279,28 @@ const hydratePostProfiles = async (posts: BlackboardPost[]): Promise<BlackboardP
   );
   const getActivityTitleForAuthor = (authorId: string) =>
     activityTitlesByAuthorId[authorId] || DEFAULT_BLACKBOARD_ACTIVITY_TITLE;
+  const achievementTitlesByAuthorId = titlePreferences.reduce<Record<string, string>>(
+    (titlesByAuthorId, preference) => {
+      titlesByAuthorId[preference.user_id] =
+        getBlackboardAchievementTitleById(preference.achievement_title_id)?.title || '';
+      return titlesByAuthorId;
+    },
+    {}
+  );
+  const getAchievementTitleForAuthor = (authorId: string) => achievementTitlesByAuthorId[authorId] || '';
 
   return posts.map(post => ({
     ...post,
     authorAvatarUrl: profilesById[post.authorId]?.avatar_url || '',
     authorActivityLevel: getActivityTitleForAuthor(post.authorId).level,
     authorActivityTitle: getActivityTitleForAuthor(post.authorId).title,
+    authorAchievementTitle: getAchievementTitleForAuthor(post.authorId),
     comments: post.comments.map(comment => ({
       ...comment,
       authorAvatarUrl: profilesById[comment.author_id]?.avatar_url || '',
       authorActivityLevel: getActivityTitleForAuthor(comment.author_id).level,
       authorActivityTitle: getActivityTitleForAuthor(comment.author_id).title,
+      authorAchievementTitle: getAchievementTitleForAuthor(comment.author_id),
     })),
   }));
 };
@@ -305,6 +322,7 @@ const mapBlackboardPost = (record: BlackboardPostRecord): BlackboardPost => {
     authorAvatarUrl: '',
     authorActivityLevel: DEFAULT_BLACKBOARD_ACTIVITY_TITLE.level,
     authorActivityTitle: DEFAULT_BLACKBOARD_ACTIVITY_TITLE.title,
+    authorAchievementTitle: '',
     createdAt: record.created_at,
     createdLabel: formatBlackboardCreatedLabel(record.created_at),
     dateGroupLabel: getBlackboardDateGroupLabel(record.created_at),
@@ -320,6 +338,7 @@ const mapBlackboardPost = (record: BlackboardPostRecord): BlackboardPost => {
       authorAvatarUrl: '',
       authorActivityLevel: DEFAULT_BLACKBOARD_ACTIVITY_TITLE.level,
       authorActivityTitle: DEFAULT_BLACKBOARD_ACTIVITY_TITLE.title,
+      authorAchievementTitle: '',
     })),
   };
 };
@@ -449,6 +468,16 @@ function UserActivityBadge({ title }: { title: string }) {
   );
 }
 
+function UserAchievementBadge({ title }: { title: string }) {
+  if (!title) return null;
+
+  return (
+    <span className="inline-flex h-5 shrink-0 items-center rounded-[0.35rem] bg-[#edf7f3] px-1.5 text-[0.68rem] font-black leading-none text-[#237454]">
+      {title}
+    </span>
+  );
+}
+
 function renderPostBody(post: BlackboardPost, options?: { onLinkClick?: (event: MouseEvent<HTMLAnchorElement>) => void }) {
   if (!post.linkedEventId || !post.linkedEventTitle) return post.body;
 
@@ -536,6 +565,7 @@ function BlackboardPostCard({
               {post.author}
             </Link>
             <UserActivityBadge title={post.authorActivityTitle} />
+            <UserAchievementBadge title={post.authorAchievementTitle} />
             {isAdmin && userId === post.authorId && (
               <span className="inline-flex h-5 shrink-0 items-center rounded-[0.35rem] bg-[#fff4c7] px-1.5 text-[0.68rem] font-black leading-none text-[#9a6a00]">
                 管理员
@@ -1455,6 +1485,7 @@ function PostDetailSheet({
                 </Link>
                 <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
                   <UserActivityBadge title={post.authorActivityTitle} />
+                  <UserAchievementBadge title={post.authorAchievementTitle} />
                   {isAdmin && userId === post.authorId && (
                     <span className="inline-flex h-5 shrink-0 items-center rounded-[0.35rem] bg-[#fff4c7] px-1.5 text-[0.68rem] font-black leading-none text-[#9a6a00]">
                       管理员
@@ -1537,6 +1568,7 @@ function PostDetailSheet({
                           {comment.author_name}
                         </Link>
                         <UserActivityBadge title={comment.authorActivityTitle} />
+                        <UserAchievementBadge title={comment.authorAchievementTitle} />
                         <span className="shrink-0 text-[0.88rem] font-semibold text-[#9b9b9b]">
                           {formatBlackboardCreatedLabel(comment.created_at)}
                         </span>
@@ -1607,8 +1639,13 @@ export function CmiBlackboard({
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [announcementComposerOpen, setAnnouncementComposerOpen] = useState(false);
+  const [selectedAchievementTitleId, setSelectedAchievementTitleId] = useState<BlackboardAchievementTitleId | null>(null);
   const draftImageFilesRef = useRef<DraftImage[]>([]);
   const isAdmin = profile?.role === 'admin';
+  const selectedAchievementTitle = useMemo(
+    () => getBlackboardAchievementTitleById(selectedAchievementTitleId),
+    [selectedAchievementTitleId]
+  );
 
   const loadPosts = async () => {
     setLoadingPosts(true);
@@ -1634,6 +1671,29 @@ export function CmiBlackboard({
     void loadPosts();
     void loadAnnouncements();
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setSelectedAchievementTitleId(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    getBlackboardTitlePreferences([user.id])
+      .then(([preference]) => {
+        if (!isMounted) return;
+        setSelectedAchievementTitleId(preference?.achievement_title_id ?? null);
+      })
+      .catch(error => {
+        console.warn('加载我的论坛称号失败:', error);
+        if (isMounted) setSelectedAchievementTitleId(null);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     draftImageFilesRef.current = draft.imageFiles;
@@ -1932,6 +1992,7 @@ export function CmiBlackboard({
         authorAvatarUrl: profile?.avatar_url || '',
         authorActivityLevel: currentActivityTitle.level,
         authorActivityTitle: currentActivityTitle.title,
+        authorAchievementTitle: selectedAchievementTitle?.title || '',
       };
 
       setPosts(currentPosts =>
@@ -1970,29 +2031,33 @@ export function CmiBlackboard({
   };
 
   return (
-    <section className="-mx-4 min-h-[calc(100dvh-6.5rem)] bg-[#f2f2f2]" aria-label="清迈生活板">
-      <div className="sticky top-[calc(env(safe-area-inset-top)+4.6rem)] z-20 border-b border-[#eeeeee] bg-white px-4 py-3">
-        <div className="flex gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {CATEGORY_META.map(({ id, label, Icon }) => {
-            const active = activeFilter === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                className={cn(
-                  'flex h-10 shrink-0 items-center gap-1.5 rounded-[0.65rem] px-3.5 text-[1rem] font-medium transition-colors',
-                  active
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-[#eeeeee] text-[#222222]'
-                )}
-                onClick={() => setActiveFilter(id)}
-              >
-                <Icon className={cn('h-4 w-4', !active && id !== 'all' && 'hidden')} strokeWidth={2.4} />
-                {label}
-                <span>{getPostCount(posts, id)}</span>
-              </button>
-            );
-          })}
+    <section className="-mx-4 min-h-[calc(100dvh-6.5rem)] bg-[#f1edfa]" aria-label="清迈生活板">
+      <div className="sticky top-[calc(env(safe-area-inset-top)+4.6rem)] z-20 border-b border-[#ded4f1] bg-[#f7f3ff] px-4 py-3">
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex gap-2">
+              {CATEGORY_META.map(({ id, label, Icon }) => {
+                const active = activeFilter === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className={cn(
+                      'flex h-10 shrink-0 items-center gap-1.5 rounded-[0.65rem] px-3.5 text-[1rem] font-medium transition-colors',
+                      active
+                        ? 'bg-[#9579ca] text-white'
+                        : 'border border-[#ded4f1] bg-white/80 text-[#453b5b]'
+                    )}
+                    onClick={() => setActiveFilter(id)}
+                  >
+                    <Icon className={cn('h-4 w-4', !active && id !== 'all' && 'hidden')} strokeWidth={2.4} />
+                    {label}
+                    <span>{getPostCount(posts, id)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2003,16 +2068,16 @@ export function CmiBlackboard({
         onHide={announcement => void handleHideAnnouncement(announcement)}
       />
 
-      <div className="divide-y-[0.65rem] divide-[#f2f2f2]">
+      <div className="divide-y-[0.65rem] divide-[#e7def6]">
         {loadingPosts ? (
-          <div className="bg-white px-5 py-10 text-center">
+          <div className="bg-white/90 px-5 py-10 text-center">
             <p className="text-[1.05rem] font-bold text-[#555555]">正在加载论坛</p>
             <p className="mt-1 text-[0.95rem] font-medium leading-relaxed text-[#8c8c8c]">
               会按最新发布往下排。
             </p>
           </div>
         ) : postsError ? (
-          <div className="bg-white px-5 py-10 text-center">
+          <div className="bg-white/90 px-5 py-10 text-center">
             <p className="text-[1.05rem] font-bold text-[#555555]">{postsError}</p>
           </div>
         ) : visiblePosts.length > 0 ? (
@@ -2029,7 +2094,7 @@ export function CmiBlackboard({
             />
           ))
         ) : (
-          <div className="bg-white px-5 py-10 text-center">
+          <div className="bg-white/90 px-5 py-10 text-center">
             <p className="text-[1.05rem] font-bold text-[#555555]">还没有帖子</p>
             <p className="mt-1 text-[0.95rem] font-medium leading-relaxed text-[#8c8c8c]">
               有人找搭子、求助或分享清迈现场后，会显示在这里。
@@ -2040,7 +2105,7 @@ export function CmiBlackboard({
 
       <button
         type="button"
-        className="fixed bottom-[calc(env(safe-area-inset-bottom)+4.25rem)] right-5 z-40 grid h-[4.5rem] w-[4.5rem] place-items-center rounded-full bg-[#18b99c] text-white shadow-[0_10px_28px_rgba(0,0,0,0.24)] active:scale-[0.97]"
+        className="fixed bottom-[calc(env(safe-area-inset-bottom)+4.25rem)] right-5 z-40 grid h-[4.5rem] w-[4.5rem] place-items-center rounded-full bg-[#9579ca] text-white shadow-[0_10px_28px_rgba(90,63,132,0.28)] active:scale-[0.97]"
         onClick={openCreateComposer}
         aria-label="发帖"
       >

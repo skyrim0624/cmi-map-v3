@@ -1,109 +1,54 @@
-import { CalendarDays, MapPin, ShieldCheck } from 'lucide-react';
+import { CircleCheck, Clock3, MapPin, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
-  CMI_EVENT_VERIFICATION_LABELS,
   type CmiEvent,
-  type CmiEventType,
-  formatCmiEventDateParts,
   formatCmiEventTime,
-  getCmiEventTypeLabel,
 } from '@/data/cmi-events';
+import {
+  getCmiEventCardImageUrl,
+  getCmiEventRegistrationPreviewLabel,
+  getCmiEventVisibleTags,
+} from './event-card-presentation';
 
 interface CmiEventCardProps {
   event: CmiEvent;
   to?: string;
   onClick?: () => void;
+  showActions?: boolean;
+  hasRegistered?: boolean;
+  isRegistering?: boolean;
+  isSharing?: boolean;
+  onShare?: () => void;
+  onRegister?: () => void;
 }
 
-const EVENT_STYLE_BY_TYPE: Record<CmiEventType, {
-  accent: string;
-  date: string;
-  icon: string;
-  tag: string;
-}> = {
-  cmi: {
-    accent: 'text-[#6f4a8e]',
-    date: 'border-[#dac8e6] bg-[#f7f1fb] text-[#6f4a8e]',
-    icon: 'text-[#7b4d92]',
-    tag: 'border-[#e5d8ee] bg-[#fbf7fd] text-[#6f4a8e]',
-  },
-  tech: {
-    accent: 'text-[#446d85]',
-    date: 'border-[#cfe0e8] bg-[#f3f9fb] text-[#446d85]',
-    icon: 'text-[#337fa6]',
-    tag: 'border-[#d8e6ec] bg-[#f7fbfc] text-[#446d85]',
-  },
-  market: {
-    accent: 'text-[#4d765d]',
-    date: 'border-[#cfe0d4] bg-[#f5faf6] text-[#4d765d]',
-    icon: 'text-[#4f8d6b]',
-    tag: 'border-[#dce9df] bg-[#f8fbf8] text-[#4d765d]',
-  },
-  festival: {
-    accent: 'text-[#a7654f]',
-    date: 'border-[#ead7ce] bg-[#fff7f3] text-[#a7654f]',
-    icon: 'text-[#b95f43]',
-    tag: 'border-[#eeded6] bg-[#fff9f6] text-[#a7654f]',
-  },
-  workshop: {
-    accent: 'text-[#816739]',
-    date: 'border-[#e5dac1] bg-[#fffaf0] text-[#816739]',
-    icon: 'text-[#8a6b2f]',
-    tag: 'border-[#eee5cf] bg-[#fffbf4] text-[#816739]',
-  },
-  exhibition: {
-    accent: 'text-[#5f6f8c]',
-    date: 'border-[#d8deea] bg-[#f7f8fc] text-[#5f6f8c]',
-    icon: 'text-[#52678e]',
-    tag: 'border-[#e1e6f1] bg-[#fafbfe] text-[#5f6f8c]',
-  },
-  music: {
-    accent: 'text-[#875779]',
-    date: 'border-[#e5d3df] bg-[#fff6fb] text-[#875779]',
-    icon: 'text-[#8f5281]',
-    tag: 'border-[#ecdce7] bg-[#fffafd] text-[#875779]',
-  },
-  meetup: {
-    accent: 'text-[#5e734f]',
-    date: 'border-[#d8e3ce] bg-[#f8fbf5] text-[#5e734f]',
-    icon: 'text-[#526f43]',
-    tag: 'border-[#e0ead8] bg-[#fbfdf9] text-[#5e734f]',
-  },
-  wellness: {
-    accent: 'text-[#4c7974]',
-    date: 'border-[#d2e4e1] bg-[#f4faf9] text-[#4c7974]',
-    icon: 'text-[#437b74]',
-    tag: 'border-[#dcebe8] bg-[#f9fcfb] text-[#4c7974]',
-  },
-  meditation: {
-    accent: 'text-[#65708c]',
-    date: 'border-[#d9deea] bg-[#f6f8fd] text-[#65708c]',
-    icon: 'text-[#5d688c]',
-    tag: 'border-[#e2e6f0] bg-[#fafbfe] text-[#65708c]',
-  },
-  sport: {
-    accent: 'text-[#9a6747]',
-    date: 'border-[#ead9cb] bg-[#fff7f1] text-[#9a6747]',
-    icon: 'text-[#9c5933]',
-    tag: 'border-[#eee2d7] bg-[#fffbf8] text-[#9a6747]',
-  },
-  stable: {
-    accent: 'text-[#66756f]',
-    date: 'border-[#d9e1dd] bg-[#f8faf8] text-[#66756f]',
-    icon: 'text-[#566c64]',
-    tag: 'border-[#e2e8e5] bg-[#fbfcfb] text-[#66756f]',
-  },
-};
-
-export function CmiEventCard({ event, to, onClick }: CmiEventCardProps) {
-  const visibleTags = Array.from(
-    new Map([getCmiEventTypeLabel(event.type), ...event.tags].map(tag => [tag.trim(), tag.trim()])).values()
-  ).slice(0, 5);
+export function CmiEventCard({
+  event,
+  to,
+  onClick,
+  showActions = false,
+  hasRegistered = false,
+  isRegistering = false,
+  isSharing = false,
+  onShare,
+  onRegister,
+}: CmiEventCardProps) {
+  const visibleTags = getCmiEventVisibleTags(event);
+  const imageUrl = getCmiEventCardImageUrl(event);
+  const registrationPreviewLabel = getCmiEventRegistrationPreviewLabel(event);
   const isInteractive = Boolean(to || onClick);
-  const style = event.isCmiRelated ? EVENT_STYLE_BY_TYPE.cmi : EVENT_STYLE_BY_TYPE[event.type];
-  const dateParts = formatCmiEventDateParts(event);
-  const cardClassName = `rounded-lg border border-[#dedbd2] bg-[#fffefa] p-4 shadow-[0_2px_8px_rgba(35,31,26,0.05)] ${
-    isInteractive ? 'cursor-pointer transition duration-150 active:translate-y-px active:bg-[#fffdf5]' : ''
+  const registrationButtonLabel = hasRegistered
+    ? isRegistering
+      ? '取消中'
+      : '已报名'
+    : isRegistering
+      ? '报名中'
+      : '报名';
+  const registrationButtonClassName = hasRegistered
+    ? 'bg-[#fff9e8] hover:bg-[#fff1d2]'
+    : 'bg-[#2eb45e] hover:bg-[#36c86b]';
+  const cardClassName = `overflow-hidden rounded-[1.25rem] border-2 border-[#161616] bg-[#fff9e8] shadow-[4px_5px_0_rgba(0,0,0,0.2)] ${
+    isInteractive ? 'cursor-pointer transition duration-150 hover:-translate-y-0.5 hover:shadow-[4px_7px_0_rgba(0,0,0,0.2)] active:scale-[0.99]' : ''
   }`;
 
   const card = (
@@ -111,7 +56,7 @@ export function CmiEventCard({ event, to, onClick }: CmiEventCardProps) {
       className={cardClassName}
       role={!to && onClick ? 'button' : undefined}
       tabIndex={!to && onClick ? 0 : undefined}
-      aria-label={!to && onClick ? `在地图上查看 ${event.title}` : undefined}
+      aria-label={!to && onClick ? `查看 ${event.title} 活动详情` : undefined}
       onClick={onClick}
       onKeyDown={(keyboardEvent) => {
         if (!onClick || to) return;
@@ -120,60 +65,91 @@ export function CmiEventCard({ event, to, onClick }: CmiEventCardProps) {
         onClick();
       }}
     >
-      <div className="grid grid-cols-[4.25rem_minmax(0,1fr)] gap-x-3 gap-y-3">
-        <div className={`flex h-[4.25rem] w-[4.25rem] shrink-0 flex-col items-center justify-center rounded-lg border text-center ${style.date}`}>
-          <p className="w-full whitespace-nowrap text-center text-[1.12rem] font-black leading-none tracking-normal">
-            {dateParts.monthDay}
-          </p>
-          {dateParts.weekday && (
-            <p className="mt-1.5 w-full whitespace-nowrap text-center text-[0.86rem] font-black leading-none tracking-normal">
-              {dateParts.weekday}
-            </p>
-          )}
-        </div>
+      <div className="relative m-3 h-[11.2rem] overflow-hidden rounded-[0.9rem] border-2 border-[#161616] bg-[#f6efe0]">
+        <img
+          src={imageUrl}
+          alt={`${event.title}活动海报`}
+          className="h-full w-full object-cover object-center"
+          loading="lazy"
+        />
+      </div>
 
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center justify-between gap-2">
-            <p className={`min-w-0 truncate text-[11px] font-black uppercase tracking-[0.12em] ${style.accent}`}>
-              {event.isCmiRelated ? 'CMI EVENT' : event.sourceLabel}
-            </p>
-            <span className="shrink-0 rounded-full border border-[#e7e0d4] bg-[#fffaf1] px-2.5 py-1 text-[11px] font-black leading-none text-foreground/64">
-              {event.priceLabel}
-            </span>
-          </div>
-          <h2 className="mt-1.5 text-[1.22rem] font-black leading-[1.18] text-foreground">
-            {event.title}
-          </h2>
-        </div>
+      <div className="p-4">
+        <h2 className="text-[1.52rem] font-black leading-[1.04] text-[#161616]">
+          {event.title}
+        </h2>
+        <p className="mt-2 line-clamp-2 text-sm font-black leading-relaxed text-[#161616]/72">
+          {event.summary}
+        </p>
 
-        <div className="col-start-2 min-w-0 space-y-3">
-          <p className="text-[0.92rem] font-semibold leading-relaxed text-foreground/74">
-            {event.summary}
-          </p>
-
-          <div className="grid grid-cols-[1.05rem_minmax(0,1fr)] gap-x-2 gap-y-1.5 border-l border-[#e0ddd4] pl-3 text-xs font-bold text-foreground/58">
-            <MapPin className={`mt-0.5 h-3.5 w-3.5 ${style.icon}`} strokeWidth={2.5} />
-            <p className="min-w-0 leading-relaxed">
-              {event.venueName} · {event.area}
-            </p>
-            <CalendarDays className={`mt-0.5 h-3.5 w-3.5 ${style.icon}`} strokeWidth={2.5} />
-            <p className="min-w-0 leading-relaxed">
-              {formatCmiEventTime(event)}
-            </p>
-            <ShieldCheck className={`mt-0.5 h-3.5 w-3.5 ${style.icon}`} strokeWidth={2.5} />
-            <p className="min-w-0 leading-relaxed">
-              {CMI_EVENT_VERIFICATION_LABELS[event.verificationStatus]} · {event.sourceLabel}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-1.5">
-            {visibleTags.map((tag, index) => (
-              <span key={`${tag}-${index}`} className={`rounded-full border px-2 py-0.5 text-[11px] font-black ${style.tag}`}>
+        {visibleTags.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {visibleTags.map(tag => (
+              <span
+                key={tag}
+                className="rounded-full border border-[#161616]/25 bg-[#2eb45e]/18 px-2.5 py-1 text-[11px] font-black leading-none text-[#161616]"
+              >
                 {tag}
               </span>
             ))}
           </div>
+        )}
+
+        <div className="mt-4 grid gap-3 rounded-[1rem] border-2 border-[#161616]/18 bg-white/58 p-3 text-sm font-black text-[#161616]">
+          <div className="grid min-w-0 gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <Clock3 className="h-4 w-4 shrink-0 text-[#161616]" strokeWidth={2.5} />
+              <span className="min-w-0 leading-snug">{formatCmiEventTime(event)}</span>
+            </div>
+            <div className="flex min-w-0 items-center gap-2">
+              <MapPin className="h-4 w-4 shrink-0 text-[#161616]" strokeWidth={2.5} />
+              <span className="min-w-0 leading-snug">{event.venueName}</span>
+            </div>
+          </div>
+          <div className="grid min-w-0 grid-cols-2 gap-2 border-t-2 border-dashed border-[#161616]/18 pt-3">
+            <div>
+              <p className="text-[10px] font-black leading-none text-[#161616]/55">费用</p>
+              <p className="mt-1 break-words text-[12px] font-black leading-tight text-[#161616]">{event.priceLabel}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-black leading-none text-[#161616]/55">参与</p>
+              <p className="mt-1 break-words text-[12px] font-black leading-tight text-[#161616]">{registrationPreviewLabel}</p>
+            </div>
+          </div>
         </div>
+
+        {showActions && (
+          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+            <button
+              type="button"
+              disabled={isSharing}
+              className="flex min-h-10 items-center justify-center gap-1.5 rounded-full border-2 border-[#161616] bg-[#ff6fba] px-3 text-sm font-black text-[#161616] shadow-[2px_3px_0_rgba(0,0,0,0.2)] transition hover:bg-[#ff83c4] active:translate-y-0.5 active:shadow-[1px_2px_0_rgba(0,0,0,0.18)] disabled:bg-[#fff9e8] disabled:text-[#161616]/70 disabled:shadow-none"
+              onClick={(event) => {
+                event.stopPropagation();
+                onShare?.();
+              }}
+              onKeyDown={(event) => event.stopPropagation()}
+              aria-label="转发活动到群"
+            >
+              <Share2 className="h-4 w-4" strokeWidth={2.5} />
+              {isSharing ? '生成中' : '转发到群'}
+            </button>
+            <button
+              type="button"
+              disabled={isRegistering}
+              className={`flex min-h-10 items-center justify-center gap-1.5 rounded-full border-2 border-[#161616] px-3 text-sm font-black text-[#161616] shadow-[2px_3px_0_rgba(0,0,0,0.2)] transition active:translate-y-0.5 active:shadow-[1px_2px_0_rgba(0,0,0,0.18)] disabled:bg-[#fff9e8] disabled:text-[#161616]/70 disabled:shadow-none ${registrationButtonClassName}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onRegister?.();
+              }}
+              onKeyDown={(event) => event.stopPropagation()}
+              aria-label={hasRegistered ? '取消报名活动' : '报名活动'}
+            >
+              <CircleCheck className="h-4 w-4" strokeWidth={2.5} />
+              {registrationButtonLabel}
+            </button>
+          </div>
+        )}
       </div>
     </article>
   );
@@ -183,7 +159,7 @@ export function CmiEventCard({ event, to, onClick }: CmiEventCardProps) {
       <Link
         to={to}
         aria-label={`在地图上查看 ${event.title}`}
-        className="block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        className="block rounded-[1.25rem] outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       >
         {card}
       </Link>

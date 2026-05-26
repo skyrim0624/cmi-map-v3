@@ -1,7 +1,9 @@
 import { supabase } from './supabase';
 import { uploadImages } from './api';
 import {
+  coerceBlackboardAchievementTitleId,
   getBlackboardActivityScore,
+  type BlackboardAchievementTitleId,
   type BlackboardPostCategory,
 } from '@/features/home/blackboard/blackboard-model';
 
@@ -61,6 +63,13 @@ export interface BlackboardActivityStatsRecord {
   post_count: number;
   comment_count: number;
   activity_score: number;
+}
+
+export interface BlackboardTitlePreferenceRecord {
+  user_id: string;
+  achievement_title_id: BlackboardAchievementTitleId;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CreateBlackboardPostInput {
@@ -146,6 +155,99 @@ const getCommentsForPosts = async (postIds: string[]): Promise<BlackboardComment
   }
 
   return Array.isArray(data) ? data as BlackboardCommentRecord[] : [];
+};
+
+const isMissingBlackboardTitlePreferencesError = (error: { code?: string; message?: string }) => {
+  const message = error.message?.toLocaleLowerCase() ?? '';
+  return error.code === '42P01' || error.code === 'PGRST205' || message.includes('blackboard_title_preferences');
+};
+
+const mapBlackboardTitlePreferenceRecord = (record: {
+  user_id?: string | null;
+  achievement_title_id?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}): BlackboardTitlePreferenceRecord | null => {
+  const titleId = coerceBlackboardAchievementTitleId(record.achievement_title_id);
+  if (!record.user_id || !titleId) return null;
+
+  return {
+    user_id: record.user_id,
+    achievement_title_id: titleId,
+    created_at: record.created_at || '',
+    updated_at: record.updated_at || '',
+  };
+};
+
+export const getBlackboardTitlePreferences = async (
+  userIds: string[]
+): Promise<BlackboardTitlePreferenceRecord[]> => {
+  const uniqueUserIds = Array.from(new Set(userIds.filter(Boolean)));
+  if (uniqueUserIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('blackboard_title_preferences')
+    .select('user_id,achievement_title_id,created_at,updated_at')
+    .in('user_id', uniqueUserIds);
+
+  if (error) {
+    if (!isMissingBlackboardTitlePreferencesError(error)) {
+      console.warn('获取论坛成就称号失败:', error);
+    }
+    return [];
+  }
+
+  return Array.isArray(data)
+    ? data.flatMap(record => {
+        const preference = mapBlackboardTitlePreferenceRecord(record);
+        return preference ? [preference] : [];
+      })
+    : [];
+};
+
+export const setBlackboardAchievementTitlePreference = async (
+  userId: string,
+  titleId: string | null
+): Promise<BlackboardTitlePreferenceRecord | null> => {
+  const safeTitleId = coerceBlackboardAchievementTitleId(titleId);
+
+  if (!safeTitleId) {
+    const { error } = await supabase
+      .from('blackboard_title_preferences')
+      .delete()
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('清除论坛成就称号失败:', error);
+      throw error;
+    }
+
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('blackboard_title_preferences')
+    .upsert(
+      {
+        user_id: userId,
+        achievement_title_id: safeTitleId,
+      },
+      { onConflict: 'user_id' }
+    )
+    .select('user_id,achievement_title_id,created_at,updated_at')
+    .maybeSingle();
+
+  if (error) {
+    console.error('更新论坛成就称号失败:', error);
+    throw error;
+  }
+
+  const preference = data ? mapBlackboardTitlePreferenceRecord(data) : null;
+  if (!preference) {
+    throw new Error('更新论坛成就称号失败：数据库没有返回有效称号');
+  }
+
+  return preference;
 };
 
 const countRowsByAuthorId = (rows: Array<{ author_id: string | null }>) =>

@@ -27,8 +27,21 @@
 - 核实状态
 - 类型标签
 - 费用和参与方式
+- 活动图片
 
 `needs-review` 只能作为运营候选，不建议公开给普通用户。公开页优先展示 `verified` 和 `stable-recurring`。
+
+## 活动图片标准
+
+被选入 CMI Map 的活动必须配图片，不能只录文字。
+
+优先级：
+
+1. 来源里有官方海报或主办方海报时，优先使用原海报。
+2. 来源没有海报但有明确现场图、主视觉或封面图时，可以使用该图作为活动封面。
+3. 来源没有可用图片时，必须用 Image Generator 生成一张活动海报，再作为 `coverImagePath` 或 `coverImageUrl` 写入。
+
+生成海报时要基于已核实字段：活动标题、地点、时间、活动类型、氛围和费用信息。不要生成会误导用户以为是官方原海报的图；来源说明里应保留真实活动来源，并在内部记录该图是生成图。
 
 ## 数据库维护
 
@@ -53,8 +66,9 @@
 
 1. 上午收集候选：官网、政府活动页、场所公告、CMI 群内活动。
 2. 中午核实：时间、地点、报名方式、费用、取消或改期风险。
-3. 下午更新：把已核实活动写入活动库，按类型打标签；同步更新 `src/data/cmi-events.ts` 作为前端兜底数据。
-4. 晚上复核：当天晚间活动是否仍有效。
+3. 中午到下午补图片：优先保存官方海报；没有海报时，用 Image Generator 生成活动海报。
+4. 下午更新：把已核实活动写入活动库，按类型打标签并写入活动图片；同步更新 `src/data/cmi-events.ts` 作为前端兜底数据。
+5. 晚上复核：当天晚间活动是否仍有效。
 
 ## 正式版发布口径
 
@@ -63,10 +77,11 @@
 1. 更新远程 `public.cmi_events`：新增未来活动设为 `published`，已结束活动设为 `archived`。
 2. 更新本地兜底：`src/data/cmi-events.ts` 保持和线上活动库同一批高可信活动，避免数据库暂不可用时页面空白。
 3. 更新可审计 SQL：把当次发布动作保存到 `supabase/migrations/`，便于追溯活动来源、核查时间和发布字段。
+4. 更新活动图片：每条新增公开活动都必须有官方海报、来源封面或 Image Generator 生成海报。
 
 Time Out 的本周末专题可以作为及时线索源；如果只用 Time Out，`reliabilityNote` 必须写明“出发前仍建议复核场地方动态”。Citylife、主办方官网、场地方页面和 CMI 自有公告优先级更高。
 
-最新一次维护：2026-05-24 19:07 ICT，发现并发布 `/Users/andreas/CMI/活动宣传内容/五月活动/5.29 穷姐姐财商分享大会`，本地新增 `cmi-financial-literacy-sharing-2026-05-29`，同步生成详情页海报和首页横幅图。本轮审计迁移为 `supabase/migrations/20260524190713_publish_cmi_financial_literacy_sharing.sql`，内容包含归档已结束的 `cmi-swap-market-2026-05-24`、刷新仍可参加的 `cmi-ai-open-mic-vol-04-2026-05-24`，以及 upsert 5.29 财商分享会。远程 Supabase 写入暂未完成：MCP 对 linked CMI_MAP 项目无执行权限，本地网络解析 `sfpcpxlxslnulzlmjcby.supabase.co` 失败，CLI 迁移 push 仍需 `SUPABASE_ACCESS_TOKEN`；待网络和 CLI 登录恢复后执行 dry-run / push。`5.23 AI+3D创意主题活动` 目录仍为空，继续保持待人工补料状态。
+最新一次维护：2026-05-26 17:30 ICT，本轮确认 Supabase MCP 已授权到 `CMI_MAP / sfpcpxlxslnulzlmjcby`，并补齐活动报名系统所需的远程 schema。已整理 `五月活动/5.28 正念一小时` 与 `六月活动/6月7日 CMI Talk父亲节特辑` 两条活动：前者使用官方海报和 CMI Map 一键报名，后者为分享嘉宾招募，来源未单列收费项，按免费报名记录并保留腾讯问卷链接供复核。两条活动均已发布到远程活动库，补入本地兜底数据、详情页海报和首页卡片图，并部署到 `https://cmimap.com/cmi-home`。对应审计迁移为 `supabase/migrations/20260526144138_publish_cmi_mindfulness_hour_2026_05_28.sql` 与 `supabase/migrations/20260526171156_publish_cmi_talk_fathers_day_2026_06_07.sql`；MCP 生成的远程迁移版本已补本地 marker，等价本地审计迁移已修复为 applied。当前 `supabase db push --dry-run --linked` 仍会被更早的本地待推迁移阻断，因此本轮没有用 `--include-all` 推送无关改动。
 
 ## 类型标签
 

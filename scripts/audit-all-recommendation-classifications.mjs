@@ -151,6 +151,28 @@ const parseCorrectionCategories = (source) => {
 };
 
 const getCategoryIntent = (category) => CATEGORY_TO_INPUT_INTENT[category] ?? [null, null];
+const isUserUploaded = (row) => row.user_name !== 'CMI社区';
+const shouldRespectUserEasterIntent = (row, inferred, correctionCategory) => {
+  if (!isUserUploaded(row) || normalizeCategory(row.category) !== '彩蛋') return false;
+  const forcedCategory = normalizeCategory(correctionCategory ?? inferred?.suggestedCategory ?? '');
+  return forcedCategory !== '清迈客栈';
+};
+
+const isCmiInnCommunityRecord = (row) => {
+  if (!isUserUploaded(row)) return false;
+  const text = rowText(row);
+  return containsAny(text, [
+    '清迈客栈',
+    '空想食堂',
+    '开放麦',
+    'magic lab',
+    'magiclab',
+    '数字游民社区',
+    'cmi studio',
+    '社区好朋友chatbot',
+    '社区好朋友',
+  ]);
+};
 
 const getServiceRoleFromCli = () => {
   try {
@@ -231,6 +253,17 @@ const inferExpectedClassification = (row) => {
   const hasMarketSignal = containsAny(text, ['市集', '集市', 'walking street', 'bazaar', '手作市集', '周末市集']);
   const hasFreshMarketSignal = containsAny(text, ['菜市场', '生鲜', '水果', '榴莲', '榴莲摊', 'fresh market', 'produce']);
 
+  if (isCmiInnCommunityRecord(row) || normalize(row.place_name) === '清迈客栈') {
+    return candidate({
+      id: 'cmi-inn',
+      category: '清迈客栈',
+      acceptableCategories: ['清迈客栈'],
+      placeTypeIds: [],
+      confidence: 0.98,
+      reason: 'CMI / 清迈客栈活动现场和社区氛围记录应进入客栈专属分类。',
+    });
+  }
+
   if (containsAny(text, ['money exchange', 'exchange', '换汇', 'super money', 'sk exchange', 'mr.pierre'])) {
     return candidate({
       id: 'exchange',
@@ -272,17 +305,6 @@ const inferExpectedClassification = (row) => {
       placeTypeIds: ['pharmacy'],
       confidence: 0.92,
       reason: '药店语义明确，应归入生活服务/药店。',
-    });
-  }
-
-  if (normalize(row.place_name) === '清迈客栈') {
-    return candidate({
-      id: 'cmi-inn',
-      category: '清迈客栈',
-      acceptableCategories: ['清迈客栈'],
-      placeTypeIds: [],
-      confidence: 0.98,
-      reason: '清迈客栈应进入客栈专属分类，而不是普通地图粗分类。',
     });
   }
 
@@ -677,6 +699,7 @@ const auditRow = (row, correctionCategories, validPlaceTypeIds, validDetailTagId
   const inferred = inferExpectedClassification(row);
   const persistedPlaceTypeIds = Array.isArray(row.place_type_ids) ? row.place_type_ids : [];
   const persistedDetailTagIds = Array.isArray(row.detail_tag_ids) ? row.detail_tag_ids : [];
+  const respectUserEasterIntent = shouldRespectUserEasterIntent(row, inferred, correctionCategory);
 
   if (row.category !== currentCategory) {
     issues.push({
@@ -689,7 +712,7 @@ const auditRow = (row, correctionCategories, validPlaceTypeIds, validDetailTagId
     });
   }
 
-  if (correctionCategory && normalizeCategory(correctionCategory) !== currentCategory) {
+  if (correctionCategory && normalizeCategory(correctionCategory) !== currentCategory && !respectUserEasterIntent) {
     issues.push({
       type: 'source_category_error',
       severity: 'high',
@@ -700,7 +723,7 @@ const auditRow = (row, correctionCategories, validPlaceTypeIds, validDetailTagId
     });
   }
 
-  if (inferred && !inferred.acceptableCategories.map(normalizeCategory).includes(currentCategory)) {
+  if (inferred && !inferred.acceptableCategories.map(normalizeCategory).includes(currentCategory) && !respectUserEasterIntent) {
     issues.push({
       type: 'source_category_error',
       severity: inferred.confidence >= 0.9 ? 'high' : 'medium',
@@ -722,7 +745,7 @@ const auditRow = (row, correctionCategories, validPlaceTypeIds, validDetailTagId
     const missingPlaceTypes = inferred.suggestedPlaceTypeIds.filter((id) => !persistedPlaceTypeIds.includes(id));
     const persistedHasData = persistedPlaceTypeIds.length > 0 || persistedDetailTagIds.length > 0;
 
-    if (persistedHasData && missingPlaceTypes.length > 0) {
+    if (persistedHasData && missingPlaceTypes.length > 0 && !respectUserEasterIntent) {
       issues.push({
         type: 'place_type_mismatch',
         severity: inferred.confidence >= 0.9 ? 'high' : 'medium',
@@ -734,7 +757,7 @@ const auditRow = (row, correctionCategories, validPlaceTypeIds, validDetailTagId
       });
     }
 
-    if (!persistedHasData && missingPlaceTypes.length > 0 && inferred.confidence >= 0.82) {
+    if (!persistedHasData && missingPlaceTypes.length > 0 && inferred.confidence >= 0.82 && !respectUserEasterIntent) {
       issues.push({
         type: 'missing_place_type',
         severity: inferred.confidence >= 0.9 ? 'high' : 'medium',
@@ -762,7 +785,7 @@ const auditRow = (row, correctionCategories, validPlaceTypeIds, validDetailTagId
   const needsManualReview =
     issues.length === 0
     && getOwnerType(row) === 'user'
-    && ['彩蛋', '拍照', '身心'].includes(row.category)
+    && ['拍照', '身心'].includes(row.category)
     && !hasConcreteContent;
 
   return {
@@ -812,50 +835,45 @@ const getPrimaryIssue = (row) =>
   )[0];
 
 const buildUpdateForRow = (row) => {
-  const issue = getPrimaryIssue(row);
-  if (!issue) return null;
-
-  const update = {};
-  let nextCategory = row.category;
-
-  if (issue.type === 'source_category_error') {
-    nextCategory = issue.suggestedCategory ?? row.category;
-  } else if (CATEGORY_ALIASES[row.category]) {
-    nextCategory = normalizeCategory(row.category);
-  }
-
-  if (nextCategory !== row.category) {
-    update.category = nextCategory;
-  }
-
-  const taxonomyIssue = row.issues.find((item) =>
-    (item.suggestedPlaceTypeIds?.length ?? 0) > 0
-    || (item.suggestedDetailTagIds?.length ?? 0) > 0,
+  const cmiInnIssue = row.issues.find((item) =>
+    item.type === 'source_category_error'
+    && item.suggestedCategory === '清迈客栈'
   );
-  const suggestedPlaceTypeIds = taxonomyIssue?.suggestedPlaceTypeIds ?? row.inferred?.suggestedPlaceTypeIds ?? [];
-  const suggestedDetailTagIds = taxonomyIssue?.suggestedDetailTagIds ?? row.inferred?.suggestedDetailTagIds ?? [];
+  if (cmiInnIssue) {
+    return {
+      category: '清迈客栈',
+      input_category_id: 'cmi-inn',
+      primary_intent_id: null,
+      place_type_ids: [],
+      detail_tag_ids: [],
+      classification_status: 'manual_curated',
+      classification_source: 'codex_user_requested_cmi_inn_classification',
+      classification_confidence: cmiInnIssue.confidence,
+      classified_at: new Date().toISOString(),
+    };
+  }
+
+  const autoIssue = row.issues.find((item) => item.type === 'missing_place_type');
+  if (!autoIssue) return null;
+
+  const hasBlockingIssue = row.issues.some((item) => item.type !== 'missing_place_type');
+  if (hasBlockingIssue) return null;
+
+  const suggestedPlaceTypeIds = autoIssue.suggestedPlaceTypeIds ?? [];
+  const suggestedDetailTagIds = autoIssue.suggestedDetailTagIds ?? [];
 
   if (suggestedPlaceTypeIds.length > 0 || suggestedDetailTagIds.length > 0) {
-    update.place_type_ids = suggestedPlaceTypeIds;
-    update.detail_tag_ids = suggestedDetailTagIds;
+    return {
+      place_type_ids: suggestedPlaceTypeIds,
+      detail_tag_ids: suggestedDetailTagIds,
+      classification_status: 'auto_high_confidence',
+      classification_source: 'codex_all_recommendation_classification_audit',
+      classification_confidence: autoIssue.confidence,
+      classified_at: new Date().toISOString(),
+    };
   }
 
-  const [inputCategoryId, primaryIntentId] = getCategoryIntent(nextCategory);
-  if (inputCategoryId !== (row.inputCategoryId ?? null)) {
-    update.input_category_id = inputCategoryId;
-  }
-  if (primaryIntentId !== (row.primaryIntentId ?? null)) {
-    update.primary_intent_id = primaryIntentId;
-  }
-
-  if (Object.keys(update).length === 0) return null;
-
-  update.classification_status = 'auto_high_confidence';
-  update.classification_source = 'codex_all_recommendation_classification_audit';
-  update.classification_confidence = Math.max(...row.issues.map((item) => item.confidence), 0);
-  update.classified_at = new Date().toISOString();
-
-  return update;
+  return null;
 };
 
 const toIssueLine = (row) => {

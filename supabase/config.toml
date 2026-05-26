@@ -38,3 +38,6 @@ content_path = "./supabase/templates/auth-magic-link.html"
 [auth.email.template.recovery]
 subject = "重置你的 CMI Map 密码"
 content_path = "./supabase/templates/auth-recovery.html"
+
+[functions.cmi-admin-agent]
+verify_jwt = false

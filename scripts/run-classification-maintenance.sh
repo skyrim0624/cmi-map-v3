@@ -11,6 +11,9 @@ cd "$REPO_DIR"
 
 set -a
 source ./.env
+if [[ -f ./.env.local ]]; then
+  source ./.env.local
+fi
 set +a
 
 auditOutput="$(node ./scripts/audit-all-recommendation-classifications.mjs --apply)"

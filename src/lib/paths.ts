@@ -11,18 +11,46 @@ export const getPlaceMapPath = (placeName: string) =>
 
 export const getProfilePath = () => '/profile';
 
-export const getPersonMapPath = (userName: string) =>
-  `/people/${encodeURIComponent(userName)}`;
+export const getPersonMapPath = (profileIdentity: string) =>
+  `/people/${encodeURIComponent(profileIdentity)}`;
 
 export const getCmiHomePath = () => '/cmi-home';
 
 export const getCmiEventPath = (eventId: string) =>
   `/events/${encodeURIComponent(eventId)}`;
 
-export const getCmiBlackboardPath = (input?: { compose?: boolean; eventId?: string | null }) => {
+export const getCmiEventCreatePath = (input?: {
+  placeName?: string | null;
+  area?: string | null;
+  category?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}) => {
+  const searchParams = new URLSearchParams();
+  if (input?.placeName) searchParams.set('place', input.placeName);
+  if (input?.area) searchParams.set('area', input.area);
+  if (input?.category) searchParams.set('category', input.category);
+  if (typeof input?.latitude === 'number') searchParams.set('lat', String(input.latitude));
+  if (typeof input?.longitude === 'number') searchParams.set('lng', String(input.longitude));
+
+  const query = searchParams.toString();
+  return query ? `/events/new?${query}` : '/events/new';
+};
+
+export const getCmiEventManagePath = (eventId: string) =>
+  `/events/${encodeURIComponent(eventId)}/manage`;
+
+export const getCmiBlackboardPath = (input?: {
+  compose?: boolean;
+  eventId?: string | null;
+  placeName?: string | null;
+  locationLabel?: string | null;
+}) => {
   const searchParams = new URLSearchParams();
   if (input?.compose) searchParams.set('compose', '1');
   if (input?.eventId) searchParams.set('event', input.eventId);
+  if (input?.placeName) searchParams.set('place', input.placeName);
+  if (input?.locationLabel) searchParams.set('location', input.locationLabel);
 
   const query = searchParams.toString();
   return query ? `/blackboard?${query}` : '/blackboard';

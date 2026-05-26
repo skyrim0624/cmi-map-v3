@@ -1,4 +1,4 @@
-import { ArrowLeft, Bookmark, Download, Heart, Loader2, MapPinned, PencilLine, Share2, Sticker as StickerIcon, Trash2 } from 'lucide-react';
+import { ArrowLeft, Bookmark, CalendarPlus, Download, Heart, Loader2, MapPinned, PencilLine, Share2, Sticker as StickerIcon, Trash2 } from 'lucide-react';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -38,7 +38,14 @@ import {
   getCmiPlaceTypeTagsForRecommendation,
 } from '@/data/cmi-taxonomy';
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
-import { deleteRecommendation, getProfilesByUserNames, getRecommendationsByPlace, type PublicProfile, updateRecommendationReason } from '@/db/api';
+import {
+  deleteRecommendation,
+  getProfilesByUserIds,
+  getProfilesByUserNames,
+  getRecommendationsByPlace,
+  type PublicProfile,
+  updateRecommendationReason,
+} from '@/db/api';
 import {
   createRecommendationInteractionState,
   loadAvailableStickers,
@@ -48,7 +55,8 @@ import {
   toggleRecommendationWishlist,
 } from '@/features/interactions/interaction-service';
 import { getCmiEasterIconUrl, getRecommendationEasterIconId, getRecommendationReasonText } from '@/lib/easter-icons';
-import { getAddTracePath, getPersonMapPath, getPlaceMapPath, getPlacePath } from '@/lib/paths';
+import { getAddTracePath, getCmiEventCreatePath, getPersonMapPath, getPlaceMapPath, getPlacePath } from '@/lib/paths';
+import { getStableProfileIdentity } from '@/features/profiles/profile-identity';
 import { createPlaceShareCard, type PlaceShareCardResult } from '@/lib/place-share-card';
 import type { PlacedSticker, Recommendation, Sticker } from '@/types/types';
 import { getCategoryIconUrl, normalizeCategory } from '@/types/types';
@@ -100,6 +108,7 @@ export default function PlaceDetail() {
   const location = useLocation();
   const { user } = useAuth();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [profilesByUserId, setProfilesByUserId] = useState<Record<string, PublicProfile>>({});
   const [profilesByUserName, setProfilesByUserName] = useState<Record<string, PublicProfile>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -157,6 +166,7 @@ export default function PlaceDetail() {
       }
     } catch {
       setRecommendations([]);
+      setProfilesByUserId({});
       setProfilesByUserName({});
       setLoadError('地点详情暂时没连上');
     } finally {
@@ -166,17 +176,27 @@ export default function PlaceDetail() {
 
   const syncRecommendationProfiles = async (nextRecommendations: Recommendation[]) => {
     if (nextRecommendations.length === 0) {
+      setProfilesByUserId({});
       setProfilesByUserName({});
       return;
     }
 
-    const profiles = await getProfilesByUserNames(nextRecommendations.map(rec => rec.user_name));
+    const [profilesById, profilesByLegacyName] = await Promise.all([
+      getProfilesByUserIds(nextRecommendations.map(rec => rec.user_id)),
+      getProfilesByUserNames(nextRecommendations.filter(rec => !rec.user_id).map(rec => rec.user_name)),
+    ]);
+    const nextProfilesByUserId = profilesById.reduce<Record<string, PublicProfile>>((profilesByIdMap, profile) => {
+      profilesByIdMap[profile.id] = profile;
+      return profilesByIdMap;
+    }, {});
+    const profiles = [...profilesById, ...profilesByLegacyName];
     const nextProfilesByUserName = profiles.reduce<Record<string, PublicProfile>>((profilesByName, profile) => {
       if (!profile.user_name) return profilesByName;
       profilesByName[profile.user_name] = profile;
       return profilesByName;
     }, {});
 
+    setProfilesByUserId(nextProfilesByUserId);
     setProfilesByUserName(nextProfilesByUserName);
   };
 
@@ -605,6 +625,21 @@ export default function PlaceDetail() {
     navigate(addTracePath);
   };
 
+  const handleCreateEventHere = () => {
+    const recommendation = recommendations[0];
+    if (!recommendation) return;
+
+    const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
+    const isCommunityGuide = isCommunityCuratedRecommendation(recommendation);
+    navigate(getCmiEventCreatePath({
+      placeName: recommendation.place_name,
+      area: isCommunityGuide ? guide.kind : normalizeCategory(recommendation.category),
+      category: recommendation.category,
+      latitude: recommendation.latitude,
+      longitude: recommendation.longitude,
+    }));
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen w-full flex-col gap-5 bg-background p-6 pt-20">
@@ -792,8 +827,9 @@ export default function PlaceDetail() {
                 const guide = getPlaceGuide(rec.place_name, rec.category);
                 const isCommunityGuide = isCommunityCuratedRecommendation(rec);
                 const canEditRecommendation = Boolean(user && rec.user_id === user.id);
-                const profile = profilesByUserName[rec.user_name];
+                const profile = (rec.user_id && profilesByUserId[rec.user_id]) || profilesByUserName[rec.user_name];
                 const displayName = isCommunityGuide ? 'CMI 社区整理' : rec.user_name;
+                const profileIdentity = profile ? getStableProfileIdentity(profile) : rec.user_id || rec.user_name;
 
                 return (
                   <Fragment key={rec.id}>
@@ -891,7 +927,7 @@ export default function PlaceDetail() {
                         className="min-w-0 text-left active:scale-[0.98]"
                         onClick={(event) => {
                           event.stopPropagation();
-                          navigate(getPersonMapPath(rec.user_name));
+                          navigate(getPersonMapPath(profileIdentity));
                         }}
                         aria-label={`查看 ${displayName} 的清迈地图`}
                       >
@@ -980,21 +1016,38 @@ export default function PlaceDetail() {
                   </div>
                 </div>
                     {idx === 0 && (
-                      <button
-                        type="button"
-                        className="flex w-full items-center gap-3 rounded-[1.35rem] border border-border bg-card p-4 text-left shadow-[0_7px_20px_rgba(45,45,47,0.06)] transition-transform active:scale-[0.99]"
-                        onClick={handleAddTrace}
-                      >
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-                          <PencilLine className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-lg font-black leading-tight text-foreground">我也来补一句</p>
-                          <p className="mt-1 text-sm font-semibold leading-snug text-muted-foreground">
-                            去过这里，再补充路况、拍照点或坑点。
-                          </p>
-                        </div>
-                      </button>
+                      <div className="grid gap-2">
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-3 rounded-[1.35rem] border border-border bg-card p-4 text-left shadow-[0_7px_20px_rgba(45,45,47,0.06)] transition-transform active:scale-[0.99]"
+                          onClick={handleAddTrace}
+                        >
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                            <PencilLine className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-lg font-black leading-tight text-foreground">我也来补一句</p>
+                            <p className="mt-1 text-sm font-semibold leading-snug text-muted-foreground">
+                              去过这里，再补充路况、拍照点或坑点。
+                            </p>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-3 rounded-[1.35rem] border border-[#3f6e52]/18 bg-[#edf6ee] p-4 text-left shadow-[0_7px_20px_rgba(45,45,47,0.05)] transition-transform active:scale-[0.99]"
+                          onClick={handleCreateEventHere}
+                        >
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-[#3f6e52]">
+                            <CalendarPlus className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-lg font-black leading-tight text-foreground">在这里发活动</p>
+                            <p className="mt-1 text-sm font-semibold leading-snug text-muted-foreground">
+                              发布页会自动绑定这个地点和地图坐标。
+                            </p>
+                          </div>
+                        </button>
+                      </div>
                     )}
                   </Fragment>
                 );

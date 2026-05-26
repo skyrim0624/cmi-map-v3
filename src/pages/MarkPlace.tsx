@@ -1,6 +1,6 @@
 import { ArrowLeft, Check, Loader2, MapPin, Mic, MicOff, PencilLine, Shuffle } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LeafletMap } from '@/components/map/LeafletMap';
 import { useAuth } from '@/contexts/AuthContext';
@@ -82,7 +82,7 @@ const queryMicrophonePermission = async (): Promise<SpeechPermissionStatus> => {
 
 const getVoiceErrorHint = (error?: string) => {
   if (error === 'not-allowed') {
-    return '浏览器没有给 cmti.uk 麦克风权限。打开地址栏权限设置，允许麦克风后再试；也可以先打字。';
+    return '浏览器没有给 cmimap.com 麦克风权限。打开地址栏权限设置，允许麦克风后再试；也可以先打字。';
   }
 
   if (error === 'audio-capture') {
@@ -109,7 +109,7 @@ const requestMicrophoneForSpeech = async () => {
     return {
       ok: false,
       permission: 'denied' as SpeechPermissionStatus,
-      hint: '当前页面不是安全连接，浏览器不会开放麦克风。请用 https://cmti.uk 再试。',
+      hint: '当前页面不是安全连接，浏览器不会开放麦克风。请用 https://cmimap.com 再试。',
     };
   }
 
@@ -175,13 +175,28 @@ const ScribbleSparks = ({ active }: { active: boolean }) => {
 
 export default function MarkPlace() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, profile, loading: authLoading } = useAuth();
+  const initialPlaceName = searchParams.get('place')?.trim() || '';
+  const initialLatitude = Number(searchParams.get('lat'));
+  const initialLongitude = Number(searchParams.get('lng'));
+  const hasInitialPickedPlace =
+    Boolean(initialPlaceName) &&
+    Number.isFinite(initialLatitude) &&
+    Number.isFinite(initialLongitude);
   
-  const [stage, setStage] = useState<Stage>('camera');
+  const [stage, setStage] = useState<Stage>(() => hasInitialPickedPlace ? 'map_fallback' : 'camera');
   const [photoURL, setPhotoURL] = useState<string | null>(null);
   const [images, setImages] = useState<File[]>([]);
-  const [locationName, setLocationName] = useState<string>('');
-  const [center, setCenter] = useState({ lat: 18.7883, lng: 98.9853 });
+  const [locationName, setLocationName] = useState<string>(() =>
+    hasInitialPickedPlace ? `已选：${initialPlaceName}` : ''
+  );
+  const [center, setCenter] = useState(() => (
+    hasInitialPickedPlace
+      ? { lat: initialLatitude, lng: initialLongitude }
+      : { lat: 18.7883, lng: 98.9853 }
+  ));
+  const [pickedPlaceName, setPickedPlaceName] = useState(initialPlaceName);
   const [description, setDescription] = useState<string>('');
   const [uploading, setUploading] = useState(false);
   
@@ -530,6 +545,7 @@ export default function MarkPlace() {
     setIsListening(false);
     speechStartingRef.current = false;
     setLocationName('手动选点');
+    setPickedPlaceName('');
     setStage('map_fallback');
   };
 
@@ -618,14 +634,21 @@ export default function MarkPlace() {
       let reason = text;
 
       if (!isCmiInnCheckIn) {
-        const punctuationIndex = text.search(/[，。！？、,\.!?\n]/);
+        const normalizedPickedPlaceName = pickedPlaceName.trim();
 
-        if (punctuationIndex > 0 && punctuationIndex < 30) {
-          placeName = text.substring(0, punctuationIndex);
-          reason = text.substring(punctuationIndex + 1).trim() || text;
-        } else {
-          placeName = text.substring(0, Math.min(30, text.length));
+        if (normalizedPickedPlaceName) {
+          placeName = normalizedPickedPlaceName;
           reason = text;
+        } else {
+          const punctuationIndex = text.search(/[，。！？、,\.!?\n]/);
+
+          if (punctuationIndex > 0 && punctuationIndex < 30) {
+            placeName = text.substring(0, punctuationIndex);
+            reason = text.substring(punctuationIndex + 1).trim() || text;
+          } else {
+            placeName = text.substring(0, Math.min(30, text.length));
+            reason = text;
+          }
         }
       }
 
@@ -893,17 +916,25 @@ export default function MarkPlace() {
 
             {stage === 'map_fallback' && (
                <div className="absolute inset-0 animate-in fade-in duration-300">
-                 <LeafletMap
-                   mode="mark"
-                   defaultZoom={15}
-                   markTargetYRatio={0.5}
-                   onCenterChange={(lat, lng) => setCenter({lat, lng})}
-                   className="h-full w-full border-none outline-none"
-                 />
+	                 <LeafletMap
+                       key={pickedPlaceName || 'manual'}
+	                   mode="mark"
+	                   defaultZoom={15}
+	                   defaultCenter={center}
+	                   markTargetYRatio={0.5}
+	                   onCenterChange={(lat, lng) => setCenter({lat, lng})}
+	                   className="h-full w-full border-none outline-none"
+	                 />
                  <div className="pointer-events-none absolute inset-x-0 top-0 z-[1001] h-40 bg-gradient-to-b from-background/95 via-background/70 to-transparent" />
                  <div className="pointer-events-none absolute inset-x-4 top-[calc(env(safe-area-inset-top)+4.75rem)] z-[1002] rounded-3xl border border-foreground/10 bg-background/90 px-4 py-3 text-center shadow-lg backdrop-blur-md">
-                   <p className="text-base font-black text-foreground">手动选择地标</p>
-                   <p className="mt-1 text-xs font-bold leading-relaxed text-muted-foreground">拖动地图，让准星中心对准地点；也可以直接点地图移动准星。</p>
+	                   <p className="text-base font-black text-foreground">
+                         {pickedPlaceName ? pickedPlaceName : '手动选择地标'}
+                       </p>
+	                   <p className="mt-1 text-xs font-bold leading-relaxed text-muted-foreground">
+                         {pickedPlaceName
+                           ? '确认准星对准这个地点后，就可以写下你的真实体验。'
+                           : '拖动地图，让准星中心对准地点；也可以直接点地图移动准星。'}
+                       </p>
                  </div>
                  <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1001] h-40 bg-gradient-to-t from-background via-background/88 to-transparent" />
                  <div className="absolute inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-[1002]">
