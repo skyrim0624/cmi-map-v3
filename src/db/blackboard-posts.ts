@@ -1,6 +1,9 @@
 import { supabase } from './supabase';
 import { uploadImages } from './api';
-import type { BlackboardPostCategory } from '@/features/home/blackboard/blackboard-model';
+import {
+  getBlackboardActivityScore,
+  type BlackboardPostCategory,
+} from '@/features/home/blackboard/blackboard-model';
 
 export type { BlackboardPostCategory };
 
@@ -51,6 +54,13 @@ export interface BlackboardAnnouncementRecord {
   author_name: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface BlackboardActivityStatsRecord {
+  author_id: string;
+  post_count: number;
+  comment_count: number;
+  activity_score: number;
 }
 
 export interface CreateBlackboardPostInput {
@@ -136,6 +146,77 @@ const getCommentsForPosts = async (postIds: string[]): Promise<BlackboardComment
   }
 
   return Array.isArray(data) ? data as BlackboardCommentRecord[] : [];
+};
+
+const countRowsByAuthorId = (rows: Array<{ author_id: string | null }>) =>
+  rows.reduce<Record<string, number>>((countsByAuthorId, row) => {
+    if (!row.author_id) return countsByAuthorId;
+    countsByAuthorId[row.author_id] = (countsByAuthorId[row.author_id] || 0) + 1;
+    return countsByAuthorId;
+  }, {});
+
+const getBlackboardActivityStatsFallback = async (
+  authorIds: string[]
+): Promise<BlackboardActivityStatsRecord[]> => {
+  const [postsResult, commentsResult] = await Promise.all([
+    supabase
+      .from('blackboard_posts')
+      .select('author_id')
+      .in('author_id', authorIds),
+    supabase
+      .from('blackboard_comments')
+      .select('author_id')
+      .in('author_id', authorIds),
+  ]);
+
+  if (postsResult.error || commentsResult.error) {
+    console.warn('获取论坛活跃称号统计失败:', postsResult.error || commentsResult.error);
+    return [];
+  }
+
+  const postCounts = countRowsByAuthorId((postsResult.data || []) as Array<{ author_id: string | null }>);
+  const commentCounts = countRowsByAuthorId((commentsResult.data || []) as Array<{ author_id: string | null }>);
+
+  return authorIds.map(authorId => {
+    const postCount = postCounts[authorId] || 0;
+    const commentCount = commentCounts[authorId] || 0;
+
+    return {
+      author_id: authorId,
+      post_count: postCount,
+      comment_count: commentCount,
+      activity_score: getBlackboardActivityScore({ postCount, commentCount }),
+    };
+  });
+};
+
+export const getBlackboardActivityStats = async (
+  authorIds: string[]
+): Promise<BlackboardActivityStatsRecord[]> => {
+  const uniqueAuthorIds = Array.from(new Set(authorIds.filter(Boolean)));
+  if (uniqueAuthorIds.length === 0) return [];
+
+  const { data, error } = await supabase.rpc('get_blackboard_activity_stats', {
+    target_author_ids: uniqueAuthorIds,
+  });
+
+  if (error) {
+    return getBlackboardActivityStatsFallback(uniqueAuthorIds);
+  }
+
+  if (!Array.isArray(data)) return [];
+
+  return data.map(record => {
+    const postCount = Number(record.post_count || 0);
+    const commentCount = Number(record.comment_count || 0);
+
+    return {
+      author_id: String(record.author_id),
+      post_count: postCount,
+      comment_count: commentCount,
+      activity_score: Number(record.activity_score || getBlackboardActivityScore({ postCount, commentCount })),
+    };
+  });
 };
 
 export const getBlackboardPosts = async (): Promise<BlackboardPostRecord[]> => {

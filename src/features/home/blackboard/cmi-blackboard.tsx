@@ -1,12 +1,17 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   ArrowLeft,
+  Check,
+  Crosshair,
   Edit3,
   HelpCircle,
   ImagePlus,
+  Loader2,
+  MapPin,
   Megaphone,
   MessageCircle,
   Plus,
+  Search,
   Send,
   Sparkles,
   Star,
@@ -17,13 +22,16 @@ import {
 import type { ChangeEvent, FormEvent, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { LeafletMap } from '@/components/map/LeafletMap';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { getAllRecommendations } from '@/db/api';
 import {
   createBlackboardComment,
   createBlackboardAnnouncement,
   createBlackboardPost,
   deleteBlackboardPost,
+  getBlackboardActivityStats,
   getBlackboardPosts,
   getBlackboardAnnouncements,
   hideBlackboardAnnouncement,
@@ -37,16 +45,29 @@ import {
 } from '@/db/blackboard-posts';
 import { supabase } from '@/db/supabase';
 import {
+  buildEventPlaceCandidates,
+  createEventPlaceCandidateFromExternalPlace,
+  findExactEventPlaceCandidate,
+  inferEventPlaceCandidatesFromText,
+  searchEventPlaceCandidates,
+  type EventPlaceCandidate,
+} from '@/features/cmi-events/event-place-binding';
+import {
   BLACKBOARD_CATEGORY_LABELS,
   BLACKBOARD_CATEGORY_OPTIONS,
   coerceBlackboardCategory,
   formatBlackboardCreatedLabel,
+  getBlackboardActivityTitle,
   getBlackboardFeedFilters,
   getBlackboardDateGroupLabel,
+  sortBlackboardFeedPosts,
   type BlackboardPostFilter,
 } from '@/features/home/blackboard/blackboard-model';
+import { searchExternalPlaceCandidates } from '@/features/places/external-place-search';
+import { useDebounce } from '@/hooks/use-debounce';
 import { getCmiEventPath, getPersonMapPath, getPlacePath } from '@/lib/paths';
 import { cn } from '@/lib/utils';
+import { isPublicMapRecommendation } from '@/types/types';
 import { normalizeImageFile } from '@/utils/imageCompression';
 
 type DraftImage = {
@@ -57,6 +78,8 @@ type DraftImage = {
 
 type BlackboardComment = BlackboardCommentRecord & {
   authorAvatarUrl: string;
+  authorActivityLevel: number;
+  authorActivityTitle: string;
 };
 
 interface BlackboardPublicProfile {
@@ -77,6 +100,8 @@ interface BlackboardPost {
   author: string;
   authorInitial: string;
   authorAvatarUrl: string;
+  authorActivityLevel: number;
+  authorActivityTitle: string;
   createdAt: string;
   createdLabel: string;
   dateGroupLabel: string;
@@ -126,6 +151,7 @@ const COMMENT_BODY_LIMIT = 500;
 const ANNOUNCEMENT_TITLE_LIMIT = 48;
 const ANNOUNCEMENT_BODY_LIMIT = 280;
 const BLACKBOARD_ICON_URL = '/cmi-home/blackboard-together.svg';
+const CHIANG_MAI_MAP_CENTER = { lat: 18.7883, lng: 98.9853 };
 
 const FILTER_ICON_BY_ID: Record<BlackboardPostFilter, LucideIcon> = {
   all: Sparkles,
@@ -152,6 +178,7 @@ const CATEGORY_TONES: Record<BlackboardPostCategory, string> = {
   help: 'bg-[#eef3ff] text-[#4a6a9e] border-[#4a6a9e]/15',
   share: 'bg-[#ecf7f1] text-[#2f7651] border-[#2f7651]/15',
 };
+const DEFAULT_BLACKBOARD_ACTIVITY_TITLE = getBlackboardActivityTitle({ postCount: 0, commentCount: 0 });
 
 const createEmptyDraft = (): BlackboardDraft => ({
   category: 'companion',
@@ -229,14 +256,34 @@ const hydratePostProfiles = async (posts: BlackboardPost[]): Promise<BlackboardP
     post.authorId,
     ...post.comments.map(comment => comment.author_id),
   ]);
-  const profilesById = indexPublicProfilesById(await getBlackboardProfilesByUserIds(authorIds));
+  const [profiles, activityStats] = await Promise.all([
+    getBlackboardProfilesByUserIds(authorIds),
+    getBlackboardActivityStats(authorIds),
+  ]);
+  const profilesById = indexPublicProfilesById(profiles);
+  const activityTitlesByAuthorId = activityStats.reduce<Record<string, typeof DEFAULT_BLACKBOARD_ACTIVITY_TITLE>>(
+    (titlesByAuthorId, stats) => {
+      titlesByAuthorId[stats.author_id] = getBlackboardActivityTitle({
+        postCount: stats.post_count,
+        commentCount: stats.comment_count,
+      });
+      return titlesByAuthorId;
+    },
+    {}
+  );
+  const getActivityTitleForAuthor = (authorId: string) =>
+    activityTitlesByAuthorId[authorId] || DEFAULT_BLACKBOARD_ACTIVITY_TITLE;
 
   return posts.map(post => ({
     ...post,
     authorAvatarUrl: profilesById[post.authorId]?.avatar_url || '',
+    authorActivityLevel: getActivityTitleForAuthor(post.authorId).level,
+    authorActivityTitle: getActivityTitleForAuthor(post.authorId).title,
     comments: post.comments.map(comment => ({
       ...comment,
       authorAvatarUrl: profilesById[comment.author_id]?.avatar_url || '',
+      authorActivityLevel: getActivityTitleForAuthor(comment.author_id).level,
+      authorActivityTitle: getActivityTitleForAuthor(comment.author_id).title,
     })),
   }));
 };
@@ -256,6 +303,8 @@ const mapBlackboardPost = (record: BlackboardPostRecord): BlackboardPost => {
     author,
     authorInitial: getAuthorInitial(author),
     authorAvatarUrl: '',
+    authorActivityLevel: DEFAULT_BLACKBOARD_ACTIVITY_TITLE.level,
+    authorActivityTitle: DEFAULT_BLACKBOARD_ACTIVITY_TITLE.title,
     createdAt: record.created_at,
     createdLabel: formatBlackboardCreatedLabel(record.created_at),
     dateGroupLabel: getBlackboardDateGroupLabel(record.created_at),
@@ -269,6 +318,8 @@ const mapBlackboardPost = (record: BlackboardPostRecord): BlackboardPost => {
     comments: (record.comments || []).map(comment => ({
       ...comment,
       authorAvatarUrl: '',
+      authorActivityLevel: DEFAULT_BLACKBOARD_ACTIVITY_TITLE.level,
+      authorActivityTitle: DEFAULT_BLACKBOARD_ACTIVITY_TITLE.title,
     })),
   };
 };
@@ -390,6 +441,14 @@ function UserAvatar({
   );
 }
 
+function UserActivityBadge({ title }: { title: string }) {
+  return (
+    <span className="inline-flex h-5 shrink-0 items-center rounded-[0.35rem] bg-primary/10 px-1.5 text-[0.68rem] font-black leading-none text-primary">
+      {title}
+    </span>
+  );
+}
+
 function renderPostBody(post: BlackboardPost, options?: { onLinkClick?: (event: MouseEvent<HTMLAnchorElement>) => void }) {
   if (!post.linkedEventId || !post.linkedEventTitle) return post.body;
 
@@ -476,6 +535,12 @@ function BlackboardPostCard({
             >
               {post.author}
             </Link>
+            <UserActivityBadge title={post.authorActivityTitle} />
+            {isAdmin && userId === post.authorId && (
+              <span className="inline-flex h-5 shrink-0 items-center rounded-[0.35rem] bg-[#fff4c7] px-1.5 text-[0.68rem] font-black leading-none text-[#9a6a00]">
+                管理员
+              </span>
+            )}
           </div>
           <p className="mt-1 text-[0.94rem] font-semibold leading-none text-[#9b9b9b]">
             {post.createdLabel}
@@ -777,6 +842,339 @@ function AnnouncementSheet({
   );
 }
 
+function LocationMapPickerSheet({
+  center,
+  onCenterChange,
+  onConfirm,
+  onClose,
+}: {
+  center: { lat: number; lng: number };
+  onCenterChange: (center: { lat: number; lng: number }) => void;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  const initialCenterRef = useRef(center);
+
+  return (
+    <div className="fixed inset-0 z-[80] flex justify-center bg-white sm:bg-foreground/30" role="presentation">
+      <section
+        className="flex h-[100dvh] w-full max-w-[520px] flex-col overflow-hidden bg-white shadow-[0_0_44px_rgba(28,28,28,0.18)]"
+        role="dialog"
+        aria-modal="true"
+        aria-label="地图选点"
+      >
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[#ededed] bg-white px-4 py-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
+          <button
+            type="button"
+            className="grid h-11 w-11 place-items-center rounded-full text-[#222222] active:bg-[#f2f2f2]"
+            onClick={onClose}
+            aria-label="返回发帖"
+          >
+            <ArrowLeft className="h-6 w-6" strokeWidth={2.35} />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="text-[1.15rem] font-black leading-tight text-[#222222]">地图选点</p>
+            <p className="mt-0.5 text-[0.78rem] font-bold text-[#8c8c8c]">
+              拖动地图，让红点对准大概位置。
+            </p>
+          </div>
+          <button
+            type="button"
+            className="rounded-full bg-primary px-4 py-2 text-sm font-black text-primary-foreground"
+            onClick={onConfirm}
+          >
+            确认
+          </button>
+        </header>
+
+        <div className="relative min-h-0 flex-1">
+          <LeafletMap
+            mode="mark"
+            defaultCenter={initialCenterRef.current}
+            defaultZoom={16}
+            markTargetYRatio={0.5}
+            onCenterChange={(lat, lng) => onCenterChange({ lat, lng })}
+            className="h-full w-full border-none outline-none"
+          />
+          <div className="pointer-events-none absolute left-1/2 top-1/2 z-[1002] -translate-x-1/2 -translate-y-full text-[#e53b35] drop-shadow-[0_5px_10px_rgba(0,0,0,0.3)]">
+            <MapPin className="h-12 w-12 fill-[#e53b35]" strokeWidth={2.2} />
+          </div>
+          <div className="pointer-events-none absolute inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-[1002] rounded-2xl bg-white/92 px-4 py-3 text-center shadow-[0_12px_30px_rgba(0,0,0,0.16)] backdrop-blur">
+            <p className="text-sm font-black text-[#222222]">
+              {center.lat.toFixed(5)}, {center.lng.toFixed(5)}
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function BlackboardLocationField({
+  draft,
+  onDraftChange,
+}: {
+  draft: BlackboardDraft;
+  onDraftChange: (draft: BlackboardDraft) => void;
+}) {
+  const [placeCandidates, setPlaceCandidates] = useState<EventPlaceCandidate[]>(() => buildEventPlaceCandidates([]));
+  const [selectedPlace, setSelectedPlace] = useState<EventPlaceCandidate | null>(null);
+  const [placeCandidatesLoading, setPlaceCandidatesLoading] = useState(false);
+  const [externalPlaceCandidates, setExternalPlaceCandidates] = useState<EventPlaceCandidate[]>([]);
+  const [externalPlaceCandidatesLoading, setExternalPlaceCandidatesLoading] = useState(false);
+  const [externalPlaceCandidatesError, setExternalPlaceCandidatesError] = useState<string | null>(null);
+  const [mapPickerOpen, setMapPickerOpen] = useState(false);
+  const [mapPickerCenter, setMapPickerCenter] = useState(CHIANG_MAI_MAP_CENTER);
+  const debouncedLocationQuery = useDebounce(draft.locationLabel, 520);
+
+  const naturalPlaceCandidates = useMemo(
+    () =>
+      selectedPlace
+        ? []
+        : inferEventPlaceCandidatesFromText(
+          placeCandidates,
+          [draft.title, draft.body].filter(Boolean).join(' ')
+        ),
+    [draft.body, draft.title, placeCandidates, selectedPlace]
+  );
+
+  const searchPlaceCandidates = useMemo(
+    () =>
+      selectedPlace
+        ? []
+        : searchEventPlaceCandidates(placeCandidates, draft.locationLabel, draft.locationLabel.trim() ? 5 : 3),
+    [draft.locationLabel, placeCandidates, selectedPlace]
+  );
+
+  const hasLocationQuery = Boolean(draft.locationLabel.trim());
+  const visibleInternalPlaceCandidates = hasLocationQuery ? searchPlaceCandidates : naturalPlaceCandidates;
+  const shouldSearchExternalPlaces =
+    hasLocationQuery &&
+    debouncedLocationQuery.trim().length >= 2 &&
+    !selectedPlace &&
+    !placeCandidatesLoading &&
+    searchPlaceCandidates.length === 0;
+  const visibleExternalPlaceCandidates = shouldSearchExternalPlaces ? externalPlaceCandidates : [];
+
+  useEffect(() => {
+    let isMounted = true;
+    setPlaceCandidatesLoading(true);
+
+    getAllRecommendations()
+      .then(recommendations => {
+        if (!isMounted) return;
+        setPlaceCandidates(buildEventPlaceCandidates(recommendations.filter(isPublicMapRecommendation)));
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setPlaceCandidates(buildEventPlaceCandidates([]));
+      })
+      .finally(() => {
+        if (isMounted) setPlaceCandidatesLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!shouldSearchExternalPlaces) {
+      setExternalPlaceCandidates([]);
+      setExternalPlaceCandidatesLoading(false);
+      setExternalPlaceCandidatesError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setExternalPlaceCandidatesLoading(true);
+    setExternalPlaceCandidatesError(null);
+
+    searchExternalPlaceCandidates(debouncedLocationQuery, {
+      signal: controller.signal,
+      limit: 5,
+    })
+      .then(places => {
+        setExternalPlaceCandidates(places.map(createEventPlaceCandidateFromExternalPlace));
+      })
+      .catch(error => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setExternalPlaceCandidates([]);
+        setExternalPlaceCandidatesError('外部地点暂时搜不到，可以直接地图选点');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setExternalPlaceCandidatesLoading(false);
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [debouncedLocationQuery, shouldSearchExternalPlaces]);
+
+  const updateLocationDraft = (locationLabel: string, linkedPlaceName?: string) => {
+    onDraftChange({
+      ...draft,
+      locationLabel,
+      linkedPlaceName,
+    });
+  };
+
+  const handleLocationChange = (value: string) => {
+    updateLocationDraft(value);
+    if (selectedPlace && selectedPlace.placeName !== value) setSelectedPlace(null);
+  };
+
+  const applyPlaceCandidate = (candidate: EventPlaceCandidate) => {
+    setSelectedPlace(candidate);
+    const linkedPlaceName = candidate.recommendationCount > 0 ? candidate.placeName : undefined;
+    updateLocationDraft(candidate.placeName, linkedPlaceName);
+    toast.success(candidate.bindingSource === 'external' ? '已定位外部地点' : '已绑定地图地点', {
+      description: candidate.placeName,
+    });
+  };
+
+  const getMapInitialCenter = () => {
+    const exactCandidate = findExactEventPlaceCandidate(placeCandidates, draft.locationLabel);
+    const candidate = selectedPlace ?? exactCandidate ?? visibleInternalPlaceCandidates[0] ?? visibleExternalPlaceCandidates[0];
+    return candidate
+      ? { lat: candidate.latitude, lng: candidate.longitude }
+      : CHIANG_MAI_MAP_CENTER;
+  };
+
+  const openMapPicker = () => {
+    setMapPickerCenter(getMapInitialCenter());
+    setMapPickerOpen(true);
+  };
+
+  const confirmMapPicker = () => {
+    // NOTE: 黑板表当前只保存 location_label；手动地图选点先落成可读位置文本，后续社交地图坐标字段再接这里。
+    updateLocationDraft(`地图选点 · ${mapPickerCenter.lat.toFixed(5)}, ${mapPickerCenter.lng.toFixed(5)}`);
+    setSelectedPlace(null);
+    setMapPickerOpen(false);
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="block">
+        <span className="text-xs font-black text-muted-foreground">地点 / 区域，可不填</span>
+        <div className="relative mt-1.5">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={draft.locationLabel}
+            onChange={event => handleLocationChange(event.target.value)}
+            className="h-11 w-full rounded-2xl border border-border bg-white px-9 text-sm font-bold outline-none focus:border-primary"
+            placeholder="搜地点 / 俗称，比如 北门"
+          />
+          {draft.locationLabel && (
+            <button
+              type="button"
+              className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-[#f2f2f2] text-muted-foreground"
+              onClick={() => {
+                updateLocationDraft('');
+                setSelectedPlace(null);
+              }}
+              aria-label="清除地点"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </label>
+
+      <button
+        type="button"
+        className="flex min-h-10 w-full items-center justify-center gap-2 rounded-2xl border border-border bg-white text-sm font-black text-muted-foreground active:scale-[0.99]"
+        onClick={openMapPicker}
+      >
+        <Crosshair className="h-4 w-4" strokeWidth={2.4} />
+        地图选点
+      </button>
+
+      {selectedPlace ? (
+        <div className="rounded-2xl border border-primary/20 bg-primary/10 px-3 py-2 text-sm font-bold text-primary">
+          <div className="flex items-start gap-2">
+            <Check className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="min-w-0">
+              <p className="truncate font-black">已选：{selectedPlace.placeName}</p>
+              <p className="mt-0.5 truncate text-xs text-primary/75">{selectedPlace.areaLabel}</p>
+            </div>
+          </div>
+        </div>
+      ) : visibleInternalPlaceCandidates.length > 0 || visibleExternalPlaceCandidates.length > 0 ? (
+        <div className="rounded-2xl border border-border bg-white p-2">
+          <div className="mb-1 flex items-center gap-1.5 px-2 text-[11px] font-black text-muted-foreground">
+            {hasLocationQuery ? <MapPin className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
+            {visibleExternalPlaceCandidates.length > 0
+              ? '外部地点候选'
+              : hasLocationQuery ? 'CMI 地点候选' : '从标题 / 内容识别到'}
+          </div>
+          <div className="space-y-1.5">
+            {visibleInternalPlaceCandidates.map(candidate => (
+              <button
+                key={`${candidate.placeName}-${candidate.latitude}-${candidate.longitude}`}
+                type="button"
+                onClick={() => applyPlaceCandidate(candidate)}
+                className="flex w-full items-center justify-between gap-3 rounded-xl bg-[#f7f7f7] px-3 py-2 text-left active:scale-[0.99]"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-black text-foreground">{candidate.placeName}</span>
+                  <span className="mt-0.5 block truncate text-[11px] font-bold text-muted-foreground">
+                    {candidate.areaLabel}
+                    {candidate.recommendationCount > 0 ? ` · ${candidate.recommendationCount} 条痕迹` : ' · 俗称候选'}
+                  </span>
+                </span>
+                <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-black text-primary">
+                  使用
+                </span>
+              </button>
+            ))}
+            {visibleExternalPlaceCandidates.map(candidate => (
+              <button
+                key={`${candidate.externalPlaceId}-${candidate.latitude}-${candidate.longitude}`}
+                type="button"
+                onClick={() => applyPlaceCandidate(candidate)}
+                className="flex w-full items-center justify-between gap-3 rounded-xl bg-[#f5fbf6] px-3 py-2 text-left active:scale-[0.99]"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-black text-foreground">{candidate.placeName}</span>
+                  <span className="mt-0.5 block truncate text-[11px] font-bold text-[#53705b]">
+                    {candidate.areaLabel} · 外部地点
+                  </span>
+                </span>
+                <span className="shrink-0 rounded-full bg-[#3f6e52] px-2.5 py-1 text-[11px] font-black text-white">
+                  定位
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : externalPlaceCandidatesLoading ? (
+        <p className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-bold text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          正在查清迈外部地点
+        </p>
+      ) : externalPlaceCandidatesError ? (
+        <p className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-muted-foreground">
+          {externalPlaceCandidatesError}
+        </p>
+      ) : placeCandidatesLoading ? (
+        <p className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-muted-foreground">
+          正在同步 CMI Map 地点候选
+        </p>
+      ) : null}
+
+      {mapPickerOpen && (
+        <LocationMapPickerSheet
+          center={mapPickerCenter}
+          onCenterChange={setMapPickerCenter}
+          onConfirm={confirmMapPicker}
+          onClose={() => setMapPickerOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
 function ComposerSheet({
   draft,
   title,
@@ -926,7 +1324,7 @@ function ComposerSheet({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="text-xs font-black text-muted-foreground">时间，可不填</span>
             <input
@@ -936,15 +1334,7 @@ function ComposerSheet({
               placeholder="今晚 / 周末"
             />
           </label>
-          <label className="block">
-            <span className="text-xs font-black text-muted-foreground">地点 / 区域，可不填</span>
-            <input
-              value={draft.locationLabel}
-              onChange={event => updateDraft('locationLabel', event.target.value)}
-              className="mt-1.5 h-11 w-full rounded-2xl border border-border bg-white px-3 text-sm font-bold outline-none focus:border-primary"
-              placeholder="宁曼 / 北门"
-            />
-          </label>
+          <BlackboardLocationField draft={draft} onDraftChange={onDraftChange} />
         </div>
 
         <label className="block">
@@ -974,6 +1364,7 @@ function PostDetailSheet({
   commentText,
   commentSubmitting,
   userId,
+  isAdmin,
   onCommentChange,
   onSubmitComment,
   onEdit,
@@ -984,6 +1375,7 @@ function PostDetailSheet({
   commentText: string;
   commentSubmitting: boolean;
   userId?: string;
+  isAdmin: boolean;
   onCommentChange: (value: string) => void;
   onSubmitComment: () => Promise<void>;
   onEdit: (post: BlackboardPost) => void;
@@ -1061,6 +1453,14 @@ function PostDetailSheet({
                 >
                   {post.author}
                 </Link>
+                <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
+                  <UserActivityBadge title={post.authorActivityTitle} />
+                  {isAdmin && userId === post.authorId && (
+                    <span className="inline-flex h-5 shrink-0 items-center rounded-[0.35rem] bg-[#fff4c7] px-1.5 text-[0.68rem] font-black leading-none text-[#9a6a00]">
+                      管理员
+                    </span>
+                  )}
+                </div>
                 <p className="mt-1 text-[0.92rem] font-semibold leading-none text-[#9b9b9b]">
                   {post.createdLabel}
                 </p>
@@ -1136,6 +1536,7 @@ function PostDetailSheet({
                         >
                           {comment.author_name}
                         </Link>
+                        <UserActivityBadge title={comment.authorActivityTitle} />
                         <span className="shrink-0 text-[0.88rem] font-semibold text-[#9b9b9b]">
                           {formatBlackboardCreatedLabel(comment.created_at)}
                         </span>
@@ -1272,9 +1673,14 @@ export function CmiBlackboard({
   ]);
 
   const visiblePosts = useMemo(() => {
-    if (activeFilter === 'all') return posts;
-    if (activeFilter === 'featured') return posts.filter(post => post.isFeatured);
-    return posts.filter(post => post.category === activeFilter);
+    const filteredPosts =
+      activeFilter === 'all'
+        ? posts
+        : activeFilter === 'featured'
+          ? posts.filter(post => post.isFeatured)
+          : posts.filter(post => post.category === activeFilter);
+
+    return sortBlackboardFeedPosts(filteredPosts);
   }, [activeFilter, posts]);
 
   const selectedPost = selectedPostId
@@ -1514,17 +1920,45 @@ export function CmiBlackboard({
         authorId: user.id,
         authorName,
       });
+      const [currentAuthorStats] = await getBlackboardActivityStats([user.id]);
+      const currentActivityTitle = currentAuthorStats
+        ? getBlackboardActivityTitle({
+            postCount: currentAuthorStats.post_count,
+            commentCount: currentAuthorStats.comment_count,
+          })
+        : DEFAULT_BLACKBOARD_ACTIVITY_TITLE;
       const mappedComment: BlackboardComment = {
         ...comment,
         authorAvatarUrl: profile?.avatar_url || '',
+        authorActivityLevel: currentActivityTitle.level,
+        authorActivityTitle: currentActivityTitle.title,
       };
 
       setPosts(currentPosts =>
-        currentPosts.map(candidate =>
-          candidate.id === post.id
+        currentPosts.map(candidate => {
+          const nextCandidate = candidate.id === post.id
             ? { ...candidate, comments: [...candidate.comments, mappedComment] }
-            : candidate
-        )
+            : candidate;
+
+          return {
+            ...nextCandidate,
+            ...(nextCandidate.authorId === user.id
+              ? {
+                  authorActivityLevel: currentActivityTitle.level,
+                  authorActivityTitle: currentActivityTitle.title,
+                }
+              : {}),
+            comments: nextCandidate.comments.map(candidateComment =>
+              candidateComment.author_id === user.id
+                ? {
+                    ...candidateComment,
+                    authorActivityLevel: currentActivityTitle.level,
+                    authorActivityTitle: currentActivityTitle.title,
+                  }
+                : candidateComment
+            ),
+          };
+        })
       );
       setCommentDrafts(currentDrafts => ({ ...currentDrafts, [post.id]: '' }));
       toast.success('评论已发出');
@@ -1641,6 +2075,7 @@ export function CmiBlackboard({
         <PostDetailSheet
           post={selectedPost}
           userId={user?.id}
+          isAdmin={isAdmin}
           commentText={commentDrafts[selectedPost.id] || ''}
           commentSubmitting={commentSubmitting}
           onCommentChange={value => setCommentDrafts(currentDrafts => ({ ...currentDrafts, [selectedPost.id]: value }))}

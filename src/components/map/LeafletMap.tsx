@@ -471,8 +471,8 @@ export const LeafletMap = ({
       keyboard: interactive,
       maxBounds: constrainToChiangMai ? CHIANG_MAI_BOUNDS : undefined,
       maxBoundsViscosity: constrainToChiangMai ? 1.0 : undefined,
-      // 移动端缩放性能优化
-      preferCanvas: true,         // 用 Canvas 替代 SVG 渲染矢量图形
+      // NOTE: 外部地点搜索会触发“清空筛选点位 -> 插入临时 pin -> 聚焦”的连续更新；Canvas 渲染器在这条路径上偶发 clearRect 空引用。
+      preferCanvas: false,
       zoomSnap: 0.5,              // 缩放步长更大，减少中间帧
       zoomAnimation: true,
       markerZoomAnimation: false, // 禁用 marker 跟随缩放的补间动画

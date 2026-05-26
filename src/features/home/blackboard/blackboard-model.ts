@@ -12,6 +12,52 @@ export interface BlackboardFeedFilterOption {
   label: string;
 }
 
+export interface BlackboardFeedSortablePost {
+  isFeatured: boolean;
+  createdAt: string;
+}
+
+export interface BlackboardActivityStats {
+  postCount: number;
+  commentCount: number;
+}
+
+export interface BlackboardActivityTitleLevel {
+  level: number;
+  minScore: number;
+  title: string;
+}
+
+export const BLACKBOARD_ACTIVITY_TITLE_LEVELS: BlackboardActivityTitleLevel[] = [
+  { level: 1, minScore: 0, title: '刚落地' },
+  { level: 2, minScore: 1, title: '冒泡中' },
+  { level: 3, minScore: 4, title: '旅行者' },
+  { level: 4, minScore: 8, title: '萨瓦迪卡' },
+  { level: 5, minScore: 15, title: '老熟人' },
+  { level: 6, minScore: 25, title: '“Grab”' },
+  { level: 7, minScore: 40, title: '清迈土著' },
+  { level: 8, minScore: 65, title: '泰北接头人' },
+  { level: 9, minScore: 100, title: '清迈广播站' },
+  { level: 10, minScore: 150, title: 'CMI 活地图' },
+];
+
+export const getBlackboardActivityScore = ({ postCount, commentCount }: BlackboardActivityStats) =>
+  Math.max(0, postCount) * 3 + Math.max(0, commentCount);
+
+export const getBlackboardActivityTitle = (stats: BlackboardActivityStats) => {
+  const activityScore = getBlackboardActivityScore(stats);
+  const matchedLevel = BLACKBOARD_ACTIVITY_TITLE_LEVELS.reduce(
+    (currentLevel, candidateLevel) =>
+      activityScore >= candidateLevel.minScore ? candidateLevel : currentLevel,
+    BLACKBOARD_ACTIVITY_TITLE_LEVELS[0]
+  );
+
+  return {
+    ...matchedLevel,
+    activityScore,
+  };
+};
+
 export const BLACKBOARD_CATEGORY_OPTIONS: BlackboardCategoryOption[] = [
   {
     id: 'companion',
@@ -49,6 +95,17 @@ export const coerceBlackboardCategory = (category: string | null | undefined): B
   if (category === 'companion' || category === 'help' || category === 'share') return category;
   return 'share';
 };
+
+const getPostSortTime = (value: string) => {
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+};
+
+export const sortBlackboardFeedPosts = <Post extends BlackboardFeedSortablePost>(posts: Post[]): Post[] =>
+  [...posts].sort((a, b) => {
+    if (a.isFeatured !== b.isFeatured) return a.isFeatured ? -1 : 1;
+    return getPostSortTime(b.createdAt) - getPostSortTime(a.createdAt);
+  });
 
 const formatBangkokDateKey = (date: Date) =>
   new Intl.DateTimeFormat('en-CA', {

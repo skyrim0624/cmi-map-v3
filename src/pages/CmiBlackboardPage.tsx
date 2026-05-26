@@ -14,6 +14,8 @@ export default function CmiBlackboardPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const eventId = searchParams.get('event');
+  const placeName = searchParams.get('place');
+  const locationLabel = searchParams.get('location');
   const shouldOpenComposer = searchParams.get('compose') === '1';
   const eventDraft = useMemo<Partial<BlackboardDraft> | undefined>(() => {
     const event = getCmiEventById(eventId);
@@ -31,6 +33,19 @@ export default function CmiBlackboardPage() {
       linkedPlaceName: event.venueName,
     };
   }, [eventId]);
+  const placeDraft = useMemo<Partial<BlackboardDraft> | undefined>(() => {
+    const normalizedPlaceName = placeName?.trim();
+    if (!normalizedPlaceName) return undefined;
+
+    return {
+      category: 'companion',
+      title: trimForBlackboard(`一起去：${normalizedPlaceName}`, BLACKBOARD_TITLE_LIMIT),
+      body: trimForBlackboard(`想在 ${normalizedPlaceName} 约一局，看看有没有同路的人。`, BLACKBOARD_BODY_LIMIT),
+      locationLabel: locationLabel?.trim() || normalizedPlaceName,
+      linkedPlaceName: normalizedPlaceName,
+    };
+  }, [locationLabel, placeName]);
+  const initialDraft = eventDraft ?? placeDraft;
 
   return (
     <div className="min-h-[100dvh] bg-[#f2f2f2]">
@@ -56,7 +71,7 @@ export default function CmiBlackboardPage() {
       </header>
 
       <main className="px-4 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-0">
-        <CmiBlackboard autoOpenComposer={shouldOpenComposer} initialDraft={eventDraft} />
+        <CmiBlackboard autoOpenComposer={shouldOpenComposer} initialDraft={initialDraft} />
       </main>
     </div>
   );
