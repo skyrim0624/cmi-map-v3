@@ -23,17 +23,72 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUpWithEmail: (email: string, password: string, userName?: string) => Promise<{ error: Error | null }>;
+  signInWithGoogle: (redirectTo?: string) => Promise<{ error: Error | null }>;
+  sendEmailCode: (input: {
+    email: string;
+    userName?: string;
+    shouldCreateUser?: boolean;
+    redirectTo?: string;
+  }) => Promise<{ error: Error | null }>;
+  verifyEmailCode: (input: {
+    email: string;
+    code: string;
+    redirectTo?: string;
+  }) => Promise<{ error: Error | null }>;
+  signInWithMagicLink: (input: {
+    email: string;
+    redirectTo: string;
+    userName?: string;
+    shouldCreateUser?: boolean;
+  }) => Promise<{ error: Error | null }>;
+  signUpWithEmail: (
+    email: string,
+    password: string,
+    userName?: string,
+    redirectTo?: string
+  ) => Promise<{ error: Error | null; needsEmailConfirmation: boolean }>;
+  sendPasswordResetEmail: (input: {
+    email: string;
+    redirectTo: string;
+  }) => Promise<{ error: Error | null }>;
+  updatePassword: (password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const getFallbackName = (user: User) =>
-  typeof user.user_metadata?.user_name === 'string' && user.user_metadata.user_name.trim()
-    ? user.user_metadata.user_name.trim()
-    : user.email?.split('@')[0];
+const USER_NAME_TAKEN_ERROR_MESSAGE = '这个昵称已经被用过了，请换一个';
+
+const normalizeProfileUserName = (userName: string) => userName.normalize('NFKC').trim();
+
+const getFallbackName = (user: User) => {
+  const metadataName = [
+    user.user_metadata?.user_name,
+    user.user_metadata?.full_name,
+    user.user_metadata?.name,
+  ].find((name) => typeof name === 'string' && name.trim());
+
+  return typeof metadataName === 'string' ? metadataName.trim() : user.email?.split('@')[0];
+};
+
+const checkUserNameAvailability = async (userName: string) => {
+  const normalizedName = normalizeProfileUserName(userName);
+  if (!normalizedName) return { available: false, error: null };
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('user_name', normalizedName)
+    .limit(1);
+
+  if (error) {
+    console.error('检查昵称是否可用失败:', error);
+    return { available: false, error: new Error(error.message) };
+  }
+
+  return { available: !data?.length, error: null };
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -90,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithEmail = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -101,17 +156,127 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUpWithEmail = async (email: string, password: string, userName?: string) => {
+  const signInWithGoogle: AuthContextType['signInWithGoogle'] = async (redirectTo) => {
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: redirectTo ? { redirectTo } : undefined,
+      });
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  };
+
+  const sendEmailCode: AuthContextType['sendEmailCode'] = async ({
+    email,
+    redirectTo,
+    userName,
+    shouldCreateUser = false,
+  }) => {
+    try {
+      const normalizedUserName = normalizeProfileUserName(userName ?? '');
+
+      if (shouldCreateUser) {
+        if (!normalizedUserName) throw new Error('请输入昵称');
+
+        const availability = await checkUserNameAvailability(normalizedUserName);
+        if (availability.error) throw new Error('暂时无法确认昵称是否可用，请稍后再试');
+        if (!availability.available) throw new Error(USER_NAME_TAKEN_ERROR_MESSAGE);
+      }
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: {
+          shouldCreateUser,
+          emailRedirectTo: redirectTo,
+          data: normalizedUserName ? { user_name: normalizedUserName } : undefined,
+        },
+      });
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  };
+
+  const verifyEmailCode: AuthContextType['verifyEmailCode'] = async ({
+    email,
+    code,
+    redirectTo,
+  }) => {
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: code.trim(),
+        type: 'email',
+        options: redirectTo ? { redirectTo } : undefined,
+      });
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  };
+
+  const signInWithMagicLink: AuthContextType['signInWithMagicLink'] = async (input) =>
+    sendEmailCode(input);
+
+  const signUpWithEmail: AuthContextType['signUpWithEmail'] = async (
+    email,
+    password,
+    userName,
+    redirectTo
+  ) => {
+    try {
+      const normalizedUserName = normalizeProfileUserName(userName ?? '');
+      if (!normalizedUserName) throw new Error('请输入昵称');
+
+      const availability = await checkUserNameAvailability(normalizedUserName);
+      if (availability.error) throw new Error('暂时无法确认昵称是否可用，请稍后再试');
+      if (!availability.available) throw new Error(USER_NAME_TAKEN_ERROR_MESSAGE);
+
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
         password,
         options: {
+          emailRedirectTo: redirectTo,
           data: {
-            user_name: userName,
+            user_name: normalizedUserName,
           },
         },
       });
+
+      if (error) throw error;
+      return { error: null, needsEmailConfirmation: Boolean(data.user && !data.session) };
+    } catch (error) {
+      return { error: error as Error, needsEmailConfirmation: false };
+    }
+  };
+
+  const sendPasswordResetEmail: AuthContextType['sendPasswordResetEmail'] = async ({
+    email,
+    redirectTo,
+  }) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo,
+      });
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  };
+
+  const updatePassword: AuthContextType['updatePassword'] = async (password) => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
 
       if (error) throw error;
       return { error: null };
@@ -127,7 +292,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signInWithEmail, signUpWithEmail, signOut, refreshProfile }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        loading,
+        signInWithEmail,
+        signInWithGoogle,
+        sendEmailCode,
+        verifyEmailCode,
+        signInWithMagicLink,
+        signUpWithEmail,
+        sendPasswordResetEmail,
+        updatePassword,
+        signOut,
+        refreshProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

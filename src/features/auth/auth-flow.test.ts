@@ -1,0 +1,93 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {
+  buildAuthRedirectTo,
+  getEmailCodeRetrySeconds,
+  normalizeEmailCode,
+  validatePasswordResetRequestForm,
+  validatePasswordSignInForm,
+  validatePasswordUpdateForm,
+  validateAuthForm,
+} from './auth-flow.ts';
+
+test('login code request only requires an email', () => {
+  assert.equal(
+    validateAuthForm({
+      mode: 'login',
+      step: 'request-code',
+      email: ' andreas@example.com ',
+      userName: '',
+      code: '',
+    }),
+    null
+  );
+});
+
+test('register code request requires email and nickname', () => {
+  assert.equal(
+    validateAuthForm({
+      mode: 'register',
+      step: 'request-code',
+      email: ' andreas@example.com ',
+      userName: ' 子扬 ',
+      code: '',
+    }),
+    null
+  );
+});
+
+test('email code verification requires a six digit code', () => {
+  assert.equal(
+    validateAuthForm({
+      mode: 'login',
+      step: 'verify-code',
+      email: 'andreas@example.com',
+      code: '12345',
+    }),
+    '请输入 6 位邮箱验证码'
+  );
+});
+
+test('email code normalization keeps only six digits', () => {
+  assert.equal(normalizeEmailCode(' 12 3-4567 '), '123456');
+});
+
+test('email code retry helper returns remaining cooldown seconds', () => {
+  assert.equal(getEmailCodeRetrySeconds(1_000, 30_000), 31);
+  assert.equal(getEmailCodeRetrySeconds(1_000, 62_000), 0);
+});
+
+test('auth redirect keeps users inside the app', () => {
+  assert.equal(
+    buildAuthRedirectTo('https://cmimap.com', '/events/new?place=North%20Gate'),
+    'https://cmimap.com/events/new?place=North%20Gate'
+  );
+  assert.equal(buildAuthRedirectTo('https://cmimap.com', 'https://evil.example'), 'https://cmimap.com/');
+  assert.equal(buildAuthRedirectTo('https://cmimap.com', '//evil.example'), 'https://cmimap.com/');
+});
+
+test('password sign in requires email and password', () => {
+  assert.equal(validatePasswordSignInForm({ email: '', password: 'secret123' }), '请输入邮箱');
+  assert.equal(validatePasswordSignInForm({ email: 'andreas@example.com', password: '' }), '请输入密码');
+  assert.equal(validatePasswordSignInForm({ email: 'andreas@example.com', password: 'secret123' }), null);
+});
+
+test('password reset request only requires an email', () => {
+  assert.equal(validatePasswordResetRequestForm({ email: '' }), '请输入邮箱');
+  assert.equal(validatePasswordResetRequestForm({ email: 'andreas@example.com' }), null);
+});
+
+test('password update requires a six character matching password', () => {
+  assert.equal(
+    validatePasswordUpdateForm({ password: 'short', confirmPassword: 'short' }),
+    '密码至少 6 位'
+  );
+  assert.equal(
+    validatePasswordUpdateForm({ password: 'secret123', confirmPassword: 'secret124' }),
+    '两次输入的密码不一致'
+  );
+  assert.equal(
+    validatePasswordUpdateForm({ password: 'secret123', confirmPassword: 'secret123' }),
+    null
+  );
+});
