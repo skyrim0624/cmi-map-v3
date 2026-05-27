@@ -10,6 +10,7 @@ import {
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -73,6 +74,7 @@ export default function Login() {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [lastPasswordResetSentAt, setLastPasswordResetSentAt] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [showStamp, setShowStamp] = useState(false);
 
   const isRegister = mode === 'register';
   const isVerifyingCode = authStep === 'verify-code';
@@ -161,7 +163,16 @@ export default function Login() {
       }
 
       toast.success('登录成功');
-      navigate(redirectPath, { replace: true });
+      setShowStamp(true);
+      confetti({
+        particleCount: 80,
+        spread: 60,
+        origin: { y: 0.6 },
+        colors: ['#18b99c', '#f59e0b', '#10b981', '#3b82f6']
+      });
+      setTimeout(() => {
+        navigate(redirectPath, { replace: true });
+      }, 1400);
     } finally {
       setLoading(false);
     }
@@ -220,7 +231,16 @@ export default function Login() {
       }
 
       toast.success('登录成功');
-      navigate(redirectPath, { replace: true });
+      setShowStamp(true);
+      confetti({
+        particleCount: 80,
+        spread: 60,
+        origin: { y: 0.6 },
+        colors: ['#18b99c', '#f59e0b', '#10b981', '#3b82f6']
+      });
+      setTimeout(() => {
+        navigate(redirectPath, { replace: true });
+      }, 1400);
     } finally {
       setLoading(false);
     }
@@ -289,7 +309,16 @@ export default function Login() {
       }
 
       toast.success('注册成功');
-      navigate(redirectPath, { replace: true });
+      setShowStamp(true);
+      confetti({
+        particleCount: 80,
+        spread: 60,
+        origin: { y: 0.6 },
+        colors: ['#18b99c', '#f59e0b', '#10b981', '#3b82f6']
+      });
+      setTimeout(() => {
+        navigate(redirectPath, { replace: true });
+      }, 1400);
     } finally {
       setLoading(false);
     }
@@ -440,7 +469,7 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#f6f6f2] px-4 py-8">
-      <Card className="w-full max-w-[26rem] overflow-hidden rounded-[1.35rem] border-[#deded8] bg-white shadow-[0_18px_50px_rgba(31,31,35,0.08)]">
+      <Card className="w-full max-w-[26rem] overflow-hidden rounded-2xl border-2 border-foreground bg-white shadow-[6px_6px_0_rgba(0,0,0,0.15)] transition-all duration-300">
         <CardHeader className="space-y-5 px-6 pb-2 pt-6">
           <button
             type="button"
@@ -465,17 +494,19 @@ export default function Login() {
           </div>
 
           {!isUpdatingPassword && (
-            <div className="grid grid-cols-2 rounded-full bg-[#f0f0ec] p-1">
+            <div className="flex gap-3">
               {([
-                ['login', '登录'],
-                ['register', '注册'],
+                ['login', '我要登录'],
+                ['register', '我是新人'],
               ] as const).map(([nextMode, label]) => (
                 <button
                   key={nextMode}
                   type="button"
                   className={cn(
-                    'h-10 rounded-full text-sm font-black transition',
-                    mode === nextMode ? 'bg-white text-[#242428] shadow-sm' : 'text-[#868681]'
+                    'flex-1 h-11 px-4 text-sm font-black transition-all rounded-xl border-2 border-foreground active:scale-95 touch-manipulation',
+                    mode === nextMode
+                      ? 'bg-primary text-primary-foreground shadow-[3px_3px_0_#000] -translate-y-0.5'
+                      : 'bg-white text-[#777771] hover:text-foreground shadow-[1px_1px_0_#000]'
                   )}
                   onClick={() => switchMode(nextMode)}
                   disabled={loading}
@@ -530,7 +561,7 @@ export default function Login() {
 
               <Button
                 type="submit"
-                className="h-12 w-full rounded-full text-base font-black"
+                className="h-12 w-full rounded-xl border-2 border-foreground text-base font-black bg-primary text-primary-foreground shadow-[3px_3px_0_#000] hover:translate-y-[-1px] hover:shadow-[4px_4px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] transition-all touch-manipulation"
                 disabled={loading}
               >
                 {loading ? '处理中...' : '更新密码'}
@@ -643,23 +674,23 @@ export default function Login() {
 
                 {(isVerifyingCode || isEmailCodeLogin) && isVerifyingCode && renderCodeField()}
 
-                <Button
-                  type="submit"
-                  className="h-12 w-full rounded-full text-base font-black"
-                  disabled={loading}
-                >
-                  {loading
-                    ? '处理中...'
-                    : isRegister
-                      ? isVerifyingCode
-                        ? '验证并完成注册'
-                        : '发送注册验证码'
-                      : loginMethod === 'code'
+                  <Button
+                    type="submit"
+                    className="h-12 w-full rounded-xl border-2 border-foreground text-base font-black bg-primary text-primary-foreground shadow-[3px_3px_0_#000] hover:translate-y-[-1px] hover:shadow-[4px_4px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] transition-all touch-manipulation"
+                    disabled={loading}
+                  >
+                    {loading
+                      ? '处理中...'
+                      : isRegister
                         ? isVerifyingCode
-                          ? '验证并登录'
-                          : '发送登录验证码'
-                        : '登录'}
-                </Button>
+                          ? '验证并完成注册'
+                          : '发送注册验证码'
+                        : loginMethod === 'code'
+                          ? isVerifyingCode
+                            ? '验证并登录'
+                            : '发送登录验证码'
+                          : '登录'}
+                  </Button>
 
                 {!isRegister && loginMethod === 'password' && (
                   <div className="flex items-center justify-between text-sm font-black">
@@ -721,14 +752,14 @@ export default function Login() {
                     输入上面的邮箱，我们会发送一封设置新密码的邮件。
                   </div>
 
-                  <Button
-                    type="submit"
-                    variant="secondary"
-                    className="h-11 w-full rounded-full text-sm font-black"
-                    disabled={loading}
-                  >
-                    {loading ? '处理中...' : '发送找回邮件'}
-                  </Button>
+                    <Button
+                      type="submit"
+                      variant="secondary"
+                      className="h-11 w-full rounded-xl border-2 border-foreground text-sm font-black bg-secondary text-secondary-foreground shadow-[2px_2px_0_#000] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] transition-all touch-manipulation"
+                      disabled={loading}
+                    >
+                      {loading ? '处理中...' : '发送找回邮件'}
+                    </Button>
 
                   <button
                     type="button"
@@ -747,22 +778,42 @@ export default function Login() {
                 <span className="h-px flex-1 bg-[#ecece6]" />
               </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                className="h-12 w-full rounded-full border-[#deded8] text-base font-black"
-                onClick={handleGoogleSignIn}
-                disabled={loading}
-              >
-                <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-black text-[#4285f4] shadow-sm">
-                  G
-                </span>
-                用 Google 登录
-              </Button>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full rounded-xl border-2 border-foreground text-base font-black bg-white text-foreground shadow-[2px_2px_0_#000] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] transition-all touch-manipulation"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
+                >
+                  <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-black text-[#4285f4] border border-[#ecece6] shadow-sm">
+                    G
+                  </span>
+                  用 Google 登录
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {showStamp && (
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/85 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="relative flex flex-col items-center justify-center p-8 rounded-3xl border-4 border-foreground bg-[#fffdf9] shadow-[12px_12px_0_#000] max-w-[20rem] text-center animate-in zoom-in-75 duration-300">
+              <div className="relative h-40 w-40 flex items-center justify-center">
+                <img
+                  src="/stickers/stamp-good-lucky.png"
+                  alt="印章"
+                  className="h-full w-full object-contain drop-shadow-[4px_8px_0_rgba(0,0,0,0.15)] animate-in zoom-in-150 duration-500 delay-100 ease-out"
+                />
+              </div>
+              <h3 className="mt-6 text-2xl font-black tracking-wider text-foreground">
+                手账已激活！
+              </h3>
+              <p className="mt-2 text-sm font-bold text-muted-foreground">
+                开启你的清迈生活漫游旅程...
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
   );
 }

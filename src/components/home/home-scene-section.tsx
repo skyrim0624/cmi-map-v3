@@ -27,19 +27,23 @@ function HomeSceneCard({
   scene: CmiScene;
   onSelect: (scene: CmiScene) => void;
 }) {
+  // 根据 ID 字符生成稳定的轻微偏转度，制造出手写账本的自然错落感
+  const tiltDeg = scene.id.charCodeAt(0) % 2 === 0 ? 'rotate-[0.6deg]' : '-rotate-[0.6deg]';
+  const hoverTiltDeg = scene.id.charCodeAt(0) % 2 === 0 ? 'hover:rotate-1' : 'hover:-rotate-1';
+
   return (
     <button
       type="button"
-      className={`min-h-[124px] rounded-lg border-2 p-3 text-left shadow-[3px_4px_0_rgba(0,0,0,0.16)] transition-transform active:translate-y-0.5 active:shadow-[2px_3px_0_rgba(0,0,0,0.14)] ${getHomeSceneToneClass(scene.id)}`}
+      className={`min-h-[124px] rounded-2xl border-2 border-foreground p-3.5 text-left shadow-[4px_4px_0_#000] hover:translate-y-[-2px] hover:shadow-[5px_5px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] transition-all duration-200 touch-manipulation ${tiltDeg} ${hoverTiltDeg} ${getHomeSceneToneClass(scene.id)}`}
       onClick={() => onSelect(scene)}
     >
       <div className="mb-3 flex items-start gap-3">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-background/80">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-background/80 border border-foreground/10">
           <HomeSceneIcon scene={scene} />
         </div>
       </div>
-      <p className="text-base font-black leading-tight">{scene.homeTitle}</p>
-      <p className="mt-1 line-clamp-2 text-xs font-semibold leading-snug opacity-75">
+      <p className="text-base font-black leading-tight text-foreground">{scene.homeTitle}</p>
+      <p className="mt-1 line-clamp-2 text-xs font-semibold leading-snug text-foreground/75">
         {scene.homeDescription}
       </p>
     </button>
@@ -58,7 +62,6 @@ function HomeFeatureCard({
   const isCmiInn = section.id === 'cmi-inn';
   const tone = isCmiInn
     ? {
-      border: 'border-[#8b6a38]',
       background: 'bg-[#fff8ed]',
       text: 'text-[#8b6a38]',
       softBorder: 'border-[#8b6a38]/25',
@@ -67,7 +70,6 @@ function HomeFeatureCard({
       highlightIcons: [CalendarDays, Images, MessageSquareText, BedDouble],
     }
     : {
-      border: 'border-[#4f6f82]',
       background: 'bg-[#f5f9fb]',
       text: 'text-[#4f6f82]',
       softBorder: 'border-[#4f6f82]/25',
@@ -76,11 +78,12 @@ function HomeFeatureCard({
       highlightIcons: [LifeBuoy, MessageSquareText, CalendarDays, BedDouble],
     };
   const FeatureIcon = tone.Icon;
+  const tiltDeg = section.id === 'cmi-inn' ? 'rotate-[0.5deg]' : '-rotate-[0.5deg]';
 
   return (
     <button
       type="button"
-      className={`w-full rounded-lg border-2 ${tone.border} ${tone.background} p-4 text-left shadow-[4px_5px_0_rgba(0,0,0,0.16)] transition-transform active:translate-y-0.5`}
+      className={`w-full rounded-2xl border-2 border-foreground ${tone.background} p-4 text-left shadow-[5px_5px_0_#000] hover:translate-y-[-1px] hover:shadow-[6px_6px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] transition-all duration-200 touch-manipulation ${tiltDeg}`}
       onClick={() => onFeatureSelect(section.feature!.path)}
     >
       <div className="mb-4 flex items-start justify-between gap-4">
@@ -92,7 +95,7 @@ function HomeFeatureCard({
             {section.feature.title}
           </h3>
         </div>
-        <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 ${tone.border} bg-background`}>
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 border-foreground bg-background shadow-[1.5px_2px_0_#000]">
           <FeatureIcon className={`h-7 w-7 ${tone.text}`} strokeWidth={2.5} />
         </div>
       </div>
@@ -108,7 +111,7 @@ function HomeFeatureCard({
           return (
             <span
               key={item}
-              className={`flex min-h-10 items-center gap-2 rounded-lg border ${tone.softBorder} bg-background/70 px-2.5 py-2 text-xs font-black text-foreground`}
+              className={`flex min-h-10 items-center gap-2 rounded-xl border-2 border-foreground/35 bg-background/70 px-2.5 py-2 text-xs font-black text-foreground`}
             >
               <Icon className={`h-4 w-4 shrink-0 ${tone.text}`} strokeWidth={2.5} />
               {item}

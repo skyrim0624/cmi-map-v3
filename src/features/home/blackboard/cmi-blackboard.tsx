@@ -2187,17 +2187,17 @@ export function CmiBlackboardHomeCard({ onOpen }: { onOpen: () => void }) {
   return (
     <button
       type="button"
-      className="min-h-[124px] rounded-lg border-2 border-primary bg-[#fbfaff]/95 p-3 text-left text-foreground shadow-[3px_4px_0_rgba(0,0,0,0.16)] transition-transform active:translate-y-0.5 active:shadow-[2px_3px_0_rgba(0,0,0,0.14)]"
+      className="min-h-[124px] rounded-2xl border-2 border-foreground bg-[#fbfaff]/95 p-3.5 text-left text-foreground shadow-[4px_4px_0_#000] hover:translate-y-[-2px] hover:shadow-[5px_5px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] transition-all duration-200 rotate-[0.5deg] hover:rotate-1 touch-manipulation"
       onClick={onOpen}
       aria-label="打开清迈生活板"
     >
       <div className="mb-3 flex items-start gap-3">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 border border-foreground/10">
           <img src={BLACKBOARD_ICON_URL} alt="" className="h-10 w-10 object-contain" />
         </div>
       </div>
-      <p className="text-base font-black leading-tight">清迈生活板</p>
-      <p className="mt-1 line-clamp-2 text-xs font-semibold leading-snug text-muted-foreground">
+      <p className="text-base font-black leading-tight text-foreground">清迈生活板</p>
+      <p className="mt-1 line-clamp-2 text-xs font-semibold leading-snug text-foreground/75">
         找搭子、求助、分享。
       </p>
     </button>

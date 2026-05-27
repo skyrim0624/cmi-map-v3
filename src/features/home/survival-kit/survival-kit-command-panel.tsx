@@ -79,10 +79,10 @@ export function HomeSurvivalKitCommandPanel({
             key={item.id}
             type="button"
             title={item.title}
-            className="flex min-h-[108px] flex-col items-center justify-center gap-2 rounded-lg border-2 border-border bg-card/95 px-1.5 text-center shadow-[2px_3px_0_rgba(0,0,0,0.08)] transition-transform active:translate-y-0.5"
+            className="flex min-h-[108px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-foreground bg-[#fbfbf8] px-1.5 text-center shadow-[2px_2px_0_#000] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] transition-all touch-manipulation"
             onClick={() => openSurvivalItem(item.id)}
           >
-            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-background p-1">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-background p-1 border border-foreground/10">
               <img
                 src={item.iconUrl}
                 alt=""
@@ -97,13 +97,13 @@ export function HomeSurvivalKitCommandPanel({
       </div>
 
       <form
-        className="rounded-lg border border-border bg-background/78 p-2 shadow-sm"
+        className="rounded-2xl border-2 border-foreground bg-[#fdfdfb] p-2 shadow-[3px_3px_0_rgba(0,0,0,0.15)]"
         onSubmit={handleSubmit}
       >
-        <p className="mb-1 px-1 text-[11px] font-black text-muted-foreground">
+        <p className="mb-1 px-1 text-[11px] font-black text-[#5a5a54]">
           {searchStateLabel}
         </p>
-        <label className="flex min-h-12 items-center gap-2 rounded-md bg-background px-3">
+        <label className="flex min-h-12 items-center gap-2 rounded-xl border border-foreground/35 bg-background px-3 focus-within:border-foreground transition-colors">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2.4} />
           <input
             value={query}
@@ -120,7 +120,7 @@ export function HomeSurvivalKitCommandPanel({
           />
           <button
             type="submit"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/25 bg-primary/10 text-primary transition-transform active:scale-[0.94]"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border-2 border-foreground bg-primary text-primary-foreground transition-transform active:scale-[0.94] shadow-[1px_1.5px_0_#000]"
             aria-label="匹配生存包分类"
           >
             <ArrowRight className="h-4 w-4" strokeWidth={3} />

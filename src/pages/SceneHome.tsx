@@ -136,13 +136,13 @@ export default function SceneHome() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-12 w-12 rounded-full border-2 border-foreground bg-background p-0 shadow-[3px_4px_0_rgba(0,0,0,0.24)]"
+            className="h-12 w-12 rounded-2xl border-2 border-foreground bg-background p-0 shadow-[3px_3px_0_#000] hover:translate-y-[-1px] hover:shadow-[4px_4px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] transition-all touch-manipulation"
             onClick={() => navigate('/profile')}
             aria-label="打开个人页面"
           >
-            <Avatar className="h-full w-full">
-              {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={displayName} />}
-              <AvatarFallback className="bg-primary font-bold text-primary-foreground">
+            <Avatar className="h-full w-full rounded-xl">
+              {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={displayName} className="rounded-xl object-cover" />}
+              <AvatarFallback className="bg-primary rounded-xl font-bold text-primary-foreground">
                 {displayName.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -151,10 +151,10 @@ export default function SceneHome() {
           <Button
             variant="default"
             size="sm"
-            className="rounded-full border-2 border-foreground font-bold shadow-lg"
+            className="h-12 rounded-xl border-2 border-foreground bg-primary text-primary-foreground font-black shadow-[3px_3px_0_#000] hover:translate-y-[-1px] hover:shadow-[4px_4px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] transition-all touch-manipulation"
             onClick={() => navigate('/login')}
           >
-            <LogIn className="mr-2 h-4 w-4" />
+            <LogIn className="mr-2 h-4 w-4" strokeWidth={2.6} />
             登录
           </Button>
         )}
@@ -163,7 +163,7 @@ export default function SceneHome() {
       <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+24px)] left-1/2 z-30 -translate-x-1/2">
         <div className="translate-x-[3px]">
           <button
-            className="app-fab flex h-14 items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-foreground bg-primary px-5 text-[15px] font-bold text-primary-foreground"
+            className="app-fab flex h-14 items-center justify-center gap-2 whitespace-nowrap rounded-2xl border-2 border-foreground bg-primary px-6 text-[15px] font-bold text-primary-foreground shadow-[3.5px_3.5px_0_#000] hover:translate-y-[-2px] hover:shadow-[5px_5px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] transition-all touch-manipulation rotate-[-1deg]"
             onClick={handleMarkPlace}
             aria-label="标记新地点"
           >
