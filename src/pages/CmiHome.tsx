@@ -36,6 +36,7 @@ import {
   cancelCmiEventRegistration,
   getCurrentUserCmiEventRegistrations,
   getPublishedCmiEvents,
+  getPublicCmiEventRegistrations,
   registerForCmiEvent,
 } from '@/db/cmi-events';
 import { getStableProfileIdentity } from '@/features/profiles/profile-identity';
@@ -466,7 +467,11 @@ function EventPreviewCard({
   onShareEvent: () => void;
   onRegisterEvent: () => void;
 }) {
-  const posterUrl = getCmiEventPosterUrl(event.id) ?? getCmiEventCardBackgroundUrl(event.id) ?? '/cmi-home/event-ai-courtyard.png';
+  const posterUrl =
+    event.coverImageUrl?.trim() ||
+    getCmiEventPosterUrl(event.id) ||
+    getCmiEventCardBackgroundUrl(event.id) ||
+    '/cmi-home/event-ai-courtyard.png';
   const registrationPreviewLabel = event.registrationLabel.includes('http')
     ? event.registrationLabel.split(/[；。]/)[0]?.trim() || '查看详情报名'
     : event.registrationLabel;
@@ -1006,7 +1011,8 @@ export default function CmiHome() {
   };
 
   const handleShareEvent = async (event: CmiEvent) => {
-    const posterUrl = getCmiEventPosterUrl(event.id) ?? getCmiEventCardBackgroundUrl(event.id);
+    const posterUrl =
+      event.coverImageUrl?.trim() || getCmiEventPosterUrl(event.id) || getCmiEventCardBackgroundUrl(event.id);
 
     if (!posterUrl) {
       toast.error('这个活动还没有可分享的海报');
@@ -1016,10 +1022,15 @@ export default function CmiHome() {
     setSharingEventIds(prev => ({ ...prev, [event.id]: true }));
 
     try {
+      const eventPageUrl = new URL(getCmiEventPath(event.id), window.location.origin).toString();
+      const publicRegistrations = await getPublicCmiEventRegistrations(event.id);
+
       const card = await createCmiEventShareCard({
         event,
         posterUrl,
         referenceDate,
+        eventPageUrl,
+        registrationCount: publicRegistrations.length,
       });
       const file = new File([card.blob], card.fileName, { type: 'image/png' });
       const shareData: FileShareData = {

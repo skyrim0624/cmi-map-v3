@@ -4,6 +4,7 @@ import {
   type CmiMapFilterGroupId,
   getCmiDetailTagsForRecommendation,
   getCmiMapFilterGroup,
+  getCmiRecommendationDisplayTag,
   getCmiPlaceTypeTagsForRecommendation,
   matchesCmiMapFilterGroup,
 } from '@/data/cmi-taxonomy';
@@ -70,6 +71,11 @@ export interface CmiSceneRecommendationPresentation {
   summary: string;
   tags: string[];
   source: 'community-guide' | 'user-recommendation';
+}
+
+export interface CmiSceneRecommendationPresentationContext {
+  mapFilterGroupId?: CmiMapFilterGroupId | string | null;
+  placeTypeId?: string | null;
 }
 
 export const CMI_HOME_SCENE_GROUPS: Array<{
@@ -676,6 +682,7 @@ export const CMI_SCENES: CmiScene[] = [
 const SCENE_MAP = new Map(CMI_SCENES.map(scene => [scene.id, scene]));
 const COMMUNITY_SCENE_IDS = new Set<CmiSceneId>(['community']);
 const QUALITY_SCENE_IDS = new Set<CmiSceneId>(['nearby', 'pick-for-me', 'explore']);
+const DISTANCE_FIRST_SCENE_IDS = new Set<CmiSceneId>(['eat']);
 const PROXIMITY_RANKED_SCENE_IDS = new Set<CmiSceneId>([
   'eat',
   'coffee-work',
@@ -829,17 +836,20 @@ const matchesDirectSceneCategoryBoundary = (
 };
 
 export const getCmiSceneRecommendationPresentation = (
-  recommendation: Recommendation
+  recommendation: Recommendation,
+  context: CmiSceneRecommendationPresentationContext = {}
 ): CmiSceneRecommendationPresentation => {
   const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
   const isCommunityGuide = isCommunityCuratedRecommendation(recommendation);
+  const contextTag = getCmiRecommendationDisplayTag(recommendation, context);
 
   return {
     title: isCommunityGuide ? guide.title : recommendation.place_name,
-    kind: guide.kind,
+    kind: contextTag?.label ?? guide.kind,
     summary: isCommunityGuide ? guide.summary : getRecommendationReasonText(recommendation),
     tags: Array.from(new Set([
       ...guide.tags,
+      ...(contextTag ? [contextTag.label] : []),
       ...getCmiDetailTagsForRecommendation(recommendation).map(tag => tag.label),
     ])),
     source: isCommunityGuide ? 'community-guide' : 'user-recommendation',
@@ -924,6 +934,16 @@ const sortSceneRecommendations = (
       const leftDistance = getDistanceInMeters(options.userLocation, left);
       const rightDistance = getDistanceInMeters(options.userLocation, right);
       return leftDistance - rightDistance;
+    }
+
+    if (DISTANCE_FIRST_SCENE_IDS.has(scene.id) && options.userLocation) {
+      const leftDistance = getDistanceInMeters(options.userLocation, left);
+      const rightDistance = getDistanceInMeters(options.userLocation, right);
+      const distanceDifference = leftDistance - rightDistance;
+      if (distanceDifference !== 0) return distanceDifference;
+
+      const qualityDifference = rightQualityScore - leftQualityScore;
+      if (qualityDifference !== 0) return qualityDifference;
     }
 
     if (PROXIMITY_RANKED_SCENE_IDS.has(scene.id) && options.userLocation) {

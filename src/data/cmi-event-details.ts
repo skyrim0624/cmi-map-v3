@@ -36,6 +36,8 @@ export const CMI_EVENT_POSTER_BY_ID: Partial<Record<string, string>> = {
   'cmi-mindfulness-hour-2026-05-28': '/cmi-home/event-posters/cmi-mindfulness-hour-2026-05-28.png',
   'cmi-financial-literacy-sharing-2026-05-29':
     '/cmi-home/event-posters/cmi-financial-literacy-sharing-2026-05-29.png',
+  'cmi-tiandi-xuanhuang-baraka-2026-05-30':
+    'https://sfpcpxlxslnulzlmjcby.supabase.co/storage/v1/object/public/cmi-event-posters/posters/cmi-tiandi-xuanhuang-baraka-2026-05-30.png',
   'cmi-waytoagi-codex-maker-lab-2026-05-31':
     '/cmi-home/event-posters/cmi-waytoagi-codex-maker-lab-2026-05-31.png',
   'cmi-talk-fathers-day-speaker-call-2026-06-07':
@@ -54,6 +56,8 @@ export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = 
     '/cmi-home/event-card-backgrounds/cmi-mindfulness-hour-2026-05-28.jpg',
   'cmi-financial-literacy-sharing-2026-05-29':
     '/cmi-home/event-card-backgrounds/cmi-financial-literacy-sharing-2026-05-29.jpg',
+  'cmi-tiandi-xuanhuang-baraka-2026-05-30':
+    '/cmi-home/event-card-backgrounds/cmi-tiandi-xuanhuang-baraka-2026-05-30.jpg',
   'cmi-waytoagi-codex-maker-lab-2026-05-31':
     '/cmi-home/event-card-backgrounds/cmi-waytoagi-codex-maker-lab-2026-05-31.jpg',
   'cmi-talk-fathers-day-speaker-call-2026-06-07':
@@ -345,6 +349,35 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
           '活动地点：清迈客栈',
           '场地费用：免费参与，可随喜支持',
           '参与方式：Luma 报名（https://luma.com/ahw83ofe），也可直接空降',
+        ],
+      },
+    ],
+  },
+  'cmi-tiandi-xuanhuang-baraka-2026-05-30': {
+    eventId: 'cmi-tiandi-xuanhuang-baraka-2026-05-30',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-tiandi-xuanhuang-baraka-2026-05-30']!,
+    postTitle: '《天地玄黄》Baraka 放映夜',
+    postBlocks: [
+      {
+        kind: 'paragraph',
+        text: '这次不是热闹的派对，而是一起慢下来看一小时无对白纪录片的力量。我们不需要很多解释，只把注意力放在画面里的呼吸和关系上。',
+      },
+      {
+        kind: 'paragraph',
+        text: '《天地玄黄》适合想在周末晚点放下手机、重新看见自己和身边人的人一起。',
+      },
+      {
+        kind: 'heading',
+        text: '活动信息',
+      },
+      {
+        kind: 'list',
+        items: [
+          '活动时间：5 月 30 日（周六）19:00',
+          '活动地点：清迈客栈',
+          '活动形式：观影放映',
+          '场地费用：免费参与',
+          '参与方式：扫码进群，或现场空降',
         ],
       },
     ],

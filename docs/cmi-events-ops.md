@@ -81,7 +81,19 @@
 
 Time Out 的本周末专题可以作为及时线索源；如果只用 Time Out，`reliabilityNote` 必须写明“出发前仍建议复核场地方动态”。Citylife、主办方官网、场地方页面和 CMI 自有公告优先级更高。
 
-最新一次维护：2026-05-26 17:30 ICT，本轮确认 Supabase MCP 已授权到 `CMI_MAP / sfpcpxlxslnulzlmjcby`，并补齐活动报名系统所需的远程 schema。已整理 `五月活动/5.28 正念一小时` 与 `六月活动/6月7日 CMI Talk父亲节特辑` 两条活动：前者使用官方海报和 CMI Map 一键报名，后者为分享嘉宾招募，来源未单列收费项，按免费报名记录并保留腾讯问卷链接供复核。两条活动均已发布到远程活动库，补入本地兜底数据、详情页海报和首页卡片图，并部署到 `https://cmimap.com/cmi-home`。对应审计迁移为 `supabase/migrations/20260526144138_publish_cmi_mindfulness_hour_2026_05_28.sql` 与 `supabase/migrations/20260526171156_publish_cmi_talk_fathers_day_2026_06_07.sql`；MCP 生成的远程迁移版本已补本地 marker，等价本地审计迁移已修复为 applied。当前 `supabase db push --dry-run --linked` 仍会被更早的本地待推迁移阻断，因此本轮没有用 `--include-all` 推送无关改动。
+最新一次维护：2026-05-27 16:18 ICT，本轮扫描 `五月活动` 与 `六月活动` 发现新增候选：`/Users/andreas/CMI/活动宣传内容/五月活动/5.27 天地玄黄观影（Magic lab）`，核实后发布为 `cmi-tiandi-xuanhuang-baraka-2026-05-30`（发布中使用官方海报）。
+
+同步动作：
+
+- 远程 `public.cmi_events` 已新增/更新：新增 `published` 活动 `cmi-tiandi-xuanhuang-baraka-2026-05-30`，并保留 `source_label = CMI 活动宣传内容文件夹`。
+- 已归档已结束活动：0 条；到 `next_check_before` 需复核活动：0 条；仍可参加活动 `last_checked_at` 已刷新，复核时间按新事件 17:00 及现有逻辑更新。
+- 本地兜底 `src/data/cmi-events.ts` 已同步更新维护时间、事件条目与 `coverImageUrl`；`src/data/cmi-event-details.ts` 已补充对应详情页与首页卡片背景映射。
+- 已补充可审计 SQL：`supabase/migrations/20260527161028_publish_cmi_tiandi_xuanhuang_baraka.sql`（同步包含状态归档/复核刷新与新增事件 upsert）。
+
+当前远程与本地可见的 future CMI / 清迈客栈活动：
+`cmi-mindfulness-hour-2026-05-28`、`cmi-financial-literacy-sharing-2026-05-29`、`cmi-tiandi-xuanhuang-baraka-2026-05-30`、`cmi-waytoagi-codex-maker-lab-2026-05-31`、`cmi-talk-fathers-day-speaker-call-2026-06-07`。
+
+类型检查和生产构建在本轮均已通过；`/cmi-home` 基础验证通过构建产物检查和远程活动条目核对。
 
 ## 类型标签
 

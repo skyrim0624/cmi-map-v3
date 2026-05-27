@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>清迈客栈活动转发原型</title>
+    <style>
+      :root {
+        --ink: #161616;
+        --paper: #fff9e8;
+        --green: #2eb45e;
+        --deep-green: #245f3b;
+        --yellow: #ffe35b;
+        --pink: #ff6fba;
+        --cream: #fff4d8;
+        --shadow: rgba(0, 0, 0, 0.28);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+        background:
+          radial-gradient(circle at 11% 20%, rgba(255, 227, 91, 0.38), transparent 22rem),
+          radial-gradient(circle at 90% 70%, rgba(255, 111, 186, 0.28), transparent 20rem),
+          #050505;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .page {
+        display: grid;
+        grid-template-columns: minmax(340px, 440px) minmax(340px, 440px);
+        gap: 32px;
+        justify-content: center;
+        align-items: start;
+        padding: 32px 20px 48px;
+      }
+
+      .phone,
+      .share-card {
+        border: 3px solid var(--ink);
+        border-radius: 28px;
+        box-shadow: 10px 12px 0 var(--shadow);
+      }
+
+      .phone {
+        overflow: hidden;
+        background: #050505;
+      }
+
+      .phone-header {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+        background: rgba(5, 5, 5, 0.92);
+      }
+
+      .brand-button,
+      .inn-button,
+      .pill,
+      .action-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid var(--ink);
+        color: var(--ink);
+        font-weight: 950;
+        line-height: 1;
+        box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.2);
+        white-space: nowrap;
+      }
+
+      .brand-button {
+        min-height: 46px;
+        border-color: rgba(255, 255, 255, 0.22);
+        border-radius: 999px;
+        background: white;
+        padding: 0 18px;
+        font-size: 24px;
+      }
+
+      .inn-button {
+        min-height: 46px;
+        gap: 8px;
+        border-radius: 999px;
+        background: var(--yellow);
+        padding: 4px 14px 4px 5px;
+        font-size: 14px;
+      }
+
+      .inn-button img {
+        width: 36px;
+        height: 36px;
+        border: 2px solid var(--ink);
+        border-radius: 999px;
+        object-fit: cover;
+      }
+
+      .screen {
+        max-height: 780px;
+        overflow-y: auto;
+        padding: 0 14px 28px;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        border: 2px solid var(--ink);
+        border-radius: 22px;
+        background: var(--green);
+        padding: 12px;
+        box-shadow: 8px 9px 0 rgba(0, 0, 0, 0.42);
+      }
+
+      .chapter {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 10px;
+        border-bottom: 2px dashed rgba(22, 22, 22, 0.72);
+        padding-bottom: 8px;
+        font-size: 12px;
+        font-weight: 950;
+      }
+
+      .hero img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 1 / 0.82;
+        border: 2px solid var(--ink);
+        border-radius: 14px;
+        object-fit: cover;
+      }
+
+      .hero h1 {
+        margin: 16px 0 8px;
+        font-size: 46px;
+        line-height: 0.9;
+        letter-spacing: 0;
+      }
+
+      .hero p,
+      .notice-lede,
+      .event-summary,
+      .share-hint {
+        margin: 0;
+        font-weight: 850;
+        line-height: 1.6;
+      }
+
+      .notice {
+        position: relative;
+        margin-top: 18px;
+        overflow: hidden;
+        border: 2px solid var(--ink);
+        border-radius: 22px;
+        background: var(--yellow);
+        padding: 12px;
+        box-shadow: 8px 9px 0 rgba(0, 0, 0, 0.4);
+      }
+
+      .notice-top {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .notice-title p {
+        margin: 0 0 4px;
+        font-size: 12px;
+        font-weight: 950;
+        opacity: 0.72;
+      }
+
+      .notice-title h2 {
+        margin: 0;
+        font-size: 36px;
+        line-height: 1;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .stat {
+        min-height: 70px;
+        border: 2px solid var(--ink);
+        border-radius: 14px;
+        background: var(--paper);
+        padding: 10px;
+        box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.16);
+      }
+
+      .stat b {
+        display: block;
+        margin-top: 6px;
+        font-size: 18px;
+      }
+
+      .event-card {
+        overflow: hidden;
+        border: 2px solid var(--ink);
+        border-radius: 20px;
+        background: var(--paper);
+        box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.22);
+      }
+
+      .event-card + .event-card {
+        margin-top: 12px;
+      }
+
+      .event-cover {
+        position: relative;
+        height: 180px;
+        margin: 12px;
+        overflow: hidden;
+        border: 2px solid var(--ink);
+        border-radius: 14px;
+        background: #f6efe0;
+      }
+
+      .event-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+      }
+
+      .event-price {
+        position: absolute;
+        border: 2px solid var(--ink);
+        font-weight: 950;
+        box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.2);
+        top: 12px;
+        right: 12px;
+        max-width: 148px;
+        border-radius: 4px;
+        background: var(--pink);
+        padding: 7px 10px;
+        font-size: 11px;
+        line-height: 1.2;
+        text-align: center;
+      }
+
+      .event-body {
+        padding: 2px 16px 16px;
+      }
+
+      .event-body h3 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.06;
+      }
+
+      .event-summary {
+        display: -webkit-box;
+        margin-top: 8px;
+        overflow: hidden;
+        color: rgba(22, 22, 22, 0.72);
+        font-size: 14px;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+      }
+
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 12px;
+      }
+
+      .pill {
+        min-height: 26px;
+        border-color: rgba(22, 22, 22, 0.26);
+        border-radius: 999px;
+        background: rgba(46, 180, 94, 0.18);
+        padding: 0 10px;
+        box-shadow: none;
+        font-size: 11px;
+      }
+
+      .event-meta {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(96px, 0.68fr);
+        gap: 8px;
+        margin-top: 10px;
+        border: 2px solid rgba(22, 22, 22, 0.18);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.58);
+        padding: 8px 10px;
+        font-size: 11px;
+        font-weight: 900;
+        line-height: 1.32;
+      }
+
+      .event-meta div {
+        min-width: 0;
+      }
+
+      .event-meta p {
+        margin: 0;
+      }
+
+      .event-meta p + p {
+        margin-top: 5px;
+      }
+
+      .event-actions {
+        display: grid;
+        grid-template-columns: 0.85fr 1.2fr 0.85fr;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .action-button {
+        min-height: 42px;
+        border-radius: 999px;
+        background: var(--paper);
+        padding: 0 8px;
+        cursor: pointer;
+      }
+
+      .action-button.primary {
+        background: var(--pink);
+      }
+
+      .action-button.stamp {
+        background: var(--green);
+      }
+
+      .action-button[aria-pressed="true"] {
+        transform: translateY(2px);
+        box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.18);
+      }
+
+      .right-panel {
+        display: grid;
+        gap: 18px;
+      }
+
+      .share-shell {
+        border: 3px solid var(--ink);
+        border-radius: 28px;
+        background: var(--cream);
+        padding: 16px;
+        box-shadow: 10px 12px 0 var(--shadow);
+      }
+
+      .share-shell h2 {
+        margin: 0 0 6px;
+        font-size: 34px;
+        line-height: 1;
+      }
+
+      .share-hint {
+        margin-bottom: 14px;
+        color: rgba(22, 22, 22, 0.74);
+        font-size: 14px;
+      }
+
+      .share-card {
+        position: relative;
+        overflow: hidden;
+        width: min(100%, 390px);
+        margin: 0 auto;
+        background:
+          radial-gradient(circle at 76% 8%, rgba(210, 184, 255, 0.38), transparent 118px),
+          radial-gradient(circle at 14% 82%, rgba(96, 45, 190, 0.22), transparent 150px),
+          linear-gradient(180deg, #9a72f2 0%, #8f66ee 52%, #8359e5 100%);
+        border-width: 3px;
+        border-radius: 28px;
+        padding: 14px;
+        box-shadow: 9px 12px 0 rgba(0, 0, 0, 0.42);
+      }
+
+      .share-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        opacity: 0.055;
+        background-image: radial-gradient(circle at 1px 1px, #161616 1px, transparent 0);
+        background-size: 18px 18px;
+      }
+
+      .share-inner {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-rows: auto auto auto auto;
+        gap: 11px;
+      }
+
+      .share-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 4px 4px 0;
+      }
+
+      .share-logo {
+        font-size: 36px;
+        font-weight: 1000;
+        line-height: 1;
+      }
+
+      .share-subtitle {
+        display: block;
+        margin-top: 4px;
+        color: rgba(0, 0, 0, 0.54);
+        font-size: 12px;
+        font-weight: 950;
+        line-height: 1.1;
+      }
+
+      .share-badge {
+        border: 2px solid rgba(0, 0, 0, 0.9);
+        border-radius: 999px;
+        background: #050505;
+        color: white;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 950;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+      }
+
+      .share-main {
+        display: grid;
+        place-items: center;
+        border: 2px solid var(--ink);
+        border-radius: 24px;
+        background: rgba(0, 0, 0, 0.18);
+        padding: 0;
+        box-shadow: 0 16px 30px rgba(0, 0, 0, 0.32);
+      }
+
+      .share-main img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 21px;
+        background: white;
+      }
+
+      .share-copy {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 20px;
+        background: rgba(5, 5, 5, 0.84);
+        padding: 13px 14px;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28);
+      }
+
+      .share-copy h3 {
+        margin: 0;
+        color: #ffffff;
+        font-size: 25px;
+        font-weight: 1000;
+        line-height: 1.06;
+        letter-spacing: 0;
+      }
+
+      .share-copy p {
+        display: -webkit-box;
+        margin: 8px 0 0;
+        overflow: hidden;
+        color: rgba(255, 255, 255, 0.76);
+        font-size: 12.5px;
+        font-weight: 850;
+        line-height: 1.5;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+      }
+
+      .share-foot {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 76px;
+        gap: 10px;
+        align-items: stretch;
+      }
+
+      .share-info {
+        border: 2px solid rgba(0, 0, 0, 0.16);
+        border-radius: 16px;
+        background: rgba(172, 131, 255, 0.44);
+        padding: 9px 10px;
+        font-size: 11px;
+        font-weight: 950;
+        line-height: 1.32;
+        backdrop-filter: blur(12px);
+      }
+
+      .share-info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 10px;
+      }
+
+      .share-info-grid span {
+        display: block;
+        color: rgba(0, 0, 0, 0.48);
+        font-size: 9px;
+      }
+
+      .share-info-grid b {
+        display: block;
+        margin-top: 1px;
+      }
+
+      .qr {
+        display: grid;
+        width: 76px;
+        min-height: 76px;
+        place-items: center;
+        border: 2px solid rgba(0, 0, 0, 0.18);
+        border-radius: 16px;
+        background: rgba(172, 131, 255, 0.46);
+        backdrop-filter: blur(12px);
+      }
+
+      .qr img {
+        display: block;
+        width: 66px;
+        height: 66px;
+        border-radius: 8px;
+        object-fit: cover;
+      }
+
+      .workflow {
+        border: 3px solid var(--ink);
+        border-radius: 22px;
+        background: var(--yellow);
+        padding: 16px;
+        box-shadow: 6px 7px 0 rgba(0, 0, 0, 0.34);
+      }
+
+      .workflow h3 {
+        margin: 0 0 12px;
+        font-size: 22px;
+      }
+
+      .workflow ol {
+        margin: 0;
+        padding-left: 22px;
+        font-weight: 850;
+        line-height: 1.7;
+      }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 22px;
+        z-index: 4;
+        transform: translateX(-50%) translateY(90px);
+        border: 2px solid var(--ink);
+        border-radius: 999px;
+        background: white;
+        padding: 12px 18px;
+        font-weight: 950;
+        box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.24);
+        transition: transform 180ms ease;
+      }
+
+      .toast.show {
+        transform: translateX(-50%) translateY(0);
+      }
+
+      @media (max-width: 860px) {
+        .page {
+          grid-template-columns: minmax(0, 440px);
+          padding: 16px 12px 36px;
+        }
+
+        .screen {
+          max-height: none;
+        }
+
+        .share-shell {
+          order: -1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="phone" aria-label="清迈客栈活动板块原型">
+        <header class="phone-header">
+          <div class="brand-button">CMI Map</div>
+          <div class="inn-button">
+            <img src="public/cmi-home/go-inn-et-manga-button-icon.png" alt="" />
+            去客栈逛逛
+          </div>
+        </header>
+
+        <div class="screen">
+          <section class="hero">
+            <div class="chapter">
+              <span>Chapter One</span>
+              <span>CMI Inn as Living Room</span>
+            </div>
+            <img src="public/cmi-home/yard-scene.jpg" alt="清迈客栈院子" />
+            <h1>清迈客栈</h1>
+            <p>一个能住、能来坐、能参加活动，也能从这里接上清迈生活的人情入口。</p>
+          </section>
+
+          <section class="notice">
+            <div class="chapter">
+              <span>Chapter Two</span>
+              <span>today at CMI inn</span>
+            </div>
+            <div class="notice-top">
+              <div class="notice-title">
+                <p>自动同步看板</p>
+                <h2>客栈活动</h2>
+              </div>
+              <button class="action-button" type="button">全部 →</button>
+            </div>
+
+            <div class="stats">
+              <div class="stat">近期<b>2 场</b></div>
+              <div class="stat">已核实<b>2 场</b></div>
+              <div class="stat">同步<b>5.24 09:30</b></div>
+            </div>
+
+            <p class="notice-lede">把“活动发现”和“CMI Map 传播”合在一个动作里：看到想去的活动，就直接转发一张群聊友好的活动卡。</p>
+
+            <article class="event-card" data-event="swap">
+              <div class="event-cover">
+                <img src="public/cmi-home/event-posters/cmi-swap-market-2026-05-24.jpg" alt="旧物交换市集" />
+                <div class="event-price">免费参与</div>
+              </div>
+              <div class="event-body">
+                <h3>旧物交换市集</h3>
+                <p class="event-summary">把旧物、技能、才艺或一次帮助带到清迈客栈，在周日下午和社区做一场轻松的交换与认识。</p>
+                <div class="tags">
+                  <span class="pill">CMI</span>
+                  <span class="pill">旧物交换</span>
+                  <span class="pill">市集</span>
+                  <span class="pill">周末</span>
+                </div>
+                <div class="event-meta">
+                  <div>
+                    <p>🕑 5.24 周日 14:00</p>
+                    <p>📍 清迈客栈</p>
+                  </div>
+                  <div>
+                    <p>费用<br />免费参与</p>
+                    <p>参与<br />扫码进群了解</p>
+                  </div>
+                </div>
+                <div class="event-actions">
+                  <button class="action-button" type="button">详情</button>
+                  <button class="action-button primary js-share" type="button" data-event="swap">转发到群</button>
+                  <button class="action-button stamp" type="button">盖戳</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="event-card" data-event="ai">
+              <div class="event-cover">
+                <img src="public/cmi-home/event-posters/cmi-ai-open-mic-vol-04-2026-05-24.jpg" alt="AI 开放麦第四期" />
+                <div class="event-price">免费参与</div>
+              </div>
+              <div class="event-body">
+                <h3>AI 开放麦第四期｜本周 AI 使用现场交流</h3>
+                <p class="event-summary">围绕本周 AI 使用、工具、项目、案例、踩坑和问题做现场交流，不用准备完整演讲。</p>
+                <div class="tags">
+                  <span class="pill">CMI</span>
+                  <span class="pill">AI开放麦</span>
+                  <span class="pill">工具实践</span>
+                  <span class="pill">免费</span>
+                </div>
+                <div class="event-meta">
+                  <div>
+                    <p>🕖 5.24 周日 19:00</p>
+                    <p>📍 清迈客栈</p>
+                  </div>
+                  <div>
+                    <p>费用<br />免费参与</p>
+                    <p>参与<br />直接空降</p>
+                  </div>
+                </div>
+                <div class="event-actions">
+                  <button class="action-button" type="button">详情</button>
+                  <button class="action-button primary js-share" type="button" data-event="ai">转发到群</button>
+                  <button class="action-button stamp" type="button">盖戳</button>
+                </div>
+              </div>
+            </article>
+          </section>
+        </div>
+      </section>
+
+      <aside class="right-panel" aria-label="活动卡片转发预览">
+        <section class="share-shell">
+          <h2>微信群卡片预览</h2>
+          <p class="share-hint">点击左侧“转发到群”，右侧会切换成要生成的竖版活动图片。真正上线后这里会调用系统分享，优先把图片发到微信。</p>
+
+          <div class="share-card">
+            <div class="share-inner">
+              <div class="share-head">
+                <div>
+                  <div class="share-logo">CMI Map</div>
+                  <span class="share-subtitle">清迈活动和好去处，都在这里</span>
+                </div>
+                <div class="share-badge" id="shareType">市集活动</div>
+              </div>
+
+              <div class="share-main">
+                <img id="shareImage" src="public/cmi-home/event-posters/cmi-swap-market-2026-05-24.jpg" alt="完整活动海报" />
+              </div>
+
+              <div class="share-copy">
+                <h3 id="shareTitle">旧物交换市集</h3>
+                <p id="shareSummary">把旧物、技能、才艺或一次帮助带到清迈客栈，在周日下午和社区做一场轻松的交换与认识。</p>
+              </div>
+
+              <div class="share-foot">
+                <div class="share-info">
+                  <div class="share-info-grid">
+                    <div><span>时间</span><b id="shareTime">5.24 周日 14:00</b></div>
+                    <div><span>地点</span><b id="shareLocation">清迈客栈</b></div>
+                    <div><span>费用</span><b id="sharePrice">免费参与</b></div>
+                    <div><span>参与</span><b id="shareJoin">扫码进群了解</b></div>
+                  </div>
+                </div>
+                <div class="qr" aria-label="CMI 清迈客栈公众号二维码">
+                  <img src="public/cmi-home/qr-cmi-official.jpg" alt="CMI 清迈客栈公众号二维码" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="workflow">
+          <h3>建议交互链路</h3>
+          <ol>
+            <li>活动卡片首屏露出 CMI Map 标签，先建立“这是地图里的活动”。</li>
+            <li>按钮文案用“转发到群”，比“分享”更贴近微信群场景。</li>
+            <li>生成竖版图片卡，完整保留活动海报；列表封面用原海报裁切填满，避免两侧虚化补边。</li>
+            <li>浏览器不支持直接分享时，降级为下载图片，让用户手动发群。</li>
+          </ol>
+        </section>
+      </aside>
+    </main>
+
+    <div class="toast" id="toast">已切换活动卡片预览</div>
+
+    <script>
+      const events = {
+        swap: {
+          type: "市集活动",
+          image: "public/cmi-home/event-posters/cmi-swap-market-2026-05-24.jpg",
+          title: "旧物交换市集",
+          summary: "把旧物、技能、才艺或一次帮助带到清迈客栈，在周日下午和社区做一场轻松的交换与认识。",
+          time: "5.24 周日 14:00",
+          location: "清迈客栈",
+          price: "免费参与",
+          join: "扫码进群了解"
+        },
+        ai: {
+          type: "AI 活动",
+          image: "public/cmi-home/event-posters/cmi-ai-open-mic-vol-04-2026-05-24.jpg",
+          title: "AI 开放麦第四期｜本周 AI 使用现场交流",
+          summary: "围绕本周 AI 使用、工具、项目、案例、踩坑和问题做现场交流，不用准备完整演讲。",
+          time: "5.24 周日 19:00",
+          location: "清迈客栈",
+          price: "免费参与",
+          join: "直接空降"
+        }
+      };
+
+      const toast = document.querySelector("#toast");
+      let toastTimer = 0;
+
+      document.querySelectorAll(".js-share").forEach((button) => {
+        button.addEventListener("click", () => {
+          const event = events[button.dataset.event];
+          document.querySelector("#shareType").textContent = event.type;
+          document.querySelector("#shareImage").src = event.image;
+          document.querySelector("#shareTitle").textContent = event.title;
+          document.querySelector("#shareSummary").textContent = event.summary;
+          document.querySelector("#shareTime").textContent = event.time;
+          document.querySelector("#shareLocation").textContent = event.location;
+          document.querySelector("#sharePrice").textContent = event.price;
+          document.querySelector("#shareJoin").textContent = event.join;
+
+          document.querySelectorAll(".js-share").forEach((item) => item.setAttribute("aria-pressed", "false"));
+          button.setAttribute("aria-pressed", "true");
+          toast.classList.add("show");
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(() => toast.classList.remove("show"), 1300);
+        });
+      });
+    </script>
+  </body>
+</html>

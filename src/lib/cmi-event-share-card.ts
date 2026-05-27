@@ -1,10 +1,13 @@
-import type { CmiEvent } from '@/data/cmi-events';
+import { formatCmiEventTime, type CmiEvent } from '@/data/cmi-events';
+import QRCode from 'qrcode';
 
 export interface CmiEventShareCardInput {
   event: CmiEvent;
   posterUrl: string;
   referenceDate: Date;
   mapQrUrl?: string;
+  eventPageUrl?: string;
+  registrationCount?: number;
 }
 
 export interface CmiEventShareCardResult {
@@ -25,12 +28,16 @@ const MODULE_GAP = 28;
 const FONT_FAMILY = '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif';
 const MAP_QR_URL = '/cmi-home/qr-cmi-map-root.png';
 const SLOGAN_ART_URL = '/cmi-home/cmi-map-slogan-handwritten.png';
-const MAP_URL_LABEL = 'cmimap.com';
+const MAP_URL_LABEL = '扫码报名参加';
 const INTRO_FONT = `1000 54px ${FONT_FAMILY}`;
 const INTRO_LINE_HEIGHT = 68;
 const FACT_LABEL_FONT = `950 32px ${FONT_FAMILY}`;
 const FACT_VALUE_FONT = `1000 50px ${FONT_FAMILY}`;
 const FACT_VALUE_LINE_HEIGHT = 56;
+const FACT_ROW_START_Y = 110;
+const FACT_ROW_STEP_Y = 84;
+const QR_SIZE = 238;
+const HEADER_HEIGHT = 270;
 
 const sanitizeFileName = (value: string) =>
   value
@@ -134,16 +141,6 @@ const canvasToBlob = (canvas: HTMLCanvasElement) =>
     }, 'image/png');
   });
 
-const formatShareEventTime = (event: CmiEvent) => {
-  const match = event.startAt?.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-  if (match) {
-    const [, , month, day, hour, minute] = match;
-    return `${Number(month)}/${Number(day)} ${hour}:${minute}`;
-  }
-
-  return event.stableSchedule || event.recurrence?.label || '时间待定';
-};
-
 const getCompactPriceLabel = (priceLabel: string) => {
   const normalized = priceLabel.replace(/\s+/g, ' ').trim();
   if (!normalized) return '费用待定';
@@ -151,6 +148,35 @@ const getCompactPriceLabel = (priceLabel: string) => {
   if (normalized.includes('免费')) return '免费';
   if (normalized.includes('带一道菜') || normalized.includes('带菜')) return '带菜分享';
   return normalized.replace(/^场地费\s*/, '').replace(/^费用\s*/, '');
+};
+
+const formatRegistrationCount = (registrationCount: number | undefined) => {
+  if (!Number.isFinite(registrationCount)) return '0 人已报名';
+  const count = Math.max(Math.floor(registrationCount), 0);
+  return `${count} 人已报名`;
+};
+
+const normalizeUrl = (url: string) => {
+  try {
+    return new URL(url, window.location.origin).toString();
+  } catch {
+    return url;
+  }
+};
+
+const createDynamicQrImage = async (url: string) => {
+  const dataUrl = await QRCode.toDataURL(normalizeUrl(url), {
+    type: 'image/png',
+    margin: 1,
+    width: 520,
+    color: {
+      dark: '#050505',
+      light: '#ffffff',
+    },
+    errorCorrectionLevel: 'M',
+  });
+
+  return loadImage(dataUrl);
 };
 
 const drawCardBackground = (
@@ -261,7 +287,9 @@ const drawFooter = (
   event: CmiEvent,
   qrImage: HTMLImageElement,
   y: number,
-  height: number
+  height: number,
+  referenceDate: Date,
+  registrationCount?: number
 ) => {
   drawRoundRect(context, CONTENT_X, y, CONTENT_WIDTH, height, 34);
   context.fillStyle = 'rgba(255, 247, 223, 0.2)';
@@ -282,33 +310,55 @@ const drawFooter = (
   context.restore();
 
   const factMaxWidth = dividerX - (CONTENT_X + 190) - 36;
-  drawFactRow(context, '时间', formatShareEventTime(event), y + 110, factMaxWidth);
-  drawFactRow(context, '地点', event.venueName, y + 194, factMaxWidth);
-  drawFactRow(context, '费用', getCompactPriceLabel(event.priceLabel), y + 278, factMaxWidth);
+  const factRows: Array<[string, string]> = [
+    ['时间', formatCmiEventTime(event, referenceDate)],
+    ['地点', event.venueName],
+    ['费用', getCompactPriceLabel(event.priceLabel)],
+  ];
 
-  const qrSize = 238;
-  const qrX = CONTENT_X + CONTENT_WIDTH - 72 - qrSize;
+  if (typeof registrationCount === 'number') {
+    factRows.push(['报名', formatRegistrationCount(registrationCount)]);
+  }
+
+  factRows.forEach((row, index) => {
+    drawFactRow(context, row[0], row[1], y + FACT_ROW_START_Y + index * FACT_ROW_STEP_Y, factMaxWidth);
+  });
+
+  const qrX = CONTENT_X + CONTENT_WIDTH - 72 - QR_SIZE;
   const qrY = y + 38;
-  drawRoundRect(context, qrX, qrY, qrSize, qrSize, 18);
+  drawRoundRect(context, qrX, qrY, QR_SIZE, QR_SIZE, 18);
   context.fillStyle = '#ffffff';
   context.fill();
-  context.drawImage(qrImage, qrX + 8, qrY + 8, qrSize - 16, qrSize - 16);
+  context.drawImage(qrImage, qrX + 8, qrY + 8, QR_SIZE - 16, QR_SIZE - 16);
 
   context.fillStyle = 'rgba(5, 5, 5, 0.72)';
   context.font = `950 34px ${FONT_FAMILY}`;
   context.textAlign = 'center';
-  context.fillText(MAP_URL_LABEL, qrX + qrSize / 2, y + height - 40);
+  context.fillText(MAP_URL_LABEL, qrX + QR_SIZE / 2, y + height - 40);
   context.textAlign = 'left';
 };
 
 export const createCmiEventShareCard = async ({
   event,
   posterUrl,
+  referenceDate,
   mapQrUrl = MAP_QR_URL,
+  eventPageUrl,
+  registrationCount,
 }: CmiEventShareCardInput): Promise<CmiEventShareCardResult> => {
+  const qrImagePromise = (async () => {
+    if (!eventPageUrl) return loadImage(mapQrUrl);
+    try {
+      return await createDynamicQrImage(eventPageUrl);
+    } catch (error) {
+      console.error('活动分享二维码生成失败，使用默认二维码 fallback:', error);
+      return loadImage(mapQrUrl);
+    }
+  })();
+
   const [posterImage, qrImage, sloganImage] = await Promise.all([
     loadImage(posterUrl),
-    loadImage(mapQrUrl),
+    qrImagePromise,
     loadImage(SLOGAN_ART_URL),
   ]);
 
@@ -321,11 +371,10 @@ export const createCmiEventShareCard = async ({
   const introLines = wrapText(measureContext, event.summary || event.title, introMaxWidth, 4);
 
   const posterHeight = Math.round(POSTER_WIDTH * (posterImage.naturalHeight / posterImage.naturalWidth));
-  const headerHeight = 330;
-  const posterY = CARD_PADDING_TOP + headerHeight;
+  const posterY = CARD_PADDING_TOP + HEADER_HEIGHT;
   const introY = posterY + posterHeight + MODULE_GAP;
   const introHeight = 118 + introLines.length * INTRO_LINE_HEIGHT;
-  const footerHeight = 352;
+  const footerHeight = 352 + Math.max(factRowsCount(registrationCount) - 3, 0) * FACT_ROW_STEP_Y;
   const footerY = introY + introHeight + MODULE_GAP;
   const cardHeight = footerY + footerHeight + CARD_PADDING_BOTTOM;
 
@@ -343,7 +392,7 @@ export const createCmiEventShareCard = async ({
   drawHeader(context, sloganImage);
   drawPoster(context, posterImage, CONTENT_X, posterY, POSTER_WIDTH, posterHeight);
   drawIntroCard(context, introLines, CONTENT_X, introY, CONTENT_WIDTH, introHeight);
-  drawFooter(context, event, qrImage, footerY, footerHeight);
+  drawFooter(context, event, qrImage, footerY, footerHeight, referenceDate, registrationCount);
 
   const blob = await canvasToBlob(canvas);
 
@@ -352,4 +401,11 @@ export const createCmiEventShareCard = async ({
     dataUrl: canvas.toDataURL('image/png'),
     fileName: `cmi-map-event-${sanitizeFileName(event.title)}.png`,
   };
+};
+
+const factRowsCount = (registrationCount?: number) => {
+  const baseRows = 3;
+  if (typeof registrationCount !== 'number') return baseRows;
+
+  return baseRows + 1;
 };

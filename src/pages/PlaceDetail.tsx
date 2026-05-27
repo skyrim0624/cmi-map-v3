@@ -1,6 +1,6 @@
 import { ArrowLeft, Bookmark, CalendarPlus, Download, Heart, Loader2, MapPinned, PencilLine, Share2, Sticker as StickerIcon, Trash2 } from 'lucide-react';
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -36,6 +36,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   getCmiDetailTagsForRecommendation,
   getCmiPlaceTypeTagsForRecommendation,
+  getCmiRecommendationDisplayTag,
+  getCmiSceneMapFilterGroupId,
+  matchesCmiMapFilterGroup,
+  matchesCmiPlaceTypeTag,
+  type CmiRecommendationDisplayContext,
 } from '@/data/cmi-taxonomy';
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
 import {
@@ -77,13 +82,29 @@ type LocationState = {
   newTraceId?: string;
 };
 
-const getRecommendationIconUrl = (recommendation: Recommendation) => (
-  recommendation.category === '彩蛋'
+const getRecommendationIconUrl = (
+  recommendation: Recommendation,
+  displayTag?: { iconUrl?: string } | null
+) => (
+  displayTag?.iconUrl ??
+  (recommendation.category === '彩蛋'
     ? getCmiEasterIconUrl(getRecommendationEasterIconId(recommendation))
-    : getCategoryIconUrl(recommendation.category)
+    : getCategoryIconUrl(recommendation.category))
 );
 
-const getPrimaryBadgeForRecommendation = (recommendation: Recommendation) => {
+const getPrimaryBadgeForRecommendation = (
+  recommendation: Recommendation,
+  context: CmiRecommendationDisplayContext = {}
+) => {
+  const displayTag = getCmiRecommendationDisplayTag(recommendation, context);
+  if (displayTag) {
+    return {
+      label: displayTag.label,
+      iconUrl: getRecommendationIconUrl(recommendation, displayTag),
+      isPlaceType: displayTag.kind === 'place-type',
+    };
+  }
+
   const placeTypeTag = getCmiPlaceTypeTagsForRecommendation(recommendation)[0];
   if (placeTypeTag) {
     return {
@@ -106,6 +127,7 @@ export default function PlaceDetail() {
   const { placeName } = useParams<{ placeName: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [profilesByUserId, setProfilesByUserId] = useState<Record<string, PublicProfile>>({});
@@ -677,13 +699,25 @@ export default function PlaceDetail() {
     );
   }
 
-  const firstRec = recommendations[0];
+  const entrySceneId = searchParams.get('scene');
+  const entryPlaceTypeId = searchParams.get('placeType');
+  const entryFilterId = searchParams.get('filter');
+  const detailMapFilterGroupId = entryFilterId ?? getCmiSceneMapFilterGroupId(entrySceneId, entryPlaceTypeId);
+  const firstRec = recommendations.find(recommendation =>
+    entryPlaceTypeId
+      ? matchesCmiPlaceTypeTag(recommendation, entryPlaceTypeId)
+      : Boolean(detailMapFilterGroupId && matchesCmiMapFilterGroup(recommendation, detailMapFilterGroupId))
+  ) ?? recommendations[0];
   const allImages = recommendations.flatMap(r => r.images);
   const firstGuide = getPlaceGuide(firstRec.place_name, firstRec.category);
   const firstIsCommunityGuide = isCommunityCuratedRecommendation(firstRec);
+  const detailDisplayContext = {
+    mapFilterGroupId: detailMapFilterGroupId,
+    placeTypeId: entryPlaceTypeId,
+  };
   const firstPlaceTypeTags = getCmiPlaceTypeTagsForRecommendation(firstRec);
   const firstDetailTags = getCmiDetailTagsForRecommendation(firstRec);
-  const firstPrimaryBadge = getPrimaryBadgeForRecommendation(firstRec);
+  const firstPrimaryBadge = getPrimaryBadgeForRecommendation(firstRec, detailDisplayContext);
   const inlineDetailTags = [
     ...firstPlaceTypeTags
       .filter(tag => !(firstPrimaryBadge.isPlaceType && tag.label === firstPrimaryBadge.label))
@@ -755,8 +789,8 @@ export default function PlaceDetail() {
               className="flex h-[32dvh] min-h-[230px] max-h-[310px] w-full items-center justify-center bg-accent"
             >
               <img
-                src={getRecommendationIconUrl(firstRec)}
-                alt={normalizeCategory(firstRec.category)}
+                src={firstPrimaryBadge.iconUrl}
+                alt={firstPrimaryBadge.label}
                 className="w-1/3 h-1/3 object-contain opacity-80"
               />
             </div>
@@ -784,8 +818,8 @@ export default function PlaceDetail() {
                       variant="outline"
                       className="rounded-full border-border/70 bg-background/90 px-2.5 py-1 text-muted-foreground shadow-sm"
                     >
-                      <img src={getRecommendationIconUrl(firstRec)} alt="" className="mr-1 h-5 w-5 object-contain" />
-                      {firstGuide.kind}
+                      <img src={firstPrimaryBadge.iconUrl} alt="" className="mr-1 h-5 w-5 object-contain" />
+                      {firstPrimaryBadge.label}
                     </Badge>
                     {inlineDetailTags.map(tag => (
                       <span
@@ -830,6 +864,65 @@ export default function PlaceDetail() {
                 const profile = (rec.user_id && profilesByUserId[rec.user_id]) || profilesByUserName[rec.user_name];
                 const displayName = isCommunityGuide ? 'CMI 社区整理' : rec.user_name;
                 const profileIdentity = profile ? getStableProfileIdentity(profile) : rec.user_id || rec.user_name;
+                const recommendationImages = rec.images.filter(Boolean);
+                const primaryRecommendationImage = recommendationImages[0];
+                const renderRecommendationActions = (className = 'justify-end pt-2') => (
+                  <div className={`relative z-20 flex gap-2 ${className}`}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-full px-3 press-feedback text-muted-foreground hover:bg-accent"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!user) {
+                          toast('登录后才能盖戳哦', { description: '注册只需要一个邮箱 ✉️' });
+                          navigate('/login', { state: { from: `/place/${placeName}` } });
+                          return;
+                        }
+                        setActiveRecIdForSticker(rec.id);
+                        setShowStickerDrawer(true);
+                      }}
+                    >
+                      <StickerIcon className="w-4 h-4 mr-1.5" />
+                      <span className="font-medium text-sm">盖戳</span>
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`rounded-full px-3 press-feedback ${localUpvotes[rec.id]?.isUpvoted ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:bg-accent'}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleUpvote(rec.id);
+                      }}
+                    >
+                      <Heart
+                        className={`w-4 h-4 mr-1.5 ${localUpvotes[rec.id]?.isUpvoted ? 'fill-primary' : ''}`}
+                      />
+                      <span className="font-medium text-sm">
+                        {localUpvotes[rec.id]?.count > 0 ? localUpvotes[rec.id].count : '+1'}
+                      </span>
+                    </Button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleWishlist(rec.id);
+                      }}
+                      className={`relative flex h-9 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium transition-all duration-300 active:scale-90 ${
+                        localWishlists[rec.id]
+                          ? 'bg-[#ffebee] text-[#f43f5e] shadow-[0_0_15px_rgba(244,63,94,0.2)]'
+                          : 'text-muted-foreground hover:bg-accent'
+                      }`}
+                    >
+                      <Bookmark className={`w-4 h-4 transition-transform ${localWishlists[rec.id] ? 'fill-current scale-110' : ''}`} strokeWidth={2} />
+                      <span>{localWishlists[rec.id] ? '已想去' : '想去'}</span>
+                      {localWishlists[rec.id] && (
+                        <span className="absolute inset-0 rounded-full animate-ping bg-[#ffebee] opacity-75"></span>
+                      )}
+                    </button>
+                  </div>
+                );
 
                 return (
                   <Fragment key={rec.id}>
@@ -844,7 +937,7 @@ export default function PlaceDetail() {
                     className={`relative overflow-hidden transition-all duration-300 ${
                       idx === 0
                         ? 'space-y-3 rounded-[1.35rem] border border-border bg-card p-4 shadow-[0_10px_28px_rgba(45,45,47,0.07)]'
-                        : 'space-y-3 rounded-xl border border-border bg-card p-5 card-shadow'
+                        : 'space-y-3 rounded-[1.15rem] border border-border bg-card p-3.5 shadow-[0_8px_22px_rgba(45,45,47,0.06)]'
                     } ${
                       activeStickerId && activeRecIdForSticker === rec.id 
                         ? 'ring-4 ring-primary ring-offset-2 scale-[1.02] cursor-crosshair' 
@@ -937,83 +1030,46 @@ export default function PlaceDetail() {
                     )}
                   </div>
 
-                  {/* 推荐理由 */}
-                  <p className={`${idx === 0 ? 'text-lg font-bold leading-relaxed text-foreground' : 'quote-text text-lg leading-relaxed'} ${canEditRecommendation ? 'pr-20' : 'pr-10'}`}>
-                    {isCommunityGuide ? guide.summary : getRecommendationReasonText(rec)}
-                  </p>
-
-                  {/* 该推荐的照片 */}
-                  {idx > 0 && rec.images.length > 0 && (
-                    <div className="flex gap-2 flex-wrap">
-                      {rec.images.map((img, imgIdx) => (
+                  {idx > 0 && primaryRecommendationImage ? (
+                    <div className="relative z-20 grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3">
+                      <div className="overflow-hidden rounded-[0.95rem] border border-border bg-muted">
                         <img
-                          key={imgIdx}
-                          src={img}
+                          src={primaryRecommendationImage}
                           alt=""
                           loading="lazy"
                           decoding="async"
-                          className="w-20 h-20 rounded-lg object-cover"
+                          className="aspect-[4/5] h-full w-full object-cover"
                         />
-                      ))}
+                      </div>
+                      <div className="min-w-0">
+                        <p className={`quote-text text-[1rem] leading-relaxed ${canEditRecommendation ? 'pr-16' : ''}`}>
+                          {isCommunityGuide ? guide.summary : getRecommendationReasonText(rec)}
+                        </p>
+                        {recommendationImages.length > 1 && (
+                          <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                            {recommendationImages.slice(1, 4).map((img, imgIdx) => (
+                              <img
+                                key={`${img}-${imgIdx}`}
+                                src={img}
+                                alt=""
+                                loading="lazy"
+                                decoding="async"
+                                className="h-11 w-11 shrink-0 rounded-lg border border-border object-cover"
+                              />
+                            ))}
+                          </div>
+                        )}
+                        {renderRecommendationActions('mt-2 justify-start flex-wrap')}
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      <p className={`${idx === 0 ? 'text-lg font-bold leading-relaxed text-foreground' : 'quote-text text-base leading-relaxed'} ${canEditRecommendation ? 'pr-20' : 'pr-10'}`}>
+                        {isCommunityGuide ? guide.summary : getRecommendationReasonText(rec)}
+                      </p>
+                      {renderRecommendationActions()}
+                    </>
                   )}
-
-                  {/* 帖子底部操作栏：点赞、贴纸、种草 */}
-                  <div className="pt-2 flex justify-end gap-2 relative z-20">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="rounded-full px-3 press-feedback text-muted-foreground hover:bg-accent"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!user) {
-                          toast('登录后才能盖戳哦', { description: '注册只需要一个邮箱 ✉️' });
-                          navigate('/login', { state: { from: `/place/${placeName}` } });
-                          return;
-                        }
-                        setActiveRecIdForSticker(rec.id);
-                        setShowStickerDrawer(true);
-                      }}
-                    >
-                      <StickerIcon className="w-4 h-4 mr-1.5" />
-                      <span className="font-medium text-sm">盖戳</span>
-                    </Button>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`rounded-full px-3 press-feedback ${localUpvotes[rec.id]?.isUpvoted ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:bg-accent'}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleUpvote(rec.id);
-                      }}
-                    >
-                      <Heart 
-                        className={`w-4 h-4 mr-1.5 ${localUpvotes[rec.id]?.isUpvoted ? 'fill-primary' : ''}`} 
-                      />
-                      <span className="font-medium text-sm">
-                        {localUpvotes[rec.id]?.count > 0 ? localUpvotes[rec.id].count : '+1'}
-                      </span>
-                    </Button>
-                    
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleWishlist(rec.id);
-                      }}
-                      className={`relative flex h-9 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium transition-all duration-300 active:scale-90 ${
-                        localWishlists[rec.id]
-                          ? 'bg-[#ffebee] text-[#f43f5e] shadow-[0_0_15px_rgba(244,63,94,0.2)]' 
-                          : 'text-muted-foreground hover:bg-accent'
-                      }`}
-                    >
-                      <Bookmark className={`w-4 h-4 transition-transform ${localWishlists[rec.id] ? 'fill-current scale-110' : ''}`} strokeWidth={2} />
-                      <span>{localWishlists[rec.id] ? '已想去' : '想去'}</span>
-                      {localWishlists[rec.id] && (
-                        <span className="absolute inset-0 rounded-full animate-ping bg-[#ffebee] opacity-75"></span>
-                      )}
-                    </button>
-                  </div>
                 </div>
                     {idx === 0 && (
                       <div className="grid gap-2">

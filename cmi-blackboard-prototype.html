@@ -1,0 +1,1475 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CMI 聊天看板原型</title>
+    <style>
+      :root {
+        --page: #f4f1e9;
+        --paper: #fffdf7;
+        --paper-strong: #ffffff;
+        --ink: #232521;
+        --muted: #827b72;
+        --soft: #e6ddd0;
+        --line: rgba(51, 44, 35, 0.1);
+        --green: #355f48;
+        --green-soft: #e8f2e9;
+        --blue: #557aa1;
+        --gold: #b7792c;
+        --red: #bd503f;
+        --shadow: 0 10px 28px rgba(56, 45, 32, 0.09);
+        --radius-lg: 22px;
+        --radius-md: 16px;
+        --radius-sm: 10px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(rgba(53, 95, 72, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(53, 95, 72, 0.045) 1px, transparent 1px),
+          radial-gradient(circle at 15% 0%, rgba(183, 121, 44, 0.12), transparent 32rem),
+          var(--page);
+        background-size: 34px 34px, 34px 34px, auto;
+        color: var(--ink);
+        font-family:
+          "Avenir Next",
+          "PingFang SC",
+          "Microsoft YaHei",
+          "Noto Sans CJK SC",
+          sans-serif;
+      }
+
+      button,
+      textarea,
+      input {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .shell {
+        width: min(100%, 940px);
+        margin: 0 auto;
+        padding: 28px 18px 40px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 48px;
+        height: 48px;
+        flex: 0 0 auto;
+        place-items: center;
+        overflow: hidden;
+        border: 1px solid rgba(53, 95, 72, 0.16);
+        border-radius: 14px;
+        background: #eef4ea;
+        box-shadow: 3px 4px 0 rgba(35, 37, 33, 0.08);
+      }
+
+      .brand-mark img {
+        width: 42px;
+        height: 42px;
+        object-fit: contain;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 30px;
+        font-weight: 900;
+        line-height: 1.04;
+      }
+
+      .subtitle {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .top-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .pill-button {
+        display: inline-flex;
+        min-height: 38px;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        border: 1px solid rgba(53, 95, 72, 0.18);
+        border-radius: 999px;
+        background: var(--paper-strong);
+        color: var(--green);
+        font-size: 13px;
+        font-weight: 900;
+        padding: 0 14px;
+        box-shadow: 2px 3px 0 rgba(35, 37, 33, 0.07);
+      }
+
+      .pill-button.primary {
+        border-color: var(--green);
+        background: var(--green);
+        color: #fff;
+      }
+
+      .layout {
+        display: block;
+      }
+
+      main {
+        max-width: 720px;
+      }
+
+      .composer,
+      .feed-card {
+        border: 1px solid var(--line);
+        background: rgba(255, 253, 247, 0.94);
+        box-shadow: var(--shadow);
+      }
+
+      .composer {
+        margin-bottom: 14px;
+        border-radius: var(--radius-lg);
+        padding: 14px;
+      }
+
+      .composer.in-modal {
+        margin: 0;
+        border: 0;
+        box-shadow: none;
+      }
+
+      .composer-row {
+        display: grid;
+        grid-template-columns: 48px minmax(0, 1fr);
+        gap: 11px;
+      }
+
+      .avatar {
+        position: relative;
+        display: grid;
+        width: 48px;
+        height: 48px;
+        flex: 0 0 auto;
+        place-items: center;
+        overflow: hidden;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #d7e5dd, #f6eddc);
+        color: var(--green);
+        font-size: 16px;
+        font-weight: 900;
+        box-shadow: 0 4px 12px rgba(35, 37, 33, 0.12);
+      }
+
+      .avatar.blue {
+        background: linear-gradient(135deg, #dce9f5, #f4f6fa);
+        color: var(--blue);
+      }
+
+      .avatar.gold {
+        background: linear-gradient(135deg, #f7dfb6, #fff6e8);
+        color: #9a681e;
+      }
+
+      .post > .avatar {
+        width: 46px;
+        height: 46px;
+        font-size: 15px;
+        box-shadow: 0 5px 14px rgba(35, 37, 33, 0.1);
+      }
+
+      .composer textarea {
+        width: 100%;
+        min-height: 88px;
+        resize: none;
+        border: 1px solid rgba(51, 44, 35, 0.12);
+        border-radius: 18px;
+        outline: none;
+        background: #fff;
+        color: var(--ink);
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1.65;
+        padding: 13px 15px;
+      }
+
+      .composer textarea:focus {
+        border-color: rgba(53, 95, 72, 0.55);
+        box-shadow: 0 0 0 4px rgba(53, 95, 72, 0.09);
+      }
+
+      .composer-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 10px;
+        padding-left: 59px;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .chip {
+        display: inline-flex;
+        min-height: 32px;
+        align-items: center;
+        border: 1px solid rgba(51, 44, 35, 0.1);
+        border-radius: 999px;
+        background: #fff;
+        color: #68625b;
+        font-size: 12px;
+        font-weight: 900;
+        padding: 0 10px;
+      }
+
+      .chip.active {
+        border-color: rgba(53, 95, 72, 0.24);
+        background: var(--green-soft);
+        color: var(--green);
+      }
+
+      .publish-button {
+        min-width: 86px;
+        min-height: 36px;
+        border: 0;
+        border-radius: 999px;
+        background: var(--green);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 900;
+        padding: 0 15px;
+        box-shadow: 0 10px 20px rgba(53, 95, 72, 0.24);
+      }
+
+      .feed {
+        display: grid;
+        gap: 14px;
+      }
+
+      .feed-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: var(--radius-lg);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 253, 247, 0.95)),
+          var(--paper);
+        transition: transform 160ms ease, box-shadow 160ms ease;
+      }
+
+      .feed-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 34px rgba(56, 45, 32, 0.11);
+      }
+
+      [data-draggable] {
+        --drag-x: 0px;
+        --drag-y: 0px;
+        transform: translate(var(--drag-x), var(--drag-y));
+      }
+
+      body.layout-editing [data-draggable] {
+        z-index: 8;
+        cursor: grab;
+        outline: 2px dashed rgba(85, 122, 161, 0.36);
+        outline-offset: 4px;
+        transition: outline-color 120ms ease, box-shadow 120ms ease;
+      }
+
+      body.layout-editing [data-draggable]:not(.post-menu) {
+        position: relative;
+      }
+
+      body.layout-editing [data-draggable]:hover {
+        outline-color: rgba(189, 80, 63, 0.58);
+        box-shadow: 0 10px 24px rgba(35, 37, 33, 0.08);
+      }
+
+      body.layout-editing [data-draggable].dragging {
+        z-index: 20;
+        cursor: grabbing;
+        outline-color: rgba(189, 80, 63, 0.78);
+      }
+
+      .feed-card.placing-stamp {
+        cursor: crosshair;
+        outline: 2px dashed rgba(189, 80, 63, 0.38);
+        outline-offset: -7px;
+      }
+
+      .feed-card.placing-stamp::after {
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        z-index: 6;
+        transform: translateX(-50%);
+        border: 1px solid rgba(189, 80, 63, 0.22);
+        border-radius: 999px;
+        background: rgba(255, 247, 242, 0.96);
+        color: var(--red);
+        content: "点一下帖子，盖在这里";
+        font-size: 12px;
+        font-weight: 900;
+        padding: 7px 11px;
+        box-shadow: 0 12px 24px rgba(35, 37, 33, 0.1);
+        pointer-events: none;
+      }
+
+      .post {
+        position: relative;
+        display: grid;
+        grid-template-columns: 46px minmax(0, 1fr) 108px;
+        gap: 14px;
+        align-items: start;
+        padding: 24px 18px 8px;
+      }
+
+      .post-menu {
+        position: absolute;
+        top: 18px;
+        right: 14px;
+        z-index: 5;
+      }
+
+      .menu-button {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        border: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.8);
+        color: #9a938b;
+        transition: background 150ms ease, color 150ms ease;
+      }
+
+      .menu-button:hover {
+        background: rgba(53, 95, 72, 0.08);
+        color: var(--green);
+      }
+
+      .menu-popover {
+        position: absolute;
+        top: 38px;
+        right: 0;
+        display: none;
+        width: 132px;
+        border: 1px solid rgba(51, 44, 35, 0.12);
+        border-radius: 14px;
+        background: #fff;
+        padding: 7px;
+        box-shadow: 0 16px 30px rgba(35, 37, 33, 0.14);
+      }
+
+      .menu-popover.open {
+        display: block;
+      }
+
+      .menu-popover button {
+        width: 100%;
+        min-height: 34px;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--red);
+        font-size: 13px;
+        font-weight: 900;
+        text-align: left;
+        padding: 0 10px;
+      }
+
+      .menu-popover button:hover {
+        background: rgba(189, 80, 63, 0.08);
+      }
+
+      .post-main {
+        min-width: 0;
+        padding-right: 2px;
+      }
+
+      .author-line {
+        display: flex;
+        min-width: 0;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        padding-right: 12px;
+      }
+
+      .name {
+        color: #4f6f90;
+        font-size: 17px;
+        font-weight: 900;
+        line-height: 1.15;
+      }
+
+      .identity {
+        display: inline-flex;
+        min-height: 21px;
+        align-items: center;
+        border: 1px solid rgba(85, 122, 161, 0.18);
+        border-radius: 999px;
+        background: rgba(238, 246, 255, 0.88);
+        color: #4d7daf;
+        font-size: 10.5px;
+        font-weight: 900;
+        padding: 0 7px;
+      }
+
+      .identity.gold {
+        border-color: rgba(183, 121, 44, 0.22);
+        background: #fff4dd;
+        color: #9e6d21;
+      }
+
+      .time {
+        width: 100%;
+        margin-top: 1px;
+        color: #938c83;
+        font-size: 12.5px;
+        font-weight: 760;
+        line-height: 1.2;
+      }
+
+      .post-text {
+        margin: 12px 0 0;
+        color: #2f312d;
+        font-size: 15.5px;
+        font-weight: 720;
+        line-height: 1.62;
+      }
+
+      .topic-line {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 8px;
+        padding-bottom: 0;
+        transform: translate(var(--drag-x), var(--drag-y));
+      }
+
+      .topic {
+        display: inline-flex;
+        min-height: 24px;
+        align-items: center;
+        border: 1px solid rgba(53, 95, 72, 0.08);
+        border-radius: 999px;
+        background: rgba(53, 95, 72, 0.07);
+        color: var(--green);
+        font-size: 11.5px;
+        font-weight: 900;
+        padding: 0 9px;
+      }
+
+      .media-stack {
+        display: grid;
+        align-content: start;
+        gap: 8px;
+        padding-top: 38px;
+      }
+
+      .media-frame {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(51, 44, 35, 0.1);
+        border-radius: 14px;
+        background: #ede7dd;
+        aspect-ratio: 1 / 1;
+        box-shadow: 0 8px 18px rgba(35, 37, 33, 0.09);
+      }
+
+      .media-frame img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .media-count {
+        position: absolute;
+        right: 7px;
+        bottom: 7px;
+        border-radius: 999px;
+        background: rgba(35, 37, 33, 0.74);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 900;
+        line-height: 1;
+        padding: 5px 7px;
+        pointer-events: none;
+      }
+
+      .post-footer {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 14px;
+        min-height: 54px;
+        padding: 14px 20px 18px 78px;
+      }
+
+      .post-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 16px;
+        padding-bottom: 0;
+      }
+
+      .action-button {
+        display: inline-flex;
+        min-height: 32px;
+        align-items: center;
+        gap: 6px;
+        border: 0;
+        background: transparent;
+        color: #625c55;
+        font-size: 13.5px;
+        font-weight: 900;
+        padding: 0;
+        transition: color 150ms ease, transform 150ms ease;
+      }
+
+      .action-button:hover {
+        color: var(--green);
+        transform: translateY(-1px);
+      }
+
+      .action-button.active {
+        color: var(--red);
+      }
+
+      .action-button svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .stamp-tray {
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-top: 1px solid rgba(51, 44, 35, 0.08);
+        background: rgba(248, 242, 232, 0.78);
+        padding: 12px 16px 14px 80px;
+      }
+
+      .stamp-tray.open {
+        display: flex;
+      }
+
+      .stamp-tray-label {
+        color: #756f66;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .stamp-options {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .stamp-option {
+        display: grid;
+        width: 46px;
+        height: 46px;
+        place-items: center;
+        border: 1px solid rgba(51, 44, 35, 0.12);
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 2px 3px 0 rgba(35, 37, 33, 0.06);
+      }
+
+      .stamp-option img {
+        width: 36px;
+        height: 36px;
+        object-fit: contain;
+      }
+
+      .stamp-layer {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .placed-stamp {
+        position: absolute;
+        width: 66px;
+        height: 66px;
+        object-fit: contain;
+        filter: drop-shadow(0 5px 7px rgba(35, 37, 33, 0.14));
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.8) rotate(-9deg);
+        animation: stamp-in 260ms cubic-bezier(0.22, 0.78, 0.28, 1.12) forwards;
+      }
+
+      @keyframes stamp-in {
+        to {
+          opacity: 0.92;
+          transform: translate(-50%, -50%) scale(1) rotate(-9deg);
+        }
+      }
+
+      .comments {
+        display: none;
+        border-top: 1px solid rgba(51, 44, 35, 0.08);
+        background: rgba(255, 255, 255, 0.62);
+        padding: 12px 16px 14px 80px;
+      }
+
+      .comments.open {
+        display: block;
+      }
+
+      .comment {
+        display: flex;
+        gap: 9px;
+        margin-bottom: 10px;
+      }
+
+      .comment:last-child {
+        margin-bottom: 0;
+      }
+
+      .mini-avatar {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--green-soft);
+        color: var(--green);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .comment-bubble {
+        min-width: 0;
+        border-radius: 13px;
+        background: #fff;
+        padding: 8px 10px;
+      }
+
+      .comment-bubble strong {
+        display: block;
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 900;
+        line-height: 1.3;
+      }
+
+      .comment-bubble span {
+        display: block;
+        margin-top: 2px;
+        color: #5d5851;
+        font-size: 13px;
+        font-weight: 740;
+        line-height: 1.55;
+      }
+
+      .toast {
+        position: fixed;
+        right: 18px;
+        bottom: 88px;
+        z-index: 20;
+        transform: translateY(22px);
+        opacity: 0;
+        border: 1px solid rgba(35, 37, 33, 0.12);
+        border-radius: 999px;
+        background: #232521;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 900;
+        padding: 12px 16px;
+        box-shadow: 0 20px 38px rgba(35, 37, 33, 0.22);
+        transition: opacity 180ms ease, transform 180ms ease;
+      }
+
+      .toast.show {
+        transform: translateY(0);
+        opacity: 1;
+      }
+
+      .floating-compose {
+        position: fixed;
+        right: max(18px, env(safe-area-inset-right));
+        bottom: max(18px, env(safe-area-inset-bottom));
+        z-index: 18;
+        display: grid;
+        width: 58px;
+        height: 58px;
+        place-items: center;
+        border: 2px solid rgba(255, 255, 255, 0.92);
+        border-radius: 50%;
+        background: var(--green);
+        color: #fff;
+        box-shadow: 0 18px 34px rgba(53, 95, 72, 0.32);
+      }
+
+      .floating-compose svg {
+        width: 27px;
+        height: 27px;
+      }
+
+      .layout-debug-toolbar {
+        position: fixed;
+        left: max(14px, env(safe-area-inset-left));
+        bottom: max(14px, env(safe-area-inset-bottom));
+        z-index: 19;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid rgba(51, 44, 35, 0.12);
+        border-radius: 999px;
+        background: rgba(255, 253, 247, 0.92);
+        padding: 8px;
+        box-shadow: 0 16px 34px rgba(35, 37, 33, 0.15);
+        backdrop-filter: blur(12px);
+      }
+
+      .debug-button {
+        min-height: 36px;
+        border: 0;
+        border-radius: 999px;
+        background: #fff;
+        color: #5d5851;
+        font-size: 12px;
+        font-weight: 900;
+        padding: 0 12px;
+      }
+
+      .debug-button.active {
+        background: var(--red);
+        color: #fff;
+      }
+
+      .debug-hint {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 850;
+        padding-right: 6px;
+      }
+
+      .composer-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        display: none;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 18px 12px 0;
+      }
+
+      .composer-modal.open {
+        display: flex;
+      }
+
+      .modal-backdrop {
+        position: absolute;
+        inset: 0;
+        border: 0;
+        background: rgba(35, 37, 33, 0.34);
+        backdrop-filter: blur(4px);
+      }
+
+      .modal-card {
+        position: relative;
+        width: min(100%, 620px);
+        max-height: calc(100dvh - 32px);
+        overflow: auto;
+        border: 1px solid rgba(51, 44, 35, 0.14);
+        border-radius: 28px 28px 0 0;
+        background: var(--paper);
+        box-shadow: 0 -18px 48px rgba(35, 37, 33, 0.24);
+      }
+
+      .modal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 16px 0;
+      }
+
+      .modal-title {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 900;
+        line-height: 1.15;
+      }
+
+      .modal-close {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        place-items: center;
+        border: 1px solid rgba(51, 44, 35, 0.12);
+        border-radius: 50%;
+        background: #fff;
+        color: var(--ink);
+      }
+
+      svg {
+        display: block;
+      }
+
+      @media (max-width: 780px) {
+        .shell {
+          padding: 18px 12px 28px;
+        }
+
+        .topbar {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .top-actions {
+          justify-content: flex-start;
+        }
+
+        main {
+          max-width: none;
+        }
+      }
+
+      @media (max-width: 560px) {
+        h1 {
+          font-size: 25px;
+        }
+
+        .brand-mark {
+          width: 44px;
+          height: 44px;
+        }
+
+        .composer-footer {
+          align-items: stretch;
+          flex-direction: column;
+          padding-left: 0;
+        }
+
+        .composer-row {
+          grid-template-columns: 42px minmax(0, 1fr);
+        }
+
+        .avatar {
+          width: 42px;
+          height: 42px;
+          font-size: 14px;
+        }
+
+        .post {
+          grid-template-columns: 40px minmax(0, 1fr) 96px;
+          gap: 11px;
+          padding: 20px 14px 7px;
+        }
+
+        .post-main {
+          padding-right: 0;
+        }
+
+        .post > .avatar {
+          width: 40px;
+          height: 40px;
+          font-size: 13.5px;
+        }
+
+        .name {
+          font-size: 15.5px;
+        }
+
+        .post-text {
+          margin-top: 10px;
+          font-size: 14.5px;
+          line-height: 1.58;
+        }
+
+        .media-stack {
+          padding-top: 37px;
+        }
+
+        .post-footer,
+        .stamp-tray,
+        .comments {
+          padding-left: 65px;
+        }
+
+        .post-footer {
+          grid-template-columns: 1fr;
+          gap: 8px;
+          padding-right: 14px;
+        }
+
+        .post-actions {
+          justify-content: flex-end;
+        }
+
+        .stamp-tray {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .stamp-options {
+          justify-content: flex-start;
+        }
+
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <img src="public/cmi-home/blackboard-together.svg" alt="" />
+          </div>
+          <div>
+            <h1>CMI 聊天看板</h1>
+            <p class="subtitle">约搭子、求助、聊天、拼车，先发在这里。</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="layout">
+        <main>
+          <section id="feed" class="feed" aria-label="帖子流">
+            <article class="feed-card" data-card-id="market" data-category="约搭子">
+              <div class="post-menu" data-draggable data-drag-key="menu">
+                <button class="menu-button" type="button" aria-label="更多操作" data-menu-button>
+                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="5" cy="12" r="2" fill="currentColor" />
+                    <circle cx="12" cy="12" r="2" fill="currentColor" />
+                    <circle cx="19" cy="12" r="2" fill="currentColor" />
+                  </svg>
+                </button>
+                <div class="menu-popover" data-menu>
+                  <button type="button" data-report>举报这条</button>
+                </div>
+              </div>
+              <div class="stamp-layer" aria-hidden="true"></div>
+              <div class="post">
+                <div class="avatar blue" data-draggable data-drag-key="avatar">集</div>
+                <div class="post-main">
+                  <div class="author-line" data-draggable data-drag-key="author">
+                    <span class="name">集友 KEnU3Kw</span>
+                    <span class="identity">初中生</span>
+                    <span class="time">刚刚</span>
+                  </div>
+                  <p class="post-text" data-draggable data-drag-key="text">
+                    周六上午想去 Jing Jai Market 逛一圈，买咖啡、看手作，慢慢走不赶时间。现在 2 个人，还可以再约 1-2 个。
+                  </p>
+                </div>
+                <div class="media-stack" data-draggable data-drag-key="media">
+                  <div class="media-frame">
+                    <img src="public/cmi-home/yard-scene.jpg" alt="清迈客栈院子照片" />
+                  </div>
+                </div>
+              </div>
+              <div class="post-footer">
+                <div class="topic-line" data-draggable data-drag-key="tags">
+                  <span class="topic"># 周末市集</span>
+                  <span class="topic"># 找搭子</span>
+                </div>
+                <div class="post-actions" data-draggable data-drag-key="actions">
+                  <button class="action-button" type="button" data-comment-button>
+                    <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M5 6.5h14v9H9.5L5 19.2V6.5Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" />
+                      <path d="M8.5 10.2h7M8.5 13h4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+                    </svg>
+                    <span data-comment-count>3</span>
+                  </button>
+                  <button class="action-button" type="button" data-stamp-button>
+                    <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M7.6 10.4v9.1H4.4v-9.1h3.2Z" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" />
+                      <path d="M7.7 10.5l3.9-6.1c.5-.8 1.8-.5 1.9.5l.3 3.5h4.3c1.1 0 1.9 1 1.6 2.1l-1.5 6.8c-.2 1-1 1.7-2.1 1.7H7.7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" />
+                    </svg>
+                    <span data-stamp-count>12</span>
+                  </button>
+                </div>
+              </div>
+              <div class="stamp-tray" data-stamp-tray>
+                <span class="stamp-tray-label">先选戳，再点帖子位置</span>
+                <div class="stamp-options">
+                  <button class="stamp-option" type="button" data-stamp-src="public/stickers/stamp-cmi-selected.png"><img src="public/stickers/stamp-cmi-selected.png" alt="客栈精选戳" /></button>
+                  <button class="stamp-option" type="button" data-stamp-src="public/stickers/stamp-good-lucky.png"><img src="public/stickers/stamp-good-lucky.png" alt="好运戳" /></button>
+                  <button class="stamp-option" type="button" data-stamp-src="public/stickers/stamp-paw.png"><img src="public/stickers/stamp-paw.png" alt="爪印戳" /></button>
+                  <button class="stamp-option" type="button" data-stamp-src="public/stickers/stamp-grass.png"><img src="public/stickers/stamp-grass.png" alt="草地戳" /></button>
+                </div>
+              </div>
+              <div class="comments" data-comments>
+                <div class="comment">
+                  <span class="mini-avatar">林</span>
+                  <div class="comment-bubble"><strong>林可</strong><span>这个路线适合上午去，下午人会多一点。</span></div>
+                </div>
+                <div class="comment">
+                  <span class="mini-avatar">Y</span>
+                  <div class="comment-bubble"><strong>Yuki</strong><span>我想加入，可以一起打车过去。</span></div>
+                </div>
+                <div class="comment">
+                  <span class="mini-avatar">安</span>
+                  <div class="comment-bubble"><strong>Andreas</strong><span>如果从客栈出发，可以 9:30 门口集合。</span></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="feed-card" data-card-id="tm30-help" data-category="求助">
+              <div class="post-menu" data-draggable data-drag-key="menu">
+                <button class="menu-button" type="button" aria-label="更多操作" data-menu-button>
+                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="5" cy="12" r="2" fill="currentColor" />
+                    <circle cx="12" cy="12" r="2" fill="currentColor" />
+                    <circle cx="19" cy="12" r="2" fill="currentColor" />
+                  </svg>
+                </button>
+                <div class="menu-popover" data-menu>
+                  <button type="button" data-report>举报这条</button>
+                </div>
+              </div>
+              <div class="stamp-layer" aria-hidden="true"></div>
+              <div class="post">
+                <div class="avatar" data-draggable data-drag-key="avatar">夏</div>
+                <div class="post-main">
+                  <div class="author-line" data-draggable data-drag-key="author">
+                    <span class="name">夏天不会骑车</span>
+                    <span class="identity gold">新到清迈</span>
+                    <span class="time">12 分钟前</span>
+                  </div>
+                  <p class="post-text" data-draggable data-drag-key="text">
+                    想问一下古城附近有没有靠谱的证件照和打印店？明天要去办 TM30 相关材料，最好能英文沟通。
+                  </p>
+                </div>
+                <div class="media-stack" data-draggable data-drag-key="media">
+                  <div class="media-frame">
+                    <img src="public/cmi-home/checkin-doorway.jpg" alt="门口照片" />
+                    <span class="media-count">2 图</span>
+                  </div>
+                </div>
+              </div>
+              <div class="post-footer">
+                <div class="topic-line" data-draggable data-drag-key="tags">
+                  <span class="topic"># 求助</span>
+                  <span class="topic"># 签证文件</span>
+                </div>
+                <div class="post-actions" data-draggable data-drag-key="actions">
+                  <button class="action-button" type="button" data-comment-button>
+                    <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M5 6.5h14v9H9.5L5 19.2V6.5Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" />
+                      <path d="M8.5 10.2h7M8.5 13h4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+                    </svg>
+                    <span data-comment-count>5</span>
+                  </button>
+                  <button class="action-button" type="button" data-stamp-button>
+                    <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M7.6 10.4v9.1H4.4v-9.1h3.2Z" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" />
+                      <path d="M7.7 10.5l3.9-6.1c.5-.8 1.8-.5 1.9.5l.3 3.5h4.3c1.1 0 1.9 1 1.6 2.1l-1.5 6.8c-.2 1-1 1.7-2.1 1.7H7.7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" />
+                    </svg>
+                    <span data-stamp-count>8</span>
+                  </button>
+                </div>
+              </div>
+              <div class="stamp-tray" data-stamp-tray>
+                <span class="stamp-tray-label">先选戳，再点帖子位置</span>
+                <div class="stamp-options">
+                  <button class="stamp-option" type="button" data-stamp-src="public/stickers/stamp-cmi-selected.png"><img src="public/stickers/stamp-cmi-selected.png" alt="客栈精选戳" /></button>
+                  <button class="stamp-option" type="button" data-stamp-src="public/stickers/stamp-good-lucky.png"><img src="public/stickers/stamp-good-lucky.png" alt="好运戳" /></button>
+                  <button class="stamp-option" type="button" data-stamp-src="public/stickers/stamp-paw.png"><img src="public/stickers/stamp-paw.png" alt="爪印戳" /></button>
+                  <button class="stamp-option" type="button" data-stamp-src="public/stickers/stamp-grass.png"><img src="public/stickers/stamp-grass.png" alt="草地戳" /></button>
+                </div>
+              </div>
+              <div class="comments" data-comments>
+                <div class="comment">
+                  <span class="mini-avatar">K</span>
+                  <div class="comment-bubble"><strong>Kai</strong><span>One Nimman 里面有打印点，急用比较稳。</span></div>
+                </div>
+                <div class="comment">
+                  <span class="mini-avatar">安</span>
+                  <div class="comment-bubble"><strong>Andreas</strong><span>我晚点把移民局附近的几个点整理到生存包。</span></div>
+                </div>
+              </div>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <button id="floatingComposerButton" class="floating-compose" type="button" aria-label="发帖子">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+      </svg>
+    </button>
+
+    <div class="layout-debug-toolbar" aria-label="布局调试工具">
+      <button id="layoutEditToggle" class="debug-button" type="button">编辑布局</button>
+      <button id="layoutResetButton" class="debug-button" type="button">重置位置</button>
+      <span class="debug-hint">调试版</span>
+    </div>
+
+    <div id="composerModal" class="composer-modal" aria-hidden="true">
+      <button class="modal-backdrop" type="button" aria-label="关闭发布" data-close-composer></button>
+      <section class="modal-card" role="dialog" aria-modal="true" aria-label="发布帖子">
+        <div class="modal-head">
+          <h2 class="modal-title">发一条</h2>
+          <button class="modal-close" type="button" aria-label="关闭发布" data-close-composer>
+            <svg width="19" height="19" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
+        <section class="composer in-modal" aria-label="发布帖子">
+          <div class="composer-row">
+            <div class="avatar gold">你</div>
+            <textarea id="composerInput" placeholder="今天想约谁一起出发？"></textarea>
+          </div>
+          <div class="composer-footer">
+            <div class="chips" aria-label="帖子分类">
+              <button class="chip active" type="button" data-draft-category="约搭子">约搭子</button>
+              <button class="chip" type="button" data-draft-category="求助">求助</button>
+              <button class="chip" type="button" data-draft-category="聊天">聊天</button>
+              <button class="chip" type="button" data-draft-category="拼车">拼车</button>
+            </div>
+            <button id="publishButton" class="publish-button" type="button">发布</button>
+          </div>
+        </section>
+      </section>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      const feed = document.querySelector("#feed");
+      const toast = document.querySelector("#toast");
+      const composerInput = document.querySelector("#composerInput");
+      const publishButton = document.querySelector("#publishButton");
+      const composerModal = document.querySelector("#composerModal");
+      const floatingComposerButton = document.querySelector("#floatingComposerButton");
+      const layoutEditToggle = document.querySelector("#layoutEditToggle");
+      const layoutResetButton = document.querySelector("#layoutResetButton");
+      const LAYOUT_STORAGE_KEY = "cmi-blackboard-prototype-layout-v1";
+      let draftCategory = "约搭子";
+      let pendingStamp = null;
+      let layoutEditing = false;
+      let dragState = null;
+
+      const readLayoutState = () => {
+        try {
+          return JSON.parse(window.localStorage.getItem(LAYOUT_STORAGE_KEY) || "{}");
+        } catch {
+          return {};
+        }
+      };
+
+      let layoutState = readLayoutState();
+
+      const writeLayoutState = () => {
+        window.localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(layoutState));
+      };
+
+      const getDragId = (element) => {
+        const card = element.closest(".feed-card");
+        return `${card?.dataset.cardId || "card"}:${element.dataset.dragKey}`;
+      };
+
+      const setDragOffset = (element, offset) => {
+        element.style.setProperty("--drag-x", `${offset.x}px`);
+        element.style.setProperty("--drag-y", `${offset.y}px`);
+      };
+
+      const getDragOffset = (element) => {
+        const dragId = getDragId(element);
+        return layoutState[dragId] || { x: 0, y: 0 };
+      };
+
+      const applySavedLayout = (root = document) => {
+        root.querySelectorAll("[data-draggable]").forEach((element) => {
+          setDragOffset(element, getDragOffset(element));
+        });
+      };
+
+      const setLayoutEditing = (nextValue) => {
+        layoutEditing = nextValue;
+        document.body.classList.toggle("layout-editing", layoutEditing);
+        layoutEditToggle.classList.toggle("active", layoutEditing);
+        layoutEditToggle.textContent = layoutEditing ? "完成编辑" : "编辑布局";
+        showToast(layoutEditing ? "可以拖动帖子组件了" : "布局编辑已关闭");
+      };
+
+      const showToast = (message) => {
+        toast.textContent = message;
+        toast.classList.add("show");
+        window.setTimeout(() => toast.classList.remove("show"), 1800);
+      };
+
+      const openComposer = () => {
+        composerModal.classList.add("open");
+        composerModal.setAttribute("aria-hidden", "false");
+        window.setTimeout(() => composerInput.focus(), 60);
+      };
+
+      const closeComposer = () => {
+        composerModal.classList.remove("open");
+        composerModal.setAttribute("aria-hidden", "true");
+      };
+
+      floatingComposerButton.addEventListener("click", openComposer);
+      layoutEditToggle.addEventListener("click", () => setLayoutEditing(!layoutEditing));
+      layoutResetButton.addEventListener("click", () => {
+        layoutState = {};
+        writeLayoutState();
+        applySavedLayout();
+        showToast("布局位置已重置");
+      });
+      document.querySelectorAll("[data-close-composer]").forEach((button) => {
+        button.addEventListener("click", closeComposer);
+      });
+
+      document.addEventListener("pointerdown", (event) => {
+        if (!layoutEditing) return;
+        const target = event.target.closest("[data-draggable]");
+        if (!target || target.closest(".composer-modal")) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const currentOffset = getDragOffset(target);
+        dragState = {
+          target,
+          id: getDragId(target),
+          startX: event.clientX,
+          startY: event.clientY,
+          originX: currentOffset.x,
+          originY: currentOffset.y,
+        };
+        target.classList.add("dragging");
+        target.setPointerCapture?.(event.pointerId);
+      }, true);
+
+      document.addEventListener("pointermove", (event) => {
+        if (!dragState) return;
+        const nextOffset = {
+          x: dragState.originX + event.clientX - dragState.startX,
+          y: dragState.originY + event.clientY - dragState.startY,
+        };
+        setDragOffset(dragState.target, nextOffset);
+      });
+
+      document.addEventListener("pointerup", () => {
+        if (!dragState) return;
+        const computedStyle = window.getComputedStyle(dragState.target);
+        const currentX = Number.parseFloat(computedStyle.getPropertyValue("--drag-x")) || 0;
+        const currentY = Number.parseFloat(computedStyle.getPropertyValue("--drag-y")) || 0;
+        layoutState[dragState.id] = {
+          x: Math.round(currentX),
+          y: Math.round(currentY),
+        };
+        writeLayoutState();
+        dragState.target.classList.remove("dragging");
+        dragState = null;
+      });
+
+      const closeMenus = () => {
+        document.querySelectorAll("[data-menu]").forEach((menu) => menu.classList.remove("open"));
+      };
+
+      const clearPendingStamp = () => {
+        pendingStamp = null;
+        document.querySelectorAll(".feed-card.placing-stamp").forEach((card) => card.classList.remove("placing-stamp"));
+        document.querySelectorAll("[data-stamp-tray]").forEach((tray) => {
+          const label = tray.querySelector(".stamp-tray-label");
+          if (label) label.textContent = "先选戳，再点帖子上的位置";
+        });
+      };
+
+      const placeStampAt = (card, source, clientX, clientY) => {
+        const layer = card.querySelector(".stamp-layer");
+        const rect = card.getBoundingClientRect();
+        const stamp = document.createElement("img");
+        const xRatio = ((clientX - rect.left) / rect.width) * 100;
+        const yRatio = ((clientY - rect.top) / rect.height) * 100;
+        stamp.className = "placed-stamp";
+        stamp.src = source;
+        stamp.alt = "";
+        stamp.style.left = `${Math.max(8, Math.min(92, xRatio))}%`;
+        stamp.style.top = `${Math.max(10, Math.min(88, yRatio))}%`;
+        layer.append(stamp);
+
+        const count = card.querySelector("[data-stamp-count]");
+        count.textContent = String(Number(count.textContent) + 1);
+        card.querySelector("[data-stamp-button]")?.classList.add("active");
+      };
+
+      document.addEventListener("click", (event) => {
+        if (!event.target.closest("[data-menu-button]") && !event.target.closest("[data-menu]")) {
+          closeMenus();
+        }
+      });
+
+      document.querySelectorAll("[data-draft-category]").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll("[data-draft-category]").forEach((item) => item.classList.remove("active"));
+          button.classList.add("active");
+          draftCategory = button.dataset.draftCategory;
+        });
+      });
+
+      const bindCard = (card) => {
+        card.querySelector("[data-menu-button]")?.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const menu = card.querySelector("[data-menu]");
+          const isOpen = menu.classList.contains("open");
+          closeMenus();
+          menu.classList.toggle("open", !isOpen);
+        });
+
+        card.querySelector("[data-report]")?.addEventListener("click", () => {
+          closeMenus();
+          showToast("已收到举报入口反馈");
+        });
+
+        card.querySelector("[data-comment-button]")?.addEventListener("click", () => {
+          card.querySelector("[data-comments]")?.classList.toggle("open");
+        });
+
+        card.querySelector("[data-stamp-button]")?.addEventListener("click", () => {
+          card.querySelector("[data-stamp-tray]")?.classList.toggle("open");
+        });
+
+        card.querySelectorAll("[data-stamp-src]").forEach((button, index) => {
+          button.addEventListener("click", () => {
+            pendingStamp = { card, source: button.dataset.stampSrc };
+            document.querySelectorAll(".feed-card.placing-stamp").forEach((item) => item.classList.remove("placing-stamp"));
+            card.classList.add("placing-stamp");
+            const label = card.querySelector(".stamp-tray-label");
+            if (label) label.textContent = "现在点一下帖子上的位置";
+          });
+        });
+
+        card.addEventListener("click", (event) => {
+          if (!pendingStamp || pendingStamp.card !== card) return;
+          if (event.target.closest("button")) return;
+
+          placeStampAt(card, pendingStamp.source, event.clientX, event.clientY);
+          card.querySelector("[data-stamp-tray]")?.classList.remove("open");
+          clearPendingStamp();
+        });
+      };
+
+      document.querySelectorAll(".feed-card").forEach(bindCard);
+      applySavedLayout();
+
+      publishButton.addEventListener("click", () => {
+        const text = composerInput.value.trim();
+        if (!text) {
+          showToast("先写一点内容");
+          return;
+        }
+
+        const card = document.createElement("article");
+        card.className = "feed-card";
+        card.dataset.cardId = `local-${Date.now()}`;
+        card.dataset.category = draftCategory;
+        card.innerHTML = `
+          <div class="post-menu" data-draggable data-drag-key="menu">
+            <button class="menu-button" type="button" aria-label="更多操作" data-menu-button>
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="5" cy="12" r="2" fill="currentColor"></circle>
+                <circle cx="12" cy="12" r="2" fill="currentColor"></circle>
+                <circle cx="19" cy="12" r="2" fill="currentColor"></circle>
+              </svg>
+            </button>
+            <div class="menu-popover" data-menu><button type="button" data-report>举报这条</button></div>
+          </div>
+          <div class="stamp-layer" aria-hidden="true"></div>
+          <div class="post">
+            <div class="avatar gold" data-draggable data-drag-key="avatar">你</div>
+            <div class="post-main">
+              <div class="author-line" data-draggable data-drag-key="author">
+                <span class="name">你</span>
+                <span class="identity gold">${draftCategory}</span>
+                <span class="time">刚刚</span>
+              </div>
+              <p class="post-text" data-draggable data-drag-key="text">${text.replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</p>
+            </div>
+            <div class="media-stack" data-draggable data-drag-key="media">
+              <div class="media-frame"><img src="public/cmi-home/memory-wall-calm.jpg" alt="发布配图预览"></div>
+            </div>
+          </div>
+          <div class="post-footer">
+            <div class="topic-line" data-draggable data-drag-key="tags"><span class="topic"># ${draftCategory}</span></div>
+            <div class="post-actions" data-draggable data-drag-key="actions">
+              <button class="action-button" type="button" data-comment-button>
+                <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 6.5h14v9H9.5L5 19.2V6.5Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"></path>
+                  <path d="M8.5 10.2h7M8.5 13h4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+                </svg>
+                <span data-comment-count>0</span>
+              </button>
+              <button class="action-button" type="button" data-stamp-button>
+                <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7.6 10.4v9.1H4.4v-9.1h3.2Z" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"></path>
+                  <path d="M7.7 10.5l3.9-6.1c.5-.8 1.8-.5 1.9.5l.3 3.5h4.3c1.1 0 1.9 1 1.6 2.1l-1.5 6.8c-.2 1-1 1.7-2.1 1.7H7.7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"></path>
+                </svg>
+                <span data-stamp-count>0</span>
+              </button>
+            </div>
+          </div>
+          <div class="stamp-tray" data-stamp-tray>
+            <span class="stamp-tray-label">先选戳，再点帖子位置</span>
+            <div class="stamp-options">
+              <button class="stamp-option" type="button" data-stamp-src="public/stickers/stamp-cmi-selected.png"><img src="public/stickers/stamp-cmi-selected.png" alt="客栈精选戳"></button>
+              <button class="stamp-option" type="button" data-stamp-src="public/stickers/stamp-good-lucky.png"><img src="public/stickers/stamp-good-lucky.png" alt="好运戳"></button>
+              <button class="stamp-option" type="button" data-stamp-src="public/stickers/stamp-paw.png"><img src="public/stickers/stamp-paw.png" alt="爪印戳"></button>
+              <button class="stamp-option" type="button" data-stamp-src="public/stickers/stamp-grass.png"><img src="public/stickers/stamp-grass.png" alt="草地戳"></button>
+            </div>
+          </div>
+          <div class="comments" data-comments>
+            <div class="comment">
+              <span class="mini-avatar">CMI</span>
+              <div class="comment-bubble"><strong>系统</strong><span>这条帖子还没有评论。</span></div>
+            </div>
+          </div>
+        `;
+
+        feed.prepend(card);
+        bindCard(card);
+        applySavedLayout(card);
+        composerInput.value = "";
+        closeComposer();
+        showToast("已发布到看板原型");
+      });
+    </script>
+  </body>
+</html>
