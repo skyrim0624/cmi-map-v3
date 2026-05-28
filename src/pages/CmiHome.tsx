@@ -36,7 +36,6 @@ import {
   cancelCmiEventRegistration,
   getCurrentUserCmiEventRegistrations,
   getPublishedCmiEvents,
-  getPublicCmiEventRegistrations,
   registerForCmiEvent,
 } from '@/db/cmi-events';
 import { getStableProfileIdentity } from '@/features/profiles/profile-identity';
@@ -1023,14 +1022,12 @@ export default function CmiHome() {
 
     try {
       const eventPageUrl = getPublicCmiEventUrl(event.id);
-      const publicRegistrations = await getPublicCmiEventRegistrations(event.id);
 
       const card = await createCmiEventShareCard({
         event,
         posterUrl,
         referenceDate,
         eventPageUrl,
-        registrationCount: publicRegistrations.length,
       });
       const file = new File([card.blob], card.fileName, { type: 'image/png' });
       const shareData: FileShareData = {
