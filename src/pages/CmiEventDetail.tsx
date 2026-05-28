@@ -440,7 +440,7 @@ export default function CmiEventDetail() {
             CMI Map
           </h1>
           <img
-            src="/cmi-home/cmi-map-slogan-handwritten.png"
+            src="/cmi-home/cmi-map-slogan-handwritten.png?v=20260528-strong"
             alt="清迈活动和好去处，都在这里"
             className="mt-3 h-auto w-[82%] max-w-[420px]"
             loading="eager"

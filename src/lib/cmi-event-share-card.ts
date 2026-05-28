@@ -27,7 +27,7 @@ const POSTER_RADIUS = 38;
 const MODULE_GAP = 28;
 const FONT_FAMILY = '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif';
 const MAP_QR_URL = '/cmi-home/qr-cmi-map-root.png';
-const SLOGAN_ART_URL = '/cmi-home/cmi-map-slogan-handwritten.png';
+const SLOGAN_ART_URL = '/cmi-home/cmi-map-slogan-handwritten.png?v=20260528-strong';
 const MAP_URL_LABEL = '扫码报名参加';
 const INTRO_FONT = `1000 54px ${FONT_FAMILY}`;
 const INTRO_LINE_HEIGHT = 68;
