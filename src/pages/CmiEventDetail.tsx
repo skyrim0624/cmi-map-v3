@@ -5,7 +5,6 @@ import {
   Check,
   Clock3,
   Loader2,
-  Mail,
   type LucideIcon,
   MapPin,
   MapPinned,
@@ -16,8 +15,8 @@ import {
   Ticket,
   UsersRound,
 } from 'lucide-react';
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,6 +41,7 @@ import {
   getCmiEventTypeLabel,
 } from '@/data/cmi-events';
 import {
+  getCurrentUserCmiEventRegistrations,
   getPublicCmiEventRegistrations,
   getPublishedCmiEvents,
   registerForCmiEvent,
@@ -73,7 +73,7 @@ const decodeRouteParam = (value: string | undefined) => {
 const renderPostBlock = (block: CmiEventDetailBlock, index: number) => {
   if (block.kind === 'heading') {
     return (
-      <h3 key={`${block.kind}-${index}`} className="pt-2 text-lg font-black leading-tight text-[#242424]">
+      <h3 key={`${block.kind}-${index}`} className="pt-2 text-lg font-black leading-tight text-white">
         {block.text}
       </h3>
     );
@@ -83,8 +83,8 @@ const renderPostBlock = (block: CmiEventDetailBlock, index: number) => {
     return (
       <ul key={`${block.kind}-${index}`} className="space-y-2">
         {block.items.map(item => (
-          <li key={item} className="flex gap-2 text-[15px] font-bold leading-relaxed text-[#4f4639]">
-            <span className="mt-[0.65rem] h-1.5 w-1.5 shrink-0 rounded-full bg-[#3f6e52]" />
+          <li key={item} className="flex gap-2 text-[15px] font-bold leading-relaxed text-white/85">
+            <span className="mt-[0.65rem] h-1.5 w-1.5 shrink-0 rounded-full bg-[#ffe466]" />
             <span>{item}</span>
           </li>
         ))}
@@ -93,7 +93,7 @@ const renderPostBlock = (block: CmiEventDetailBlock, index: number) => {
   }
 
   return (
-    <p key={`${block.kind}-${index}`} className="text-[15px] font-bold leading-[1.85] text-[#4f4639]">
+    <p key={`${block.kind}-${index}`} className="text-[15px] font-bold leading-[1.85] text-white/85">
       {block.text}
     </p>
   );
@@ -109,13 +109,13 @@ function EventInfoRow({
   value: string;
 }) {
   return (
-    <div className="grid grid-cols-[2.35rem_minmax(0,1fr)] gap-3 rounded-[1rem] border border-[#2e2a23]/8 bg-white/78 p-3">
-      <div className="flex h-9 w-9 items-center justify-center rounded-[0.85rem] bg-[#fff0d5] text-[#8b5f32]">
+    <div className="grid grid-cols-[2.35rem_minmax(0,1fr)] gap-3 rounded-[1rem] border-[3px] border-[#050505] bg-white/76 p-3 shadow-[3px_4px_0_rgba(5,5,5,0.16)]">
+      <div className="flex h-9 w-9 items-center justify-center rounded-[0.85rem] border-2 border-[#050505] bg-[#fff7df] text-[#050505]">
         <Icon className="h-[18px] w-[18px]" strokeWidth={2.5} />
       </div>
       <div className="min-w-0">
-        <p className="text-[11px] font-black leading-none text-[#8b5f32]">{label}</p>
-        <p className="mt-1.5 text-[14px] font-black leading-snug text-[#30302b]">{value}</p>
+        <p className="text-[11px] font-black leading-none text-[#6b4ca8]">{label}</p>
+        <p className="mt-1.5 break-words text-[14px] font-black leading-snug text-[#050505]">{value}</p>
       </div>
     </div>
   );
@@ -131,12 +131,12 @@ function EventInfoTile({
   value: string;
 }) {
   return (
-    <div className="rounded-[1rem] border border-[#2e2a23]/8 bg-white/78 p-3">
-      <div className="flex items-center gap-1.5 text-[11px] font-black leading-none text-[#8b5f32]">
+    <div className="rounded-[1rem] border-[3px] border-[#050505] bg-white/76 p-3 shadow-[3px_4px_0_rgba(5,5,5,0.16)]">
+      <div className="flex items-center gap-1.5 text-[11px] font-black leading-none text-[#6b4ca8]">
         <Icon className="h-3.5 w-3.5" strokeWidth={2.5} />
         {label}
       </div>
-      <p className="mt-2 text-[13px] font-black leading-snug text-[#30302b]">{value}</p>
+      <p className="mt-2 break-words text-[13px] font-black leading-snug text-[#050505]">{value}</p>
     </div>
   );
 }
@@ -145,6 +145,7 @@ export default function CmiEventDetail() {
   const { eventId: eventIdParam } = useParams<{ eventId: string }>();
   const eventId = useMemo(() => decodeRouteParam(eventIdParam), [eventIdParam]);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, profile } = useAuth();
   const referenceDate = useMemo(() => new Date(), []);
   const [event, setEvent] = useState<CmiEvent | null>(() => getCmiEventById(eventId));
@@ -152,9 +153,7 @@ export default function CmiEventDetail() {
   const [rideDialogOpen, setRideDialogOpen] = useState(false);
   const [wantToGo, setWantToGo] = useState(false);
   const [publicRegistrations, setPublicRegistrations] = useState<CmiEventPublicRegistration[]>([]);
-  const [attendeeName, setAttendeeName] = useState(profile?.user_name ?? '');
-  const [attendeeEmail, setAttendeeEmail] = useState(user?.email ?? '');
-  const [registrationNote, setRegistrationNote] = useState('');
+  const [currentUserRegistered, setCurrentUserRegistered] = useState(false);
   const [submittingRegistration, setSubmittingRegistration] = useState(false);
 
   const detailContent = getCmiEventDetailContent(eventId);
@@ -248,9 +247,26 @@ export default function CmiEventDetail() {
   }, [event?.registrationEnabled, eventId]);
 
   useEffect(() => {
-    if (!attendeeName && profile?.user_name) setAttendeeName(profile.user_name);
-    if (!attendeeEmail && user?.email) setAttendeeEmail(user.email);
-  }, [attendeeEmail, attendeeName, profile?.user_name, user?.email]);
+    let isMounted = true;
+
+    if (!eventId || !user?.id) {
+      setCurrentUserRegistered(false);
+      return;
+    }
+
+    getCurrentUserCmiEventRegistrations([eventId], user.id)
+      .then(registrations => {
+        if (!isMounted) return;
+        setCurrentUserRegistered(registrations.some(registration => registration.eventId === eventId));
+      })
+      .catch(() => {
+        if (isMounted) setCurrentUserRegistered(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [eventId, user?.id]);
 
   const handleToggleWantToGo = () => {
     if (!eventId) return;
@@ -281,30 +297,36 @@ export default function CmiEventDetail() {
     navigate(getCmiBlackboardPath({ compose: true, eventId: event.id }));
   };
 
-  const handleRegistrationSubmit = async (submitEvent: FormEvent<HTMLFormElement>) => {
-    submitEvent.preventDefault();
+  const handleOneClickRegistration = async () => {
     if (!event) return;
+    if (!user?.id || !user.email) {
+      toast('登录后可以一键报名', { description: '注册只需要一个邮箱。' });
+      navigate('/login', { state: { from: `${location.pathname}${location.search}` } });
+      return;
+    }
+    if (currentUserRegistered) {
+      toast('你已经报名这个活动了');
+      return;
+    }
     if (!isRegistrationOpen) {
       toast.error(registrationSummary.isFull ? '这个活动名额已满' : '这个活动暂时关闭报名');
       return;
     }
-    if (!attendeeName.trim() || !attendeeEmail.trim()) {
-      toast.error('请填写报名昵称和邮箱');
-      return;
-    }
+
+    const attendeeName = profile?.user_name?.trim() || user.email.split('@')[0] || 'CMI 朋友';
 
     setSubmittingRegistration(true);
     try {
       const result = await registerForCmiEvent({
         eventId: event.id,
         attendeeName,
-        attendeeEmail,
-        note: registrationNote,
-        userId: user?.id,
+        attendeeEmail: user.email,
+        note: '从活动详情页一键报名',
+        userId: user.id,
       });
       const nextRegistrations = await getPublicCmiEventRegistrations(event.id);
       setPublicRegistrations(nextRegistrations);
-      setRegistrationNote('');
+      setCurrentUserRegistered(true);
 
       if (result.notificationError) {
         toast.warning('报名成功，邮件通知稍后需要补发', {
@@ -315,6 +337,12 @@ export default function CmiEventDetail() {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';
+      if (message.toLowerCase().includes('duplicate')) {
+        setCurrentUserRegistered(true);
+        toast('你已经报名这个活动了');
+        return;
+      }
+
       toast.error(message.includes('duplicate') ? '这个邮箱已经报名过了' : '报名失败', {
         description: message.includes('duplicate') ? undefined : message,
       });
@@ -373,8 +401,8 @@ export default function CmiEventDetail() {
 
   if (loading && !event) {
     return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-[#fffdf8] text-[#242424]">
-        <div className="flex items-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-black shadow-sm">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-[#8b61ee] text-[#050505]">
+        <div className="flex items-center gap-2 rounded-full border-[3px] border-[#050505] bg-white px-4 py-3 text-sm font-black shadow-[4px_5px_0_rgba(5,5,5,0.18)]">
           <Loader2 className="h-4 w-4 animate-spin" />
           正在打开活动详情
         </div>
@@ -384,14 +412,14 @@ export default function CmiEventDetail() {
 
   if (!event) {
     return (
-      <div className="min-h-[100dvh] bg-[#fffdf8] px-4 py-[calc(env(safe-area-inset-top)+28px)] text-[#242424]">
-        <div className="mx-auto max-w-[520px] rounded-[1.5rem] border border-[#2e2a23]/10 bg-white p-5 shadow-sm">
+      <div className="min-h-[100dvh] bg-[#050505] px-4 py-[calc(env(safe-area-inset-top)+28px)] text-[#050505]">
+        <div className="mx-auto max-w-[520px] rounded-[2rem] border-[4px] border-[#050505] bg-[#9b74f4] p-5 shadow-sm">
           <p className="text-lg font-black">这个活动暂时没找到</p>
-          <p className="mt-2 text-sm font-bold leading-relaxed text-[#6d6a62]">
+          <p className="mt-2 text-sm font-bold leading-relaxed text-[#2b2241]">
             可能是活动已经下线，或者链接里的活动编号不完整。
           </p>
           <Button
-            className="mt-5 min-h-12 rounded-full bg-[#3f6e52] px-5 font-black text-white"
+            className="mt-5 min-h-12 rounded-full border-[3px] border-[#050505] bg-[#160f25] px-5 font-black text-white"
             onClick={() => navigate(getCmiHomePath())}
           >
             回到清迈客栈
@@ -402,32 +430,33 @@ export default function CmiEventDetail() {
   }
 
   return (
-    <div
-      className="min-h-[100dvh] bg-[#fffdf8] text-[#242424]"
-      style={{
-        backgroundImage:
-          'radial-gradient(circle at 12% 6%, rgba(63,110,82,0.14), transparent 28%), radial-gradient(circle at 92% 28%, rgba(143,119,191,0.12), transparent 30%), linear-gradient(rgba(139,95,50,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(139,95,50,0.04) 1px, transparent 1px)',
-        backgroundSize: 'auto, auto, 30px 30px, 30px 30px',
-      }}
-    >
-      <header className="sticky top-0 z-40 border-b border-[#2e2a23]/10 bg-[#fffdf8]/92 px-4 py-[calc(env(safe-area-inset-top)+10px)] pb-3 backdrop-blur-md">
+    <div className="min-h-[100dvh] bg-[#050505] text-[#050505]">
+      <div
+        className="mx-auto min-h-[100dvh] max-w-[520px] bg-[#8b61ee]"
+        style={{
+          backgroundImage:
+            'linear-gradient(180deg, rgba(155,116,244,0.98), rgba(130,86,231,0.98)), radial-gradient(circle, rgba(5,5,5,0.14) 1px, transparent 1.3px)',
+          backgroundSize: 'auto, 18px 18px',
+        }}
+      >
+      <header className="sticky top-0 z-40 border-b-[3px] border-[#050505]/18 bg-[#9b74f4]/94 px-5 py-[calc(env(safe-area-inset-top)+12px)] pb-3 backdrop-blur-md">
         <div className="mx-auto flex max-w-[520px] items-center justify-between gap-3">
           <Button
             variant="ghost"
-            className="min-h-11 rounded-full border border-[#2e2a23]/12 bg-white/90 px-4 text-base font-black text-[#242424] shadow-sm"
+            className="min-h-11 rounded-full border-[3px] border-[#050505] bg-white px-4 text-base font-black text-[#050505] shadow-[4px_5px_0_rgba(5,5,5,0.16)]"
             onClick={() => navigate(-1)}
             aria-label="返回上一页"
           >
             <ArrowLeft className="h-4 w-4" />
             返回
           </Button>
-          <span className="rounded-full bg-[#e8f2e7] px-3 py-1.5 text-[12px] font-black text-[#3f6e52]">
+          <span className="rounded-full border-[3px] border-[#050505] bg-[#fff7df] px-3 py-1.5 text-[12px] font-black text-[#050505] shadow-[3px_4px_0_rgba(5,5,5,0.14)]">
             活动详情
           </span>
           {canManageEvent && (
             <Button
               variant="ghost"
-              className="min-h-10 rounded-full border border-[#2e2a23]/12 bg-white/90 px-3 text-xs font-black text-[#242424]"
+              className="min-h-10 rounded-full border-[3px] border-[#050505] bg-white px-3 text-xs font-black text-[#050505]"
               onClick={() => navigate(getCmiEventManagePath(event.id))}
             >
               管理
@@ -436,8 +465,20 @@ export default function CmiEventDetail() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[520px] px-4 pb-28 pt-4">
-        <section className="overflow-hidden rounded-[1.7rem] border-2 border-[#2e2a23]/10 bg-[#fff9ec] shadow-[5px_6px_0_rgba(46,42,35,0.10),0_18px_42px_rgba(46,42,35,0.10)]">
+      <main className="px-5 pb-32 pt-4">
+        <section className="pb-2 pt-1">
+          <h1 className="text-[3rem] font-black leading-none tracking-normal text-[#050505] sm:text-[3.7rem]">
+            CMI Map
+          </h1>
+          <img
+            src="/cmi-home/cmi-map-slogan-handwritten.png"
+            alt="清迈活动和好去处，都在这里"
+            className="mt-3 h-auto w-[82%] max-w-[420px]"
+            loading="eager"
+          />
+        </section>
+
+        <section className="mt-5 overflow-hidden rounded-[1.7rem] border-[4px] border-[#050505] bg-[#fff9ec] shadow-[5px_6px_0_rgba(5,5,5,0.22)]">
           <img
             src={posterUrl}
             alt={`${event.title}完整海报`}
@@ -448,30 +489,30 @@ export default function CmiEventDetail() {
 
         <section className="mt-5">
           <div className="mb-3 flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#e8f2e7] px-3 py-1.5 text-[12px] font-black text-[#3f6e52]">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#e8f2e7] px-3 py-1.5 text-[12px] font-black text-[#3f6e52] shadow-[2px_3px_0_rgba(5,5,5,0.12)]">
               <CalendarDays className="h-3.5 w-3.5" />
               {getCmiEventTimeBucketLabel(event, referenceDate)}
             </span>
-            <span className="rounded-full bg-[#f2e8ff] px-3 py-1.5 text-[12px] font-black text-[#755da9]">
+            <span className="rounded-full bg-[#f2e8ff] px-3 py-1.5 text-[12px] font-black text-[#755da9] shadow-[2px_3px_0_rgba(5,5,5,0.12)]">
               {getCmiEventTypeLabel(event.type)}
             </span>
           </div>
 
-          <h1 className="text-[2.15rem] font-black leading-[1.02] text-[#242424]">
+          <h2 className="break-words text-[2.15rem] font-black leading-[1.02] text-[#050505] sm:text-[2.55rem]">
             {event.title}
-          </h1>
+          </h2>
 
-          <div className="mt-4 rounded-[1.25rem] border border-[#3f6e52]/16 bg-[#edf6ee] p-4 shadow-[0_12px_26px_rgba(63,110,82,0.10)]">
-            <div className="flex items-center gap-2 text-[12px] font-black text-[#3f6e52]">
+          <div className="mt-4 rounded-[1.25rem] border-[4px] border-[#050505] bg-[#160f25] p-5 shadow-[5px_6px_0_rgba(5,5,5,0.2)]">
+            <div className="flex items-center gap-2 text-[12px] font-black text-[#ffe466]">
               <MessageSquareText className="h-4 w-4" strokeWidth={2.5} />
               活动内容
             </div>
-            <p className="mt-2 text-[15px] font-black leading-[1.72] text-[#304235]">
+            <p className="mt-3 text-[17px] font-black leading-[1.72] text-white">
               {event.summary}
             </p>
           </div>
 
-          <div className="mt-3 grid gap-2 rounded-[1.2rem] border border-[#2e2a23]/8 bg-[#fff7df] p-3 text-sm font-black text-[#3d3a33]">
+          <div className="mt-4 grid gap-3 rounded-[1.3rem] border-[3px] border-[#050505]/20 bg-[#a982f7]/70 p-3 text-sm font-black text-[#050505] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
             <EventInfoRow Icon={MapPin} label="活动地点" value={locationLabel} />
             <EventInfoRow Icon={Clock3} label="活动时间" value={formatCmiEventTime(event, referenceDate)} />
             {isInternalRegistrationEnabled ? (
@@ -485,26 +526,26 @@ export default function CmiEventDetail() {
           </div>
         </section>
 
-        <section className="mt-5 rounded-[1.4rem] border border-[#2e2a23]/8 bg-white/78 p-4 shadow-[0_14px_34px_rgba(46,42,35,0.08)]">
+        <section className="mt-5 rounded-[1.4rem] border-[4px] border-[#050505] bg-[#160f25] p-5 shadow-[5px_6px_0_rgba(5,5,5,0.2)]">
           <div className="mb-3 flex items-center gap-2">
-            <MessageSquareText className="h-5 w-5 text-[#3f6e52]" strokeWidth={2.5} />
-            <h2 className="text-xl font-black leading-tight text-[#242424]">详细说明</h2>
+            <MessageSquareText className="h-5 w-5 text-[#ffe466]" strokeWidth={2.5} />
+            <h2 className="text-xl font-black leading-tight text-white">详细说明</h2>
           </div>
-          <h3 className="mb-3 text-[1.35rem] font-black leading-tight text-[#242424]">{postTitle}</h3>
+          <h3 className="mb-3 text-[1.35rem] font-black leading-tight text-white">{postTitle}</h3>
           <div className="space-y-3">
             {postBlocks.map(renderPostBlock)}
           </div>
         </section>
 
         {isInternalRegistrationEnabled && (
-          <section className="mt-5 rounded-[1.4rem] border border-[#2e2a23]/8 bg-[#edf6ee] p-4 shadow-[0_14px_34px_rgba(63,110,82,0.10)]">
+          <section className="mt-5 rounded-[1.4rem] border-[4px] border-[#050505] bg-[#a982f7]/82 p-4 shadow-[5px_6px_0_rgba(5,5,5,0.2)]">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-[12px] font-black text-[#3f6e52]">活动报名</p>
-                <h2 className="mt-1 text-xl font-black leading-tight text-[#242424]">
+                <p className="text-[12px] font-black text-[#432277]">活动报名</p>
+                <h2 className="mt-1 text-xl font-black leading-tight text-[#050505]">
                   {registrationSummary.goingCount} 人已报名
                 </h2>
-                <p className="mt-1 text-sm font-bold leading-relaxed text-[#53705b]">
+                <p className="mt-1 text-sm font-bold leading-relaxed text-[#2c2240]">
                   {registrationSummary.capacity
                     ? `名额 ${registrationSummary.capacity}，剩余 ${registrationSummary.remainingSpots} 个`
                     : '不限人数'}
@@ -513,8 +554,8 @@ export default function CmiEventDetail() {
               <span className={cn(
                 'shrink-0 rounded-full px-3 py-1.5 text-[12px] font-black',
                 isRegistrationOpen
-                  ? 'bg-white text-[#3f6e52]'
-                  : 'bg-[#f7e7e4] text-[#b44c40]'
+                  ? 'border-[3px] border-[#050505] bg-white text-[#050505]'
+                  : 'border-[3px] border-[#050505] bg-[#f7e7e4] text-[#b44c40]'
               )}>
                 {isRegistrationOpen ? '报名中' : registrationSummary.isFull ? '已满' : '已关闭'}
               </span>
@@ -523,7 +564,7 @@ export default function CmiEventDetail() {
             {visibleAttendees.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {visibleAttendees.slice(0, 12).map(attendee => (
-                  <span key={attendee.id} className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-[#3f6e52] shadow-sm">
+                  <span key={attendee.id} className="rounded-full border-2 border-[#050505] bg-white px-3 py-1.5 text-xs font-black text-[#050505] shadow-sm">
                     {attendee.name}
                   </span>
                 ))}
@@ -531,57 +572,40 @@ export default function CmiEventDetail() {
             )}
 
             {isRegistrationOpen ? (
-              <form className="mt-4 space-y-3" onSubmit={handleRegistrationSubmit}>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    value={attendeeName}
-                    onChange={inputEvent => setAttendeeName(inputEvent.target.value)}
-                    className="min-h-12 rounded-2xl border border-[#3f6e52]/18 bg-white px-4 text-sm font-bold outline-none focus:border-[#3f6e52]"
-                    placeholder="昵称 / 姓名"
-                    maxLength={80}
-                  />
-                  <input
-                    value={attendeeEmail}
-                    onChange={inputEvent => setAttendeeEmail(inputEvent.target.value)}
-                    className="min-h-12 rounded-2xl border border-[#3f6e52]/18 bg-white px-4 text-sm font-bold outline-none focus:border-[#3f6e52]"
-                    placeholder="邮箱"
-                    type="email"
-                  />
-                </div>
-                <textarea
-                  value={registrationNote}
-                  onChange={inputEvent => setRegistrationNote(inputEvent.target.value)}
-                  className="min-h-20 w-full rounded-2xl border border-[#3f6e52]/18 bg-white px-4 py-3 text-sm font-bold leading-relaxed outline-none focus:border-[#3f6e52]"
-                  maxLength={500}
-                  placeholder="备注，可选"
-                />
-                <Button
-                  type="submit"
-                  disabled={submittingRegistration}
-                  className="min-h-12 w-full rounded-full bg-[#3f6e52] text-base font-black text-white"
-                >
-                  {submittingRegistration ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  我要报名
-                </Button>
-                <p className="flex items-center gap-1.5 text-xs font-bold leading-relaxed text-[#53705b]">
-                  <Mail className="h-3.5 w-3.5 shrink-0" />
-                  报名后会通知活动发起人和 CMI 管理邮箱。
-                </p>
-              </form>
+              <Button
+                type="button"
+                disabled={submittingRegistration || currentUserRegistered}
+                className={cn(
+                  'mt-4 min-h-14 w-full rounded-full border-[3px] border-[#050505] text-base font-black shadow-[4px_5px_0_rgba(5,5,5,0.2)]',
+                  currentUserRegistered
+                    ? 'bg-white text-[#050505] opacity-100'
+                    : 'bg-[#160f25] text-white'
+                )}
+                onClick={handleOneClickRegistration}
+              >
+                {submittingRegistration ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : currentUserRegistered ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                {currentUserRegistered ? '已报名' : user?.id ? '一键报名' : '登录后报名'}
+              </Button>
             ) : (
-              <p className="mt-4 rounded-2xl bg-white/78 p-3 text-sm font-bold leading-relaxed text-[#53705b]">
+              <p className="mt-4 rounded-2xl border-[3px] border-[#050505] bg-white/78 p-3 text-sm font-bold leading-relaxed text-[#2c2240]">
                 {registrationSummary.isFull ? '这个活动已经满员。' : '发起人暂时关闭了报名。'}
               </p>
             )}
           </section>
         )}
 
-        <section className="mt-5 rounded-[1.4rem] border border-[#2e2a23]/8 bg-[#f5f0ff] p-4 shadow-[0_14px_34px_rgba(46,42,35,0.08)]">
+        <section className="mt-5 rounded-[1.4rem] border-[4px] border-[#050505] bg-[#fff7df]/92 p-4 shadow-[5px_6px_0_rgba(5,5,5,0.2)]">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-[12px] font-black text-[#755da9]">活动盖戳</p>
-              <h2 className="mt-1 text-xl font-black leading-tight text-[#242424]">想去就盖一下</h2>
-              <p className="mt-2 text-sm font-bold leading-relaxed text-[#6d5b82]">
+              <p className="text-[12px] font-black text-[#6b4ca8]">活动盖戳</p>
+              <h2 className="mt-1 text-xl font-black leading-tight text-[#050505]">想去就盖一下</h2>
+              <p className="mt-2 text-sm font-bold leading-relaxed text-[#2c2240]">
                 这个戳会保存在你这台设备上，方便下次回来确认。
               </p>
             </div>
@@ -592,7 +616,7 @@ export default function CmiEventDetail() {
                 'relative flex h-24 w-24 shrink-0 rotate-[-8deg] items-center justify-center rounded-full border-[3px] border-dashed text-lg font-black transition active:scale-95',
                 wantToGo
                   ? 'border-[#d55747] bg-[#fff7f2] text-[#d55747] shadow-[0_10px_22px_rgba(213,87,71,0.18)]'
-                  : 'border-[#755da9]/45 bg-white/72 text-[#755da9]'
+                  : 'border-[#050505] bg-white/72 text-[#6b4ca8]'
               )}
               aria-pressed={wantToGo}
               aria-label="盖想去戳"
@@ -607,11 +631,11 @@ export default function CmiEventDetail() {
         </section>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#2e2a23]/10 bg-[#fffdf8]/92 px-4 pb-[calc(0.875rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t-[4px] border-[#050505] bg-[#8b61ee]/94 px-4 pb-[calc(0.875rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
         <div className="mx-auto grid max-w-[520px] gap-2">
           <button
             type="button"
-            className="flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full bg-[#3f6e52] text-base font-black text-white shadow-[0_12px_24px_rgba(63,110,82,0.24)] transition active:scale-95"
+            className="flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full border-[3px] border-[#050505] bg-[#160f25] text-base font-black text-white shadow-[4px_5px_0_rgba(5,5,5,0.22)] transition active:scale-95"
             onClick={handleOpenBlackboardComposer}
           >
             <UsersRound className="h-[18px] w-[18px]" strokeWidth={2.7} />
@@ -619,36 +643,36 @@ export default function CmiEventDetail() {
             <span className="text-xs font-black text-white/78">预填发帖</span>
           </button>
           <div className="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            className="flex min-h-12 items-center justify-center gap-2 rounded-full border-2 border-[#2e2a23]/10 bg-white text-sm font-black text-[#242424] shadow-sm transition active:scale-95"
-            onClick={handleOpenCmiMap}
-          >
-            <MapPinned className="h-4 w-4" />
-            CMI地图
-          </button>
-          <button
-            type="button"
-            className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#3f6e52] text-sm font-black text-white shadow-sm transition active:scale-95"
-            onClick={handleOpenGoogleMaps}
-          >
-            <Navigation className="h-4 w-4" />
-            导航
-          </button>
-          <button
-            type="button"
-            className="flex min-h-12 items-center justify-center gap-1.5 rounded-full border-2 border-[#2e2a23]/10 bg-white text-sm font-black text-[#242424] shadow-sm transition active:scale-95"
-            onClick={() => setRideDialogOpen(true)}
-          >
-            <Car className="h-4 w-4" />
-            叫车
-          </button>
+            <button
+              type="button"
+              className="flex min-h-12 items-center justify-center gap-2 rounded-full border-[3px] border-[#050505] bg-white text-sm font-black text-[#050505] shadow-[3px_4px_0_rgba(5,5,5,0.16)] transition active:scale-95"
+              onClick={handleOpenCmiMap}
+            >
+              <MapPinned className="h-4 w-4" />
+              CMI地图
+            </button>
+            <button
+              type="button"
+              className="flex min-h-12 items-center justify-center gap-2 rounded-full border-[3px] border-[#050505] bg-[#160f25] text-sm font-black text-white shadow-[3px_4px_0_rgba(5,5,5,0.16)] transition active:scale-95"
+              onClick={handleOpenGoogleMaps}
+            >
+              <Navigation className="h-4 w-4" />
+              导航
+            </button>
+            <button
+              type="button"
+              className="flex min-h-12 items-center justify-center gap-1.5 rounded-full border-[3px] border-[#050505] bg-white text-sm font-black text-[#050505] shadow-[3px_4px_0_rgba(5,5,5,0.16)] transition active:scale-95"
+              onClick={() => setRideDialogOpen(true)}
+            >
+              <Car className="h-4 w-4" />
+              叫车
+            </button>
           </div>
         </div>
       </div>
 
       <Dialog open={rideDialogOpen} onOpenChange={setRideDialogOpen}>
-        <DialogContent className="max-w-[430px] rounded-3xl border-2 border-foreground p-5">
+        <DialogContent className="max-w-[430px] rounded-3xl border-[4px] border-[#050505] bg-[#fff7df] p-5 text-[#050505]">
           <DialogHeader className="space-y-2 text-left">
             <DialogTitle className="text-2xl font-black">叫车去这里</DialogTitle>
             <DialogDescription className="font-semibold leading-relaxed">
@@ -659,7 +683,7 @@ export default function CmiEventDetail() {
           <div className="grid grid-cols-2 gap-2">
             <Button
               variant="outline"
-              className="h-12 rounded-full border-2 font-black"
+              className="h-12 rounded-full border-[3px] border-[#050505] bg-white font-black text-[#050505]"
               onClick={() => {
                 setRideDialogOpen(false);
                 void handleGrab();
@@ -670,7 +694,7 @@ export default function CmiEventDetail() {
             </Button>
             <Button
               variant="outline"
-              className="h-12 rounded-full border-2 font-black"
+              className="h-12 rounded-full border-[3px] border-[#050505] bg-white font-black text-[#050505]"
               onClick={() => {
                 setRideDialogOpen(false);
                 void handleBolt();
@@ -682,6 +706,7 @@ export default function CmiEventDetail() {
           </div>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }
