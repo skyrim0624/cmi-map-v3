@@ -256,6 +256,7 @@ Deno.serve(async (req) => {
   const doorwayImage = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/checkin-doorway.jpg');
   const yardImage = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/yard-front.jpg');
   const parkingGuideCardImage = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/cmi-inn-parking-guide-card.png');
+  const parkingMapQr = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/qr-blue-coffee-parking-map.png');
   const officialQr = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/qr-cmi-official.jpg');
   const groupQr = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/qr-community-group-5.jpg');
   const linkeQr = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/qr-linke.jpg');
@@ -286,7 +287,7 @@ Deno.serve(async (req) => {
       <div style="border:3px solid #111;border-radius:18px;background:#fff;padding:16px;margin:18px 0;">
         <h3 style="margin:0 0 10px;font-size:20px;line-height:1.3;">停车提醒</h3>
         <p style="margin:0;line-height:1.8;font-weight:700;">
-          清迈客栈门口不能停车。开车来的话，推荐停在 Blue Coffee at Somphet Market 旁边的停车场，再步行约 3 分钟到清迈客栈；不要停在巷口、邻居门口或客栈门口，容易影响通行。下面这张图可以直接保存到相册。
+          清迈客栈门口不能停车。开车来的话，推荐停在 Blue Coffee at Somphet Market 旁边的停车场，再步行约 3 分钟到清迈客栈；不要停在巷口、邻居门口或客栈门口，容易影响通行。下面这张图可以直接保存到相册，右下角二维码可以打开 Google 地图导航。
         </p>
       </div>
       ${imageBlock(parkingGuideCardImage, '清迈客栈停车指引卡')}
@@ -296,16 +297,20 @@ Deno.serve(async (req) => {
       </p>
 
       <div style="border:3px solid #111;border-radius:18px;background:#f2e8ff;padding:16px;margin:18px 0;">
-        <h3 style="margin:0 0 10px;font-size:20px;line-height:1.3;">活动前先加一下</h3>
-        <p style="margin:0 0 12px;line-height:1.7;font-weight:700;">公众号会发活动信息；微信群方便临时问路、确认位置；找不到路或到店沟通，可以加子扬或林可微信。</p>
+        <h3 style="margin:0 0 10px;font-size:20px;line-height:1.3;">导航和活动联系二维码</h3>
+        <p style="margin:0 0 12px;line-height:1.7;font-weight:700;">开车先扫 Google 地图导航到停车点；到场前可以加公众号、微信群、林可或子扬。</p>
         <table role="presentation" style="width:100%;border-collapse:collapse;">
           <tr>
+            ${qrBlock(parkingMapQr, 'Google 地图导航', '停车点导航')}
             ${qrBlock(officialQr, '清迈客栈公众号', '活动更新')}
-            ${qrBlock(groupQr, '清迈客栈微信群', '问路和活动通知')}
           </tr>
           <tr>
+            ${qrBlock(groupQr, '清迈客栈微信群', '问路和活动通知')}
             ${qrBlock(linkeQr, '林可微信', '订房和到店沟通')}
+          </tr>
+          <tr>
             ${qrBlock(andreasQr, '子扬微信', '找不到路时联系')}
+            <td style="width:50%;padding:8px;vertical-align:top;text-align:center;"></td>
           </tr>
         </table>
       </div>
