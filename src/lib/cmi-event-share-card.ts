@@ -1,4 +1,5 @@
-import { formatCmiEventTime, type CmiEvent } from '@/data/cmi-events';
+import { formatCmiEventShareCardTime, type CmiEvent } from '@/data/cmi-events';
+import { getPublicCmiEventUrl } from '@/lib/paths';
 import QRCode from 'qrcode';
 
 export interface CmiEventShareCardInput {
@@ -151,7 +152,7 @@ const getCompactPriceLabel = (priceLabel: string) => {
 };
 
 const formatRegistrationCount = (registrationCount: number | undefined) => {
-  if (!Number.isFinite(registrationCount)) return '0 人已报名';
+  if (typeof registrationCount !== 'number' || !Number.isFinite(registrationCount)) return '0 人已报名';
   const count = Math.max(Math.floor(registrationCount), 0);
   return `${count} 人已报名`;
 };
@@ -311,7 +312,7 @@ const drawFooter = (
 
   const factMaxWidth = dividerX - (CONTENT_X + 190) - 36;
   const factRows: Array<[string, string]> = [
-    ['时间', formatCmiEventTime(event, referenceDate)],
+    ['时间', formatCmiEventShareCardTime(event, referenceDate)],
     ['地点', event.venueName],
     ['费用', getCompactPriceLabel(event.priceLabel)],
   ];
@@ -346,10 +347,10 @@ export const createCmiEventShareCard = async ({
   eventPageUrl,
   registrationCount,
 }: CmiEventShareCardInput): Promise<CmiEventShareCardResult> => {
+  const qrTargetUrl = eventPageUrl ?? getPublicCmiEventUrl(event.id);
   const qrImagePromise = (async () => {
-    if (!eventPageUrl) return loadImage(mapQrUrl);
     try {
-      return await createDynamicQrImage(eventPageUrl);
+      return await createDynamicQrImage(qrTargetUrl);
     } catch (error) {
       console.error('活动分享二维码生成失败，使用默认二维码 fallback:', error);
       return loadImage(mapQrUrl);

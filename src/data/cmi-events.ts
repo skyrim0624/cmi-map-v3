@@ -1202,6 +1202,32 @@ export const formatCmiEventTime = (
   return event.stableSchedule ?? '时间待确认';
 };
 
+const CMI_EVENT_DISPLAY_TIME_ZONE = 'Asia/Bangkok';
+
+export const formatCmiEventShareCardTime = (
+  event: CmiEvent,
+  referenceDate: Date = new Date()
+) => {
+  const sortTime = getCmiEventSortTime(event, referenceDate);
+
+  if (sortTime === Number.MAX_SAFE_INTEGER) {
+    return event.stableSchedule ?? '时间待确认';
+  }
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: CMI_EVENT_DISPLAY_TIME_ZONE,
+  }).formatToParts(new Date(sortTime));
+  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find(part => part.type === type)?.value ?? '';
+
+  return `${Number(getPart('month'))}/${Number(getPart('day'))} ${getPart('hour')}:${getPart('minute')}`;
+};
+
 export const formatCmiEventDateParts = (
   event: CmiEvent,
   referenceDate: Date = new Date()

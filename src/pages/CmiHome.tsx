@@ -42,7 +42,7 @@ import {
 import { getStableProfileIdentity } from '@/features/profiles/profile-identity';
 import { type CmiEventShareCardResult, createCmiEventShareCard } from '@/lib/cmi-event-share-card';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
-import { getAddTracePath, getCmiEventPath, getPersonMapPath } from '@/lib/paths';
+import { getAddTracePath, getCmiEventPath, getPersonMapPath, getPublicCmiEventUrl } from '@/lib/paths';
 import { CMI_INN_LOGO_ICON_URL, CMI_INN_PLACE_NAME, type Recommendation } from '@/types/types';
 
 type FileShareData = {
@@ -1022,7 +1022,7 @@ export default function CmiHome() {
     setSharingEventIds(prev => ({ ...prev, [event.id]: true }));
 
     try {
-      const eventPageUrl = new URL(getCmiEventPath(event.id), window.location.origin).toString();
+      const eventPageUrl = getPublicCmiEventUrl(event.id);
       const publicRegistrations = await getPublicCmiEventRegistrations(event.id);
 
       const card = await createCmiEventShareCard({

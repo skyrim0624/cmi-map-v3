@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowLeft, LogIn, MapPinned, PlusCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { getCmiEventCreatePath, getCmiEventPath, getPersonMapPath, getPlacePath, getSceneMapPath } from '@/lib/paths';
+import { getCmiEventCreatePath, getCmiEventPath, getPersonMapPath, getPlacePath, getPublicCmiEventUrl, getSceneMapPath } from '@/lib/paths';
 import {
   getPlaceGuide,
   isCommunityCuratedRecommendation,
@@ -537,7 +537,7 @@ export default function ListView() {
     setSharingEventIds(prev => ({ ...prev, [event.id]: true }));
 
     try {
-      const eventPageUrl = new URL(getCmiEventPath(event.id), window.location.origin).toString();
+      const eventPageUrl = getPublicCmiEventUrl(event.id);
       const publicRegistrations = await getPublicCmiEventRegistrations(event.id);
 
       const card = await createCmiEventShareCard({

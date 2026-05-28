@@ -33,6 +33,11 @@ export const getCmiHomePath = () => '/cmi-home';
 export const getCmiEventPath = (eventId: string) =>
   `/events/${encodeURIComponent(eventId)}`;
 
+const CMI_MAP_PUBLIC_ORIGIN = 'https://cmimap.com';
+
+export const getPublicCmiEventUrl = (eventId: string) =>
+  `${CMI_MAP_PUBLIC_ORIGIN}${getCmiEventPath(eventId)}`;
+
 export const getCmiEventCreatePath = (input?: {
   placeName?: string | null;
   area?: string | null;
