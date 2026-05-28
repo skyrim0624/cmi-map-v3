@@ -84,7 +84,7 @@ const imageBlock = (src: string, alt: string) => `
 `;
 
 const qrBlock = (src: string, title: string, description: string) => `
-  <td style="width:33.33%;padding:8px;vertical-align:top;text-align:center;">
+  <td style="width:50%;padding:8px;vertical-align:top;text-align:center;">
     <img src="${src}" alt="${escapeHtml(title)}" style="display:block;width:132px;height:132px;object-fit:cover;border:3px solid #111;border-radius:16px;margin:0 auto;background:#fff;" />
     <div style="margin-top:8px;font-size:15px;font-weight:900;color:#111;">${escapeHtml(title)}</div>
     <div style="margin-top:3px;font-size:12px;font-weight:700;line-height:1.5;color:#5d5548;">${escapeHtml(description)}</div>
@@ -258,6 +258,7 @@ Deno.serve(async (req) => {
   const parkingGuideCardImage = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/cmi-inn-parking-guide-card.png');
   const officialQr = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/qr-cmi-official.jpg');
   const groupQr = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/qr-community-group-5.jpg');
+  const linkeQr = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/qr-linke.jpg');
   const andreasQr = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/qr-andreas.jpg');
 
   const attendeeEmailResult = await sendResendEmail({
@@ -296,11 +297,14 @@ Deno.serve(async (req) => {
 
       <div style="border:3px solid #111;border-radius:18px;background:#f2e8ff;padding:16px;margin:18px 0;">
         <h3 style="margin:0 0 10px;font-size:20px;line-height:1.3;">活动前先加一下</h3>
-        <p style="margin:0 0 12px;line-height:1.7;font-weight:700;">公众号会发活动信息；微信群方便临时问路、确认位置；找不到路可以加子扬微信。</p>
+        <p style="margin:0 0 12px;line-height:1.7;font-weight:700;">公众号会发活动信息；微信群方便临时问路、确认位置；找不到路或到店沟通，可以加子扬或林可微信。</p>
         <table role="presentation" style="width:100%;border-collapse:collapse;">
           <tr>
             ${qrBlock(officialQr, '清迈客栈公众号', '活动更新')}
             ${qrBlock(groupQr, '清迈客栈微信群', '问路和活动通知')}
+          </tr>
+          <tr>
+            ${qrBlock(linkeQr, '林可微信', '订房和到店沟通')}
             ${qrBlock(andreasQr, '子扬微信', '找不到路时联系')}
           </tr>
         </table>
