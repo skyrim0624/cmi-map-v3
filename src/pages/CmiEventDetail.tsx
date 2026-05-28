@@ -12,7 +12,6 @@ import {
   Navigation,
   Send,
   Ticket,
-  UsersRound,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -48,7 +47,6 @@ import {
 } from '@/db/cmi-events';
 import { isCmiEventManager } from '@/features/cmi-events/event-management';
 import {
-  getCmiBlackboardPath,
   getCmiEventManagePath,
   getCmiHomePath,
   getPlaceMapPath,
@@ -266,11 +264,6 @@ export default function CmiEventDetail() {
     }
 
     navigate(getPlaceMapPath(CMI_INN_EVENT_LOCATION.name));
-  };
-
-  const handleOpenBlackboardComposer = () => {
-    if (!event) return;
-    navigate(getCmiBlackboardPath({ compose: true, eventId: event.id }));
   };
 
   const handleOneClickRegistration = async () => {
@@ -585,21 +578,12 @@ export default function CmiEventDetail() {
           <button
             type="button"
             className="flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full border-[3px] border-[#050505] bg-[#160f25] text-base font-black text-white shadow-[4px_5px_0_rgba(5,5,5,0.22)] transition active:scale-95"
-            onClick={handleOpenBlackboardComposer}
+            onClick={handleOpenCmiMap}
           >
-            <UsersRound className="h-[18px] w-[18px]" strokeWidth={2.7} />
-            一起去
-            <span className="text-xs font-black text-white/78">预填发帖</span>
+            <MapPinned className="h-[18px] w-[18px]" strokeWidth={2.7} />
+            CMI地图
           </button>
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              className="flex min-h-12 items-center justify-center gap-2 rounded-full border-[3px] border-[#050505] bg-white text-sm font-black text-[#050505] shadow-[3px_4px_0_rgba(5,5,5,0.16)] transition active:scale-95"
-              onClick={handleOpenCmiMap}
-            >
-              <MapPinned className="h-4 w-4" />
-              CMI地图
-            </button>
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               className="flex min-h-12 items-center justify-center gap-2 rounded-full border-[3px] border-[#050505] bg-[#160f25] text-sm font-black text-white shadow-[3px_4px_0_rgba(5,5,5,0.16)] transition active:scale-95"
