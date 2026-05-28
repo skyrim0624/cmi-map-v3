@@ -39,10 +39,11 @@ import {
 } from '@/data/cmi-events';
 import {
   getCurrentUserCmiEventRegistrations,
-  getPublicCmiEventRegistrations,
+  getCmiEventManagerEmails,
+  getManagedCmiEventRegistrations,
   getPublishedCmiEvents,
   registerForCmiEvent,
-  type CmiEventPublicRegistration,
+  type CmiEventRegistration,
 } from '@/db/cmi-events';
 import { isCmiEventManager } from '@/features/cmi-events/event-management';
 import {
@@ -143,7 +144,8 @@ export default function CmiEventDetail() {
   const [event, setEvent] = useState<CmiEvent | null>(() => getCmiEventById(eventId));
   const [loading, setLoading] = useState(true);
   const [rideDialogOpen, setRideDialogOpen] = useState(false);
-  const [publicRegistrations, setPublicRegistrations] = useState<CmiEventPublicRegistration[]>([]);
+  const [managerEmails, setManagerEmails] = useState<string[]>([]);
+  const [managedRegistrations, setManagedRegistrations] = useState<CmiEventRegistration[]>([]);
   const [currentUserRegistered, setCurrentUserRegistered] = useState(false);
   const [submittingRegistration, setSubmittingRegistration] = useState(false);
 
@@ -163,25 +165,29 @@ export default function CmiEventDetail() {
       },
     ];
   const locationLabel = event ? `${event.venueName}${event.area ? ` · ${event.area}` : ''}` : '';
+  const canManageEvent =
+    isCmiEventManager(event ? { ...event, managerEmails } : null, {
+      userId: user?.id,
+      email: user?.email,
+      role: profile?.role,
+    });
+  const registrationsForSummary = canManageEvent ? managedRegistrations : [];
   const registrationSummary = useMemo(
-    () => summarizeEventRegistrations(publicRegistrations, event?.capacity),
-    [event?.capacity, publicRegistrations]
+    () => summarizeEventRegistrations(registrationsForSummary, event?.capacity),
+    [event?.capacity, registrationsForSummary]
   );
   const visibleAttendees = useMemo(
-    () => getVisibleEventAttendees(publicRegistrations, event?.attendeeVisibility ?? 'count-only'),
-    [event?.attendeeVisibility, publicRegistrations]
+    () =>
+      canManageEvent
+        ? getVisibleEventAttendees(managedRegistrations, event?.attendeeVisibility ?? 'count-only')
+        : [],
+    [canManageEvent, event?.attendeeVisibility, managedRegistrations]
   );
   const isInternalRegistrationEnabled = Boolean(event?.registrationEnabled);
   const isRegistrationOpen =
     isInternalRegistrationEnabled &&
     event?.registrationStatus === 'open' &&
     !registrationSummary.isFull;
-  const canManageEvent =
-    isCmiEventManager(event, {
-      userId: user?.id,
-      email: user?.email,
-      role: profile?.role,
-    });
 
   const navigationTarget = useMemo(() => {
     if (event?.mapLocation) {
@@ -201,6 +207,8 @@ export default function CmiEventDetail() {
 
     setLoading(true);
     setEvent(getCmiEventById(eventId));
+    setManagerEmails([]);
+    setManagedRegistrations([]);
 
     getPublishedCmiEvents()
       .then(events => {
@@ -222,15 +230,46 @@ export default function CmiEventDetail() {
   }, [eventId]);
 
   useEffect(() => {
-    if (!eventId || !event?.registrationEnabled) {
-      setPublicRegistrations([]);
+    let isMounted = true;
+
+    if (!eventId || !user?.id) {
+      setManagerEmails([]);
       return;
     }
 
-    getPublicCmiEventRegistrations(eventId)
-      .then(setPublicRegistrations)
-      .catch(() => setPublicRegistrations([]));
-  }, [event?.registrationEnabled, eventId]);
+    getCmiEventManagerEmails(eventId)
+      .then(emails => {
+        if (isMounted) setManagerEmails(emails);
+      })
+      .catch(() => {
+        if (isMounted) setManagerEmails([]);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [eventId, user?.id]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!eventId || !event?.registrationEnabled || !canManageEvent) {
+      setManagedRegistrations([]);
+      return;
+    }
+
+    getManagedCmiEventRegistrations(eventId)
+      .then(registrations => {
+        if (isMounted) setManagedRegistrations(registrations);
+      })
+      .catch(() => {
+        if (isMounted) setManagedRegistrations([]);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [canManageEvent, event?.registrationEnabled, eventId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -281,8 +320,10 @@ export default function CmiEventDetail() {
         note: '从活动详情页一键报名',
         userId: user.id,
       });
-      const nextRegistrations = await getPublicCmiEventRegistrations(event.id);
-      setPublicRegistrations(nextRegistrations);
+      if (canManageEvent) {
+        const nextRegistrations = await getManagedCmiEventRegistrations(event.id);
+        setManagedRegistrations(nextRegistrations);
+      }
       setCurrentUserRegistered(true);
 
       if (result.notificationError) {

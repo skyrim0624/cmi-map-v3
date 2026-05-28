@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { CMI_EVENT_TYPE_OPTIONS, type CmiEventAttendeeVisibility, type CmiEventType } from '@/data/cmi-events';
 import { getAllRecommendations } from '@/db/api';
 import { createCmiEvent, uploadCmiEventPoster } from '@/db/cmi-events';
+import { parseCmiEventManagerEmails } from '@/features/cmi-events/event-management';
 import { EventPosterField } from '@/features/cmi-events/event-poster-field';
 import {
   buildEventPlaceCandidates,
@@ -133,6 +134,7 @@ export default function CmiEventCreate() {
   const [priceLabel, setPriceLabel] = useState('免费参与');
   const [organizerName, setOrganizerName] = useState(profile?.user_name ?? '');
   const [organizerEmail, setOrganizerEmail] = useState(user?.email ?? '');
+  const [managerEmailsText, setManagerEmailsText] = useState('');
   const [organizerNameAutoFilled, setOrganizerNameAutoFilled] = useState(Boolean(profile?.user_name));
   const [organizerEmailAutoFilled, setOrganizerEmailAutoFilled] = useState(Boolean(user?.email));
   const [capacity, setCapacity] = useState('');
@@ -389,6 +391,7 @@ export default function CmiEventCreate() {
         hostName: organizerName || profile?.user_name || user.email || 'CMI Map 用户',
         organizerName: organizerName || profile?.user_name || user.email || 'CMI Map 用户',
         organizerEmail,
+        managerEmails: parseCmiEventManagerEmails(managerEmailsText),
         contactEmail: null,
         capacity: parseOptionalNumber(capacity),
         attendeeVisibility,
@@ -660,6 +663,16 @@ export default function CmiEventCreate() {
                   onChange={event => setOrganizerEmail(event.target.value)}
                   className="min-h-12 w-full rounded-2xl border border-[#2e2a23]/12 bg-white px-4 text-sm font-bold"
                   placeholder="这个邮箱登录后可以管理活动"
+                />
+              </label>
+
+              <label className="mt-3 block space-y-1.5">
+                <span className="text-[11px] font-black text-[#6d6a62]">管理员邮箱</span>
+                <textarea
+                  value={managerEmailsText}
+                  onChange={event => setManagerEmailsText(event.target.value)}
+                  className="min-h-20 w-full rounded-2xl border border-[#2e2a23]/12 bg-white px-4 py-3 text-sm font-bold leading-relaxed"
+                  placeholder="每行一个邮箱；这些人登录后能看报名名单，也会收到报名邮件"
                 />
               </label>
 

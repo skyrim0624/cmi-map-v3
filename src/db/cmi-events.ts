@@ -12,6 +12,7 @@ import type { Category } from '@/types/types';
 import type { EventRegistrationForSummary, EventRegistrationStatus } from '@/features/cmi-events/event-rsvp-utils';
 import {
   buildEditableCmiEventPayload,
+  normalizeCmiEventManagerEmails,
   type EditableCmiEventInput,
 } from '@/features/cmi-events/event-management';
 import { compressImage } from '@/utils/imageCompression';
@@ -138,6 +139,10 @@ interface CmiEventRegistrationRow {
   created_at: string;
 }
 
+interface CmiEventManagerRow {
+  email: string;
+}
+
 interface CmiEventPublicRegistrationRow {
   id: string;
   event_id: string;
@@ -178,6 +183,7 @@ export interface CreateCmiEventInput {
   coverImageUrl?: string | null;
   tags: string[];
   userId: string;
+  managerEmails?: string[];
 }
 
 export interface RegisterForCmiEventInput {
@@ -216,6 +222,71 @@ const toPublicRegistration = (row: CmiEventPublicRegistrationRow): CmiEventPubli
   status: row.status as EventRegistrationStatus,
   createdAt: row.created_at,
 });
+
+const isMissingOptionalManagerTable = (error: { code?: string; message: string }) => {
+  const errorMessage = error.message.toLowerCase();
+  return (
+    error.code === '42P01' ||
+    error.code === 'PGRST205' ||
+    errorMessage.includes('cmi_event_managers')
+  );
+};
+
+export const getCmiEventManagerEmails = async (eventId: string): Promise<string[]> => {
+  const { data, error } = await supabase
+    .from('cmi_event_managers')
+    .select('email')
+    .eq('event_id', eventId)
+    .order('email', { ascending: true });
+
+  if (error) {
+    if (!isMissingOptionalManagerTable(error)) {
+      console.error('获取活动管理员失败:', error);
+    }
+    return [];
+  }
+
+  return Array.isArray(data)
+    ? normalizeCmiEventManagerEmails((data as CmiEventManagerRow[]).map(row => row.email))
+    : [];
+};
+
+const replaceCmiEventManagerEmails = async ({
+  eventId,
+  managerEmails,
+  organizerEmail,
+  userId,
+}: {
+  eventId: string;
+  managerEmails?: string[];
+  organizerEmail?: string | null;
+  userId: string;
+}) => {
+  const normalizedEmails = normalizeCmiEventManagerEmails(managerEmails ?? [], organizerEmail);
+
+  const { error: deleteError } = await supabase
+    .from('cmi_event_managers')
+    .delete()
+    .eq('event_id', eventId);
+
+  if (deleteError) {
+    throw new Error(deleteError.message);
+  }
+
+  if (normalizedEmails.length === 0) return;
+
+  const { error: insertError } = await supabase
+    .from('cmi_event_managers')
+    .insert(normalizedEmails.map(email => ({
+      event_id: eventId,
+      email,
+      created_by: userId,
+    })));
+
+  if (insertError) {
+    throw new Error(insertError.message);
+  }
+};
 
 const normalizeSlug = (value: string) =>
   value
@@ -312,7 +383,19 @@ export const createCmiEvent = async (input: CreateCmiEventInput): Promise<CmiEve
     throw new Error(error?.message ?? '活动发布失败');
   }
 
-  return toCmiEvent(data as CmiEventRow);
+  await replaceCmiEventManagerEmails({
+    eventId,
+    managerEmails: input.managerEmails,
+    organizerEmail: input.organizerEmail,
+    userId: input.userId,
+  });
+
+  const managerEmails = await getCmiEventManagerEmails(eventId);
+
+  return {
+    ...toCmiEvent(data as CmiEventRow),
+    managerEmails,
+  };
 };
 
 export const uploadCmiEventPoster = async (file: File): Promise<string | null> => {
@@ -370,7 +453,19 @@ export const updateCmiEventDetails = async (input: EditableCmiEventInput): Promi
     throw new Error(error?.message ?? '活动更新失败');
   }
 
-  return toCmiEvent(data as CmiEventRow);
+  await replaceCmiEventManagerEmails({
+    eventId: input.id,
+    managerEmails: input.managerEmails,
+    organizerEmail: input.organizerEmail,
+    userId: input.updatedBy,
+  });
+
+  const managerEmails = await getCmiEventManagerEmails(input.id);
+
+  return {
+    ...toCmiEvent(data as CmiEventRow),
+    managerEmails,
+  };
 };
 
 export const getPublicCmiEventRegistrations = async (

@@ -79,6 +79,7 @@ export interface CmiEvent {
   organizerId?: string;
   organizerName?: string;
   organizerEmail?: string;
+  managerEmails?: string[];
   contactEmail?: string;
   capacity?: number;
   registrationEnabled?: boolean;

@@ -57,7 +57,8 @@ test('buildEventRegistrationEmailRecipients 去掉空值并按邮箱去重', () 
       adminEmail: 'events@cmimap.com',
       organizerEmail: 'Events@CMIMap.com ',
       contactEmail: ' host@example.com ',
+      managerEmails: ['Host@Example.com', 'cohost@example.com'],
     }),
-    ['events@cmimap.com', 'host@example.com']
+    ['events@cmimap.com', 'host@example.com', 'cohost@example.com']
   );
 });

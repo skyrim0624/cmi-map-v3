@@ -37,6 +37,93 @@ const uniqueEmails = (emails: Array<string | null | undefined>) => {
   return Array.from(unique.values());
 };
 
+const getSupabaseServiceKey = () => {
+  const legacyServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (legacyServiceRoleKey) return legacyServiceRoleKey;
+
+  const secretKeys = Deno.env.get('SUPABASE_SECRET_KEYS');
+  if (!secretKeys) return undefined;
+
+  try {
+    const parsed = JSON.parse(secretKeys) as Record<string, string | undefined>;
+    return parsed.default ?? Object.values(parsed).find(Boolean);
+  } catch {
+    return undefined;
+  }
+};
+
+const absoluteAssetUrl = (siteUrl: string, path: string) =>
+  `${siteUrl.replace(/\/$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
+
+const formatEventTime = (startAt: string | null | undefined) =>
+  startAt
+    ? new Intl.DateTimeFormat('zh-CN', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: 'Asia/Bangkok',
+      hour12: false,
+    }).format(new Date(startAt))
+    : '时间待确认';
+
+const emailShell = (content: string) => `
+  <div style="margin:0;background:#f5f1ea;padding:24px 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#242424;">
+    <div style="max-width:640px;margin:0 auto;background:#fffaf0;border:3px solid #111;border-radius:22px;overflow:hidden;">
+      <div style="background:#8b61ee;padding:22px 24px;border-bottom:3px solid #111;">
+        <div style="font-size:34px;font-weight:900;letter-spacing:0;color:#050505;line-height:1;">CMI Map</div>
+        <div style="margin-top:8px;font-size:16px;font-weight:800;color:#2b184a;">清迈活动和好去处，都在这里</div>
+      </div>
+      <div style="padding:24px;">
+        ${content}
+      </div>
+    </div>
+  </div>
+`;
+
+const imageBlock = (src: string, alt: string) => `
+  <img src="${src}" alt="${escapeHtml(alt)}" style="display:block;width:100%;max-width:560px;border:3px solid #111;border-radius:18px;margin:12px 0;background:#eee;" />
+`;
+
+const qrBlock = (src: string, title: string, description: string) => `
+  <td style="width:33.33%;padding:8px;vertical-align:top;text-align:center;">
+    <img src="${src}" alt="${escapeHtml(title)}" style="display:block;width:132px;height:132px;object-fit:cover;border:3px solid #111;border-radius:16px;margin:0 auto;background:#fff;" />
+    <div style="margin-top:8px;font-size:15px;font-weight:900;color:#111;">${escapeHtml(title)}</div>
+    <div style="margin-top:3px;font-size:12px;font-weight:700;line-height:1.5;color:#5d5548;">${escapeHtml(description)}</div>
+  </td>
+`;
+
+const sendResendEmail = async ({
+  resendApiKey,
+  from,
+  to,
+  subject,
+  html,
+}: {
+  resendApiKey: string;
+  from: string;
+  to: string[];
+  subject: string;
+  html: string;
+}) => {
+  if (to.length === 0) return { ok: true, skipped: true, detail: null };
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from,
+      to,
+      subject,
+      html,
+    }),
+  });
+
+  const detail = await response.json().catch(() => ({}));
+  return { ok: response.ok, skipped: false, detail };
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -47,7 +134,7 @@ Deno.serve(async (req) => {
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const serviceRoleKey = getSupabaseServiceKey();
   const resendApiKey = Deno.env.get('RESEND_API_KEY');
 
   if (!supabaseUrl || !serviceRoleKey) {
@@ -73,7 +160,7 @@ Deno.serve(async (req) => {
 
   const { data: event, error: eventError } = await supabase
     .from('cmi_events')
-    .select('id,title,start_at,venue_name,area,organizer_email,contact_email,created_by')
+    .select('id,title,start_at,venue_name,area,source_type,is_cmi_related,organizer_name,organizer_email,contact_email,created_by')
     .eq('id', eventId)
     .maybeSingle();
 
@@ -101,56 +188,137 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Registration not found' }, 404);
   }
 
-  const adminEmail = Deno.env.get('CMI_EVENT_ADMIN_EMAIL') ?? Deno.env.get('CMI_ADMIN_EMAIL');
-  const recipients = uniqueEmails([adminEmail, event.organizer_email, event.contact_email]);
+  const { data: managers, error: managersError } = await supabase
+    .from('cmi_event_managers')
+    .select('email')
+    .eq('event_id', eventId);
 
-  if (!resendApiKey || recipients.length === 0) {
+  if (managersError) {
+    return jsonResponse({ error: managersError.message }, 500);
+  }
+
+  const defaultCmiInnOrganizerEmail = normalizeEmail(
+    Deno.env.get('CMI_INN_DEFAULT_ORGANIZER_EMAIL')
+  ) || 'skyrim1179676226@gmail.com';
+  const isCmiInnEvent = Boolean(
+    event.is_cmi_related ||
+    event.source_type === 'cmi' ||
+    event.venue_name?.includes('清迈客栈') ||
+    event.area?.includes('清迈客栈') ||
+    event.area?.toUpperCase().includes('CMI')
+  );
+  const adminEmail = Deno.env.get('CMI_EVENT_ADMIN_EMAIL') ?? Deno.env.get('CMI_ADMIN_EMAIL');
+  const managerEmails = Array.isArray(managers)
+    ? managers.map(manager => normalizeEmail(manager.email))
+    : [];
+  const organizerRecipients = uniqueEmails([
+    adminEmail,
+    isCmiInnEvent ? defaultCmiInnOrganizerEmail : null,
+    event.organizer_email,
+    event.contact_email,
+    ...managerEmails,
+  ]);
+
+  if (!resendApiKey) {
     return jsonResponse({ ok: true, skipped: true, reason: 'email_not_configured' });
   }
 
   const siteUrl = Deno.env.get('PUBLIC_SITE_URL') ?? 'https://cmimap.com';
+  const normalizedSiteUrl = siteUrl.replace(/\/$/, '');
   const manageUrl = `${siteUrl.replace(/\/$/, '')}/events/${encodeURIComponent(eventId)}/manage`;
-  const eventTime = event.start_at
-    ? new Intl.DateTimeFormat('zh-CN', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-      timeZone: 'Asia/Bangkok',
-      hour12: false,
-    }).format(new Date(event.start_at))
-    : '时间待确认';
+  const eventUrl = `${normalizedSiteUrl}/events/${encodeURIComponent(eventId)}`;
+  const eventTime = formatEventTime(event.start_at);
+  const eventLocation = `${event.venue_name}${event.area ? ` · ${event.area}` : ''}`;
   const note = registration.note ? `<p><strong>备注：</strong>${escapeHtml(registration.note)}</p>` : '';
+  const from = Deno.env.get('CMI_EVENT_EMAIL_FROM') ?? 'CMI Map <onboarding@resend.dev>';
 
-  const emailResponse = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: Deno.env.get('CMI_EVENT_EMAIL_FROM') ?? 'CMI Map <onboarding@resend.dev>',
-      to: recipients,
-      subject: `新的活动报名：${event.title}`,
-      html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.7; color: #242424;">
-          <h2>新的活动报名</h2>
-          <p><strong>活动：</strong>${escapeHtml(event.title)}</p>
-          <p><strong>时间：</strong>${escapeHtml(eventTime)}</p>
-          <p><strong>地点：</strong>${escapeHtml(event.venue_name)}${event.area ? ` · ${escapeHtml(event.area)}` : ''}</p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p><strong>报名人：</strong>${escapeHtml(registration.attendee_name)}</p>
-          <p><strong>邮箱：</strong>${escapeHtml(registration.attendee_email)}</p>
-          ${note}
-          <p><a href="${manageUrl}">查看活动报名名单</a></p>
-        </div>
-      `,
-    }),
+  const organizerEmailResult = await sendResendEmail({
+    resendApiKey,
+    from,
+    to: organizerRecipients,
+    subject: `新的活动报名：${event.title}`,
+    html: emailShell(`
+      <h2 style="margin:0 0 14px;font-size:24px;line-height:1.25;">新的活动报名</h2>
+      <p style="margin:0 0 8px;line-height:1.7;"><strong>活动：</strong>${escapeHtml(event.title)}</p>
+      <p style="margin:0 0 8px;line-height:1.7;"><strong>时间：</strong>${escapeHtml(eventTime)}</p>
+      <p style="margin:0 0 8px;line-height:1.7;"><strong>地点：</strong>${escapeHtml(eventLocation)}</p>
+      <hr style="border:none;border-top:1px solid #ddd;margin:20px 0;" />
+      <p style="margin:0 0 8px;line-height:1.7;"><strong>报名人：</strong>${escapeHtml(registration.attendee_name)}</p>
+      <p style="margin:0 0 8px;line-height:1.7;"><strong>邮箱：</strong>${escapeHtml(registration.attendee_email)}</p>
+      ${note}
+      <p style="margin:20px 0 0;">
+        <a href="${manageUrl}" style="display:inline-block;background:#160f25;color:#fff;text-decoration:none;border:3px solid #111;border-radius:999px;padding:10px 18px;font-weight:900;">查看报名名单</a>
+      </p>
+    `),
   });
 
-  const emailData = await emailResponse.json().catch(() => ({}));
+  const entranceImage = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/checkin-entrance.jpg');
+  const doorwayImage = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/checkin-doorway.jpg');
+  const yardImage = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/yard-front.jpg');
+  const officialQr = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/qr-cmi-official.jpg');
+  const groupQr = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/qr-community-group-5.jpg');
+  const andreasQr = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/qr-andreas.jpg');
 
-  if (!emailResponse.ok) {
-    return jsonResponse({ error: 'Email provider failed', detail: emailData }, 502);
+  const attendeeEmailResult = await sendResendEmail({
+    resendApiKey,
+    from,
+    to: uniqueEmails([registration.attendee_email]),
+    subject: `报名成功：${event.title}`,
+    html: emailShell(`
+      <h2 style="margin:0 0 12px;font-size:24px;line-height:1.25;">报名成功，活动见</h2>
+      <p style="margin:0 0 8px;line-height:1.7;"><strong>活动：</strong>${escapeHtml(event.title)}</p>
+      <p style="margin:0 0 8px;line-height:1.7;"><strong>时间：</strong>${escapeHtml(eventTime)}</p>
+      <p style="margin:0 0 16px;line-height:1.7;"><strong>地点：</strong>${escapeHtml(eventLocation)}</p>
+
+      <div style="border:3px solid #111;border-radius:18px;background:#160f25;color:#fff;padding:16px;margin:18px 0;">
+        <h3 style="margin:0 0 10px;font-size:20px;line-height:1.3;color:#fff;">清迈客栈路线指引</h3>
+        <p style="margin:0;line-height:1.8;font-weight:700;color:#fff;">
+          清迈客栈在巷子里，导航快到的时候请放慢一点，看门口和院子的标识。第一次来的人比较容易在巷口错过，建议直接打车或骑摩托到附近，再按下面照片找入口。
+        </p>
+      </div>
+
+      ${imageBlock(entranceImage, '清迈客栈巷口和入口参考')}
+      ${imageBlock(doorwayImage, '清迈客栈门口参考')}
+      ${imageBlock(yardImage, '清迈客栈院子参考')}
+
+      <div style="border:3px solid #111;border-radius:18px;background:#fff;padding:16px;margin:18px 0;">
+        <h3 style="margin:0 0 10px;font-size:20px;line-height:1.3;">停车提醒</h3>
+        <p style="margin:0;line-height:1.8;font-weight:700;">
+          清迈客栈门口不能停车，旁边也没有自带停车场。开车来的话，请提前在主路或附近合法停车点停好，再步行或叫车进巷子；不要停在巷口、邻居门口或客栈门口，容易影响通行。
+        </p>
+      </div>
+
+      <div style="border:3px solid #111;border-radius:18px;background:#f2e8ff;padding:16px;margin:18px 0;">
+        <h3 style="margin:0 0 10px;font-size:20px;line-height:1.3;">活动前先加一下</h3>
+        <p style="margin:0 0 12px;line-height:1.7;font-weight:700;">公众号会发活动信息；微信群方便临时问路、确认位置；找不到路可以加子扬微信。</p>
+        <table role="presentation" style="width:100%;border-collapse:collapse;">
+          <tr>
+            ${qrBlock(officialQr, '清迈客栈公众号', '活动更新')}
+            ${qrBlock(groupQr, '清迈客栈微信群', '问路和活动通知')}
+            ${qrBlock(andreasQr, '子扬微信', '找不到路时联系')}
+          </tr>
+        </table>
+      </div>
+
+      <p style="margin:20px 0 0;">
+        <a href="${eventUrl}" style="display:inline-block;background:#160f25;color:#fff;text-decoration:none;border:3px solid #111;border-radius:999px;padding:10px 18px;font-weight:900;">打开活动页</a>
+      </p>
+    `),
+  });
+
+  const failures = [
+    organizerEmailResult.ok ? null : { target: 'organizers', detail: organizerEmailResult.detail },
+    attendeeEmailResult.ok ? null : { target: 'attendee', detail: attendeeEmailResult.detail },
+  ].filter(Boolean);
+
+  if (failures.length > 0) {
+    return jsonResponse({ error: 'Email provider failed', detail: failures }, 502);
   }
 
-  return jsonResponse({ ok: true, skipped: false });
+  return jsonResponse({
+    ok: true,
+    skipped: false,
+    organizerRecipients: organizerRecipients.length,
+    attendeeRecipients: 1,
+  });
 });

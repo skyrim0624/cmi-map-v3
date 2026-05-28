@@ -66,14 +66,16 @@ export const buildEventRegistrationEmailRecipients = ({
   adminEmail,
   organizerEmail,
   contactEmail,
+  managerEmails = [],
 }: {
   adminEmail?: string | null;
   organizerEmail?: string | null;
   contactEmail?: string | null;
+  managerEmails?: Array<string | null | undefined>;
 }) => {
   const uniqueEmails = new Map<string, string>();
 
-  for (const email of [adminEmail, organizerEmail, contactEmail]) {
+  for (const email of [adminEmail, organizerEmail, contactEmail, ...managerEmails]) {
     const normalizedEmail = normalizeEmail(email);
     if (!normalizedEmail.includes('@')) continue;
     uniqueEmails.set(normalizedEmail, normalizedEmail);
