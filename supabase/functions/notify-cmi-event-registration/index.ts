@@ -255,6 +255,7 @@ Deno.serve(async (req) => {
   const entranceImage = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/checkin-entrance.jpg');
   const doorwayImage = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/checkin-doorway.jpg');
   const yardImage = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/yard-front.jpg');
+  const parkingGuideCardImage = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/cmi-inn-parking-guide-card.png');
   const officialQr = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/qr-cmi-official.jpg');
   const groupQr = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/qr-community-group-5.jpg');
   const andreasQr = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/qr-andreas.jpg');
@@ -284,9 +285,14 @@ Deno.serve(async (req) => {
       <div style="border:3px solid #111;border-radius:18px;background:#fff;padding:16px;margin:18px 0;">
         <h3 style="margin:0 0 10px;font-size:20px;line-height:1.3;">停车提醒</h3>
         <p style="margin:0;line-height:1.8;font-weight:700;">
-          清迈客栈门口不能停车，旁边也没有自带停车场。开车来的话，请提前在主路或附近合法停车点停好，再步行或叫车进巷子；不要停在巷口、邻居门口或客栈门口，容易影响通行。
+          清迈客栈门口不能停车。开车来的话，推荐停在 Blue Coffee at Somphet Market 旁边的停车场，再步行约 3 分钟到清迈客栈；不要停在巷口、邻居门口或客栈门口，容易影响通行。下面这张图可以直接保存到相册。
         </p>
       </div>
+      ${imageBlock(parkingGuideCardImage, '清迈客栈停车指引卡')}
+      <p style="margin:8px 0 16px;line-height:1.7;font-weight:700;">
+        停车定位：
+        <a href="https://maps.app.goo.gl/Yp6eQcaRng1FBtaK6" style="color:#160f25;font-weight:900;">Blue Coffee at Somphet Market 旁边停车场</a>
+      </p>
 
       <div style="border:3px solid #111;border-radius:18px;background:#f2e8ff;padding:16px;margin:18px 0;">
         <h3 style="margin:0 0 10px;font-size:20px;line-height:1.3;">活动前先加一下</h3>
