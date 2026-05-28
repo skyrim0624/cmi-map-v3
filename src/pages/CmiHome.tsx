@@ -577,7 +577,7 @@ function YardNoticeWall({
   onShareEvent: (event: CmiEvent) => void;
   onRegisterEvent: (event: CmiEvent) => void;
 }) {
-  const visibleInnEvents = innEvents.slice(0, 4);
+  const visibleInnEvents = innEvents;
   const latestCheckedAtLabel = formatBangkokDateTime(
     getNewestTimestamp(innEvents.map(event => event.lastCheckedAt))
   );
@@ -834,7 +834,7 @@ export default function CmiHome() {
   const [events, setEvents] = useState<CmiEvent[]>(CMI_EVENTS);
   const innEvents = useMemo(() => getPrimaryInnEvents(events, referenceDate), [events, referenceDate]);
   const visibleInnEventIdsKey = useMemo(
-    () => innEvents.slice(0, 4).map(event => event.id).join('|'),
+    () => innEvents.map(event => event.id).join('|'),
     [innEvents]
   );
   const [registeredEventIds, setRegisteredEventIds] = useState<Record<string, boolean>>({});
