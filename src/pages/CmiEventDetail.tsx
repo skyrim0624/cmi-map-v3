@@ -519,11 +519,11 @@ export default function CmiEventDetail() {
               <div className="min-w-0">
                 <p className="text-[12px] font-black text-[#432277]">活动报名</p>
                 <h2 className="mt-1 text-xl font-black leading-tight text-[#050505]">
-                  {registrationSummary.goingCount} 人已报名
+                  一键报名参加
                 </h2>
                 <p className="mt-1 text-sm font-bold leading-relaxed text-[#2c2240]">
                   {registrationSummary.capacity
-                    ? `名额 ${registrationSummary.capacity}，剩余 ${registrationSummary.remainingSpots} 个`
+                    ? `名额 ${registrationSummary.capacity}`
                     : '不限人数'}
                 </p>
               </div>
