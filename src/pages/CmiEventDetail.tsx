@@ -7,7 +7,6 @@ import {
   Loader2,
   type LucideIcon,
   MapPin,
-  MapPinned,
   MessageSquareText,
   Navigation,
   Send,
@@ -49,8 +48,6 @@ import { isCmiEventManager } from '@/features/cmi-events/event-management';
 import {
   getCmiEventManagePath,
   getCmiHomePath,
-  getPlaceMapPath,
-  getSceneMapPath,
 } from '@/lib/paths';
 import { getVisibleEventAttendees, summarizeEventRegistrations } from '@/features/cmi-events/event-rsvp-utils';
 import { cn } from '@/lib/utils';
@@ -256,15 +253,6 @@ export default function CmiEventDetail() {
       isMounted = false;
     };
   }, [eventId, user?.id]);
-
-  const handleOpenCmiMap = () => {
-    if (event?.mapLocation) {
-      navigate(getSceneMapPath('tomorrow-events', { eventId: event.id }));
-      return;
-    }
-
-    navigate(getPlaceMapPath(CMI_INN_EVENT_LOCATION.name));
-  };
 
   const handleOneClickRegistration = async () => {
     if (!event) return;
@@ -575,14 +563,6 @@ export default function CmiEventDetail() {
 
       <div className="fixed bottom-0 left-0 right-0 z-50 border-t-[4px] border-[#050505] bg-[#8b61ee]/94 px-4 pb-[calc(0.875rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
         <div className="mx-auto grid max-w-[520px] gap-2">
-          <button
-            type="button"
-            className="flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full border-[3px] border-[#050505] bg-[#160f25] text-base font-black text-white shadow-[4px_5px_0_rgba(5,5,5,0.22)] transition active:scale-95"
-            onClick={handleOpenCmiMap}
-          >
-            <MapPinned className="h-[18px] w-[18px]" strokeWidth={2.7} />
-            CMI地图
-          </button>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
