@@ -11,7 +11,6 @@ import {
   MessageSquareText,
   Navigation,
   Send,
-  Stamp,
   Ticket,
   UsersRound,
 } from 'lucide-react';
@@ -57,8 +56,6 @@ import {
 } from '@/lib/paths';
 import { getVisibleEventAttendees, summarizeEventRegistrations } from '@/features/cmi-events/event-rsvp-utils';
 import { cn } from '@/lib/utils';
-
-const WANT_TO_GO_STORAGE_PREFIX = 'cmi-map:event-want-to-go:';
 
 const decodeRouteParam = (value: string | undefined) => {
   if (!value) return '';
@@ -151,7 +148,6 @@ export default function CmiEventDetail() {
   const [event, setEvent] = useState<CmiEvent | null>(() => getCmiEventById(eventId));
   const [loading, setLoading] = useState(true);
   const [rideDialogOpen, setRideDialogOpen] = useState(false);
-  const [wantToGo, setWantToGo] = useState(false);
   const [publicRegistrations, setPublicRegistrations] = useState<CmiEventPublicRegistration[]>([]);
   const [currentUserRegistered, setCurrentUserRegistered] = useState(false);
   const [submittingRegistration, setSubmittingRegistration] = useState(false);
@@ -231,11 +227,6 @@ export default function CmiEventDetail() {
   }, [eventId]);
 
   useEffect(() => {
-    if (!eventId) return;
-    setWantToGo(window.localStorage.getItem(`${WANT_TO_GO_STORAGE_PREFIX}${eventId}`) === '1');
-  }, [eventId]);
-
-  useEffect(() => {
     if (!eventId || !event?.registrationEnabled) {
       setPublicRegistrations([]);
       return;
@@ -267,21 +258,6 @@ export default function CmiEventDetail() {
       isMounted = false;
     };
   }, [eventId, user?.id]);
-
-  const handleToggleWantToGo = () => {
-    if (!eventId) return;
-
-    const nextValue = !wantToGo;
-    setWantToGo(nextValue);
-
-    if (nextValue) {
-      window.localStorage.setItem(`${WANT_TO_GO_STORAGE_PREFIX}${eventId}`, '1');
-      toast.success('已盖上想去戳');
-    } else {
-      window.localStorage.removeItem(`${WANT_TO_GO_STORAGE_PREFIX}${eventId}`);
-      toast('已取消想去戳');
-    }
-  };
 
   const handleOpenCmiMap = () => {
     if (event?.mapLocation) {
@@ -600,35 +576,6 @@ export default function CmiEventDetail() {
           </section>
         )}
 
-        <section className="mt-5 rounded-[1.4rem] border-[4px] border-[#050505] bg-[#fff7df]/92 p-4 shadow-[5px_6px_0_rgba(5,5,5,0.2)]">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[12px] font-black text-[#6b4ca8]">活动盖戳</p>
-              <h2 className="mt-1 text-xl font-black leading-tight text-[#050505]">想去就盖一下</h2>
-              <p className="mt-2 text-sm font-bold leading-relaxed text-[#2c2240]">
-                这个戳会保存在你这台设备上，方便下次回来确认。
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleToggleWantToGo}
-              className={cn(
-                'relative flex h-24 w-24 shrink-0 rotate-[-8deg] items-center justify-center rounded-full border-[3px] border-dashed text-lg font-black transition active:scale-95',
-                wantToGo
-                  ? 'border-[#d55747] bg-[#fff7f2] text-[#d55747] shadow-[0_10px_22px_rgba(213,87,71,0.18)]'
-                  : 'border-[#050505] bg-white/72 text-[#6b4ca8]'
-              )}
-              aria-pressed={wantToGo}
-              aria-label="盖想去戳"
-            >
-              <span className="absolute inset-3 rounded-full border border-current/55" />
-              <span className="relative flex flex-col items-center leading-none">
-                {wantToGo ? <Check className="mb-1 h-5 w-5" /> : <Stamp className="mb-1 h-5 w-5" />}
-                想去
-              </span>
-            </button>
-          </div>
-        </section>
       </main>
 
       <div className="fixed bottom-0 left-0 right-0 z-50 border-t-[4px] border-[#050505] bg-[#8b61ee]/94 px-4 pb-[calc(0.875rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
