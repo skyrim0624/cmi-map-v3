@@ -79,6 +79,7 @@ export interface CmiEvent {
   organizerId?: string;
   organizerName?: string;
   organizerEmail?: string;
+  managerEmails?: string[];
   contactEmail?: string;
   capacity?: number;
   registrationEnabled?: boolean;
@@ -122,7 +123,7 @@ export const CMI_EVENT_TIME_BUCKET_LABELS: Record<CmiEventTimeBucket, string> = 
   stable: '稳定活动',
 };
 
-export const CMI_EVENTS_LAST_MAINTAINED_AT = '2026-05-26T17:30:52+07:00';
+export const CMI_EVENTS_LAST_MAINTAINED_AT = '2026-05-27T16:18:55+07:00';
 
 export const CMI_EVENTS: CmiEvent[] = [
   {
@@ -336,12 +337,45 @@ export const CMI_EVENTS: CmiEvent[] = [
     isCmiRelated: true,
     isVerified: true,
     verificationStatus: 'verified',
-    lastCheckedAt: '2026-05-25T15:15:13+07:00',
+    lastCheckedAt: '2026-05-26T20:41:59+07:00',
     nextCheckBefore: '2026-05-29T12:00:00+07:00',
     reliabilityNote:
       '信息来自更新后的 5.29 穷姐姐财商分享大会推文 Markdown 与同目录海报；时间、地点、费用、Luma 报名链接和空降参与方式均明确。',
     tags: ['CMI', '财商', '理财', '数字游民', '分享会', '免费'],
     summary: '一场面向清迈旅居者和数字游民的财商分享，围绕理财工具、收入安全垫、风险识别和个人价值展开。',
+    coverImageUrl: '/cmi-home/event-posters/cmi-financial-literacy-sharing-2026-05-29.png',
+  },
+  {
+    id: 'cmi-tiandi-xuanhuang-baraka-2026-05-30',
+    title: '《天地玄黄》Baraka 放映夜',
+    type: 'cmi',
+    startAt: '2026-05-30T19:00:00+07:00',
+    venueName: '清迈客栈',
+    area: 'CMI / 清迈客栈',
+    priceLabel: '免费参与',
+    registrationLabel: '免费参与；扫码进群，或现场空降',
+    sourceType: 'cmi',
+    sourceLabel: 'CMI 活动宣传内容文件夹',
+    hostName: 'MagicLab × 清迈客栈',
+    language: '中文',
+    suitableFor: ['观影放映', '无语言电影', '周末晚上', '放松'],
+    isCmiRelated: true,
+    isVerified: true,
+    verificationStatus: 'verified',
+    lastCheckedAt: '2026-05-27T16:10:28+07:00',
+    nextCheckBefore: '2026-05-30T17:00:00+07:00',
+    reliabilityNote:
+      '信息来自 5.27 天地玄黄观影推文与官方海报；时间、地点、费用、参与方式均明确，未见独立报名链接。',
+    tags: ['CMI', '观影会', '电影', '周末', '清迈客栈'],
+    summary: '无对白纪录片《天地玄黄》放映夜，围绕沉默、自然和人的关系展开，适合周六晚上到清迈客栈放松一下。',
+    detailBody:
+      '这场放映围绕《天地玄黄》讨论“如何用镜头面对喧嚣”。活动时间：5 月 30 日（周六）19:00；地点：清迈客栈；费用：免费参与；参与方式：扫码进群，或现场空降。',
+    coverImageUrl: 'https://sfpcpxlxslnulzlmjcby.supabase.co/storage/v1/object/public/cmi-event-posters/posters/cmi-tiandi-xuanhuang-baraka-2026-05-30.png',
+    registrationEnabled: true,
+    registrationStatus: 'open',
+    attendeeVisibility: 'public',
+    organizerName: 'CMI 社区',
+    organizerEmail: 'events@cmimap.com',
   },
   {
     id: 'cmi-waytoagi-codex-maker-lab-2026-05-31',
@@ -367,6 +401,7 @@ export const CMI_EVENTS: CmiEvent[] = [
     reliabilityNote: '信息来自来源说明、公众号推文 Markdown、公众号离线提取和同目录海报；时间、地点、费用、参与方式和报名链接均明确。',
     tags: ['CMI', 'WaytoAGI', 'AI切磋大会', 'Codex', '工作坊', '免费'],
     summary: 'WaytoAGI 第24期 AI 切磋大会清迈站，在清迈客栈用 Codex 现场做出可演示的小作品。',
+    coverImageUrl: '/cmi-home/event-posters/cmi-waytoagi-codex-maker-lab-2026-05-31.png',
   },
   {
     id: 'cmi-talk-fathers-day-speaker-call-2026-06-07',
@@ -1166,6 +1201,32 @@ export const formatCmiEventTime = (
   }
 
   return event.stableSchedule ?? '时间待确认';
+};
+
+const CMI_EVENT_DISPLAY_TIME_ZONE = 'Asia/Bangkok';
+
+export const formatCmiEventShareCardTime = (
+  event: CmiEvent,
+  referenceDate: Date = new Date()
+) => {
+  const sortTime = getCmiEventSortTime(event, referenceDate);
+
+  if (sortTime === Number.MAX_SAFE_INTEGER) {
+    return event.stableSchedule ?? '时间待确认';
+  }
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: CMI_EVENT_DISPLAY_TIME_ZONE,
+  }).formatToParts(new Date(sortTime));
+  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find(part => part.type === type)?.value ?? '';
+
+  return `${Number(getPart('month'))}/${Number(getPart('day'))} ${getPart('hour')}:${getPart('minute')}`;
 };
 
 export const formatCmiEventDateParts = (

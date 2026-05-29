@@ -40,6 +40,7 @@ import {
   getCmiPlaceTypeTag,
   getCmiPlaceTypeTagsByIds,
   getCmiPrimaryIntentSceneIds,
+  getCmiRecommendationDisplayTag,
   matchesCmiMapFilterGroup,
   matchesCmiPlaceTypeTag,
   matchesCmiRecommendationSearchQuery,
@@ -231,7 +232,9 @@ const createEasterEggMarkers = (sourceMarkers: MapMarkerType[]): MapMarkerType[]
     });
 };
 
-const toMarkerVisualOverride = (tag: CmiPlaceTypeTag | null | undefined) => (
+const toMarkerVisualOverride = (
+  tag: Pick<CmiPlaceTypeTag, 'label' | 'iconUrl' | 'needsIcon'> | null | undefined
+) => (
   tag?.iconUrl && !tag.needsIcon
     ? {
       label: tag.label,
@@ -321,6 +324,7 @@ export default function MapView() {
   const selectedEventId = searchParams.get('event');
   const selectedPlaceNameParam = searchParams.get('place');
   const isNearbyScene = activeScene?.id === 'nearby' || activeScene?.id === 'nearby-wander';
+  const shouldUseUserLocationForScene = isNearbyScene || activeScene?.id === 'eat';
   const activePlaceTypeParam = searchParams.get('placeType');
   const activePlaceTypeId =
     isNearbyScene && !isCmiNearbyWanderPlaceTypeId(activePlaceTypeParam)
@@ -486,11 +490,16 @@ export default function MapView() {
   ]);
   const sceneRecommendations = sceneRecommendationState.recommendations;
   const isPlaceTypeFallback = sceneRecommendationState.isPlaceTypeFallback;
+  const activeSceneMapFilterGroupId = directIntentMapGroupId ?? activeNearbyMapGroupId;
 
   const sceneMarkers = useMemo(() => {
     const markerMap = new Map<string, MapMarkerType>();
 
     sceneRecommendations.forEach((recommendation) => {
+      const displayTag = getCmiRecommendationDisplayTag(recommendation, {
+        mapFilterGroupId: activeSceneMapFilterGroupId,
+        placeTypeId: activePlaceTypeId,
+      });
       if (!markerMap.has(recommendation.place_name)) {
         markerMap.set(recommendation.place_name, {
           id: recommendation.id,
@@ -499,13 +508,14 @@ export default function MapView() {
           latitude: recommendation.latitude,
           longitude: recommendation.longitude,
           recommendations: [],
+          visualOverride: toMarkerVisualOverride(displayTag),
         });
       }
       markerMap.get(recommendation.place_name)!.recommendations.push(recommendation);
     });
 
     return Array.from(markerMap.values());
-  }, [sceneRecommendations]);
+  }, [activePlaceTypeId, activeSceneMapFilterGroupId, sceneRecommendations]);
 
   // 加载推荐数据
   useEffect(() => {
@@ -561,7 +571,7 @@ export default function MapView() {
   ]);
 
   useEffect(() => {
-    if (!isNearbyScene) {
+    if (!shouldUseUserLocationForScene) {
       setLocationStatus('idle');
       return;
     }
@@ -572,7 +582,7 @@ export default function MapView() {
     }
 
     setLocationStatus(userLocation ? 'ready' : 'locating');
-  }, [isNearbyScene, userLocation]);
+  }, [shouldUseUserLocationForScene, userLocation]);
 
   useEffect(() => {
     if (!shouldSearchExternalPlaces) {
@@ -674,6 +684,13 @@ export default function MapView() {
     removeSelectedLocationFromUrl();
   };
 
+  const getContextualPlacePath = (placeName: string) =>
+    getPlacePath(placeName, {
+      sceneId: activeScene?.id,
+      filterId: activeScene ? activeNearbyMapGroupId : activeMapFilterGroupId === 'all' ? null : activeMapFilterGroupId,
+      placeTypeId: activeScene ? activePlaceTypeId : activeMapPlaceTypeId,
+    });
+
   // 点击预览卡片，进入详情页
   const handleCardClick = () => {
     if (ignoreNextSelectedCardClickRef.current) {
@@ -684,7 +701,7 @@ export default function MapView() {
     if (selectedExternalPlace) return;
     if (selectedMarker && isEasterEggRecommendation(selectedMarker)) return;
     if (selectedMarker) {
-      navigate(getPlacePath(selectedMarker.place_name));
+      navigate(getContextualPlacePath(selectedMarker.place_name));
     }
   };
 
@@ -700,7 +717,7 @@ export default function MapView() {
   const handleSelectedDetails = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     if (!selectedMarker) return;
-    navigate(getPlacePath(selectedMarker.place_name));
+    navigate(getContextualPlacePath(selectedMarker.place_name));
   };
 
   const handleCopySelectedPlace = async (event: MouseEvent<HTMLButtonElement>) => {
@@ -1226,6 +1243,10 @@ export default function MapView() {
   const selectedIsCommunityGuide = selectedRecommendation
     ? isCommunityCuratedRecommendation(selectedRecommendation)
     : false;
+  const selectedRecommendationImages = selectedRecommendations.flatMap(recommendation =>
+    recommendation.images.filter(Boolean)
+  );
+  const additionalSelectedRecommendations = selectedRecommendations.slice(1);
   const scenePanelItemCount = isEventScene ? sceneEvents.length : sceneRecommendations.length;
   const scenePanelPreviewLabels = isEventScene
     ? sceneEvents.slice(0, SCENE_PANEL_PREVIEW_LIMIT).map(event => event.title)
@@ -1238,7 +1259,7 @@ export default function MapView() {
         ? `${scenePanelItemCount} 个地点 · ${scenePanelPreviewLabels.join(' / ')}`
         : '地点还在整理中';
   const nearbyLocationLabel = '没拿到定位权限，允许后点重试';
-  const shouldShowNearbyLocationNotice = isNearbyScene && locationStatus === 'error';
+  const shouldShowLocationNotice = shouldUseUserLocationForScene && locationStatus === 'error';
 
   useEffect(() => {
     warmupImages(mapWarmupImageUrls, { batchSize: 8, delayMs: 80 });
@@ -1250,8 +1271,8 @@ export default function MapView() {
       <div className="absolute inset-0 z-0">
         <LeafletMap
           key={
-            isNearbyScene
-              ? `nearby-${locationRequestKey}`
+            shouldUseUserLocationForScene
+              ? `location-${activeScene?.id ?? 'scene'}-${locationRequestKey}`
               : selectedEventId
                 ? `event-${selectedEventId}`
                 : selectedPlaceNameParam
@@ -1268,7 +1289,7 @@ export default function MapView() {
           focusTarget={activeMapFocusTarget}
           focusTargetZoom={activeMapFocusZoom}
           focusTargetOffsetYRatio={0.14}
-          focusUserLocation={isNearbyScene}
+          focusUserLocation={shouldUseUserLocationForScene}
           constrainToChiangMai
           locationZoom={16}
           onUserLocation={handleUserLocation}
@@ -1692,7 +1713,7 @@ export default function MapView() {
         )}
       </div>
 
-      {shouldShowNearbyLocationNotice && (
+      {shouldShowLocationNotice && (
         <div className="pointer-events-none absolute top-[calc(env(safe-area-inset-top)+110px)] left-4 right-4 z-20 md:left-6 md:right-auto md:max-w-[360px]">
           <div className="flex items-center gap-2 rounded-full border-2 border-border/50 bg-background/90 px-3 py-2 text-xs font-black text-foreground shadow-md backdrop-blur-sm">
             <LocateFixed className="h-4 w-4 shrink-0 text-primary" strokeWidth={2.5} />
@@ -1841,11 +1862,19 @@ export default function MapView() {
                     {!isEventScene && sceneRecommendations.map(recommendation => {
                       const guide = getPlaceGuide(recommendation.place_name, recommendation.category);
                       const isCommunityGuide = isCommunityCuratedRecommendation(recommendation);
-                      const presentation = getCmiSceneRecommendationPresentation(recommendation);
+                      const displayTag = getCmiRecommendationDisplayTag(recommendation, {
+                        mapFilterGroupId: activeSceneMapFilterGroupId,
+                        placeTypeId: activePlaceTypeId,
+                      });
+                      const presentation = getCmiSceneRecommendationPresentation(recommendation, {
+                        mapFilterGroupId: activeSceneMapFilterGroupId,
+                        placeTypeId: activePlaceTypeId,
+                      });
                       const markerVisual = getMapMarkerVisual({
                         place_name: recommendation.place_name,
                         category: recommendation.category,
                         recommendations: [recommendation],
+                        visualOverride: toMarkerVisualOverride(displayTag),
                       });
                       const summary = isCommunityGuide ? guide.summary : getRecommendationReasonText(recommendation);
                       const cardImage = recommendation.images[0];
@@ -1854,7 +1883,7 @@ export default function MapView() {
                           key={recommendation.id}
                           type="button"
                           className="flex w-full min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-2 text-left transition-transform active:scale-[0.98]"
-                          onClick={() => navigate(getPlacePath(recommendation.place_name))}
+                          onClick={() => navigate(getContextualPlacePath(recommendation.place_name))}
                         >
                           {cardImage ? (
                             <img
@@ -2164,10 +2193,10 @@ export default function MapView() {
       {/* 预览卡片 - z-index 最高 */}
       {selectedMarker && !selectedEvent && !selectedExternalPlace && !isEasterEggMode && selectedRecommendations.length > 0 && (
         <div
-          className="absolute bottom-0 left-0 right-0 z-50 cursor-pointer rounded-t-3xl border-t border-border/20 bg-card p-6 card-shadow slide-up press-feedback"
-          onClick={handleCardClick}
+          className="absolute bottom-0 left-0 right-0 z-50 max-h-[74dvh] overflow-hidden rounded-t-3xl border-t border-border/20 bg-card card-shadow slide-up"
           {...selectedCardSwipeHandlers}
         >
+          <div className="max-h-[74dvh] overflow-y-auto overscroll-contain px-6 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-3">
           <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-muted-foreground/20" aria-hidden="true" />
           <div className="space-y-4">
             {selectedIsCommunityGuide && selectedGuide ? (
@@ -2267,10 +2296,10 @@ export default function MapView() {
             </div>
 
             {/* 缩略图 */}
-            {selectedRecommendations[0].images.length > 0 && (
-              <div className="flex gap-2">
-                {selectedRecommendations[0].images.slice(0, 3).map((img, idx) => (
-                  <div key={idx} className="w-16 h-16 rounded-lg overflow-hidden border border-border shadow-sm">
+            {selectedRecommendationImages.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {selectedRecommendationImages.slice(0, 8).map((img, idx) => (
+                  <div key={`${img}-${idx}`} className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border shadow-sm">
                     <img
                       src={img}
                       alt=""
@@ -2282,13 +2311,26 @@ export default function MapView() {
             )}
 
             {/* 多人推荐提示 */}
-            {selectedRecommendations.length > 1 && (
-              <div className="pt-2 border-t border-border/50">
+            {additionalSelectedRecommendations.length > 0 && (
+              <div className="space-y-3 border-t border-border/50 pt-3">
                 <p className="text-xs font-semibold text-muted-foreground/80">
                   还有 {selectedRecommendations.length - 1} 人推荐了这里
                 </p>
+                <div className="space-y-2">
+                  {additionalSelectedRecommendations.map(recommendation => (
+                    <div key={recommendation.id} className="rounded-2xl bg-muted/45 px-3 py-2">
+                      <p className="line-clamp-3 text-sm font-medium leading-relaxed text-foreground">
+                        {getRecommendationReasonText(recommendation)}
+                      </p>
+                      <p className="mt-1 truncate text-xs font-semibold text-muted-foreground">
+                        {recommendation.user_name} 的清迈地图
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+          </div>
           </div>
         </div>
       )}

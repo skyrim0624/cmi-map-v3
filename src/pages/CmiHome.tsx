@@ -41,7 +41,7 @@ import {
 import { getStableProfileIdentity } from '@/features/profiles/profile-identity';
 import { type CmiEventShareCardResult, createCmiEventShareCard } from '@/lib/cmi-event-share-card';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
-import { getAddTracePath, getCmiEventPath, getPersonMapPath } from '@/lib/paths';
+import { getAddTracePath, getCmiEventPath, getPersonMapPath, getPublicCmiEventUrl } from '@/lib/paths';
 import { CMI_INN_LOGO_ICON_URL, CMI_INN_PLACE_NAME, type Recommendation } from '@/types/types';
 
 type FileShareData = {
@@ -466,7 +466,11 @@ function EventPreviewCard({
   onShareEvent: () => void;
   onRegisterEvent: () => void;
 }) {
-  const posterUrl = getCmiEventPosterUrl(event.id) ?? getCmiEventCardBackgroundUrl(event.id) ?? '/cmi-home/event-ai-courtyard.png';
+  const posterUrl =
+    event.coverImageUrl?.trim() ||
+    getCmiEventPosterUrl(event.id) ||
+    getCmiEventCardBackgroundUrl(event.id) ||
+    '/cmi-home/event-ai-courtyard.png';
   const registrationPreviewLabel = event.registrationLabel.includes('http')
     ? event.registrationLabel.split(/[；。]/)[0]?.trim() || '查看详情报名'
     : event.registrationLabel;
@@ -573,7 +577,7 @@ function YardNoticeWall({
   onShareEvent: (event: CmiEvent) => void;
   onRegisterEvent: (event: CmiEvent) => void;
 }) {
-  const visibleInnEvents = innEvents.slice(0, 4);
+  const visibleInnEvents = innEvents;
   const latestCheckedAtLabel = formatBangkokDateTime(
     getNewestTimestamp(innEvents.map(event => event.lastCheckedAt))
   );
@@ -830,7 +834,7 @@ export default function CmiHome() {
   const [events, setEvents] = useState<CmiEvent[]>(CMI_EVENTS);
   const innEvents = useMemo(() => getPrimaryInnEvents(events, referenceDate), [events, referenceDate]);
   const visibleInnEventIdsKey = useMemo(
-    () => innEvents.slice(0, 4).map(event => event.id).join('|'),
+    () => innEvents.map(event => event.id).join('|'),
     [innEvents]
   );
   const [registeredEventIds, setRegisteredEventIds] = useState<Record<string, boolean>>({});
@@ -1006,7 +1010,8 @@ export default function CmiHome() {
   };
 
   const handleShareEvent = async (event: CmiEvent) => {
-    const posterUrl = getCmiEventPosterUrl(event.id) ?? getCmiEventCardBackgroundUrl(event.id);
+    const posterUrl =
+      event.coverImageUrl?.trim() || getCmiEventPosterUrl(event.id) || getCmiEventCardBackgroundUrl(event.id);
 
     if (!posterUrl) {
       toast.error('这个活动还没有可分享的海报');
@@ -1016,10 +1021,13 @@ export default function CmiHome() {
     setSharingEventIds(prev => ({ ...prev, [event.id]: true }));
 
     try {
+      const eventPageUrl = getPublicCmiEventUrl(event.id);
+
       const card = await createCmiEventShareCard({
         event,
         posterUrl,
         referenceDate,
+        eventPageUrl,
       });
       const file = new File([card.blob], card.fileName, { type: 'image/png' });
       const shareData: FileShareData = {

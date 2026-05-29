@@ -102,6 +102,19 @@ export interface CmiMapFilterGroup {
   keywords: string[];
 }
 
+export interface CmiRecommendationDisplayTag {
+  id: string;
+  label: string;
+  iconUrl?: string;
+  needsIcon?: boolean;
+  kind: 'place-type' | 'map-filter-group';
+}
+
+export interface CmiRecommendationDisplayContext {
+  mapFilterGroupId?: CmiMapFilterGroupId | string | null;
+  placeTypeId?: string | null;
+}
+
 const normalize = (value: string) => value.trim().toLocaleLowerCase();
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -554,6 +567,18 @@ const PLACE_TYPE_ID_ALIASES: Record<string, string> = {
   'fresh-produce': 'fresh-market',
 };
 
+const SCENE_MAP_FILTER_GROUP_IDS: Partial<Record<CmiSceneId, CmiMapFilterGroupId>> = {
+  eat: 'eat',
+  'coffee-work': 'work',
+  shopping: 'shopping',
+  market: 'market',
+  play: 'play',
+  'massage-relax': 'relax',
+  sport: 'sport',
+  night: 'nightlife',
+  'life-rescue': 'service',
+};
+
 const toPrimaryIntentTag = (intent: CmiPrimaryIntent): CmiDirectIntentTag => ({
   id: `intent-${intent.id}`,
   label: intent.label,
@@ -627,6 +652,15 @@ export const getCmiMapFilterGroupForPlaceType = (placeTypeId: string | null | un
   const tag = getCmiPlaceTypeTag(placeTypeId);
   if (!tag) return null;
   return CMI_MAP_FILTER_GROUPS.find(group => group.placeTypeIds.includes(tag.id)) ?? null;
+};
+
+export const getCmiSceneMapFilterGroupId = (
+  sceneId: CmiSceneId | string | null | undefined,
+  placeTypeId?: string | null
+) => {
+  const placeTypeGroup = getCmiMapFilterGroupForPlaceType(placeTypeId);
+  if (placeTypeGroup) return placeTypeGroup.id;
+  return sceneId ? SCENE_MAP_FILTER_GROUP_IDS[sceneId as CmiSceneId] ?? null : null;
 };
 
 export const getCmiPrimaryIntentTags = (): CmiDirectIntentTag[] =>
@@ -773,6 +807,52 @@ export const matchesCmiMapFilterGroup = (
   const category = normalizeCategory(recommendation.category);
   if (group.categoryFallbacks?.includes(category)) return true;
   return group.placeTypeIds.some(placeTypeId => matchesCmiPlaceTypeTag(recommendation, placeTypeId));
+};
+
+const toRecommendationDisplayPlaceTypeTag = (tag: CmiPlaceTypeTag): CmiRecommendationDisplayTag => ({
+  id: tag.id,
+  label: tag.label,
+  iconUrl: tag.iconUrl,
+  needsIcon: tag.needsIcon,
+  kind: 'place-type',
+});
+
+const toRecommendationDisplayGroupTag = (group: CmiMapFilterGroup): CmiRecommendationDisplayTag => ({
+  id: group.id,
+  label: group.label,
+  iconUrl: group.iconUrl,
+  needsIcon: group.needsIcon,
+  kind: 'map-filter-group',
+});
+
+export const getCmiRecommendationDisplayTag = (
+  recommendation: Recommendation,
+  context: CmiRecommendationDisplayContext = {}
+): CmiRecommendationDisplayTag | null => {
+  if (isEasterEggRecommendation(recommendation)) return null;
+
+  const explicitPlaceType = getCmiPlaceTypeTag(context.placeTypeId);
+  if (explicitPlaceType && matchesCmiPlaceTypeTag(recommendation, explicitPlaceType.id)) {
+    return toRecommendationDisplayPlaceTypeTag(explicitPlaceType);
+  }
+
+  const group = getCmiMapFilterGroup(context.mapFilterGroupId);
+  if (group) {
+    const contextPlaceType =
+      getCmiPlaceTypeTagsForRecommendation(recommendation).find(tag => group.placeTypeIds.includes(tag.id))
+      ?? group.placeTypeIds
+        .map(placeTypeId => getCmiPlaceTypeTag(placeTypeId))
+        .find((tag): tag is CmiPlaceTypeTag => {
+          if (!tag) return false;
+          return matchesCmiPlaceTypeTag(recommendation, tag.id);
+        });
+
+    if (contextPlaceType) return toRecommendationDisplayPlaceTypeTag(contextPlaceType);
+    if (matchesCmiMapFilterGroup(recommendation, group.id)) return toRecommendationDisplayGroupTag(group);
+  }
+
+  const firstPlaceType = getCmiPlaceTypeTagsForRecommendation(recommendation)[0];
+  return firstPlaceType ? toRecommendationDisplayPlaceTypeTag(firstPlaceType) : null;
 };
 
 export const matchesCmiRecommendationSearchQuery = (

@@ -1,17 +1,23 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildEditableCmiEventPayload, isCmiEventManager } from './event-management';
+import {
+  buildEditableCmiEventPayload,
+  isCmiEventManager,
+  parseCmiEventManagerEmails,
+} from './event-management';
 
 test('isCmiEventManager 允许创建者、发起人 id、发起人邮箱和管理员管理活动', () => {
   const event = {
     createdBy: 'creator-user-id',
     organizerId: 'legacy-organizer-id',
     organizerEmail: 'Linke@Example.com',
+    managerEmails: ['CoHost@Example.com'],
   };
 
   assert.equal(isCmiEventManager(event, { userId: 'creator-user-id', email: 'someone@example.com', role: 'user' }), true);
   assert.equal(isCmiEventManager(event, { userId: 'legacy-organizer-id', email: 'someone@example.com', role: 'user' }), true);
   assert.equal(isCmiEventManager(event, { userId: 'other-user-id', email: 'linke@example.com', role: 'user' }), true);
+  assert.equal(isCmiEventManager(event, { userId: 'other-user-id', email: 'cohost@example.com', role: 'user' }), true);
   assert.equal(isCmiEventManager(event, { userId: 'other-user-id', email: 'nobody@example.com', role: 'admin' }), true);
 });
 
@@ -24,6 +30,13 @@ test('isCmiEventManager 不把非发起人邮箱误判成管理者', () => {
 
   assert.equal(isCmiEventManager(event, { userId: 'other-user-id', email: 'other@example.com', role: 'user' }), false);
   assert.equal(isCmiEventManager(event, { userId: null, email: 'linke@example.com', role: 'user' }), false);
+});
+
+test('parseCmiEventManagerEmails 支持换行、逗号并统一小写去空格', () => {
+  assert.deepEqual(
+    parseCmiEventManagerEmails('Host@Example.com\n cohost@example.com，bad-value;SECOND@example.com '),
+    ['host@example.com', 'cohost@example.com', 'second@example.com']
+  );
 });
 
 test('buildEditableCmiEventPayload 不允许通过管理表单修改活动主题', () => {
@@ -40,6 +53,7 @@ test('buildEditableCmiEventPayload 不允许通过管理表单修改活动主题
     priceLabel: '免费参与',
     organizerName: '林可',
     organizerEmail: 'linke@example.com',
+    managerEmails: ['host@example.com'],
     coverImageUrl: 'https://example.com/poster.jpg',
     capacity: null,
     attendeeVisibility: 'public',
@@ -51,5 +65,6 @@ test('buildEditableCmiEventPayload 不允许通过管理表单修改活动主题
   assert.equal('title' in payload, false);
   assert.equal(payload.venue_name, '清迈客栈');
   assert.equal(payload.organizer_email, 'linke@example.com');
+  assert.equal('managerEmails' in payload, false);
   assert.equal(payload.cover_image_url, 'https://example.com/poster.jpg');
 });

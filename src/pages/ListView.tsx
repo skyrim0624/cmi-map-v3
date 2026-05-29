@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowLeft, LogIn, MapPinned, PlusCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { getCmiEventCreatePath, getCmiEventPath, getPersonMapPath, getPlacePath, getSceneMapPath } from '@/lib/paths';
+import { getCmiEventCreatePath, getCmiEventPath, getPersonMapPath, getPlacePath, getPublicCmiEventUrl, getSceneMapPath } from '@/lib/paths';
 import {
   getPlaceGuide,
   isCommunityCuratedRecommendation,
@@ -50,6 +50,8 @@ import {
   getCmiMapFilterGroups,
   getCmiPlaceTypeTag,
   getCmiPlaceTypeTagsByIds,
+  getCmiRecommendationDisplayTag,
+  getCmiSceneMapFilterGroupId,
   matchesCmiMapFilterGroup,
   matchesCmiPlaceTypeTag,
 } from '@/data/cmi-taxonomy';
@@ -101,6 +103,17 @@ const renderListFilterIcon = (
   </span>
 );
 
+const toMarkerVisualOverride = (
+  tag: { label: string; iconUrl?: string; needsIcon?: boolean } | null | undefined
+) => (
+  tag?.iconUrl && !tag.needsIcon
+    ? {
+      label: tag.label,
+      iconUrl: tag.iconUrl,
+    }
+    : undefined
+);
+
 export default function ListView() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -140,6 +153,7 @@ export default function ListView() {
     ? activeNearbyMapGroupFromPlaceType ?? getCmiMapFilterGroup(sceneFilterParam)
     : null;
   const activeNearbyMapGroupId = activeNearbyMapGroup?.id ?? null;
+  const activeDisplayMapGroupId = activeNearbyMapGroupId ?? getCmiSceneMapFilterGroupId(activeScene?.id, activePlaceTypeId);
   const nearbySecondaryTags = useMemo(
     () => activeNearbyMapGroup ? getCmiPlaceTypeTagsByIds(activeNearbyMapGroup.placeTypeIds) : [],
     [activeNearbyMapGroup]
@@ -427,7 +441,11 @@ export default function ListView() {
 
   const handleOpenPlace = (placeName: string) => {
     saveListScrollPosition();
-    navigate(getPlacePath(placeName));
+    navigate(getPlacePath(placeName, {
+      sceneId: activeScene?.id,
+      filterId: activeNearbyMapGroupId,
+      placeTypeId: activePlaceTypeId,
+    }));
   };
 
   const handleOpenEvent = (event: CmiEvent) => {
@@ -518,10 +536,13 @@ export default function ListView() {
     setSharingEventIds(prev => ({ ...prev, [event.id]: true }));
 
     try {
+      const eventPageUrl = getPublicCmiEventUrl(event.id);
+
       const card = await createCmiEventShareCard({
         event,
         posterUrl,
         referenceDate,
+        eventPageUrl,
       });
       const file = new File([card.blob], card.fileName, { type: 'image/png' });
       const shareData: FileShareData = {
@@ -911,11 +932,16 @@ export default function ListView() {
               {visibleRecommendations.map((rec) => {
               const guide = getPlaceGuide(rec.place_name, rec.category);
               const isCommunityGuide = isCommunityCuratedRecommendation(rec);
+              const displayTag = getCmiRecommendationDisplayTag(rec, {
+                mapFilterGroupId: activeDisplayMapGroupId,
+                placeTypeId: activePlaceTypeId,
+              });
               const markerVisual = activeScene
                 ? getMapMarkerVisual({
                   place_name: rec.place_name,
                   category: rec.category,
                   recommendations: [rec],
+                  visualOverride: toMarkerVisualOverride(displayTag),
                 })
                 : null;
               const fallbackIconUrl = markerVisual?.iconUrl ?? getCategoryIconUrl(rec.category);
@@ -949,7 +975,7 @@ export default function ListView() {
                         <div className="space-y-1.5">
                           <div className="flex min-w-0 items-center gap-2">
                             <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-black text-primary">
-                              {guide.kind}
+                              {displayTag?.label ?? guide.kind}
                             </span>
                             <span className="truncate text-xs font-semibold text-muted-foreground">
                               {rec.place_name}

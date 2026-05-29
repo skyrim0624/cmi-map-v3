@@ -1,7 +1,21 @@
 import type { CmiScene } from '@/data/cmi-scenes';
 
-export const getPlacePath = (placeName: string) =>
-  `/place/${encodeURIComponent(placeName)}`;
+export interface PlacePathOptions {
+  sceneId?: string | null;
+  filterId?: string | null;
+  placeTypeId?: string | null;
+}
+
+export const getPlacePath = (placeName: string, input?: PlacePathOptions) => {
+  const searchParams = new URLSearchParams();
+  if (input?.sceneId) searchParams.set('scene', input.sceneId);
+  if (input?.filterId) searchParams.set('filter', input.filterId);
+  if (input?.placeTypeId) searchParams.set('placeType', input.placeTypeId);
+
+  const query = searchParams.toString();
+  const basePath = `/place/${encodeURIComponent(placeName)}`;
+  return query ? `${basePath}?${query}` : basePath;
+};
 
 export const getAddTracePath = (placeName: string) =>
   `/place/${encodeURIComponent(placeName)}/add-trace`;
@@ -18,6 +32,11 @@ export const getCmiHomePath = () => '/cmi-home';
 
 export const getCmiEventPath = (eventId: string) =>
   `/events/${encodeURIComponent(eventId)}`;
+
+const CMI_MAP_PUBLIC_ORIGIN = 'https://cmimap.com';
+
+export const getPublicCmiEventUrl = (eventId: string) =>
+  `${CMI_MAP_PUBLIC_ORIGIN}${getCmiEventPath(eventId)}`;
 
 export const getCmiEventCreatePath = (input?: {
   placeName?: string | null;

@@ -5,6 +5,7 @@ export interface CmiEventManagerTarget {
   createdBy?: string | null;
   organizerId?: string | null;
   organizerEmail?: string | null;
+  managerEmails?: string[] | null;
 }
 
 export interface CmiEventManagerIdentity {
@@ -26,6 +27,7 @@ export interface EditableCmiEventInput {
   priceLabel: string;
   organizerName: string;
   organizerEmail: string;
+  managerEmails?: string[];
   coverImageUrl?: string | null;
   capacity?: number | null;
   attendeeVisibility: CmiEventAttendeeVisibility;
@@ -57,6 +59,28 @@ export interface EditableCmiEventPayload {
 const normalizeEmail = (value?: string | null) =>
   value?.trim().toLowerCase() ?? '';
 
+export const parseCmiEventManagerEmails = (value: string) =>
+  value
+    .split(/[\s,，;；]+/)
+    .map(normalizeEmail)
+    .filter(email => email.includes('@'));
+
+export const normalizeCmiEventManagerEmails = (
+  emails: Array<string | null | undefined>,
+  organizerEmail?: string | null
+) => {
+  const organizer = normalizeEmail(organizerEmail);
+  const uniqueEmails = new Map<string, string>();
+
+  for (const email of emails) {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail.includes('@') || normalizedEmail === organizer) continue;
+    uniqueEmails.set(normalizedEmail, normalizedEmail);
+  }
+
+  return Array.from(uniqueEmails.values());
+};
+
 export const isCmiEventManager = (
   event: CmiEventManagerTarget | null | undefined,
   identity: CmiEventManagerIdentity | null | undefined
@@ -68,7 +92,12 @@ export const isCmiEventManager = (
 
   const organizerEmail = normalizeEmail(event.organizerEmail);
   const userEmail = normalizeEmail(identity.email);
-  return Boolean(organizerEmail && userEmail && organizerEmail === userEmail);
+  if (organizerEmail && userEmail && organizerEmail === userEmail) return true;
+
+  return Boolean(
+    userEmail &&
+    event.managerEmails?.some(managerEmail => normalizeEmail(managerEmail) === userEmail)
+  );
 };
 
 export const buildEditableCmiEventPayload = (input: EditableCmiEventInput): EditableCmiEventPayload => {

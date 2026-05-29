@@ -206,6 +206,27 @@ const getDisplayValue = (value: string | null | undefined) => {
   return EMPTY_META_VALUES.has(displayValue) ? '' : displayValue;
 };
 
+const derivePostTitle = (text: string) => {
+  const normalizedText = text.trim().replace(/\s+/g, ' ');
+  return normalizedText.slice(0, POST_TITLE_LIMIT);
+};
+
+const getPostDisplayText = (post: Pick<BlackboardPost, 'title' | 'body'>) => {
+  const title = post.title.trim();
+  const body = post.body.trim();
+  if (!body) return title;
+  if (!title || body === title || body.startsWith(title)) return body;
+  return `${title}\n${body}`;
+};
+
+const getDraftPostText = (draft: Pick<BlackboardDraft, 'title' | 'body'>) => {
+  const title = draft.title.trim();
+  const body = draft.body.trim();
+  if (!body) return title;
+  if (!title || body === title || body.startsWith(title)) return draft.body;
+  return `${draft.title}\n${draft.body}`;
+};
+
 const stopCardOpen = (event: MouseEvent<HTMLElement>) => {
   event.stopPropagation();
 };
@@ -479,14 +500,15 @@ function UserAchievementBadge({ title }: { title: string }) {
 }
 
 function renderPostBody(post: BlackboardPost, options?: { onLinkClick?: (event: MouseEvent<HTMLAnchorElement>) => void }) {
-  if (!post.linkedEventId || !post.linkedEventTitle) return post.body;
+  const postText = getPostDisplayText(post);
+  if (!post.linkedEventId || !post.linkedEventTitle) return postText;
 
   const mention = `@${post.linkedEventTitle}`;
-  const mentionIndex = post.body.indexOf(mention);
-  if (mentionIndex < 0) return post.body;
+  const mentionIndex = postText.indexOf(mention);
+  if (mentionIndex < 0) return postText;
 
-  const beforeMention = post.body.slice(0, mentionIndex);
-  const afterMention = post.body.slice(mentionIndex + mention.length);
+  const beforeMention = postText.slice(0, mentionIndex);
+  const afterMention = postText.slice(mentionIndex + mention.length);
 
   return (
     <>
@@ -587,9 +609,8 @@ function BlackboardPostCard({
         </button>
       </div>
 
-      <div className="mt-4 space-y-2">
-        <h3 className="text-[1.32rem] font-medium leading-snug text-[#5c5c5c]">{post.title}</h3>
-        <p className="whitespace-pre-wrap text-[1.08rem] font-normal leading-[1.58] text-[#5f5f5f]">
+      <div className="mt-4">
+        <p className="whitespace-pre-wrap text-[1.16rem] font-medium leading-[1.58] text-[#4f4f4f]">
           {renderPostBody(post, { onLinkClick: stopCardOpen })}
         </p>
       </div>
@@ -1227,13 +1248,22 @@ function ComposerSheet({
   onClose: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isValid = draft.title.trim().length > 0 && draft.body.trim().length > 0;
+  const postText = getDraftPostText(draft);
+  const isValid = postText.trim().length > 0;
 
   const updateDraft = <Field extends keyof BlackboardDraft>(
     field: Field,
     value: BlackboardDraft[Field]
   ) => {
     onDraftChange({ ...draft, [field]: value });
+  };
+
+  const updatePostText = (value: string) => {
+    onDraftChange({
+      ...draft,
+      title: derivePostTitle(value),
+      body: value,
+    });
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -1278,29 +1308,15 @@ function ComposerSheet({
 
         <label className="block">
           <span className="flex items-center justify-between gap-3 text-sm font-black text-foreground">
-            标题
-            <span className="text-xs text-muted-foreground">{draft.title.length}/{POST_TITLE_LIMIT}</span>
-          </span>
-          <input
-            value={draft.title}
-            maxLength={POST_TITLE_LIMIT}
-            onChange={event => updateDraft('title', event.target.value)}
-            className="mt-2 h-12 w-full rounded-2xl border border-border bg-white px-4 text-base font-bold text-foreground outline-none focus:border-primary"
-            placeholder="比如：今晚有人去北门听爵士吗"
-          />
-        </label>
-
-        <label className="block">
-          <span className="flex items-center justify-between gap-3 text-sm font-black text-foreground">
-            内容
-            <span className="text-xs text-muted-foreground">{draft.body.length}/{POST_BODY_LIMIT}</span>
+            帖子
+            <span className="text-xs text-muted-foreground">{postText.length}/{POST_BODY_LIMIT}</span>
           </span>
           <textarea
-            value={draft.body}
+            value={postText}
             maxLength={POST_BODY_LIMIT}
-            onChange={event => updateDraft('body', event.target.value)}
-            className="mt-2 min-h-[8.75rem] w-full resize-none rounded-2xl border border-border bg-white px-4 py-3 text-base font-semibold leading-relaxed text-foreground outline-none focus:border-primary"
-            placeholder="直接写你想说的事。可以约人、求助，也可以随手分享清迈生活。"
+            onChange={event => updatePostText(event.target.value)}
+            className="mt-2 min-h-[13rem] w-full resize-none rounded-2xl border border-border bg-white px-4 py-3 text-base font-semibold leading-relaxed text-foreground outline-none focus:border-primary"
+            placeholder="发生了什么？可以约人、求助，也可以随手分享清迈生活。"
           />
         </label>
 
@@ -1477,13 +1493,13 @@ function PostDetailSheet({
                 <UserAvatar name={post.author} avatarUrl={post.authorAvatarUrl} className="h-[3.2rem] w-[3.2rem] text-[1.15rem]" />
               </Link>
               <div className="min-w-0">
-                <Link
-                  to={getPersonMapPath(post.authorId)}
-                  className="block truncate text-[1.06rem] font-black leading-tight text-[#6d839b] active:opacity-70"
-                >
-                  {post.author}
-                </Link>
-                <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  <Link
+                    to={getPersonMapPath(post.authorId)}
+                    className="min-w-0 truncate text-[1.06rem] font-black leading-tight text-[#6d839b] active:opacity-70"
+                  >
+                    {post.author}
+                  </Link>
                   <UserActivityBadge title={post.authorActivityTitle} />
                   <UserAchievementBadge title={post.authorAchievementTitle} />
                   {isAdmin && userId === post.authorId && (
@@ -1498,8 +1514,7 @@ function PostDetailSheet({
               </div>
             </div>
 
-            <h1 className="mt-6 text-[1.55rem] font-medium leading-snug text-[#2d2d2d]">{post.title}</h1>
-            <p className="mt-3 whitespace-pre-wrap text-[1.13rem] font-normal leading-[1.58] text-[#333333]">
+            <p className="mt-6 whitespace-pre-wrap text-[1.22rem] font-medium leading-[1.6] text-[#2d2d2d]">
               {renderPostBody(post)}
             </p>
 
@@ -1755,11 +1770,12 @@ export function CmiBlackboard({
   };
 
   const openEditComposer = (post: BlackboardPost) => {
+    const postText = getPostDisplayText(post);
     revokeDraftImages(draft.imageFiles);
     setDraft({
       category: post.category,
-      title: post.title,
-      body: post.body,
+      title: derivePostTitle(postText),
+      body: postText,
       timeLabel: post.timeLabel,
       locationLabel: post.locationLabel,
       peopleLabel: post.peopleLabel,
@@ -1824,9 +1840,9 @@ export function CmiBlackboard({
       return;
     }
 
-    const title = draft.title.trim();
-    const body = draft.body.trim();
-    if (!title || !body) return;
+    const body = getDraftPostText(draft).trim();
+    if (!body) return;
+    const title = derivePostTitle(body);
 
     const authorName = profile?.user_name?.trim() || user.email?.split('@')[0] || 'CMI 朋友';
 
