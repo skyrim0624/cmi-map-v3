@@ -492,6 +492,10 @@
   justify-content: flex-end;
 }
 
+.cmi-v3-comic-topbar--custom {
+  display: block;
+}
+
 .cmi-v3-comic-brand {
   min-height: 48px;
   border: 0;
@@ -530,6 +534,14 @@
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
   margin-bottom: 14px;
+}
+
+.cmi-v3-mode-switch--top {
+  margin-bottom: 0;
+}
+
+.cmi-v3-mode-switch--top button {
+  min-height: 48px;
 }
 
 .cmi-v3-mode-switch button,

@@ -742,10 +742,7 @@ function FeedMode({
       onTitleClick={() => onNavigate('map')}
       onActionClick={() => onNavigate('map')}
     >
-      <div className="cmi-v3-mode-switch">
-        <button type="button" className="is-active">动态</button>
-        <button type="button" onClick={() => onNavigate('events')}>活动</button>
-      </div>
+      <FeedEventSwitch activeScreen="feed" onNavigate={onNavigate} />
 
       <section className="cmi-v3-hard-card cmi-v3-feed-hero cmi-v3-dot-paper">
         <ChapterHeader left="Today in Chiang Mai" right="CMI Community Feed" />
@@ -854,6 +851,7 @@ function EventsMode({
   return (
     <ComicPage
       title="活动"
+      headerContent={<FeedEventSwitch activeScreen="events" onNavigate={onNavigate} placement="top" />}
       footer={
         <button type="button" className="cmi-v3-events-create-fixed" onClick={() => onOpenPath(getCmiEventCreatePath())}>
           <Plus size={22} strokeWidth={3} />
@@ -1039,6 +1037,7 @@ function ComicPage({
   actionLabel,
   children,
   footer,
+  headerContent,
   hideTitle = false,
   onTitleClick,
   onActionClick,
@@ -1047,23 +1046,33 @@ function ComicPage({
   actionLabel?: string;
   children: ReactNode;
   footer?: ReactNode;
+  headerContent?: ReactNode;
   hideTitle?: boolean;
   onTitleClick: () => void;
   onActionClick?: () => void;
 }) {
   const hasAction = Boolean(actionLabel && onActionClick);
+  const topbarClassName = [
+    'cmi-v3-comic-topbar',
+    hideTitle ? 'cmi-v3-comic-topbar--action-only' : '',
+    headerContent ? 'cmi-v3-comic-topbar--custom' : '',
+  ].filter(Boolean).join(' ');
 
   return (
     <section className="cmi-v3-comic-page">
       <span className="cmi-v3-bg-ring cmi-v3-bg-ring--left" />
       <span className="cmi-v3-bg-ring cmi-v3-bg-ring--right" />
-      <header className={`cmi-v3-comic-topbar ${hideTitle ? 'cmi-v3-comic-topbar--action-only' : ''}`}>
-        {!hideTitle && <button type="button" className="cmi-v3-comic-brand" onClick={onTitleClick}>{title}</button>}
-        {hasAction && (
-          <button type="button" className="cmi-v3-comic-action" onClick={onActionClick}>
-            {actionLabel === '分享' ? <Share2 size={18} strokeWidth={3} /> : actionLabel === '地图' ? <MapIcon size={18} strokeWidth={3} /> : <Menu size={18} strokeWidth={3} />}
-            <span>{actionLabel}</span>
-          </button>
+      <header className={topbarClassName}>
+        {headerContent ?? (
+          <>
+            {!hideTitle && <button type="button" className="cmi-v3-comic-brand" onClick={onTitleClick}>{title}</button>}
+            {hasAction && (
+              <button type="button" className="cmi-v3-comic-action" onClick={onActionClick}>
+                {actionLabel === '分享' ? <Share2 size={18} strokeWidth={3} /> : actionLabel === '地图' ? <MapIcon size={18} strokeWidth={3} /> : <Menu size={18} strokeWidth={3} />}
+                <span>{actionLabel}</span>
+              </button>
+            )}
+          </>
         )}
       </header>
       <div className="cmi-v3-comic-scroll">
@@ -1071,6 +1080,35 @@ function ComicPage({
       </div>
       {footer}
     </section>
+  );
+}
+
+function FeedEventSwitch({
+  activeScreen,
+  onNavigate,
+  placement = 'content',
+}: {
+  activeScreen: 'feed' | 'events';
+  onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
+  placement?: 'content' | 'top';
+}) {
+  return (
+    <div className={`cmi-v3-mode-switch ${placement === 'top' ? 'cmi-v3-mode-switch--top' : ''}`}>
+      <button
+        type="button"
+        className={activeScreen === 'feed' ? 'is-active' : undefined}
+        onClick={() => onNavigate('feed')}
+      >
+        动态
+      </button>
+      <button
+        type="button"
+        className={activeScreen === 'events' ? 'is-active' : undefined}
+        onClick={() => onNavigate('events')}
+      >
+        活动
+      </button>
+    </div>
   );
 }
 
