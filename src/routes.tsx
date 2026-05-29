@@ -20,6 +20,7 @@ const PlaygroundMarkPlace = lazy(() => import('./pages/PlaygroundMarkPlace'));
 const PlaygroundWishlist = lazy(() => import('./pages/PlaygroundWishlist'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Login = lazy(() => import('./pages/Login'));
+const CmiMapV3Prototype = lazy(() => import('./pages/CmiMapV3Prototype'));
 
 export interface RouteConfig {
   name: string;
@@ -76,6 +77,12 @@ export const routes: RouteConfig[] = [
     name: '清迈客栈',
     path: '/cmi-home',
     element: <CmiHome />,
+    public: true,
+  },
+  {
+    name: 'CMI Map 3.0 原型',
+    path: '/v3',
+    element: <CmiMapV3Prototype />,
     public: true,
   },
   {
