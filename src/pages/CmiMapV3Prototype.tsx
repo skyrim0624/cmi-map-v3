@@ -12,6 +12,7 @@ import {
   Search,
   Share2,
   Users,
+  X,
 } from 'lucide-react';
 import {
   type CSSProperties,
@@ -362,7 +363,12 @@ export default function CmiMapV3Prototype() {
 
   const handleNavigate = (screen: ScreenId, input?: { eventId?: string | null }) => {
     setActiveScreen(screen);
-    if (input?.eventId) setSelectedEventId(input.eventId);
+    if (input?.eventId) {
+      setSelectedEventId(input.eventId);
+      if (screen === 'map') setSelectedMarker(null);
+    } else if (screen !== 'eventDetail') {
+      setSelectedEventId(null);
+    }
 
     const nextParams = new URLSearchParams();
     if (screen !== 'map') nextParams.set('screen', screen);
@@ -376,7 +382,13 @@ export default function CmiMapV3Prototype() {
       .then(data => {
         const publicRecommendations = data.filter(isPublicMapRecommendation);
         setRecommendations(publicRecommendations);
-        setSelectedMarker(current => current ?? groupRecommendationsIntoMarkers(publicRecommendations)[0] ?? null);
+        setSelectedMarker(current => {
+          if (!current) return null;
+          const stillExists = publicRecommendations.some(recommendation =>
+            current.recommendations.some(item => item.id === recommendation.id)
+          );
+          return stillExists ? current : null;
+        });
       })
       .catch(error => {
         console.error('CMI Map 3.0 推荐数据加载失败:', error);
@@ -393,12 +405,10 @@ export default function CmiMapV3Prototype() {
     getPublishedCmiEvents()
       .then(data => {
         setEvents(data);
-        setSelectedEventId(current => current ?? data[0]?.id ?? null);
       })
       .catch(error => {
         console.error('CMI Map 3.0 活动数据加载失败:', error);
         setEvents(CMI_EVENTS);
-        setSelectedEventId(current => current ?? CMI_EVENTS[0]?.id ?? null);
       })
       .finally(() => {
         setIsLoadingEvents(false);
@@ -449,8 +459,14 @@ export default function CmiMapV3Prototype() {
           isLoading={isLoadingRecommendations || isLoadingEvents}
           markers={mapMarkers}
           recommendationsError={recommendationsError}
+          listEvents={visibleEvents}
+          listRecommendations={filteredRecommendations}
           selectedMarker={selectedMarker}
-          selectedEvent={selectedEvent}
+          selectedEvent={selectedEventId ? selectedEvent : null}
+          onClearSelection={() => {
+            setSelectedMarker(null);
+            setSelectedEventId(null);
+          }}
           onFilterChange={setActiveFilter}
           onMarkerSelect={(marker) => {
             if (isEventMarker(marker)) {
@@ -461,6 +477,7 @@ export default function CmiMapV3Prototype() {
             }
 
             setSelectedMarker(marker);
+            setSelectedEventId(null);
           }}
           onNavigate={handleNavigate}
           onOpenPath={navigate}
@@ -470,7 +487,6 @@ export default function CmiMapV3Prototype() {
         <FeedMode
           isLoading={isLoadingRecommendations}
           recommendations={feedRecommendations}
-          featuredEvents={featuredEvents.slice(0, 2)}
           onNavigate={handleNavigate}
           onOpenPath={navigate}
         />
@@ -505,10 +521,13 @@ function MapMode({
   activeFilter,
   filters,
   markers,
+  listEvents,
+  listRecommendations,
   selectedMarker,
   selectedEvent,
   isLoading,
   recommendationsError,
+  onClearSelection,
   onFilterChange,
   onMarkerSelect,
   onNavigate,
@@ -517,16 +536,25 @@ function MapMode({
   activeFilter: MapFilterId;
   filters: FilterItem[];
   markers: MapMarker[];
+  listEvents: CmiEvent[];
+  listRecommendations: Recommendation[];
   selectedMarker: MapMarker | null;
   selectedEvent: CmiEvent | null;
   isLoading: boolean;
   recommendationsError: string | null;
+  onClearSelection: () => void;
   onFilterChange: (filterId: MapFilterId) => void;
   onMarkerSelect: (marker: MapMarker) => void;
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
   onOpenPath: (path: string) => void;
 }) {
   const selectedRecommendation = selectedMarker?.recommendations[0] ?? null;
+  const handleRecommendationSelect = (recommendation: Recommendation) => {
+    const matchedMarker = markers.find(marker =>
+      marker.recommendations.some(item => item.id === recommendation.id)
+    );
+    if (matchedMarker) onMarkerSelect(matchedMarker);
+  };
 
   return (
     <section className="cmi-v3-map-mode" aria-label="CMI Map 3.0 地图形态页">
@@ -586,6 +614,7 @@ function MapMode({
             onClick: () => onOpenPath(getAddTracePath(selectedRecommendation.place_name)),
           }}
           title={selectedRecommendation.place_name}
+          onDismiss={onClearSelection}
         >
           <RecommendationSheetBody recommendations={selectedMarker?.recommendations ?? [selectedRecommendation]} />
         </MapBottomSheet>
@@ -604,10 +633,20 @@ function MapMode({
             onClick: () => onOpenPath(getCmiEventPath(selectedEvent.id)),
           }}
           title={selectedEvent.title}
+          onDismiss={onClearSelection}
         >
           <EventSheetBody event={selectedEvent} />
         </MapBottomSheet>
-      ) : null}
+      ) : (
+        <MapPulseSheet
+          events={listEvents}
+          isLoading={isLoading}
+          recommendations={listRecommendations}
+          onEventSelect={(event) => onNavigate('map', { eventId: event.id })}
+          onOpenPath={onOpenPath}
+          onRecommendationSelect={handleRecommendationSelect}
+        />
+      )}
 
       <footer className="cmi-v3-map-bottom">
         <button type="button" onClick={() => onNavigate('feed')}>
@@ -632,6 +671,7 @@ function MapBottomSheet({
   primaryAction,
   secondaryAction,
   title,
+  onDismiss,
 }: {
   children: ReactNode;
   imageAlt: string;
@@ -641,6 +681,7 @@ function MapBottomSheet({
   primaryAction: { label: string; onClick: () => void };
   secondaryAction: { label: string; onClick: () => void };
   title: string;
+  onDismiss?: () => void;
 }) {
   const { dragHandlers, dragOffset, isDragging, setSnap, snap } = useBottomSheetDrag(itemId);
   const isExpanded = snap === 'expanded';
@@ -664,6 +705,11 @@ function MapBottomSheet({
       data-sheet-state={snap}
       style={sheetStyle}
     >
+      {onDismiss && (
+        <button type="button" className="cmi-v3-selected-note-close" onClick={onDismiss} aria-label="关闭详情">
+          <X size={18} strokeWidth={3} />
+        </button>
+      )}
       <div className="cmi-v3-selected-note-grabber" aria-hidden="true" />
       <div
         className="cmi-v3-selected-note-summary"
@@ -680,14 +726,126 @@ function MapBottomSheet({
           <p>{meta}</p>
         </div>
       </div>
-      <div className="cmi-v3-selected-note-body" aria-hidden={!isExpanded}>
-        {children}
+      <div className="cmi-v3-selected-note-body">
         <div className="cmi-v3-selected-note-actions">
           <button type="button" onClick={primaryAction.onClick}>{primaryAction.label}</button>
           <button type="button" onClick={secondaryAction.onClick}>{secondaryAction.label}</button>
         </div>
+        {children}
       </div>
     </article>
+  );
+}
+
+function MapPulseSheet({
+  events,
+  isLoading,
+  recommendations,
+  onEventSelect,
+  onOpenPath,
+  onRecommendationSelect,
+}: {
+  events: CmiEvent[];
+  isLoading: boolean;
+  recommendations: Recommendation[];
+  onEventSelect: (event: CmiEvent) => void;
+  onOpenPath: (path: string) => void;
+  onRecommendationSelect: (recommendation: Recommendation) => void;
+}) {
+  const { dragHandlers, dragOffset, isDragging, setSnap, snap } = useBottomSheetDrag('map-pulse');
+  const isExpanded = snap === 'expanded';
+  const sheetStyle = { '--cmi-v3-sheet-drag-y': `${dragOffset}px` } as CSSProperties;
+  const visibleRecommendations = recommendations.slice(0, 8);
+  const visibleEvents = events.slice(0, 4);
+
+  const handleHeaderKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+
+    event.preventDefault();
+    setSnap(isExpanded ? 'collapsed' : 'expanded');
+  };
+
+  return (
+    <section
+      className={`cmi-v3-map-pulse-sheet ${isExpanded ? 'is-expanded' : ''} ${isDragging ? 'is-dragging' : ''}`}
+      data-sheet-state={snap}
+      style={sheetStyle}
+      aria-label="本地生活脉搏"
+    >
+      <div
+        className="cmi-v3-map-pulse-handle-zone"
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
+        onKeyDown={handleHeaderKeyDown}
+        {...dragHandlers}
+      >
+        <div className="cmi-v3-selected-note-grabber" aria-hidden="true" />
+        <div className="cmi-v3-map-pulse-head">
+          <div>
+            <h2>本地生活脉搏</h2>
+            <p>附近的人刚留下的新鲜事</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="cmi-v3-map-pulse-body">
+        <div className="cmi-v3-map-pulse-rank">
+          <span>地图人气热榜</span>
+        </div>
+
+        {isLoading && <p className="cmi-v3-map-pulse-state">正在同步社区动态</p>}
+
+        {visibleRecommendations.length > 0 && (
+          <div className="cmi-v3-map-pulse-row" aria-label="附近动态">
+            {visibleRecommendations.map(recommendation => (
+              <button
+                key={recommendation.id}
+                type="button"
+                className="cmi-v3-map-pulse-card"
+                onClick={() => onRecommendationSelect(recommendation)}
+              >
+                <img
+                  src={recommendation.images[0] || getCategoryConfig(recommendation.category).iconUrl}
+                  alt=""
+                />
+                <strong>{recommendation.place_name}</strong>
+                <span>{`${recommendation.user_name || 'CMI 朋友'} · ${formatTraceTime(recommendation.created_at)}`}</span>
+                <p>{getRecommendationSummary(recommendation)}</p>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {isExpanded && visibleEvents.length > 0 && (
+          <div className="cmi-v3-map-pulse-section">
+            <strong>附近活动</strong>
+            {visibleEvents.map(event => (
+              <button
+                key={event.id}
+                type="button"
+                className="cmi-v3-map-pulse-event"
+                onClick={() => onEventSelect(event)}
+              >
+                <img src={getCmiEventCardImageUrl(event)} alt="" />
+                <div>
+                  <span>{formatCmiEventTime(event)}</span>
+                  <strong>{event.title}</strong>
+                  <p>{event.venueName}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {isExpanded && (
+          <div className="cmi-v3-map-pulse-actions">
+            <button type="button" onClick={() => onOpenPath('/mark')}>留个彩蛋</button>
+            <button type="button" onClick={() => onOpenPath(getCmiEventCreatePath())}>发布活动</button>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -723,13 +881,11 @@ function EventSheetBody({ event }: { event: CmiEvent }) {
 
 function FeedMode({
   recommendations,
-  featuredEvents,
   isLoading,
   onNavigate,
   onOpenPath,
 }: {
   recommendations: Recommendation[];
-  featuredEvents: CmiEvent[];
   isLoading: boolean;
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
   onOpenPath: (path: string) => void;
@@ -748,19 +904,10 @@ function FeedMode({
         <ChapterHeader left="Today in Chiang Mai" right="CMI Community Feed" />
         <img src="/cmi-home/yard-scene.jpg" alt="清迈客栈院子" />
         <h1>今天清迈发生了什么</h1>
-        <p>附近的人留下了新的吃饭、散步、活动和小发现。</p>
+        <p>附近的人留下了新的吃饭、散步和小发现。</p>
       </section>
 
       {isLoading && <p className="cmi-v3-inline-state">正在同步社区动态</p>}
-
-      {featuredEvents.map(event => (
-        <EventFeedCard
-          key={event.id}
-          event={event}
-          onOpenDetail={() => onNavigate('eventDetail', { eventId: event.id })}
-          onOpenRealPage={() => onOpenPath(getCmiEventPath(event.id))}
-        />
-      ))}
 
       {recommendations.map(recommendation => (
         <RecommendationFeedCard
@@ -772,7 +919,7 @@ function FeedMode({
         />
       ))}
 
-      {!isLoading && recommendations.length === 0 && featuredEvents.length === 0 && (
+      {!isLoading && recommendations.length === 0 && (
         <p className="cmi-v3-inline-state">还没有新的社区动态。</p>
       )}
 
@@ -955,50 +1102,32 @@ function RecommendationFeedCard({
   const categoryLabel = normalizeCategory(recommendation.category);
 
   return (
-    <article className={`cmi-v3-feed-card cmi-v3-feed-card--${getRecommendationTone(recommendation)}`}>
-      <div className="cmi-v3-feed-head">
-        <span className="cmi-v3-avatar"><img src={imageUrl} alt="" /></span>
-        <div>
-          <strong>{recommendation.user_name || 'CMI 朋友'}</strong>
-          <span>{`${recommendation.place_name} · ${formatTraceTime(recommendation.created_at)}`}</span>
+    <article className={`cmi-v3-feed-card cmi-v3-feed-post-card cmi-v3-feed-card--${getRecommendationTone(recommendation)}`}>
+      <img className="cmi-v3-feed-post-image" src={imageUrl} alt={recommendation.place_name} />
+      <div className="cmi-v3-feed-post-content">
+        <div className="cmi-v3-feed-head">
+          <span className="cmi-v3-avatar"><img src={categoryConfig.iconUrl} alt="" /></span>
+          <div>
+            <strong>{recommendation.user_name || 'CMI 朋友'}</strong>
+            <span>{`${categoryLabel} · ${formatTraceTime(recommendation.created_at)}`}</span>
+          </div>
         </div>
-        <em>{categoryLabel}</em>
-      </div>
-      <h2>{recommendation.place_name}</h2>
-      <p>{getRecommendationSummary(recommendation)}</p>
-      <div className="cmi-v3-card-actions">
-        <button type="button" onClick={onOpenMap}><MapPin size={14} strokeWidth={3} />地图</button>
-        <button type="button" onClick={onOpenPlace}><Heart size={14} strokeWidth={3} />详情</button>
-        <button type="button" onClick={onAddTrace}><MessageCircle size={14} strokeWidth={3} />补一句</button>
-      </div>
-    </article>
-  );
-}
-
-function EventFeedCard({
-  event,
-  onOpenDetail,
-  onOpenRealPage,
-}: {
-  event: CmiEvent;
-  onOpenDetail: () => void;
-  onOpenRealPage: () => void;
-}) {
-  return (
-    <article className={`cmi-v3-feed-card cmi-v3-feed-card--${getEventTone(event)}`}>
-      <div className="cmi-v3-feed-head">
-        <span className="cmi-v3-avatar"><img src={getCmiEventCardImageUrl(event)} alt="" /></span>
-        <div>
-          <strong>{event.hostName || '清迈客栈'}</strong>
-          <span>{`${event.venueName} · ${formatCmiEventTime(event)}`}</span>
+        <h2>{recommendation.place_name}</h2>
+        <p>{getRecommendationSummary(recommendation)}</p>
+        <div className="cmi-v3-card-actions">
+          <button type="button" onClick={onOpenMap} aria-label="打开地图" title="地图">
+            <MapPin size={16} strokeWidth={3} />
+            <span className="cmi-v3-feed-action-label">地图</span>
+          </button>
+          <button type="button" onClick={onOpenPlace} aria-label="查看详情" title="详情">
+            <Heart size={16} strokeWidth={3} />
+            <span className="cmi-v3-feed-action-label">详情</span>
+          </button>
+          <button type="button" onClick={onAddTrace} aria-label="补一句" title="补一句">
+            <MessageCircle size={16} strokeWidth={3} />
+            <span className="cmi-v3-feed-action-label">补一句</span>
+          </button>
         </div>
-        <em>活动</em>
-      </div>
-      <h2>{event.title}</h2>
-      <p>{event.summary}</p>
-      <div className="cmi-v3-card-actions">
-        <button type="button" onClick={onOpenDetail}>预览</button>
-        <button type="button" onClick={onOpenRealPage}>报名</button>
       </div>
     </article>
   );
