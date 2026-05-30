@@ -705,6 +705,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  padding: 0 18px;
 }
 
 .cmi-v3-map-pulse-head h2,
@@ -727,7 +728,7 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding-top: 14px;
+  padding-top: 8px;
   scrollbar-width: none;
 }
 
@@ -740,7 +741,11 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  padding: 0 18px 9px;
+  padding: 16px 18px 9px;
+}
+
+.cmi-v3-map-pulse-state + .cmi-v3-map-pulse-section-label {
+  padding-top: 6px;
 }
 
 .cmi-v3-map-pulse-section-label strong {

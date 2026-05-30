@@ -1308,15 +1308,16 @@ function MapPulseSheet({
         {...dragHandlers}
       >
         <div className="cmi-v3-selected-note-grabber" aria-hidden="true" />
+      </div>
+
+      <div className="cmi-v3-map-pulse-body">
         <div className="cmi-v3-map-pulse-head">
           <div>
             <h2>本地生活脉搏</h2>
             <p>附近的人刚留下的新鲜事</p>
           </div>
         </div>
-      </div>
 
-      <div className="cmi-v3-map-pulse-body">
         {isLoading && <p className="cmi-v3-map-pulse-state">正在同步社区活动和动态</p>}
 
         <div className="cmi-v3-map-pulse-section-label">
