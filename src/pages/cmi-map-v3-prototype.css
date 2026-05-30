@@ -6,14 +6,23 @@
   --cmi-v3-pink: #ff6fba;
   --cmi-v3-purple: #8b6bbf;
   --cmi-v3-muted: rgba(22, 22, 22, 0.66);
+  --cmi-v3-viewport-height: 100vh;
   position: relative;
   height: 100%;
-  min-height: 100dvh;
+  min-height: 100%;
+  max-height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
   background: #050505;
   color: var(--cmi-v3-ink);
   font-family: ui-rounded, "Arial Rounded MT Bold", "PingFang SC", "Microsoft YaHei", sans-serif;
   letter-spacing: 0;
+}
+
+@supports (height: 100svh) {
+  .cmi-v3-screen {
+    --cmi-v3-viewport-height: 100svh;
+  }
 }
 
 .cmi-v3-screen button {
@@ -24,8 +33,10 @@
   --cmi-v3-map-nav-height: calc(env(safe-area-inset-bottom) + 86px);
   position: relative;
   height: 100%;
-  min-height: 100dvh;
+  min-height: 0;
+  max-height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
   background: #fbfcfb;
 }
 
@@ -301,8 +312,10 @@
   z-index: 21;
   display: flex;
   flex-direction: column;
-  height: min(48dvh, 430px);
-  max-height: min(76dvh, 620px);
+  height: min(48vh, 430px);
+  height: min(48svh, 430px);
+  max-height: min(76vh, 620px);
+  max-height: min(76svh, 620px);
   border: 0;
   border-radius: 26px 26px 0 0;
   background: #fff;
@@ -323,7 +336,7 @@
 
 .cmi-v3-selected-note.is-expanded {
   height: calc(100vh - var(--cmi-v3-map-nav-height) - 150px);
-  height: calc(100dvh - var(--cmi-v3-map-nav-height) - 150px);
+  height: calc(var(--cmi-v3-viewport-height) - var(--cmi-v3-map-nav-height) - 150px);
   max-height: 620px;
   box-shadow: 0 -16px 42px rgba(22, 22, 22, 0.22);
 }
@@ -636,8 +649,10 @@
   z-index: 21;
   display: flex;
   flex-direction: column;
-  height: clamp(210px, 30dvh, 248px);
-  max-height: min(84dvh, 670px);
+  height: clamp(210px, 30vh, 248px);
+  height: clamp(210px, 30svh, 248px);
+  max-height: min(84vh, 670px);
+  max-height: min(84svh, 670px);
   border-radius: 26px 26px 0 0;
   background: #fff;
   box-shadow: 0 -10px 32px rgba(22, 22, 22, 0.18);
@@ -657,7 +672,7 @@
 
 .cmi-v3-map-pulse-sheet.is-expanded {
   height: calc(100vh - var(--cmi-v3-map-nav-height) - 80px);
-  height: calc(100dvh - var(--cmi-v3-map-nav-height) - 80px);
+  height: calc(var(--cmi-v3-viewport-height) - var(--cmi-v3-map-nav-height) - 80px);
   max-height: 670px;
   box-shadow: 0 -14px 40px rgba(22, 22, 22, 0.22);
 }
@@ -774,7 +789,8 @@
 }
 
 .cmi-v3-map-pulse-sheet.is-expanded .cmi-v3-map-pulse-card img {
-  height: min(30dvh, 224px);
+  height: min(30vh, 224px);
+  height: min(30svh, 224px);
 }
 
 .cmi-v3-map-pulse-card-copy {
@@ -1058,8 +1074,10 @@
 .cmi-v3-comic-page {
   position: relative;
   height: 100%;
-  min-height: 100dvh;
+  min-height: 100%;
+  max-height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
   background: #050505;
 }
 
