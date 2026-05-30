@@ -609,31 +609,34 @@
 }
 
 .cmi-v3-map-pulse-card {
-  flex: 0 0 min(82vw, 330px);
-  display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
-  gap: 10px;
-  min-height: 114px;
+  flex: 0 0 min(80vw, 324px);
+  display: block;
+  min-height: 0;
   border: 0;
-  border-radius: 20px;
-  background: #fff7e0;
-  padding: 9px;
+  border-radius: 22px;
+  background: #fff2ed;
+  padding: 0 0 14px;
   overflow: hidden;
   text-align: left;
 }
 
 .cmi-v3-map-pulse-card img {
-  width: 96px;
-  height: 96px;
-  border-radius: 15px;
+  width: 100%;
+  height: 142px;
+  border-radius: 0;
   background: #fff;
   object-fit: cover;
+}
+
+.cmi-v3-map-pulse-sheet.is-expanded .cmi-v3-map-pulse-card img {
+  height: min(30dvh, 224px);
 }
 
 .cmi-v3-map-pulse-card-copy {
   display: flex;
   min-width: 0;
   flex-direction: column;
+  padding: 12px 13px 0;
 }
 
 .cmi-v3-map-pulse-card-copy span,
@@ -659,9 +662,9 @@
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  margin-top: 7px;
-  font-size: 17px;
-  line-height: 1.12;
+  margin-top: 9px;
+  font-size: 20px;
+  line-height: 1.08;
   font-weight: 950;
 }
 
@@ -670,12 +673,12 @@
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  margin-top: auto;
-  padding-top: 7px;
-  color: rgba(22, 22, 22, 0.64);
-  font-size: 11px;
+  margin-top: 7px;
+  padding-top: 0;
+  color: rgba(22, 22, 22, 0.72);
+  font-size: 12px;
   font-weight: 850;
-  line-height: 1.35;
+  line-height: 1.42;
 }
 
 .cmi-v3-map-pulse-feed {
