@@ -1320,11 +1320,6 @@ function MapPulseSheet({
 
         {isLoading && <p className="cmi-v3-map-pulse-state">正在同步社区活动和动态</p>}
 
-        <div className="cmi-v3-map-pulse-section-label">
-          <strong>客栈 / 合作活动</strong>
-          <span>CMI 与友推社区</span>
-        </div>
-
         {visibleEvents.length > 0 ? (
           <div className="cmi-v3-map-pulse-row" aria-label="客栈合作活动">
             {visibleEvents.map(event => (

@@ -765,7 +765,7 @@
   display: flex;
   gap: 12px;
   overflow-x: auto;
-  padding: 0 18px 14px;
+  padding: 10px 18px 14px;
   scrollbar-width: none;
 }
 
