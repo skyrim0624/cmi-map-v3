@@ -33,7 +33,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { LeafletMap } from '@/components/map/LeafletMap';
 import { getCmiEventCardImageUrl } from '@/components/intent/event-card-presentation';
 import { useAuth } from '@/contexts/AuthContext';
-import { CMI_EVENTS, formatCmiEventTime, type CmiEvent } from '@/data/cmi-events';
+import {
+  CMI_EVENTS,
+  formatCmiEventTime,
+  getCmiEventSortTime,
+  isCmiEventExpired,
+  type CmiEvent,
+} from '@/data/cmi-events';
 import {
   getAllRecommendations,
   getProfilesByUserIds,
@@ -62,6 +68,7 @@ import './cmi-map-v3-prototype.css';
 type ScreenId = 'map' | 'feed' | 'publish' | 'events' | 'eventDetail';
 type MapFilterId = 'all' | 'food' | 'play' | 'events' | 'easter';
 type FeedCardTone = 'paper' | 'yellow' | 'green' | 'pink';
+type EventStatusTone = 'open' | 'full' | 'ended';
 type SheetSnap = 'collapsed' | 'expanded';
 type SheetDragSource = 'pointer' | 'mouse' | 'touch';
 type ProfileLookup = Record<string, PublicProfile>;
@@ -110,6 +117,20 @@ function getEventTone(event: CmiEvent): FeedCardTone {
   if (event.type === 'wellness' || event.type === 'meditation' || event.type === 'sport') return 'green';
   if (event.type === 'market') return 'pink';
   return 'paper';
+}
+
+function getEventStatusBadge(event: CmiEvent): { label: string; tone: EventStatusTone } {
+  const referenceDate = new Date();
+  const sortTime = getCmiEventSortTime(event, referenceDate);
+  const isOngoing =
+    sortTime !== Number.MAX_SAFE_INTEGER &&
+    sortTime <= referenceDate.getTime() &&
+    (!event.endAt || new Date(event.endAt).getTime() >= referenceDate.getTime());
+
+  if (isCmiEventExpired(event, referenceDate)) return { label: '已结束', tone: 'ended' };
+  if (isOngoing) return { label: '进行中', tone: 'open' };
+  if (event.registrationEnabled && event.registrationStatus === 'closed') return { label: '名额已满', tone: 'full' };
+  return { label: '未开始', tone: 'open' };
 }
 
 function getProfileLookupKey(value: string | null | undefined) {
@@ -1353,12 +1374,15 @@ function EventListCard({
     ? event.registrationLabel.split(/[；。;]/)[0]?.trim() || '查看详情报名'
     : event.registrationLabel;
   const visibleTags = event.tags.slice(0, 4);
+  const statusBadge = getEventStatusBadge(event);
 
   return (
     <article className={`cmi-v3-event-card cmi-v3-feed-card--${getEventTone(event)}`}>
       <div className="cmi-v3-event-card-media">
         <img src={getCmiEventCardImageUrl(event)} alt={`${event.title}活动海报`} />
-        <span>{event.priceLabel}</span>
+        <span className={`cmi-v3-event-status-badge cmi-v3-event-status-badge--${statusBadge.tone}`}>
+          {statusBadge.label}
+        </span>
       </div>
       <div className="cmi-v3-event-card-copy">
         <h2>{event.title}</h2>
