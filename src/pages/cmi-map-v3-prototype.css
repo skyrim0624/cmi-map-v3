@@ -1419,46 +1419,144 @@
 }
 
 .cmi-v3-event-card {
-  display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
-  gap: 12px;
-  min-height: 142px;
   margin-top: 14px;
   background: var(--cmi-v3-paper);
+  overflow: hidden;
   padding: 12px;
 }
 
-.cmi-v3-event-card img {
-  width: 96px;
-  height: 118px;
+.cmi-v3-event-card-media {
+  position: relative;
+  height: clamp(176px, 48vw, 224px);
+  overflow: hidden;
   border: 2px solid var(--cmi-v3-ink);
-  border-radius: 15px;
+  border-radius: 18px;
+  background: #f6efe0;
+}
+
+.cmi-v3-event-card-media img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
-.cmi-v3-event-card > div > span {
-  display: inline-flex;
+.cmi-v3-event-card-media span {
+  position: absolute;
+  top: 10px;
+  right: 10px;
   border: 1.5px solid var(--cmi-v3-ink);
-  border-radius: 999px;
-  background: var(--cmi-v3-yellow);
-  padding: 5px 8px;
+  border-radius: 8px;
+  background: var(--cmi-v3-pink);
+  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.22);
+  padding: 6px 9px;
   font-size: 11px;
   font-weight: 950;
 }
 
+.cmi-v3-event-card-copy {
+  padding: 13px 4px 2px;
+}
+
 .cmi-v3-event-card h2 {
-  margin: 9px 0 0;
-  font-size: 21px;
-  line-height: 1.08;
+  margin: 0;
+  color: var(--cmi-v3-ink);
+  font-size: 25px;
+  line-height: 1.04;
   font-weight: 950;
 }
 
 .cmi-v3-event-card p {
-  margin: 6px 0 0;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  margin: 9px 0 0;
   color: rgba(22, 22, 22, 0.76);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 900;
-  line-height: 1.45;
+  line-height: 1.55;
+}
+
+.cmi-v3-event-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 11px;
+}
+
+.cmi-v3-event-card-tags span {
+  border: 1px solid rgba(22, 22, 22, 0.28);
+  border-radius: 999px;
+  background: rgba(46, 180, 94, 0.18);
+  padding: 5px 9px;
+  color: var(--cmi-v3-ink);
+  font-size: 11px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.cmi-v3-event-card-info {
+  display: grid;
+  gap: 8px;
+  margin-top: 13px;
+  border-top: 2px dashed rgba(22, 22, 22, 0.16);
+  padding-top: 12px;
+}
+
+.cmi-v3-event-card-line {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  color: var(--cmi-v3-ink);
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.35;
+}
+
+.cmi-v3-event-card-line svg {
+  flex: 0 0 auto;
+}
+
+.cmi-v3-event-card-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  border-top: 2px dashed rgba(22, 22, 22, 0.16);
+  padding-top: 11px;
+}
+
+.cmi-v3-event-card-detail-grid span,
+.cmi-v3-event-card-detail-grid strong {
+  display: block;
+}
+
+.cmi-v3-event-card-detail-grid span {
+  color: rgba(22, 22, 22, 0.56);
+  font-size: 10px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.cmi-v3-event-card-detail-grid strong {
+  margin-top: 5px;
+  color: var(--cmi-v3-ink);
+  font-size: 12px;
+  font-weight: 950;
+  line-height: 1.25;
+}
+
+.cmi-v3-event-card-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.cmi-v3-event-card-actions button {
+  min-height: 38px;
+  justify-content: center;
+  padding: 0 10px;
 }
 
 .cmi-v3-detail-poster {

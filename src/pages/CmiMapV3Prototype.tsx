@@ -1349,14 +1349,49 @@ function EventListCard({
   onOpenRealPage: () => void;
   onOpenMap: () => void;
 }) {
+  const registrationPreviewLabel = event.registrationLabel.includes('http')
+    ? event.registrationLabel.split(/[；。;]/)[0]?.trim() || '查看详情报名'
+    : event.registrationLabel;
+  const visibleTags = event.tags.slice(0, 4);
+
   return (
     <article className={`cmi-v3-event-card cmi-v3-feed-card--${getEventTone(event)}`}>
-      <img src={getCmiEventCardImageUrl(event)} alt={event.title} />
-      <div>
-        <span>{formatCmiEventTime(event)}</span>
+      <div className="cmi-v3-event-card-media">
+        <img src={getCmiEventCardImageUrl(event)} alt={`${event.title}活动海报`} />
+        <span>{event.priceLabel}</span>
+      </div>
+      <div className="cmi-v3-event-card-copy">
         <h2>{event.title}</h2>
         <p>{event.summary}</p>
-        <div className="cmi-v3-card-actions">
+
+        {visibleTags.length > 0 && (
+          <div className="cmi-v3-event-card-tags" aria-label="活动标签">
+            {visibleTags.map(tag => <span key={tag}>{tag}</span>)}
+          </div>
+        )}
+
+        <div className="cmi-v3-event-card-info">
+          <div className="cmi-v3-event-card-line">
+            <Calendar size={16} strokeWidth={3} />
+            <span>{formatCmiEventTime(event)}</span>
+          </div>
+          <div className="cmi-v3-event-card-line">
+            <MapPin size={16} strokeWidth={3} />
+            <span>{event.venueName}</span>
+          </div>
+          <div className="cmi-v3-event-card-detail-grid">
+            <div>
+              <span>费用</span>
+              <strong>{event.priceLabel}</strong>
+            </div>
+            <div>
+              <span>参与</span>
+              <strong>{registrationPreviewLabel}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="cmi-v3-card-actions cmi-v3-event-card-actions">
           <button type="button" onClick={onOpenDetail}>预览</button>
           <button type="button" onClick={onOpenRealPage}>报名</button>
           <button type="button" onClick={onOpenMap}>地图</button>
