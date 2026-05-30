@@ -1194,9 +1194,13 @@ function EventsMode({
       title="活动"
       headerContent={<FeedEventSwitch activeScreen="events" onNavigate={onNavigate} placement="top" />}
       footer={
-        <button type="button" className="cmi-v3-events-create-fixed" onClick={() => onOpenPath(getCmiEventCreatePath())}>
+        <button
+          type="button"
+          className="cmi-v3-events-create-fixed"
+          aria-label="发布活动"
+          onClick={() => onOpenPath(getCmiEventCreatePath())}
+        >
           <Plus size={22} strokeWidth={3} />
-          发布活动
         </button>
       }
       onTitleClick={() => onNavigate('feed')}

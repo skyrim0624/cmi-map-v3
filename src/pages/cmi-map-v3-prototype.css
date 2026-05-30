@@ -1548,23 +1548,20 @@
 
 .cmi-v3-events-create-fixed {
   position: absolute;
-  left: 50%;
+  right: 16px;
   bottom: calc(env(safe-area-inset-bottom) + 18px);
   z-index: 24;
-  width: min(268px, calc(100% - 72px));
+  width: 56px;
+  height: 56px;
   min-height: 56px;
   border: 2px solid var(--cmi-v3-ink);
-  border-radius: 999px;
+  border-radius: 50%;
   background: var(--cmi-v3-purple);
   color: #fff;
   box-shadow: 5px 6px 0 rgba(22, 22, 22, 0.35);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 17px;
-  font-weight: 950;
-  transform: translateX(-50%);
+  display: grid;
+  place-items: center;
+  padding: 0;
 }
 
 .cmi-v3-screen--publish .cmi-v3-comic-scroll,
