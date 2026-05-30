@@ -336,7 +336,8 @@
 
 .cmi-v3-selected-note[data-sheet-state="minimized"] .cmi-v3-selected-note-close,
 .cmi-v3-selected-note[data-sheet-state="minimized"] .cmi-v3-selected-note-summary,
-.cmi-v3-selected-note[data-sheet-state="minimized"] .cmi-v3-selected-note-body {
+.cmi-v3-selected-note[data-sheet-state="minimized"] .cmi-v3-selected-note-body,
+.cmi-v3-selected-note[data-sheet-state="minimized"] .cmi-v3-place-post-panel {
   display: none;
 }
 
@@ -402,6 +403,122 @@
   border-radius: 18px;
   object-fit: cover;
   user-select: none;
+}
+
+.cmi-v3-place-post-sheet {
+  padding: 8px 18px 18px;
+}
+
+.cmi-v3-place-post-sheet .cmi-v3-selected-note-close {
+  right: auto;
+  left: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(10px);
+}
+
+.cmi-v3-place-post-panel {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: minmax(0, 0.94fr) minmax(150px, 1.06fr);
+  gap: 16px;
+  min-height: 0;
+  padding-top: 10px;
+  outline: none;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.cmi-v3-place-post-sheet.is-dragging .cmi-v3-place-post-panel {
+  cursor: grabbing;
+}
+
+.cmi-v3-place-post-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 52px;
+}
+
+.cmi-v3-place-post-author {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.cmi-v3-place-post-avatar {
+  width: 44px;
+  height: 44px;
+  border: 1.5px solid rgba(22, 22, 22, 0.22);
+  border-radius: 50%;
+  background: #d9f6fb;
+  color: #09525d;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.cmi-v3-place-post-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cmi-v3-place-post-author strong,
+.cmi-v3-place-post-author span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cmi-v3-place-post-author strong {
+  font-size: 14px;
+  line-height: 1.1;
+  font-weight: 950;
+}
+
+.cmi-v3-place-post-author span {
+  margin-top: 3px;
+  color: rgba(22, 22, 22, 0.58);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.cmi-v3-place-post-copy h2 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  margin: 0;
+  font-size: 23px;
+  line-height: 1.06;
+  font-weight: 950;
+}
+
+.cmi-v3-place-post-copy p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  margin: 0;
+  color: rgba(22, 22, 22, 0.78);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.5;
+}
+
+.cmi-v3-place-post-photo {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border-radius: 22px;
+  background: #f7f3ed;
+  object-fit: cover;
 }
 
 .cmi-v3-selected-note h2,

@@ -773,6 +773,7 @@ export default function CmiMapV3Prototype() {
           placedStickers={placedStickers}
           activeRecIdForSticker={activeRecIdForSticker}
           activeStickerId={activeStickerId}
+          profilesByAuthorKey={profilesByAuthorKey}
           isWishlistFilterActive={isWishlistFilterActive}
           locationRequestKey={locationRequestKey}
           selectedMarker={selectedMarker}
@@ -880,6 +881,7 @@ function MapMode({
   placedStickers,
   activeRecIdForSticker,
   activeStickerId,
+  profilesByAuthorKey,
   recommendationsError,
   onClearSelection,
   onFilterChange,
@@ -906,6 +908,7 @@ function MapMode({
   placedStickers: PlacedStickerMap;
   activeRecIdForSticker: string | null;
   activeStickerId: string | null;
+  profilesByAuthorKey: ProfileLookup;
   recommendationsError: string | null;
   onClearSelection: () => void;
   onFilterChange: (filterId: MapFilterId) => void;
@@ -919,6 +922,9 @@ function MapMode({
   onWishlistFilterToggle: () => void;
 }) {
   const selectedRecommendation = selectedMarker?.recommendations[0] ?? null;
+  const selectedRecommendationAuthorProfile = selectedRecommendation
+    ? getRecommendationAuthorProfile(selectedRecommendation, profilesByAuthorKey)
+    : null;
   const handleRecommendationSelect = (recommendation: Recommendation) => {
     const matchedMarker = markers.find(marker =>
       marker.recommendations.some(item => item.id === recommendation.id)
@@ -994,16 +1000,12 @@ function MapMode({
       )}
 
       {selectedRecommendation ? (
-        <MapBottomSheet
+        <PlacePostSheet
           itemId={`recommendation:${selectedRecommendation.id}`}
-          imageAlt={selectedRecommendation.place_name}
-          imageUrl={selectedRecommendation.images[0] || getCategoryConfig(selectedRecommendation.category).iconUrl}
-          meta={`${selectedRecommendation.user_name || 'CMI 朋友'} · ${formatTraceTime(selectedRecommendation.created_at)}`}
-          title={selectedRecommendation.place_name}
+          authorProfile={selectedRecommendationAuthorProfile}
+          recommendation={selectedRecommendation}
           onDismiss={onClearSelection}
-        >
-          <RecommendationSheetBody recommendations={selectedMarker?.recommendations ?? [selectedRecommendation]} />
-        </MapBottomSheet>
+        />
       ) : selectedEvent ? (
         <MapBottomSheet
           itemId={`event:${selectedEvent.id}`}
@@ -1056,6 +1058,78 @@ function MapMode({
         </button>
       </footer>
     </section>
+  );
+}
+
+function PlacePostSheet({
+  authorProfile,
+  itemId,
+  recommendation,
+  onDismiss,
+}: {
+  authorProfile: PublicProfile | null;
+  itemId: string;
+  recommendation: Recommendation;
+  onDismiss?: () => void;
+}) {
+  const { dragHandlers, dragOffset, isDragging, setSnap, snap } = useBottomSheetDrag(itemId);
+  const isExpanded = snap === 'expanded';
+  const categoryConfig = getCategoryConfig(recommendation.category);
+  const imageUrl = recommendation.images[0] || categoryConfig.iconUrl;
+  const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
+  const authorAvatarUrl = authorProfile?.avatar_url?.trim() ?? '';
+  const categoryLabel = normalizeCategory(recommendation.category);
+  const summary = getRecommendationSummary(recommendation).trim();
+  const title = recommendation.place_name.trim();
+  const visibleSummary = summary && summary !== title ? summary : '';
+  const sheetStyle = { '--cmi-v3-sheet-drag-y': `${dragOffset}px` } as CSSProperties;
+  const sheetClassName = [
+    'cmi-v3-selected-note',
+    'cmi-v3-place-post-sheet',
+    isExpanded ? 'is-expanded' : '',
+    isDragging ? 'is-dragging' : '',
+  ].filter(Boolean).join(' ');
+
+  const handlePanelKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+
+    event.preventDefault();
+    setSnap(isExpanded ? 'collapsed' : 'expanded');
+  };
+
+  return (
+    <article className={sheetClassName} data-sheet-state={snap} style={sheetStyle}>
+      {onDismiss && (
+        <button type="button" className="cmi-v3-selected-note-close" onClick={onDismiss} aria-label="关闭详情">
+          <X size={18} strokeWidth={3} />
+        </button>
+      )}
+      <div className="cmi-v3-selected-note-grabber" aria-hidden="true" />
+      <div
+        className="cmi-v3-place-post-panel"
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
+        aria-label={title}
+        onKeyDown={handlePanelKeyDown}
+        {...dragHandlers}
+      >
+        <div className="cmi-v3-place-post-copy">
+          <div className="cmi-v3-place-post-author">
+            <span className="cmi-v3-place-post-avatar" aria-hidden="true">
+              {authorAvatarUrl ? <img src={authorAvatarUrl} alt="" /> : getUserInitial(authorName)}
+            </span>
+            <div>
+              <strong>{authorName}</strong>
+              <span>{`${categoryLabel} · ${formatTraceTime(recommendation.created_at)}`}</span>
+            </div>
+          </div>
+          <h2>{title}</h2>
+          {visibleSummary && <p>{visibleSummary}</p>}
+        </div>
+        <img className="cmi-v3-place-post-photo" src={imageUrl} alt={title} />
+      </div>
+    </article>
   );
 }
 
@@ -1299,19 +1373,6 @@ function MapPulseSheet({
         )}
       </div>
     </section>
-  );
-}
-
-function RecommendationSheetBody({ recommendations }: { recommendations: Recommendation[] }) {
-  return (
-    <div className="cmi-v3-selected-note-thread">
-      {recommendations.slice(0, 4).map(recommendation => (
-        <article key={recommendation.id}>
-          <span>{`${recommendation.user_name || 'CMI 朋友'} · ${formatTraceTime(recommendation.created_at)}`}</span>
-          <p>{getRecommendationSummary(recommendation)}</p>
-        </article>
-      ))}
-    </div>
   );
 }
 
