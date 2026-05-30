@@ -525,11 +525,17 @@ export default function CmiMapV3Prototype() {
     [activeFilter, isWishlistFilterActive, recommendations, user?.id]
   );
 
+  const communityEvents = useMemo(
+    () => events.filter(isCuratedCommunityEvent),
+    [events]
+  );
+
   const visibleEvents = useMemo(
-    () => events
-      .filter(event => !isWishlistFilterActive && (activeFilter === 'all' || activeFilter === 'events'))
-      .slice(0, 12),
-    [activeFilter, events, isWishlistFilterActive]
+    () => {
+      if (isWishlistFilterActive || (activeFilter !== 'all' && activeFilter !== 'events')) return [];
+      return communityEvents.slice(0, 12);
+    },
+    [activeFilter, communityEvents, isWishlistFilterActive]
   );
 
   const mapMarkers = useMemo(
@@ -546,13 +552,13 @@ export default function CmiMapV3Prototype() {
   );
 
   const featuredEvents = useMemo(
-    () => events.slice(0, 8),
-    [events]
+    () => communityEvents.slice(0, 8),
+    [communityEvents]
   );
 
   const selectedEvent = useMemo(
-    () => events.find(event => event.id === selectedEventId) ?? events[0] ?? null,
-    [events, selectedEventId]
+    () => communityEvents.find(event => event.id === selectedEventId) ?? communityEvents[0] ?? null,
+    [communityEvents, selectedEventId]
   );
 
   return (
@@ -1223,6 +1229,10 @@ function EventsMode({
           }}
         />
       ))}
+
+      {!isLoading && events.length === 0 && (
+        <p className="cmi-v3-inline-state">暂时还没有新的客栈、合作或友推社区活动。</p>
+      )}
     </ComicPage>
   );
 }
