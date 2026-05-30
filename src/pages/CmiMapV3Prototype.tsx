@@ -1,7 +1,9 @@
 import {
+  Bookmark,
   Calendar,
   Camera,
   Heart,
+  Layers,
   List,
   Map as MapIcon,
   MapPin,
@@ -30,6 +32,7 @@ import {
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { LeafletMap } from '@/components/map/LeafletMap';
 import { getCmiEventCardImageUrl } from '@/components/intent/event-card-presentation';
+import { useAuth } from '@/contexts/AuthContext';
 import { CMI_EVENTS, formatCmiEventTime, type CmiEvent } from '@/data/cmi-events';
 import { getAllRecommendations } from '@/db/api';
 import { getPublishedCmiEvents } from '@/db/cmi-events';
@@ -79,6 +82,8 @@ const screenIds: ScreenId[] = ['map', 'feed', 'publish', 'events', 'eventDetail'
 const SHEET_OPEN_THRESHOLD = -44;
 const SHEET_CLOSE_THRESHOLD = 54;
 const SHEET_DRAG_LIMIT = 160;
+const curatedCommunityEventSourceTypes = new Set<CmiEvent['sourceType']>(['cmi', 'community', 'manual']);
+const curatedCommunityEventKeywords = ['CMI', CMI_INN_PLACE_NAME, 'MagicLab', 'WaytoAGI', 'NOMADAY', '友推', '合作'];
 
 const foodCategories = new Set<Category>(['吃饭', '咖啡', '市集']);
 const playCategories = new Set<Category>(['户外', '景点', '购物', '运动', '酒吧', '身心']);
@@ -99,6 +104,28 @@ function getEventTone(event: CmiEvent): FeedCardTone {
   if (event.type === 'wellness' || event.type === 'meditation' || event.type === 'sport') return 'green';
   if (event.type === 'market') return 'pink';
   return 'paper';
+}
+
+function isCuratedCommunityEvent(event: CmiEvent) {
+  if (event.isCmiRelated || curatedCommunityEventSourceTypes.has(event.sourceType)) return true;
+
+  const eventText = [
+    event.title,
+    event.venueName,
+    event.area,
+    event.hostName,
+    event.sourceLabel,
+    event.organizerName,
+    ...event.tags,
+  ].filter(Boolean).join(' ');
+
+  return curatedCommunityEventKeywords.some(keyword => eventText.includes(keyword));
+}
+
+function getCuratedCommunityEventLabel(event: CmiEvent) {
+  if (event.sourceType === 'community' || event.sourceType === 'manual') return '社区友推';
+  if (event.isCmiRelated || event.sourceType === 'cmi' || event.venueName.includes(CMI_INN_PLACE_NAME)) return '清迈客栈';
+  return '合作活动';
 }
 
 function formatTraceTime(value: string) {
@@ -130,6 +157,11 @@ function recommendationMatchesFilter(recommendation: Recommendation, filterId: M
   if (filterId === 'play') return playCategories.has(category);
   if (filterId === 'easter') return category === '彩蛋';
   return false;
+}
+
+function isWishlistedByUser(recommendation: Recommendation, userId: string | null) {
+  if (!userId) return false;
+  return recommendation.wishlists?.some(wishlist => wishlist.user_id === userId) ?? false;
 }
 
 function groupRecommendationsIntoMarkers(recommendations: Recommendation[]): MapMarker[] {
@@ -350,9 +382,12 @@ function useBottomSheetDrag(itemId: string) {
 
 export default function CmiMapV3Prototype() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeScreen, setActiveScreen] = useState<ScreenId>(() => resolveScreenId(searchParams.get('screen')));
   const [activeFilter, setActiveFilter] = useState<MapFilterId>('all');
+  const [isWishlistFilterActive, setIsWishlistFilterActive] = useState(false);
+  const [locationRequestKey, setLocationRequestKey] = useState(0);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [events, setEvents] = useState<CmiEvent[]>(CMI_EVENTS);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
@@ -416,15 +451,18 @@ export default function CmiMapV3Prototype() {
   }, []);
 
   const filteredRecommendations = useMemo(
-    () => recommendations.filter(recommendation => recommendationMatchesFilter(recommendation, activeFilter)),
-    [activeFilter, recommendations]
+    () => recommendations.filter(recommendation =>
+      recommendationMatchesFilter(recommendation, activeFilter)
+      && (!isWishlistFilterActive || isWishlistedByUser(recommendation, user?.id ?? null))
+    ),
+    [activeFilter, isWishlistFilterActive, recommendations, user?.id]
   );
 
   const visibleEvents = useMemo(
     () => events
-      .filter(event => activeFilter === 'all' || activeFilter === 'events')
+      .filter(event => !isWishlistFilterActive && (activeFilter === 'all' || activeFilter === 'events'))
       .slice(0, 12),
-    [activeFilter, events]
+    [activeFilter, events, isWishlistFilterActive]
   );
 
   const mapMarkers = useMemo(
@@ -461,6 +499,8 @@ export default function CmiMapV3Prototype() {
           recommendationsError={recommendationsError}
           listEvents={visibleEvents}
           listRecommendations={filteredRecommendations}
+          isWishlistFilterActive={isWishlistFilterActive}
+          locationRequestKey={locationRequestKey}
           selectedMarker={selectedMarker}
           selectedEvent={selectedEventId ? selectedEvent : null}
           onClearSelection={() => {
@@ -468,6 +508,16 @@ export default function CmiMapV3Prototype() {
             setSelectedEventId(null);
           }}
           onFilterChange={setActiveFilter}
+          onLocateUser={() => setLocationRequestKey(current => current + 1)}
+          onWishlistFilterToggle={() => {
+            setIsWishlistFilterActive(current => {
+              const nextValue = !current;
+              if (nextValue) setActiveFilter('all');
+              return nextValue;
+            });
+            setSelectedMarker(null);
+            setSelectedEventId(null);
+          }}
           onMarkerSelect={(marker) => {
             if (isEventMarker(marker)) {
               const event = events.find(item => item.id === marker.eventId);
@@ -520,6 +570,8 @@ export default function CmiMapV3Prototype() {
 function MapMode({
   activeFilter,
   filters,
+  isWishlistFilterActive,
+  locationRequestKey,
   markers,
   listEvents,
   listRecommendations,
@@ -529,12 +581,16 @@ function MapMode({
   recommendationsError,
   onClearSelection,
   onFilterChange,
+  onLocateUser,
   onMarkerSelect,
   onNavigate,
   onOpenPath,
+  onWishlistFilterToggle,
 }: {
   activeFilter: MapFilterId;
   filters: FilterItem[];
+  isWishlistFilterActive: boolean;
+  locationRequestKey: number;
   markers: MapMarker[];
   listEvents: CmiEvent[];
   listRecommendations: Recommendation[];
@@ -544,9 +600,11 @@ function MapMode({
   recommendationsError: string | null;
   onClearSelection: () => void;
   onFilterChange: (filterId: MapFilterId) => void;
+  onLocateUser: () => void;
   onMarkerSelect: (marker: MapMarker) => void;
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
   onOpenPath: (path: string) => void;
+  onWishlistFilterToggle: () => void;
 }) {
   const selectedRecommendation = selectedMarker?.recommendations[0] ?? null;
   const handleRecommendationSelect = (recommendation: Recommendation) => {
@@ -559,9 +617,12 @@ function MapMode({
   return (
     <section className="cmi-v3-map-mode" aria-label="CMI Map 3.0 地图形态页">
       <LeafletMap
+        key={`map-location-${locationRequestKey}`}
         markers={markers}
         onMarkerClick={onMarkerSelect}
         defaultZoom={13.3}
+        focusUserLocation={locationRequestKey > 0}
+        locationZoom={16}
         constrainToChiangMai
         className="cmi-v3-live-map"
       />
@@ -591,6 +652,27 @@ function MapMode({
             <span>{filter.label}</span>
           </button>
         ))}
+      </div>
+
+      <div className="cmi-v3-map-layer-control" aria-label="地图图层">
+        <button type="button" aria-label="切换地图图层">
+          <Layers size={22} strokeWidth={2.8} />
+        </button>
+      </div>
+
+      <div className="cmi-v3-map-side-controls" aria-label="地图快捷操作">
+        <button type="button" className="cmi-v3-map-side-button" onClick={onLocateUser} aria-label="定位到自己">
+          <Navigation size={23} strokeWidth={3} />
+        </button>
+        <button
+          type="button"
+          className={`cmi-v3-map-side-button ${isWishlistFilterActive ? 'is-active' : ''}`}
+          onClick={onWishlistFilterToggle}
+          aria-pressed={isWishlistFilterActive}
+          aria-label={isWishlistFilterActive ? '关闭收藏过滤' : '只看我的收藏'}
+        >
+          <Bookmark size={22} strokeWidth={3} />
+        </button>
       </div>
 
       {(isLoading || recommendationsError) && (
@@ -656,6 +738,10 @@ function MapMode({
         <button type="button" onClick={() => onOpenPath('/mark')}>
           <Plus size={22} strokeWidth={3} />
           留个彩蛋
+        </button>
+        <button type="button" onClick={() => onNavigate('events')}>
+          <Calendar size={18} strokeWidth={3} />
+          活动
         </button>
       </footer>
     </section>
@@ -756,7 +842,7 @@ function MapPulseSheet({
   const isExpanded = snap === 'expanded';
   const sheetStyle = { '--cmi-v3-sheet-drag-y': `${dragOffset}px` } as CSSProperties;
   const visibleRecommendations = recommendations.slice(0, 8);
-  const visibleEvents = events.slice(0, 4);
+  const visibleEvents = events.filter(isCuratedCommunityEvent).slice(0, 4);
 
   const handleHeaderKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -790,52 +876,83 @@ function MapPulseSheet({
       </div>
 
       <div className="cmi-v3-map-pulse-body">
-        <div className="cmi-v3-map-pulse-rank">
-          <span>地图人气热榜</span>
+        {isLoading && <p className="cmi-v3-map-pulse-state">正在同步社区活动和动态</p>}
+
+        <div className="cmi-v3-map-pulse-section-label">
+          <strong>客栈 / 合作活动</strong>
+          <span>CMI 与友推社区</span>
         </div>
 
-        {isLoading && <p className="cmi-v3-map-pulse-state">正在同步社区动态</p>}
-
-        {visibleRecommendations.length > 0 && (
-          <div className="cmi-v3-map-pulse-row" aria-label="附近动态">
-            {visibleRecommendations.map(recommendation => (
-              <button
-                key={recommendation.id}
-                type="button"
-                className="cmi-v3-map-pulse-card"
-                onClick={() => onRecommendationSelect(recommendation)}
-              >
-                <img
-                  src={recommendation.images[0] || getCategoryConfig(recommendation.category).iconUrl}
-                  alt=""
-                />
-                <strong>{recommendation.place_name}</strong>
-                <span>{`${recommendation.user_name || 'CMI 朋友'} · ${formatTraceTime(recommendation.created_at)}`}</span>
-                <p>{getRecommendationSummary(recommendation)}</p>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {isExpanded && visibleEvents.length > 0 && (
-          <div className="cmi-v3-map-pulse-section">
-            <strong>附近活动</strong>
+        {visibleEvents.length > 0 ? (
+          <div className="cmi-v3-map-pulse-row" aria-label="客栈合作活动">
             {visibleEvents.map(event => (
               <button
                 key={event.id}
                 type="button"
-                className="cmi-v3-map-pulse-event"
+                className="cmi-v3-map-pulse-card"
+                aria-label={`查看${event.title}活动`}
                 onClick={() => onEventSelect(event)}
               >
                 <img src={getCmiEventCardImageUrl(event)} alt="" />
-                <div>
-                  <span>{formatCmiEventTime(event)}</span>
+                <div className="cmi-v3-map-pulse-card-copy">
+                  <span>{getCuratedCommunityEventLabel(event)}</span>
                   <strong>{event.title}</strong>
-                  <p>{event.venueName}</p>
+                  <p>{`${formatCmiEventTime(event)} · ${event.venueName}`}</p>
                 </div>
               </button>
             ))}
           </div>
+        ) : !isLoading ? (
+          <p className="cmi-v3-map-pulse-state">暂时没有新的客栈或合作活动。</p>
+        ) : null}
+
+        {isExpanded && visibleRecommendations.length > 0 && (
+          <div className="cmi-v3-map-pulse-feed" aria-label="附近动态">
+            <div className="cmi-v3-map-pulse-section-label">
+              <strong>附近动态</strong>
+              <span>社区新鲜事</span>
+            </div>
+            {visibleRecommendations.map(recommendation => {
+              const categoryConfig = getCategoryConfig(recommendation.category);
+              const imageUrl = recommendation.images[0] || categoryConfig.iconUrl;
+              const categoryLabel = normalizeCategory(recommendation.category);
+
+              return (
+                <button
+                  key={recommendation.id}
+                  type="button"
+                  className="cmi-v3-map-pulse-trace"
+                  aria-label={`查看${recommendation.place_name}动态`}
+                  onClick={() => onRecommendationSelect(recommendation)}
+                >
+                  <img className="cmi-v3-map-pulse-trace-image" src={imageUrl} alt={recommendation.place_name} />
+                  <div className="cmi-v3-map-pulse-trace-content">
+                    <div className="cmi-v3-map-pulse-trace-head">
+                      <span className="cmi-v3-map-pulse-trace-avatar"><img src={categoryConfig.iconUrl} alt="" /></span>
+                      <div>
+                        <strong>{recommendation.user_name || 'CMI 朋友'}</strong>
+                        <span>{categoryLabel}</span>
+                      </div>
+                      <em>...</em>
+                    </div>
+                    <p>{getRecommendationSummary(recommendation)}</p>
+                    <div className="cmi-v3-map-pulse-trace-foot">
+                      <span>{`${formatTraceTime(recommendation.created_at)} · ${recommendation.place_name}`}</span>
+                      <span aria-hidden="true">
+                        <Heart size={15} strokeWidth={3} />
+                        <MapPin size={15} strokeWidth={3} />
+                        <MessageCircle size={15} strokeWidth={3} />
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {isExpanded && !isLoading && visibleRecommendations.length === 0 && (
+          <p className="cmi-v3-map-pulse-state">附近还没有新的社区动态。</p>
         )}
 
         {isExpanded && (
