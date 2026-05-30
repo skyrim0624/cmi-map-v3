@@ -322,7 +322,9 @@
 }
 
 .cmi-v3-selected-note.is-expanded {
-  height: min(76dvh, 620px);
+  height: calc(100vh - var(--cmi-v3-map-nav-height) - 150px);
+  height: calc(100dvh - var(--cmi-v3-map-nav-height) - 150px);
+  max-height: 620px;
   box-shadow: 0 -16px 42px rgba(22, 22, 22, 0.22);
 }
 
@@ -537,7 +539,9 @@
 }
 
 .cmi-v3-map-pulse-sheet.is-expanded {
-  height: min(84dvh, 670px);
+  height: calc(100vh - var(--cmi-v3-map-nav-height) - 80px);
+  height: calc(100dvh - var(--cmi-v3-map-nav-height) - 80px);
+  max-height: 670px;
   box-shadow: 0 -14px 40px rgba(22, 22, 22, 0.22);
 }
 
