@@ -34,7 +34,12 @@ import { LeafletMap } from '@/components/map/LeafletMap';
 import { getCmiEventCardImageUrl } from '@/components/intent/event-card-presentation';
 import { useAuth } from '@/contexts/AuthContext';
 import { CMI_EVENTS, formatCmiEventTime, type CmiEvent } from '@/data/cmi-events';
-import { getAllRecommendations } from '@/db/api';
+import {
+  getAllRecommendations,
+  getProfilesByUserIds,
+  getProfilesByUserNames,
+  type PublicProfile,
+} from '@/db/api';
 import { getPublishedCmiEvents } from '@/db/cmi-events';
 import {
   getAddTracePath,
@@ -59,6 +64,7 @@ type MapFilterId = 'all' | 'food' | 'play' | 'events' | 'easter';
 type FeedCardTone = 'paper' | 'yellow' | 'green' | 'pink';
 type SheetSnap = 'collapsed' | 'expanded';
 type SheetDragSource = 'pointer' | 'mouse' | 'touch';
+type ProfileLookup = Record<string, PublicProfile>;
 
 interface FilterItem {
   id: MapFilterId;
@@ -104,6 +110,28 @@ function getEventTone(event: CmiEvent): FeedCardTone {
   if (event.type === 'wellness' || event.type === 'meditation' || event.type === 'sport') return 'green';
   if (event.type === 'market') return 'pink';
   return 'paper';
+}
+
+function getProfileLookupKey(value: string | null | undefined) {
+  return value?.normalize('NFKC').trim().toLowerCase() ?? '';
+}
+
+function addProfileLookupEntry(lookup: ProfileLookup, profile: PublicProfile) {
+  [profile.id, profile.handle, profile.user_name].forEach(value => {
+    const key = getProfileLookupKey(value);
+    if (key) lookup[key] = profile;
+  });
+}
+
+function getRecommendationAuthorProfile(recommendation: Recommendation, profiles: ProfileLookup) {
+  return profiles[getProfileLookupKey(recommendation.user_id)]
+    ?? profiles[getProfileLookupKey(recommendation.user_name)]
+    ?? null;
+}
+
+function getUserInitial(name: string | null | undefined) {
+  const normalizedName = name?.normalize('NFKC').trim();
+  return normalizedName ? Array.from(normalizedName)[0].toUpperCase() : 'C';
 }
 
 function isCuratedCommunityEvent(event: CmiEvent) {
@@ -389,6 +417,7 @@ export default function CmiMapV3Prototype() {
   const [isWishlistFilterActive, setIsWishlistFilterActive] = useState(false);
   const [locationRequestKey, setLocationRequestKey] = useState(0);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [profilesByAuthorKey, setProfilesByAuthorKey] = useState<ProfileLookup>({});
   const [events, setEvents] = useState<CmiEvent[]>(CMI_EVENTS);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(() => searchParams.get('event'));
@@ -434,6 +463,44 @@ export default function CmiMapV3Prototype() {
         setIsLoadingRecommendations(false);
       });
   }, []);
+
+  useEffect(() => {
+    let isActive = true;
+    const userIds = recommendations.map(recommendation => recommendation.user_id);
+    const userNames = recommendations
+      .map(recommendation => recommendation.user_name)
+      .filter(name => Boolean(getProfileLookupKey(name)));
+    const hasLookupInput = userIds.some(Boolean) || userNames.length > 0;
+
+    if (!hasLookupInput) {
+      setProfilesByAuthorKey({});
+      return () => {
+        isActive = false;
+      };
+    }
+
+    Promise.all([
+      getProfilesByUserIds(userIds),
+      getProfilesByUserNames(userNames),
+    ])
+      .then(([profilesById, profilesByName]) => {
+        if (!isActive) return;
+
+        const nextLookup: ProfileLookup = {};
+        [...profilesById, ...profilesByName].forEach(profile => {
+          addProfileLookupEntry(nextLookup, profile);
+        });
+        setProfilesByAuthorKey(nextLookup);
+      })
+      .catch(error => {
+        console.error('CMI Map 3.0 用户头像加载失败:', error);
+        if (isActive) setProfilesByAuthorKey({});
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [recommendations]);
 
   useEffect(() => {
     setIsLoadingEvents(true);
@@ -536,6 +603,7 @@ export default function CmiMapV3Prototype() {
       {activeScreen === 'feed' && (
         <FeedMode
           isLoading={isLoadingRecommendations}
+          profilesByAuthorKey={profilesByAuthorKey}
           recommendations={feedRecommendations}
           onNavigate={handleNavigate}
           onOpenPath={navigate}
@@ -999,11 +1067,13 @@ function EventSheetBody({ event }: { event: CmiEvent }) {
 function FeedMode({
   recommendations,
   isLoading,
+  profilesByAuthorKey,
   onNavigate,
   onOpenPath,
 }: {
   recommendations: Recommendation[];
   isLoading: boolean;
+  profilesByAuthorKey: ProfileLookup;
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
   onOpenPath: (path: string) => void;
 }) {
@@ -1029,6 +1099,7 @@ function FeedMode({
       {recommendations.map(recommendation => (
         <RecommendationFeedCard
           key={recommendation.id}
+          authorProfile={getRecommendationAuthorProfile(recommendation, profilesByAuthorKey)}
           recommendation={recommendation}
           onOpenMap={() => onOpenPath(getPlaceMapPath(recommendation.place_name))}
           onOpenPlace={() => onOpenPath(getPlacePath(recommendation.place_name))}
@@ -1205,11 +1276,13 @@ function EventDetailMode({
 
 function RecommendationFeedCard({
   recommendation,
+  authorProfile,
   onOpenMap,
   onOpenPlace,
   onAddTrace,
 }: {
   recommendation: Recommendation;
+  authorProfile: PublicProfile | null;
   onOpenMap: () => void;
   onOpenPlace: () => void;
   onAddTrace: () => void;
@@ -1217,15 +1290,19 @@ function RecommendationFeedCard({
   const categoryConfig = getCategoryConfig(recommendation.category);
   const imageUrl = recommendation.images[0] || categoryConfig.iconUrl;
   const categoryLabel = normalizeCategory(recommendation.category);
+  const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
+  const authorAvatarUrl = authorProfile?.avatar_url?.trim() ?? '';
 
   return (
     <article className={`cmi-v3-feed-card cmi-v3-feed-post-card cmi-v3-feed-card--${getRecommendationTone(recommendation)}`}>
       <img className="cmi-v3-feed-post-image" src={imageUrl} alt={recommendation.place_name} />
       <div className="cmi-v3-feed-post-content">
         <div className="cmi-v3-feed-head">
-          <span className="cmi-v3-avatar"><img src={categoryConfig.iconUrl} alt="" /></span>
+          <span className="cmi-v3-avatar cmi-v3-feed-user-avatar" aria-hidden="true">
+            {authorAvatarUrl ? <img src={authorAvatarUrl} alt="" /> : getUserInitial(authorName)}
+          </span>
           <div>
-            <strong>{recommendation.user_name || 'CMI 朋友'}</strong>
+            <strong>{authorName}</strong>
             <span>{`${categoryLabel} · ${formatTraceTime(recommendation.created_at)}`}</span>
           </div>
         </div>

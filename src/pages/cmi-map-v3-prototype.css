@@ -1110,8 +1110,8 @@
 }
 
 .cmi-v3-feed-post-card .cmi-v3-feed-head {
-  grid-template-columns: 32px minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
 }
 
 .cmi-v3-avatar {
@@ -1128,9 +1128,10 @@
 }
 
 .cmi-v3-feed-post-card .cmi-v3-avatar {
-  width: 32px;
-  height: 32px;
+  width: 42px;
+  height: 42px;
   border-width: 1.5px;
+  font-size: 17px;
 }
 
 .cmi-v3-avatar img {
@@ -1140,7 +1141,7 @@
 }
 
 .cmi-v3-feed-head strong,
-.cmi-v3-feed-head span {
+.cmi-v3-feed-head > div > span {
   display: block;
 }
 
@@ -1150,13 +1151,13 @@
 }
 
 .cmi-v3-feed-post-card .cmi-v3-feed-head strong,
-.cmi-v3-feed-post-card .cmi-v3-feed-head span {
+.cmi-v3-feed-post-card .cmi-v3-feed-head > div > span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.cmi-v3-feed-head span {
+.cmi-v3-feed-head > div > span {
   margin-top: 3px;
   color: rgba(22, 22, 22, 0.64);
   font-size: 11px;
