@@ -84,6 +84,7 @@ type ScreenId = 'map' | 'feed' | 'publish' | 'events' | 'eventDetail';
 type MapFilterId = 'all' | 'food' | 'play' | 'events' | 'easter';
 type FeedCardTone = 'paper' | 'yellow' | 'green' | 'pink';
 type EventStatusTone = 'open' | 'full' | 'ended';
+type EventTabId = 'ongoing' | 'upcoming' | 'ended' | 'joined';
 type SheetSnap = 'minimized' | 'collapsed' | 'expanded';
 type SheetDragSource = 'pointer' | 'mouse' | 'touch';
 type ProfileLookup = Record<string, PublicProfile>;
@@ -104,6 +105,12 @@ const mapFilters: FilterItem[] = [
   { id: 'play', label: '好玩', iconUrl: '/map-icons/cmi-flat-v2/direct-play.png' },
   { id: 'events', label: '活动', iconUrl: '/map-icons/cmi-flat-v2/home-events.png' },
   { id: 'easter', label: '彩蛋', iconUrl: '/map-icons/cmi-easter-v2/egg-v2-03-cat-face.png' },
+];
+const eventTabs: Array<{ id: EventTabId; label: string }> = [
+  { id: 'ongoing', label: '正在发生' },
+  { id: 'upcoming', label: '即将开始' },
+  { id: 'ended', label: '刚结束' },
+  { id: 'joined', label: '我参加的' },
 ];
 
 const screenIds: ScreenId[] = ['map', 'feed', 'publish', 'events', 'eventDetail'];
@@ -169,16 +176,20 @@ function getEventTone(event: CmiEvent): FeedCardTone {
   return 'paper';
 }
 
-function getEventStatusBadge(event: CmiEvent): { label: string; tone: EventStatusTone } {
-  const referenceDate = new Date();
+function isEventOngoing(event: CmiEvent, referenceDate: Date) {
   const sortTime = getCmiEventSortTime(event, referenceDate);
-  const isOngoing =
+  return (
     sortTime !== Number.MAX_SAFE_INTEGER &&
     sortTime <= referenceDate.getTime() &&
-    (!event.endAt || new Date(event.endAt).getTime() >= referenceDate.getTime());
+    (!event.endAt || new Date(event.endAt).getTime() >= referenceDate.getTime())
+  );
+}
+
+function getEventStatusBadge(event: CmiEvent): { label: string; tone: EventStatusTone } {
+  const referenceDate = new Date();
 
   if (isCmiEventExpired(event, referenceDate)) return { label: '已结束', tone: 'ended' };
-  if (isOngoing) return { label: '进行中', tone: 'open' };
+  if (isEventOngoing(event, referenceDate)) return { label: '进行中', tone: 'open' };
   if (event.registrationEnabled && event.registrationStatus === 'closed') return { label: '名额已满', tone: 'full' };
   return { label: '未开始', tone: 'open' };
 }
@@ -189,6 +200,16 @@ function compareUpcomingEvents(left: CmiEvent, right: CmiEvent, referenceDate: D
 
 function compareEndedEvents(left: CmiEvent, right: CmiEvent, referenceDate: Date) {
   return getCmiEventSortTime(right, referenceDate) - getCmiEventSortTime(left, referenceDate);
+}
+
+function compareCommunityEvents(left: CmiEvent, right: CmiEvent, referenceDate: Date) {
+  const isLeftEnded = isCmiEventExpired(left, referenceDate);
+  const isRightEnded = isCmiEventExpired(right, referenceDate);
+
+  if (isLeftEnded !== isRightEnded) return isLeftEnded ? 1 : -1;
+  return isLeftEnded
+    ? compareEndedEvents(left, right, referenceDate)
+    : compareUpcomingEvents(left, right, referenceDate);
 }
 
 function getProfileLookupKey(value: string | null | undefined) {
@@ -625,7 +646,12 @@ export default function CmiMapV3Prototype() {
   );
 
   const communityEvents = useMemo(
-    () => events.filter(isCuratedCommunityEvent),
+    () => {
+      const referenceDate = new Date();
+      return events
+        .filter(isCuratedCommunityEvent)
+        .sort((left, right) => compareCommunityEvents(left, right, referenceDate));
+    },
     [events]
   );
 
@@ -690,11 +716,6 @@ export default function CmiMapV3Prototype() {
       isActive = false;
     };
   }, [availableStickers.length, showStickerDrawer]);
-
-  const featuredEvents = useMemo(
-    () => communityEvents.slice(0, 8),
-    [communityEvents]
-  );
 
   const selectedEvent = useMemo(
     () => communityEvents.find(event => event.id === selectedEventId) ?? communityEvents[0] ?? null,
@@ -870,7 +891,7 @@ export default function CmiMapV3Prototype() {
       )}
       {activeScreen === 'events' && (
         <EventsMode
-          events={featuredEvents}
+          events={communityEvents}
           isLoading={isLoadingEvents}
           onNavigate={handleNavigate}
           onOpenPath={navigate}
@@ -1564,9 +1585,10 @@ function EventsMode({
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
   onOpenPath: (path: string) => void;
 }) {
-  const [showEndedEvents, setShowEndedEvents] = useState(true);
-  const { endedEvents, upcomingEvents } = useMemo(() => {
+  const [activeEventTab, setActiveEventTab] = useState<EventTabId>('upcoming');
+  const eventGroups = useMemo(() => {
     const referenceDate = new Date();
+    const nextOngoingEvents: CmiEvent[] = [];
     const nextUpcomingEvents: CmiEvent[] = [];
     const nextEndedEvents: CmiEvent[] = [];
 
@@ -1576,14 +1598,35 @@ function EventsMode({
         return;
       }
 
+      if (isEventOngoing(event, referenceDate)) {
+        nextOngoingEvents.push(event);
+        return;
+      }
+
       nextUpcomingEvents.push(event);
     });
 
     return {
+      ongoing: nextOngoingEvents.sort((left, right) => compareUpcomingEvents(left, right, referenceDate)),
       upcomingEvents: nextUpcomingEvents.sort((left, right) => compareUpcomingEvents(left, right, referenceDate)),
       endedEvents: nextEndedEvents.sort((left, right) => compareEndedEvents(left, right, referenceDate)),
+      joined: [],
     };
   }, [events]);
+  const visibleEvents =
+    activeEventTab === 'ongoing'
+      ? eventGroups.ongoing
+      : activeEventTab === 'ended'
+        ? eventGroups.endedEvents
+        : activeEventTab === 'joined'
+          ? eventGroups.joined
+          : eventGroups.upcomingEvents;
+  const emptyEventMessage: Record<EventTabId, string> = {
+    ongoing: '现在没有正在发生的活动。',
+    upcoming: '暂时没有未开始活动。',
+    ended: '暂时没有刚结束的活动。',
+    joined: '你参加的活动之后会放在这里。',
+  };
 
   const renderEventCard = (event: CmiEvent) => (
     <EventListCard
@@ -1622,34 +1665,28 @@ function EventsMode({
         <h1>最近可以去哪儿</h1>
         <p>活动不是公告板，是社区共同记忆的入口。</p>
         <div className="cmi-v3-event-tabs">
-          {['正在发生', '即将开始', '刚结束', '我参加的'].map((tab, index) => (
-            <button key={tab} type="button" className={index === 0 ? 'is-active' : undefined}>{tab}</button>
+          {eventTabs.map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              className={activeEventTab === tab.id ? 'is-active' : undefined}
+              aria-pressed={activeEventTab === tab.id}
+              onClick={() => setActiveEventTab(tab.id)}
+            >
+              {tab.label}
+            </button>
           ))}
         </div>
       </section>
 
       {isLoading && <p className="cmi-v3-inline-state">正在同步活动库</p>}
 
-      {upcomingEvents.map(renderEventCard)}
+      {visibleEvents.map(renderEventCard)}
 
-      {endedEvents.length > 0 && (
-        <section className="cmi-v3-ended-events" aria-label="已结束活动">
-          <button
-            type="button"
-            className="cmi-v3-ended-events-toggle"
-            aria-expanded={showEndedEvents}
-            onClick={() => setShowEndedEvents(current => !current)}
-          >
-            <span>{showEndedEvents ? '收起已结束活动' : '展开已结束活动'}</span>
-            <strong>{endedEvents.length} 场</strong>
-          </button>
-
-          {showEndedEvents && endedEvents.map(renderEventCard)}
-        </section>
-      )}
-
-      {!isLoading && events.length === 0 && (
-        <p className="cmi-v3-inline-state">暂时还没有新的客栈、合作或友推社区活动。</p>
+      {!isLoading && (events.length === 0 || visibleEvents.length === 0) && (
+        <p className="cmi-v3-inline-state">
+          {events.length === 0 ? '暂时还没有新的客栈、合作或友推社区活动。' : emptyEventMessage[activeEventTab]}
+        </p>
       )}
     </ComicPage>
   );
