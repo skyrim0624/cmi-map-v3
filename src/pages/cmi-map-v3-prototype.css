@@ -1483,6 +1483,36 @@
   padding: 0 12px;
 }
 
+.cmi-v3-ended-events {
+  margin-top: 14px;
+}
+
+.cmi-v3-ended-events-toggle {
+  width: 100%;
+  min-height: 48px;
+  border: 2px solid var(--cmi-v3-ink);
+  border-radius: 18px;
+  background: var(--cmi-v3-paper);
+  box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 14px;
+  color: var(--cmi-v3-ink);
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.cmi-v3-ended-events-toggle strong {
+  border: 1.5px solid var(--cmi-v3-ink);
+  border-radius: 999px;
+  background: var(--cmi-v3-pink);
+  padding: 5px 9px;
+  font-size: 11px;
+  line-height: 1;
+}
+
 .cmi-v3-event-card {
   margin-top: 14px;
   background: var(--cmi-v3-paper);

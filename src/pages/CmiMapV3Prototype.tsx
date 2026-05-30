@@ -134,6 +134,14 @@ function getEventStatusBadge(event: CmiEvent): { label: string; tone: EventStatu
   return { label: '未开始', tone: 'open' };
 }
 
+function compareUpcomingEvents(left: CmiEvent, right: CmiEvent, referenceDate: Date) {
+  return getCmiEventSortTime(left, referenceDate) - getCmiEventSortTime(right, referenceDate);
+}
+
+function compareEndedEvents(left: CmiEvent, right: CmiEvent, referenceDate: Date) {
+  return getCmiEventSortTime(right, referenceDate) - getCmiEventSortTime(left, referenceDate);
+}
+
 function getProfileLookupKey(value: string | null | undefined) {
   return value?.normalize('NFKC').trim().toLowerCase() ?? '';
 }
@@ -1210,6 +1218,43 @@ function EventsMode({
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
   onOpenPath: (path: string) => void;
 }) {
+  const [showEndedEvents, setShowEndedEvents] = useState(true);
+  const { endedEvents, upcomingEvents } = useMemo(() => {
+    const referenceDate = new Date();
+    const nextUpcomingEvents: CmiEvent[] = [];
+    const nextEndedEvents: CmiEvent[] = [];
+
+    events.forEach(event => {
+      if (isCmiEventExpired(event, referenceDate)) {
+        nextEndedEvents.push(event);
+        return;
+      }
+
+      nextUpcomingEvents.push(event);
+    });
+
+    return {
+      upcomingEvents: nextUpcomingEvents.sort((left, right) => compareUpcomingEvents(left, right, referenceDate)),
+      endedEvents: nextEndedEvents.sort((left, right) => compareEndedEvents(left, right, referenceDate)),
+    };
+  }, [events]);
+
+  const renderEventCard = (event: CmiEvent) => (
+    <EventListCard
+      key={event.id}
+      event={event}
+      onOpenDetail={() => onNavigate('eventDetail', { eventId: event.id })}
+      onOpenRealPage={() => onOpenPath(getCmiEventPath(event.id))}
+      onOpenMap={() => {
+        if (!event.mapLocation) {
+          onOpenPath(getCmiEventPath(event.id));
+          return;
+        }
+        onNavigate('map', { eventId: event.id });
+      }}
+    />
+  );
+
   return (
     <ComicPage
       title="活动"
@@ -1239,21 +1284,23 @@ function EventsMode({
 
       {isLoading && <p className="cmi-v3-inline-state">正在同步活动库</p>}
 
-      {events.map(event => (
-        <EventListCard
-          key={event.id}
-          event={event}
-          onOpenDetail={() => onNavigate('eventDetail', { eventId: event.id })}
-          onOpenRealPage={() => onOpenPath(getCmiEventPath(event.id))}
-          onOpenMap={() => {
-            if (!event.mapLocation) {
-              onOpenPath(getCmiEventPath(event.id));
-              return;
-            }
-            onNavigate('map', { eventId: event.id });
-          }}
-        />
-      ))}
+      {upcomingEvents.map(renderEventCard)}
+
+      {endedEvents.length > 0 && (
+        <section className="cmi-v3-ended-events" aria-label="已结束活动">
+          <button
+            type="button"
+            className="cmi-v3-ended-events-toggle"
+            aria-expanded={showEndedEvents}
+            onClick={() => setShowEndedEvents(current => !current)}
+          >
+            <span>{showEndedEvents ? '收起已结束活动' : '展开已结束活动'}</span>
+            <strong>{endedEvents.length} 场</strong>
+          </button>
+
+          {showEndedEvents && endedEvents.map(renderEventCard)}
+        </section>
+      )}
 
       {!isLoading && events.length === 0 && (
         <p className="cmi-v3-inline-state">暂时还没有新的客栈、合作或友推社区活动。</p>
