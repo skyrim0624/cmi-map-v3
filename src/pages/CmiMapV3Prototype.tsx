@@ -1086,13 +1086,10 @@ function FeedMode({
   return (
     <ComicPage
       title="CMI Map"
-      actionLabel="地图"
       hideTitle
+      headerContent={<FeedEventSwitch activeScreen="feed" onNavigate={onNavigate} placement="top" />}
       onTitleClick={() => onNavigate('map')}
-      onActionClick={() => onNavigate('map')}
     >
-      <FeedEventSwitch activeScreen="feed" onNavigate={onNavigate} />
-
       <section className="cmi-v3-hard-card cmi-v3-feed-hero cmi-v3-dot-paper">
         <ChapterHeader left="Today in Chiang Mai" right="CMI Community Feed" />
         <img src="/cmi-home/yard-scene.jpg" alt="清迈客栈院子" />
@@ -1425,12 +1422,19 @@ function FeedEventSwitch({
   onNavigate,
   placement = 'content',
 }: {
-  activeScreen: 'feed' | 'events';
+  activeScreen: 'map' | 'feed' | 'events';
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
   placement?: 'content' | 'top';
 }) {
   return (
     <div className={`cmi-v3-mode-switch ${placement === 'top' ? 'cmi-v3-mode-switch--top' : ''}`}>
+      <button
+        type="button"
+        className={activeScreen === 'map' ? 'is-active' : undefined}
+        onClick={() => onNavigate('map')}
+      >
+        地图
+      </button>
       <button
         type="button"
         className={activeScreen === 'feed' ? 'is-active' : undefined}
