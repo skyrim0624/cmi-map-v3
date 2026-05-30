@@ -999,14 +999,6 @@ function MapMode({
           imageAlt={selectedRecommendation.place_name}
           imageUrl={selectedRecommendation.images[0] || getCategoryConfig(selectedRecommendation.category).iconUrl}
           meta={`${selectedRecommendation.user_name || 'CMI 朋友'} · ${formatTraceTime(selectedRecommendation.created_at)}`}
-          primaryAction={{
-            label: '详情',
-            onClick: () => onOpenPath(getPlacePath(selectedRecommendation.place_name)),
-          }}
-          secondaryAction={{
-            label: '补一句',
-            onClick: () => onOpenPath(getAddTracePath(selectedRecommendation.place_name)),
-          }}
           title={selectedRecommendation.place_name}
           onDismiss={onClearSelection}
         >
@@ -1083,8 +1075,8 @@ function MapBottomSheet({
   imageUrl: string;
   itemId: string;
   meta: string;
-  primaryAction: { label: string; onClick: () => void };
-  secondaryAction: { label: string; onClick: () => void };
+  primaryAction?: { label: string; onClick: () => void };
+  secondaryAction?: { label: string; onClick: () => void };
   title: string;
   onDismiss?: () => void;
 }) {
@@ -1132,10 +1124,12 @@ function MapBottomSheet({
         </div>
       </div>
       <div className="cmi-v3-selected-note-body">
-        <div className="cmi-v3-selected-note-actions">
-          <button type="button" onClick={primaryAction.onClick}>{primaryAction.label}</button>
-          <button type="button" onClick={secondaryAction.onClick}>{secondaryAction.label}</button>
-        </div>
+        {(primaryAction || secondaryAction) && (
+          <div className="cmi-v3-selected-note-actions">
+            {primaryAction && <button type="button" onClick={primaryAction.onClick}>{primaryAction.label}</button>}
+            {secondaryAction && <button type="button" onClick={secondaryAction.onClick}>{secondaryAction.label}</button>}
+          </div>
+        )}
         {children}
       </div>
     </article>
@@ -1311,7 +1305,6 @@ function MapPulseSheet({
 function RecommendationSheetBody({ recommendations }: { recommendations: Recommendation[] }) {
   return (
     <div className="cmi-v3-selected-note-thread">
-      <strong>这个地点的最近动态</strong>
       {recommendations.slice(0, 4).map(recommendation => (
         <article key={recommendation.id}>
           <span>{`${recommendation.user_name || 'CMI 朋友'} · ${formatTraceTime(recommendation.created_at)}`}</span>
