@@ -2,7 +2,6 @@ import {
   Bookmark,
   Calendar,
   Camera,
-  Heart,
   Layers,
   List,
   Map as MapIcon,
@@ -13,6 +12,7 @@ import {
   Plus,
   Search,
   Share2,
+  Sticker as StickerIcon,
   Users,
   X,
 } from 'lucide-react';
@@ -30,6 +30,7 @@ import {
   useState,
 } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { LeafletMap } from '@/components/map/LeafletMap';
 import { getCmiEventCardImageUrl } from '@/components/intent/event-card-presentation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -48,10 +49,22 @@ import {
 } from '@/db/api';
 import { getPublishedCmiEvents } from '@/db/cmi-events';
 import {
+  appendStickerPlacement,
+  applyWishlistState,
+  createOptimisticStickerPlacement,
+  type PlacedStickerMap,
+  type WishlistStateMap,
+} from '@/features/interactions/recommendation-card-interactions';
+import {
+  loadAvailableStickers,
+  loadRecommendationStickerPlacements,
+  placeRecommendationSticker,
+  toggleRecommendationWishlist,
+} from '@/features/interactions/interaction-service';
+import {
   getAddTracePath,
   getCmiEventCreatePath,
   getCmiEventPath,
-  getPlaceMapPath,
   getPlacePath,
 } from '@/lib/paths';
 import {
@@ -61,7 +74,9 @@ import {
   normalizeCategory,
   type Category,
   type MapMarker,
+  type PlacedSticker,
   type Recommendation,
+  type Sticker,
 } from '@/types/types';
 import './cmi-map-v3-prototype.css';
 
@@ -220,6 +235,10 @@ function recommendationMatchesFilter(recommendation: Recommendation, filterId: M
 function isWishlistedByUser(recommendation: Recommendation, userId: string | null) {
   if (!userId) return false;
   return recommendation.wishlists?.some(wishlist => wishlist.user_id === userId) ?? false;
+}
+
+function clampRatio(value: number) {
+  return Math.min(100, Math.max(0, value));
 }
 
 function groupRecommendationsIntoMarkers(recommendations: Recommendation[]): MapMarker[] {
@@ -456,6 +475,12 @@ export default function CmiMapV3Prototype() {
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
+  const [localWishlists, setLocalWishlists] = useState<WishlistStateMap>({});
+  const [availableStickers, setAvailableStickers] = useState<Sticker[]>([]);
+  const [placedStickers, setPlacedStickers] = useState<PlacedStickerMap>({});
+  const [activeStickerId, setActiveStickerId] = useState<string | null>(null);
+  const [activeRecIdForSticker, setActiveRecIdForSticker] = useState<string | null>(null);
+  const [showStickerDrawer, setShowStickerDrawer] = useState(false);
 
   const handleNavigate = (screen: ScreenId, input?: { eventId?: string | null }) => {
     setActiveScreen(screen);
@@ -535,6 +560,14 @@ export default function CmiMapV3Prototype() {
   }, [recommendations]);
 
   useEffect(() => {
+    const nextWishlists: WishlistStateMap = {};
+    recommendations.forEach(recommendation => {
+      nextWishlists[recommendation.id] = isWishlistedByUser(recommendation, user?.id ?? null);
+    });
+    setLocalWishlists(nextWishlists);
+  }, [recommendations, user?.id]);
+
+  useEffect(() => {
     setIsLoadingEvents(true);
     getPublishedCmiEvents()
       .then(data => {
@@ -583,6 +616,47 @@ export default function CmiMapV3Prototype() {
     [recommendations]
   );
 
+  useEffect(() => {
+    let isActive = true;
+    if (feedRecommendations.length === 0) {
+      setPlacedStickers({});
+      return () => {
+        isActive = false;
+      };
+    }
+
+    loadRecommendationStickerPlacements(feedRecommendations)
+      .then(nextPlacedStickers => {
+        if (isActive) setPlacedStickers(nextPlacedStickers);
+      })
+      .catch(error => {
+        console.error('CMI Map 3.0 盖戳数据加载失败:', error);
+        if (isActive) setPlacedStickers({});
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [feedRecommendations]);
+
+  useEffect(() => {
+    if (!showStickerDrawer || availableStickers.length > 0) return;
+
+    let isActive = true;
+    loadAvailableStickers()
+      .then(stickers => {
+        if (isActive) setAvailableStickers(stickers);
+      })
+      .catch(error => {
+        console.error('CMI Map 3.0 图章库加载失败:', error);
+        if (isActive) setAvailableStickers([]);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [availableStickers.length, showStickerDrawer]);
+
   const featuredEvents = useMemo(
     () => communityEvents.slice(0, 8),
     [communityEvents]
@@ -592,6 +666,97 @@ export default function CmiMapV3Prototype() {
     () => communityEvents.find(event => event.id === selectedEventId) ?? communityEvents[0] ?? null,
     [communityEvents, selectedEventId]
   );
+
+  const getCurrentV3Path = useCallback(() => {
+    const queryString = searchParams.toString();
+    return `/v3${queryString ? `?${queryString}` : ''}`;
+  }, [searchParams]);
+
+  const requireLoggedInUser = useCallback((actionLabel: string) => {
+    if (user) return true;
+
+    toast(`登录后才能${actionLabel}`, { description: '注册只需要一个邮箱' });
+    navigate('/login', { state: { from: getCurrentV3Path() } });
+    return false;
+  }, [getCurrentV3Path, navigate, user]);
+
+  const handleStartStamp = useCallback((recommendationId: string) => {
+    if (!requireLoggedInUser('盖戳')) return;
+
+    setActiveRecIdForSticker(recommendationId);
+    setShowStickerDrawer(true);
+  }, [requireLoggedInUser]);
+
+  const handleToggleWishlist = useCallback(async (recommendation: Recommendation) => {
+    if (!requireLoggedInUser('收藏') || !user) return;
+
+    let previousValue = false;
+    setLocalWishlists(current => {
+      previousValue = current[recommendation.id] ?? isWishlistedByUser(recommendation, user.id);
+      return applyWishlistState(current, recommendation.id, !previousValue);
+    });
+
+    try {
+      const nextValue = await toggleRecommendationWishlist(recommendation.id, user.id);
+      setLocalWishlists(current => applyWishlistState(current, recommendation.id, nextValue));
+      toast.success(nextValue ? '已收藏' : '已取消收藏');
+    } catch (error) {
+      console.error('CMI Map 3.0 收藏失败:', error);
+      setLocalWishlists(current => applyWishlistState(current, recommendation.id, previousValue));
+      toast.error('收藏失败，请稍后再试');
+    }
+  }, [requireLoggedInUser, user]);
+
+  const handleRecommendationCardClick = useCallback(async (
+    event: ReactMouseEvent<HTMLElement>,
+    recommendationId: string
+  ) => {
+    if (!activeStickerId || activeRecIdForSticker !== recommendationId || !user) return;
+
+    const selectedStickerId = activeStickerId;
+    const sticker = availableStickers.find(item => item.id === selectedStickerId);
+    if (!sticker) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const xRatio = clampRatio(((event.clientX - rect.left) / rect.width) * 100);
+    const yRatio = clampRatio(((event.clientY - rect.top) / rect.height) * 100);
+    const rotation = Math.random() * 40 - 20;
+    const optimisticPlacement = createOptimisticStickerPlacement({
+      id: `preview-${recommendationId}-${Date.now()}`,
+      recommendationId,
+      userId: user.id,
+      sticker,
+      xRatio,
+      yRatio,
+      rotation,
+      createdAt: new Date().toISOString(),
+    });
+
+    setPlacedStickers(current => appendStickerPlacement(current, recommendationId, optimisticPlacement));
+    setActiveStickerId(null);
+    setActiveRecIdForSticker(null);
+
+    const savedPlacement = await placeRecommendationSticker({
+      recommendation_id: recommendationId,
+      user_id: user.id,
+      sticker_id: selectedStickerId,
+      x_ratio: xRatio,
+      y_ratio: yRatio,
+      rotation,
+    });
+
+    if (savedPlacement) {
+      setPlacedStickers(current => ({
+        ...current,
+        [recommendationId]: (current[recommendationId] ?? []).map(placement =>
+          placement.id === optimisticPlacement.id ? savedPlacement : placement
+        ),
+      }));
+      return;
+    }
+
+    toast.error('印章可能没有盖稳，请刷新重试');
+  }, [activeRecIdForSticker, activeStickerId, availableStickers, user]);
 
   return (
     <div className={`cmi-v3-screen cmi-v3-screen--${activeScreen}`}>
@@ -604,6 +769,10 @@ export default function CmiMapV3Prototype() {
           recommendationsError={recommendationsError}
           listEvents={visibleEvents}
           listRecommendations={filteredRecommendations}
+          localWishlists={localWishlists}
+          placedStickers={placedStickers}
+          activeRecIdForSticker={activeRecIdForSticker}
+          activeStickerId={activeStickerId}
           isWishlistFilterActive={isWishlistFilterActive}
           locationRequestKey={locationRequestKey}
           selectedMarker={selectedMarker}
@@ -614,6 +783,9 @@ export default function CmiMapV3Prototype() {
           }}
           onFilterChange={setActiveFilter}
           onLocateUser={() => setLocationRequestKey(current => current + 1)}
+          onPlaceStamp={handleRecommendationCardClick}
+          onStartStamp={handleStartStamp}
+          onToggleWishlist={handleToggleWishlist}
           onWishlistFilterToggle={() => {
             setIsWishlistFilterActive(current => {
               const nextValue = !current;
@@ -641,10 +813,17 @@ export default function CmiMapV3Prototype() {
       {activeScreen === 'feed' && (
         <FeedMode
           isLoading={isLoadingRecommendations}
+          localWishlists={localWishlists}
+          placedStickers={placedStickers}
+          activeRecIdForSticker={activeRecIdForSticker}
+          activeStickerId={activeStickerId}
           profilesByAuthorKey={profilesByAuthorKey}
           recommendations={feedRecommendations}
           onNavigate={handleNavigate}
+          onPlaceStamp={handleRecommendationCardClick}
           onOpenPath={navigate}
+          onStartStamp={handleStartStamp}
+          onToggleWishlist={handleToggleWishlist}
         />
       )}
       {activeScreen === 'publish' && (
@@ -669,6 +848,19 @@ export default function CmiMapV3Prototype() {
           onOpenPath={navigate}
         />
       )}
+      <StickerDrawer
+        availableStickers={availableStickers}
+        isOpen={showStickerDrawer}
+        onClose={() => {
+          setShowStickerDrawer(false);
+          setActiveRecIdForSticker(null);
+        }}
+        onSelectSticker={(stickerId) => {
+          setActiveStickerId(stickerId);
+          setShowStickerDrawer(false);
+          toast.success('图章已沾墨水', { description: '现在点击动态卡片，把它盖上去。', duration: 4000 });
+        }}
+      />
     </div>
   );
 }
@@ -684,6 +876,10 @@ function MapMode({
   selectedMarker,
   selectedEvent,
   isLoading,
+  localWishlists,
+  placedStickers,
+  activeRecIdForSticker,
+  activeStickerId,
   recommendationsError,
   onClearSelection,
   onFilterChange,
@@ -691,6 +887,9 @@ function MapMode({
   onMarkerSelect,
   onNavigate,
   onOpenPath,
+  onPlaceStamp,
+  onStartStamp,
+  onToggleWishlist,
   onWishlistFilterToggle,
 }: {
   activeFilter: MapFilterId;
@@ -703,6 +902,10 @@ function MapMode({
   selectedMarker: MapMarker | null;
   selectedEvent: CmiEvent | null;
   isLoading: boolean;
+  localWishlists: WishlistStateMap;
+  placedStickers: PlacedStickerMap;
+  activeRecIdForSticker: string | null;
+  activeStickerId: string | null;
   recommendationsError: string | null;
   onClearSelection: () => void;
   onFilterChange: (filterId: MapFilterId) => void;
@@ -710,6 +913,9 @@ function MapMode({
   onMarkerSelect: (marker: MapMarker) => void;
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
   onOpenPath: (path: string) => void;
+  onPlaceStamp: (event: ReactMouseEvent<HTMLElement>, recommendationId: string) => void;
+  onStartStamp: (recommendationId: string) => void;
+  onToggleWishlist: (recommendation: Recommendation) => void;
   onWishlistFilterToggle: () => void;
 }) {
   const selectedRecommendation = selectedMarker?.recommendations[0] ?? null;
@@ -827,12 +1033,19 @@ function MapMode({
         </MapBottomSheet>
       ) : (
         <MapPulseSheet
+          activeRecIdForSticker={activeRecIdForSticker}
+          activeStickerId={activeStickerId}
           events={listEvents}
           isLoading={isLoading}
+          localWishlists={localWishlists}
+          placedStickers={placedStickers}
           recommendations={listRecommendations}
           onEventSelect={(event) => onNavigate('map', { eventId: event.id })}
           onOpenPath={onOpenPath}
+          onPlaceStamp={onPlaceStamp}
           onRecommendationSelect={handleRecommendationSelect}
+          onStartStamp={onStartStamp}
+          onToggleWishlist={onToggleWishlist}
         />
       )}
 
@@ -930,19 +1143,33 @@ function MapBottomSheet({
 }
 
 function MapPulseSheet({
+  activeRecIdForSticker,
+  activeStickerId,
   events,
   isLoading,
+  localWishlists,
+  placedStickers,
   recommendations,
   onEventSelect,
   onOpenPath,
+  onPlaceStamp,
   onRecommendationSelect,
+  onStartStamp,
+  onToggleWishlist,
 }: {
+  activeRecIdForSticker: string | null;
+  activeStickerId: string | null;
   events: CmiEvent[];
   isLoading: boolean;
+  localWishlists: WishlistStateMap;
+  placedStickers: PlacedStickerMap;
   recommendations: Recommendation[];
   onEventSelect: (event: CmiEvent) => void;
   onOpenPath: (path: string) => void;
+  onPlaceStamp: (event: ReactMouseEvent<HTMLElement>, recommendationId: string) => void;
   onRecommendationSelect: (recommendation: Recommendation) => void;
+  onStartStamp: (recommendationId: string) => void;
+  onToggleWishlist: (recommendation: Recommendation) => void;
 }) {
   const { dragHandlers, dragOffset, isDragging, setSnap, snap } = useBottomSheetDrag('map-pulse');
   const isExpanded = snap === 'expanded';
@@ -1024,13 +1251,20 @@ function MapPulseSheet({
               const categoryLabel = normalizeCategory(recommendation.category);
 
               return (
-                <button
+                <article
                   key={recommendation.id}
-                  type="button"
-                  className="cmi-v3-map-pulse-trace"
-                  aria-label={`查看${recommendation.place_name}动态`}
-                  onClick={() => onRecommendationSelect(recommendation)}
+                  className={`cmi-v3-map-pulse-trace ${
+                    activeStickerId && activeRecIdForSticker === recommendation.id ? 'is-stamp-target' : ''
+                  }`}
+                  onClick={(event) => {
+                    if (activeStickerId && activeRecIdForSticker === recommendation.id) {
+                      onPlaceStamp(event, recommendation.id);
+                      return;
+                    }
+                    onRecommendationSelect(recommendation);
+                  }}
                 >
+                  <PlacedStickerLayer placements={placedStickers[recommendation.id]} variant="pulse" />
                   <img className="cmi-v3-map-pulse-trace-image" src={imageUrl} alt={recommendation.place_name} />
                   <div className="cmi-v3-map-pulse-trace-content">
                     <div className="cmi-v3-map-pulse-trace-head">
@@ -1044,14 +1278,16 @@ function MapPulseSheet({
                     <p>{getRecommendationSummary(recommendation)}</p>
                     <div className="cmi-v3-map-pulse-trace-foot">
                       <span>{`${formatTraceTime(recommendation.created_at)} · ${recommendation.place_name}`}</span>
-                      <span aria-hidden="true">
-                        <Heart size={15} strokeWidth={3} />
-                        <MapPin size={15} strokeWidth={3} />
-                        <MessageCircle size={15} strokeWidth={3} />
-                      </span>
+                      <RecommendationActionButtons
+                        isWishlisted={localWishlists[recommendation.id] ?? false}
+                        onComment={() => onOpenPath(getAddTracePath(recommendation.place_name))}
+                        onStamp={() => onStartStamp(recommendation.id)}
+                        onWishlist={() => onToggleWishlist(recommendation)}
+                        variant="pulse"
+                      />
                     </div>
                   </div>
-                </button>
+                </article>
               );
             })}
           </div>
@@ -1105,15 +1341,29 @@ function EventSheetBody({ event }: { event: CmiEvent }) {
 function FeedMode({
   recommendations,
   isLoading,
+  localWishlists,
+  placedStickers,
+  activeRecIdForSticker,
+  activeStickerId,
   profilesByAuthorKey,
   onNavigate,
+  onPlaceStamp,
   onOpenPath,
+  onStartStamp,
+  onToggleWishlist,
 }: {
   recommendations: Recommendation[];
   isLoading: boolean;
+  localWishlists: WishlistStateMap;
+  placedStickers: PlacedStickerMap;
+  activeRecIdForSticker: string | null;
+  activeStickerId: string | null;
   profilesByAuthorKey: ProfileLookup;
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
+  onPlaceStamp: (event: ReactMouseEvent<HTMLElement>, recommendationId: string) => void;
   onOpenPath: (path: string) => void;
+  onStartStamp: (recommendationId: string) => void;
+  onToggleWishlist: (recommendation: Recommendation) => void;
 }) {
   return (
     <ComicPage
@@ -1134,11 +1384,17 @@ function FeedMode({
       {recommendations.map(recommendation => (
         <RecommendationFeedCard
           key={recommendation.id}
+          activeRecIdForSticker={activeRecIdForSticker}
+          activeStickerId={activeStickerId}
           authorProfile={getRecommendationAuthorProfile(recommendation, profilesByAuthorKey)}
+          isWishlisted={localWishlists[recommendation.id] ?? false}
+          placedStickers={placedStickers[recommendation.id] ?? []}
           recommendation={recommendation}
-          onOpenMap={() => onOpenPath(getPlaceMapPath(recommendation.place_name))}
-          onOpenPlace={() => onOpenPath(getPlacePath(recommendation.place_name))}
-          onAddTrace={() => onOpenPath(getAddTracePath(recommendation.place_name))}
+          onComment={() => onOpenPath(getAddTracePath(recommendation.place_name))}
+          onPlaceStamp={onPlaceStamp}
+          onSelect={() => onOpenPath(getPlacePath(recommendation.place_name))}
+          onStartStamp={() => onStartStamp(recommendation.id)}
+          onToggleWishlist={() => onToggleWishlist(recommendation)}
         />
       ))}
 
@@ -1358,25 +1614,50 @@ function EventDetailMode({
 
 function RecommendationFeedCard({
   recommendation,
+  activeRecIdForSticker,
+  activeStickerId,
   authorProfile,
-  onOpenMap,
-  onOpenPlace,
-  onAddTrace,
+  isWishlisted,
+  placedStickers,
+  onComment,
+  onPlaceStamp,
+  onSelect,
+  onStartStamp,
+  onToggleWishlist,
 }: {
   recommendation: Recommendation;
+  activeRecIdForSticker: string | null;
+  activeStickerId: string | null;
   authorProfile: PublicProfile | null;
-  onOpenMap: () => void;
-  onOpenPlace: () => void;
-  onAddTrace: () => void;
+  isWishlisted: boolean;
+  placedStickers: PlacedSticker[];
+  onComment: () => void;
+  onPlaceStamp: (event: ReactMouseEvent<HTMLElement>, recommendationId: string) => void;
+  onSelect: () => void;
+  onStartStamp: () => void;
+  onToggleWishlist: () => void;
 }) {
   const categoryConfig = getCategoryConfig(recommendation.category);
   const imageUrl = recommendation.images[0] || categoryConfig.iconUrl;
   const categoryLabel = normalizeCategory(recommendation.category);
   const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
   const authorAvatarUrl = authorProfile?.avatar_url?.trim() ?? '';
+  const isStampTargetActive = activeStickerId && activeRecIdForSticker === recommendation.id;
 
   return (
-    <article className={`cmi-v3-feed-card cmi-v3-feed-post-card cmi-v3-feed-card--${getRecommendationTone(recommendation)}`}>
+    <article
+      className={`cmi-v3-feed-card cmi-v3-feed-post-card cmi-v3-feed-card--${getRecommendationTone(recommendation)} ${
+        isStampTargetActive ? 'is-stamp-target' : ''
+      }`}
+      onClick={(event) => {
+        if (isStampTargetActive) {
+          onPlaceStamp(event, recommendation.id);
+          return;
+        }
+        onSelect();
+      }}
+    >
+      <PlacedStickerLayer placements={placedStickers} variant="feed" />
       <img className="cmi-v3-feed-post-image" src={imageUrl} alt={recommendation.place_name} />
       <div className="cmi-v3-feed-post-content">
         <div className="cmi-v3-feed-head">
@@ -1390,22 +1671,135 @@ function RecommendationFeedCard({
         </div>
         <h2>{recommendation.place_name}</h2>
         <p>{getRecommendationSummary(recommendation)}</p>
-        <div className="cmi-v3-card-actions">
-          <button type="button" onClick={onOpenMap} aria-label="打开地图" title="地图">
-            <MapPin size={16} strokeWidth={3} />
-            <span className="cmi-v3-feed-action-label">地图</span>
-          </button>
-          <button type="button" onClick={onOpenPlace} aria-label="查看详情" title="详情">
-            <Heart size={16} strokeWidth={3} />
-            <span className="cmi-v3-feed-action-label">详情</span>
-          </button>
-          <button type="button" onClick={onAddTrace} aria-label="补一句" title="补一句">
-            <MessageCircle size={16} strokeWidth={3} />
-            <span className="cmi-v3-feed-action-label">补一句</span>
-          </button>
-        </div>
+        <RecommendationActionButtons
+          isWishlisted={isWishlisted}
+          onComment={onComment}
+          onStamp={onStartStamp}
+          onWishlist={onToggleWishlist}
+          variant="feed"
+        />
       </div>
     </article>
+  );
+}
+
+function RecommendationActionButtons({
+  isWishlisted,
+  onComment,
+  onStamp,
+  onWishlist,
+  variant,
+}: {
+  isWishlisted: boolean;
+  onComment: () => void;
+  onStamp: () => void;
+  onWishlist: () => void;
+  variant: 'feed' | 'pulse';
+}) {
+  const handleActionClick = (event: ReactMouseEvent<HTMLButtonElement>, action: () => void) => {
+    event.stopPropagation();
+    action();
+  };
+
+  return (
+    <div className={`cmi-v3-recommendation-actions cmi-v3-recommendation-actions--${variant}`}>
+      <button type="button" onClick={(event) => handleActionClick(event, onStamp)} aria-label="盖戳" title="盖戳">
+        <StickerIcon size={16} strokeWidth={3} />
+        <span className="cmi-v3-feed-action-label">盖戳</span>
+      </button>
+      <button
+        type="button"
+        className={isWishlisted ? 'is-active' : undefined}
+        onClick={(event) => handleActionClick(event, onWishlist)}
+        aria-label={isWishlisted ? '取消收藏' : '收藏'}
+        aria-pressed={isWishlisted}
+        title="收藏"
+      >
+        <Bookmark size={16} strokeWidth={3} />
+        <span className="cmi-v3-feed-action-label">收藏</span>
+      </button>
+      <button type="button" onClick={(event) => handleActionClick(event, onComment)} aria-label="评论" title="评论">
+        <MessageCircle size={16} strokeWidth={3} />
+        <span className="cmi-v3-feed-action-label">评论</span>
+      </button>
+    </div>
+  );
+}
+
+function PlacedStickerLayer({
+  placements = [],
+  variant,
+}: {
+  placements?: PlacedSticker[];
+  variant: 'feed' | 'pulse';
+}) {
+  if (placements.length === 0) return null;
+
+  return (
+    <div className={`cmi-v3-placed-sticker-layer cmi-v3-placed-sticker-layer--${variant}`} aria-hidden="true">
+      {placements.map(placement => {
+        if (!placement.sticker?.icon_url) return null;
+
+        return (
+          <span
+            key={placement.id}
+            className="cmi-v3-placed-sticker"
+            style={{
+              left: `${placement.x_ratio}%`,
+              top: `${placement.y_ratio}%`,
+              transform: `translate(-50%, -50%) rotate(${placement.rotation}deg)`,
+            }}
+          >
+            <img src={placement.sticker.icon_url} alt="" />
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function StickerDrawer({
+  availableStickers,
+  isOpen,
+  onClose,
+  onSelectSticker,
+}: {
+  availableStickers: Sticker[];
+  isOpen: boolean;
+  onClose: () => void;
+  onSelectSticker: (stickerId: string) => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="cmi-v3-sticker-drawer" role="dialog" aria-modal="true" aria-label="选择盖戳图章">
+      <button type="button" className="cmi-v3-sticker-drawer-backdrop" onClick={onClose} aria-label="关闭盖戳选择" />
+      <div className="cmi-v3-sticker-drawer-panel">
+        <div className="cmi-v3-sticker-drawer-title">
+          <StickerIcon size={20} strokeWidth={3} />
+          <strong>选择一个图章</strong>
+        </div>
+        {availableStickers.length > 0 ? (
+          <div className="cmi-v3-sticker-grid">
+            {availableStickers.map(sticker => (
+              <button
+                key={sticker.id}
+                type="button"
+                className="cmi-v3-sticker-option"
+                onClick={() => onSelectSticker(sticker.id)}
+              >
+                <span>
+                  <img src={sticker.icon_url} alt="" />
+                </span>
+                <strong>{sticker.name}</strong>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="cmi-v3-sticker-loading">正在准备图章</p>
+        )}
+      </div>
+    </div>
   );
 }
 
