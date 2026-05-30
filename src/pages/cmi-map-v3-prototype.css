@@ -21,6 +21,7 @@
 }
 
 .cmi-v3-map-mode {
+  --cmi-v3-map-nav-height: calc(env(safe-area-inset-bottom) + 86px);
   position: relative;
   height: 100%;
   min-height: 100dvh;
@@ -215,7 +216,7 @@
 .cmi-v3-map-side-controls {
   position: absolute;
   right: 18px;
-  bottom: calc(env(safe-area-inset-bottom) + 328px);
+  bottom: calc(var(--cmi-v3-map-nav-height) + 250px);
   z-index: 18;
   display: grid;
   gap: 12px;
@@ -296,12 +297,12 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: calc(env(safe-area-inset-bottom) + 82px);
+  bottom: var(--cmi-v3-map-nav-height);
   z-index: 21;
   display: flex;
   flex-direction: column;
-  height: clamp(232px, 31dvh, 276px);
-  max-height: min(68dvh, 540px);
+  height: min(48dvh, 430px);
+  max-height: min(76dvh, 620px);
   border: 0;
   border-radius: 26px 26px 0 0;
   background: #fff;
@@ -321,8 +322,20 @@
 }
 
 .cmi-v3-selected-note.is-expanded {
-  height: min(68dvh, 540px);
+  height: min(76dvh, 620px);
   box-shadow: 0 -16px 42px rgba(22, 22, 22, 0.22);
+}
+
+.cmi-v3-selected-note[data-sheet-state="minimized"] {
+  height: 18px;
+  padding: 7px 0 0;
+  box-shadow: 0 -4px 16px rgba(22, 22, 22, 0.12);
+}
+
+.cmi-v3-selected-note[data-sheet-state="minimized"] .cmi-v3-selected-note-close,
+.cmi-v3-selected-note[data-sheet-state="minimized"] .cmi-v3-selected-note-summary,
+.cmi-v3-selected-note[data-sheet-state="minimized"] .cmi-v3-selected-note-body {
+  display: none;
 }
 
 .cmi-v3-selected-note-close {
@@ -500,11 +513,11 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: calc(env(safe-area-inset-bottom) + 82px);
+  bottom: var(--cmi-v3-map-nav-height);
   z-index: 21;
   display: flex;
   flex-direction: column;
-  height: clamp(210px, 29dvh, 238px);
+  height: clamp(210px, 30dvh, 248px);
   max-height: min(84dvh, 670px);
   border-radius: 26px 26px 0 0;
   background: #fff;
@@ -526,6 +539,17 @@
 .cmi-v3-map-pulse-sheet.is-expanded {
   height: min(84dvh, 670px);
   box-shadow: 0 -14px 40px rgba(22, 22, 22, 0.22);
+}
+
+.cmi-v3-map-pulse-sheet[data-sheet-state="minimized"] {
+  height: 18px;
+  padding: 7px 0 0;
+  box-shadow: 0 -4px 16px rgba(22, 22, 22, 0.12);
+}
+
+.cmi-v3-map-pulse-sheet[data-sheet-state="minimized"] .cmi-v3-map-pulse-head,
+.cmi-v3-map-pulse-sheet[data-sheet-state="minimized"] .cmi-v3-map-pulse-body {
+  display: none;
 }
 
 .cmi-v3-map-pulse-handle-zone {
@@ -840,16 +864,61 @@
 
 .cmi-v3-map-bottom {
   position: absolute;
-  left: 16px;
-  right: 16px;
-  bottom: calc(env(safe-area-inset-bottom) + 16px);
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 22;
   display: grid;
-  grid-template-columns: minmax(82px, 0.72fr) minmax(142px, 1.35fr) minmax(82px, 0.72fr);
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  height: var(--cmi-v3-map-nav-height);
+  border-top: 1px solid rgba(22, 22, 22, 0.08);
+  background: rgba(239, 248, 249, 0.96);
+  box-shadow: 0 -4px 20px rgba(22, 22, 22, 0.08);
+  padding: 8px 18px calc(env(safe-area-inset-bottom) + 6px);
+  backdrop-filter: blur(16px);
 }
 
-.cmi-v3-map-bottom button,
+.cmi-v3-map-bottom button {
+  min-height: 58px;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
+  color: rgba(22, 22, 22, 0.7);
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.cmi-v3-map-bottom button svg {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  box-sizing: content-box;
+  padding: 7px 22px;
+}
+
+.cmi-v3-map-bottom button:first-child {
+  color: #09525d;
+}
+
+.cmi-v3-map-bottom button:first-child svg {
+  background: #bfeff7;
+}
+
+.cmi-v3-map-bottom button:nth-child(2) {
+  color: var(--cmi-v3-ink);
+}
+
+.cmi-v3-map-bottom button:nth-child(2) svg {
+  background: rgba(255, 255, 255, 0.68);
+}
+
 .cmi-v3-fixed-footer button {
   min-height: 52px;
   border: 2px solid var(--cmi-v3-ink);
@@ -863,10 +932,6 @@
   gap: 7px;
   font-size: 16px;
   font-weight: 950;
-}
-
-.cmi-v3-map-bottom button:nth-child(2) {
-  font-size: 17px;
 }
 
 .cmi-v3-comic-page {

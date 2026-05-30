@@ -69,7 +69,7 @@ type ScreenId = 'map' | 'feed' | 'publish' | 'events' | 'eventDetail';
 type MapFilterId = 'all' | 'food' | 'play' | 'events' | 'easter';
 type FeedCardTone = 'paper' | 'yellow' | 'green' | 'pink';
 type EventStatusTone = 'open' | 'full' | 'ended';
-type SheetSnap = 'collapsed' | 'expanded';
+type SheetSnap = 'minimized' | 'collapsed' | 'expanded';
 type SheetDragSource = 'pointer' | 'mouse' | 'touch';
 type ProfileLookup = Record<string, PublicProfile>;
 
@@ -94,6 +94,7 @@ const mapFilters: FilterItem[] = [
 const screenIds: ScreenId[] = ['map', 'feed', 'publish', 'events', 'eventDetail'];
 const SHEET_OPEN_THRESHOLD = -44;
 const SHEET_CLOSE_THRESHOLD = 54;
+const SHEET_MINIMIZE_THRESHOLD = 78;
 const SHEET_DRAG_LIMIT = 160;
 const curatedCommunityEventSourceTypes = new Set<CmiEvent['sourceType']>(['cmi', 'community', 'manual']);
 const curatedCommunityEventKeywords = ['CMI', CMI_INN_PLACE_NAME, 'MagicLab', 'WaytoAGI', 'NOMADAY', '友推', '合作'];
@@ -292,9 +293,6 @@ function useBottomSheetDrag(itemId: string) {
     if (!dragStart) return;
 
     const deltaY = clientY - dragStart.y;
-    const shouldExpand = dragStart.snap === 'collapsed' && deltaY <= SHEET_OPEN_THRESHOLD;
-    const shouldCollapse = dragStart.snap === 'expanded' && deltaY >= SHEET_CLOSE_THRESHOLD;
-
     if (Math.abs(deltaY) > 8) {
       suppressNextClickRef.current = true;
       window.setTimeout(() => {
@@ -302,8 +300,9 @@ function useBottomSheetDrag(itemId: string) {
       }, 250);
     }
     setSnap(current => {
-      if (shouldExpand) return 'expanded';
-      if (shouldCollapse) return 'collapsed';
+      if (deltaY <= SHEET_OPEN_THRESHOLD) return dragStart.snap === 'minimized' ? 'collapsed' : 'expanded';
+      if (deltaY >= SHEET_MINIMIZE_THRESHOLD) return dragStart.snap === 'expanded' ? 'collapsed' : 'minimized';
+      if (deltaY >= SHEET_CLOSE_THRESHOLD && dragStart.snap === 'expanded') return 'collapsed';
       return current;
     });
     setDragOffset(0);
@@ -323,12 +322,12 @@ function useBottomSheetDrag(itemId: string) {
     if (!isDragging) return;
 
     const handleMouseMove = (event: MouseEvent) => {
-      if (dragStartRef.current?.source !== 'mouse') return;
+      if (dragStartRef.current?.source !== 'mouse' && dragStartRef.current?.source !== 'pointer') return;
       updateDrag(event.clientY);
     };
 
     const handleMouseUp = (event: MouseEvent) => {
-      if (dragStartRef.current?.source !== 'mouse') return;
+      if (dragStartRef.current?.source !== 'mouse' && dragStartRef.current?.source !== 'pointer') return;
       settleDrag(event.clientY);
     };
 
@@ -409,7 +408,11 @@ function useBottomSheetDrag(itemId: string) {
       return;
     }
 
-    setSnap(current => current === 'expanded' ? 'collapsed' : 'expanded');
+    setSnap(current => {
+      if (current === 'expanded') return 'collapsed';
+      if (current === 'minimized') return 'collapsed';
+      return 'expanded';
+    });
   };
 
   return {
