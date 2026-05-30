@@ -1006,20 +1006,22 @@
   bottom: 0;
   z-index: 22;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0;
+  grid-template-columns: 86px 112px 86px;
+  justify-content: space-around;
+  gap: 8px;
   height: var(--cmi-v3-map-nav-height);
   border-top: 1px solid rgba(22, 22, 22, 0.08);
   background: rgba(239, 248, 249, 0.96);
   box-shadow: 0 -4px 20px rgba(22, 22, 22, 0.08);
-  padding: 8px 18px calc(env(safe-area-inset-bottom) + 6px);
+  padding: 7px 24px calc(env(safe-area-inset-bottom) + 6px);
   backdrop-filter: blur(16px);
 }
 
 .cmi-v3-map-bottom button {
-  min-height: 58px;
+  min-height: 60px;
+  min-width: 0;
   border: 0;
-  border-radius: 18px;
+  border-radius: 19px;
   background: transparent;
   color: rgba(22, 22, 22, 0.7);
   box-shadow: none;
@@ -1027,24 +1029,35 @@
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
+  gap: 5px;
+  padding: 0 4px;
+  font-size: 12.5px;
   font-weight: 950;
+  line-height: 1;
+  white-space: nowrap;
 }
 
-.cmi-v3-map-bottom button svg {
-  width: 24px;
-  height: 24px;
+.cmi-v3-map-bottom-icon {
+  width: 46px;
+  height: 36px;
   border-radius: 999px;
-  box-sizing: content-box;
-  padding: 7px 22px;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(22, 22, 22, 0.08);
+  box-shadow: 0 3px 0 rgba(22, 22, 22, 0.08);
+}
+
+.cmi-v3-map-bottom-icon svg {
+  width: 29px;
+  height: 29px;
+  overflow: visible;
 }
 
 .cmi-v3-map-bottom button:first-child {
   color: #09525d;
 }
 
-.cmi-v3-map-bottom button:first-child svg {
+.cmi-v3-map-bottom-icon--feed {
   background: #bfeff7;
 }
 
@@ -1052,8 +1065,12 @@
   color: var(--cmi-v3-ink);
 }
 
-.cmi-v3-map-bottom button:nth-child(2) svg {
-  background: rgba(255, 255, 255, 0.68);
+.cmi-v3-map-bottom-icon--egg {
+  background: #fff;
+}
+
+.cmi-v3-map-bottom-icon--event {
+  background: #fff9d7;
 }
 
 .cmi-v3-fixed-footer button {
@@ -2121,19 +2138,18 @@
   }
 
   .cmi-v3-map-bottom {
-    left: 12px;
-    right: 12px;
-    grid-template-columns: minmax(76px, 0.72fr) minmax(128px, 1.35fr) minmax(76px, 0.72fr);
-    gap: 8px;
+    grid-template-columns: 78px 104px 78px;
+    gap: 6px;
+    padding-inline: 16px;
   }
 
   .cmi-v3-map-bottom button {
-    gap: 5px;
-    font-size: 14px;
+    font-size: 12px;
   }
 
-  .cmi-v3-map-bottom button:nth-child(2) {
-    font-size: 15px;
+  .cmi-v3-map-bottom-icon {
+    width: 42px;
+    height: 34px;
   }
 
   .cmi-v3-map-layer-control,

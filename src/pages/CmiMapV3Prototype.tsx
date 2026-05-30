@@ -117,6 +117,40 @@ const curatedCommunityEventKeywords = ['CMI', CMI_INN_PLACE_NAME, 'MagicLab', 'W
 const foodCategories = new Set<Category>(['吃饭', '咖啡', '市集']);
 const playCategories = new Set<Category>(['户外', '景点', '购物', '运动', '酒吧', '身心']);
 
+function BottomFeedIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 36 36">
+      <path d="M18 4.8c-5.7 0-10.2 4.1-10.2 9.5 0 7.1 8.1 15.6 9.6 16.9.4.4.9.4 1.3 0 1.6-1.3 9.6-9.8 9.6-16.9C28.3 8.9 23.8 4.8 18 4.8Z" fill="#bff2f7" stroke="#161616" strokeWidth="2.8" strokeLinejoin="round" />
+      <path d="M13.1 16.2c2.3-4.3 5.3-5.9 9.9-6.4-2.1 2.2-3.2 4.6-3.6 8.1l-2.5-2.2-3.8.5Z" fill="#8b6bbf" stroke="#161616" strokeWidth="2.4" strokeLinejoin="round" />
+      <path d="M20 20.3c2.1.8 3.5 2.1 4.1 3.9" stroke="#161616" strokeWidth="2.2" strokeLinecap="round" />
+      <circle cx="12.1" cy="10.4" r="1.7" fill="#ffe35b" stroke="#161616" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function BottomEggIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 36 36">
+      <path d="M17.9 5.2c5.1 0 9.2 6.1 9.2 13.3 0 6.7-3.8 11.5-9.2 11.5s-9.2-4.8-9.2-11.5c0-7.2 4.2-13.3 9.2-13.3Z" fill="#fff9e8" stroke="#161616" strokeWidth="2.8" strokeLinejoin="round" />
+      <path d="M11.2 20.7c2.1-1.8 4-1.8 6.1 0 2.2 1.8 4.1 1.8 7 0" stroke="#8b6bbf" strokeWidth="2.6" strokeLinecap="round" />
+      <path d="M18 11.3v7.3M14.3 14.9h7.4" stroke="#ff704d" strokeWidth="2.8" strokeLinecap="round" />
+      <path d="M25.8 8.1l1 1.8 1.8 1-1.8 1-1 1.8-1-1.8-1.8-1 1.8-1 1-1.8Z" fill="#ffe35b" stroke="#161616" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function BottomEventIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 36 36">
+      <path d="M8 11.5c0-1.8 1.3-3.1 3.1-3.1h13.8c1.8 0 3.1 1.3 3.1 3.1v13.2c0 1.8-1.3 3.1-3.1 3.1H11.1c-1.8 0-3.1-1.3-3.1-3.1V11.5Z" fill="#ffe35b" stroke="#161616" strokeWidth="2.8" strokeLinejoin="round" />
+      <path d="M8.6 15.4h18.8" stroke="#161616" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M13.2 6.7v5M22.8 6.7v5" stroke="#161616" strokeWidth="2.8" strokeLinecap="round" />
+      <path d="M13.2 20.2h2.1M20.7 20.2h2.1M13.2 24h2.1M20.7 24h2.1" stroke="#161616" strokeWidth="2.1" strokeLinecap="round" />
+      <circle cx="27" cy="9.1" r="3.1" fill="#bff2f7" stroke="#161616" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
 function resolveScreenId(value: string | null): ScreenId {
   return screenIds.find(screen => screen === value) ?? 'map';
 }
@@ -1045,15 +1079,21 @@ function MapMode({
 
       <footer className="cmi-v3-map-bottom">
         <button type="button" onClick={() => onNavigate('feed')}>
-          <Navigation size={18} strokeWidth={3} />
+          <span className="cmi-v3-map-bottom-icon cmi-v3-map-bottom-icon--feed">
+            <BottomFeedIcon />
+          </span>
           动态
         </button>
         <button type="button" onClick={() => onOpenPath('/mark')}>
-          <Plus size={22} strokeWidth={3} />
+          <span className="cmi-v3-map-bottom-icon cmi-v3-map-bottom-icon--egg">
+            <BottomEggIcon />
+          </span>
           留个彩蛋
         </button>
         <button type="button" onClick={() => onNavigate('events')}>
-          <Calendar size={18} strokeWidth={3} />
+          <span className="cmi-v3-map-bottom-icon cmi-v3-map-bottom-icon--event">
+            <BottomEventIcon />
+          </span>
           活动
         </button>
       </footer>
