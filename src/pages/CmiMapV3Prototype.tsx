@@ -1037,11 +1037,15 @@ function MapMode({
           </span>
           动态
         </button>
-        <button type="button" onClick={() => onOpenPath('/mark')}>
+        <button
+          type="button"
+          className="cmi-v3-map-bottom-add-button"
+          onClick={() => onOpenPath('/mark')}
+          aria-label="留个彩蛋"
+        >
           <span className="cmi-v3-map-bottom-icon cmi-v3-map-bottom-icon--egg">
             <img src={bottomNavIconUrls.add} alt="" />
           </span>
-          留个彩蛋
         </button>
         <button type="button" onClick={() => onNavigate('events')}>
           <span className="cmi-v3-map-bottom-icon cmi-v3-map-bottom-icon--event">
@@ -1250,7 +1254,7 @@ function MapPulseSheet({
       className={`cmi-v3-map-pulse-sheet ${isExpanded ? 'is-expanded' : ''} ${isDragging ? 'is-dragging' : ''}`}
       data-sheet-state={snap}
       style={sheetStyle}
-      aria-label="本地生活脉搏"
+      aria-label="清迈客栈新动态"
     >
       <div
         className="cmi-v3-map-pulse-handle-zone"
@@ -1266,7 +1270,7 @@ function MapPulseSheet({
       <div className="cmi-v3-map-pulse-body">
         <div className="cmi-v3-map-pulse-head">
           <div>
-            <h2>本地生活脉搏</h2>
+            <h2>清迈客栈新动态</h2>
             <p>附近的人刚留下的新鲜事</p>
           </div>
         </div>

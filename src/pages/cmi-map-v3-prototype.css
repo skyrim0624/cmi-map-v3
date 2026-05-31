@@ -1136,6 +1136,16 @@
   color: var(--cmi-v3-ink);
 }
 
+.cmi-v3-map-bottom-add-button {
+  align-self: center;
+}
+
+.cmi-v3-map-bottom-add-button .cmi-v3-map-bottom-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+}
+
 .cmi-v3-map-bottom-icon--egg {
   background: #fff;
 }
@@ -2221,6 +2231,11 @@
   .cmi-v3-map-bottom-icon {
     width: 36px;
     height: 25px;
+  }
+
+  .cmi-v3-map-bottom-add-button .cmi-v3-map-bottom-icon {
+    width: 44px;
+    height: 44px;
   }
 
   .cmi-v3-map-layer-control {
