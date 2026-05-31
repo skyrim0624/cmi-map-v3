@@ -115,6 +115,7 @@ const eventTabs: Array<{ id: EventTabId; label: string }> = [
 ];
 
 const screenIds: ScreenId[] = ['map', 'feed', 'publish', 'events', 'eventDetail'];
+const CMI_MAP_DEFAULT_ZOOM = 14.5;
 const SHEET_OPEN_THRESHOLD = -28;
 const SHEET_CLOSE_THRESHOLD = 54;
 const SHEET_MINIMIZE_THRESHOLD = 96;
@@ -934,7 +935,7 @@ function MapMode({
         key={`map-location-${locationRequestKey}`}
         markers={markers}
         onMarkerClick={onMarkerSelect}
-        defaultZoom={13.3}
+        defaultZoom={CMI_MAP_DEFAULT_ZOOM}
         focusUserLocation={locationRequestKey > 0}
         locationZoom={16}
         constrainToChiangMai
