@@ -186,7 +186,6 @@
   gap: 7px;
 }
 
-.cmi-v3-map-brand,
 .cmi-v3-map-search,
 .cmi-v3-round-button {
   min-height: 48px;
@@ -197,24 +196,16 @@
   backdrop-filter: blur(10px);
 }
 
-.cmi-v3-map-brand {
-  flex: 0 0 auto;
-  border-radius: 999px;
-  padding: 0 13px;
-  font-size: 19px;
-  font-weight: 950;
-}
-
 .cmi-v3-map-search {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-width: 0;
   border-radius: 999px;
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 12px;
+  gap: 8px;
+  padding: 0 16px;
   color: #928a84;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 950;
 }
 
@@ -2427,7 +2418,6 @@
 }
 
 @media (max-width: 370px) {
-  .cmi-v3-map-brand,
   .cmi-v3-comic-brand {
     font-size: 18px;
   }

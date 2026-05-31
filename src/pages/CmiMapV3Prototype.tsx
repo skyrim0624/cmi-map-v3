@@ -1216,9 +1216,6 @@ function MapMode({
       />
 
       <header className="cmi-v3-map-topbar">
-        <button type="button" className="cmi-v3-map-brand" onClick={() => onNavigate('feed')}>
-          CMI Map
-        </button>
         <form
           className={`cmi-v3-map-search ${searchQuery.trim() ? 'has-value' : ''}`}
           role="search"
