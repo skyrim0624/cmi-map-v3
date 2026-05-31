@@ -713,7 +713,6 @@
 }
 
 .cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-state,
-.cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-row,
 .cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-feed,
 .cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-actions {
   display: none;
@@ -731,6 +730,30 @@
 .cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-head h2 {
   font-size: clamp(24px, 6vw, 28px);
   line-height: 1;
+}
+
+.cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-row {
+  gap: 10px;
+  margin-top: 5px;
+  padding: 0 18px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-card {
+  flex-basis: min(54vw, 220px);
+  height: 48px;
+  border-radius: 16px 16px 0 0;
+  box-shadow: none;
+  opacity: 0.82;
+}
+
+.cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-card img {
+  height: 48px;
+}
+
+.cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-card-copy {
+  display: none;
 }
 
 .cmi-v3-map-pulse-sheet[data-sheet-state="minimized"] {
