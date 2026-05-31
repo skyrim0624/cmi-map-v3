@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { formatCmiEventShareCardTime, type CmiEvent } from './cmi-events.ts';
+import { formatCmiEventShareCardTime, isCmiInnEvent, type CmiEvent } from './cmi-events.ts';
 
 const baseEvent = {
   id: 'cmi-mindfulness-hour-2026-05-28',
@@ -41,5 +41,37 @@ test('活动分享卡时间保留带清迈时区的活动时间', () => {
       startAt: '2026-05-28T19:00:00+07:00',
     }),
     '5/28 19:00'
+  );
+});
+
+test('清迈客栈活动筛选排除外部社区友推活动', () => {
+  assert.equal(
+    isCmiInnEvent({
+      ...baseEvent,
+      id: 'tong-tung-weekend-market',
+      title: 'Tong Tung 周末市集',
+      type: 'market',
+      venueName: 'Tong Tung Market at Baan Rim Nam',
+      area: 'Nong Chom / Meechok 附近',
+      sourceType: 'community',
+      sourceLabel: 'Citylife 核查',
+      hostName: 'Tong Tung Market',
+      isCmiRelated: false,
+      tags: ['市集', '周末'],
+    }),
+    false
+  );
+
+  assert.equal(
+    isCmiInnEvent({
+      ...baseEvent,
+      id: 'waytoagi-codex-maker-lab-2026-05-31',
+      title: 'WaytoAGI Codex 轻造物局 · 清迈站',
+      type: 'tech',
+      venueName: '清迈客栈',
+      area: 'CMI / 清迈客栈',
+      hostName: 'WaytoAGI × 清迈客栈',
+    }),
+    true
   );
 });

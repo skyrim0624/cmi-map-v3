@@ -832,3 +832,18 @@
   - 本地浏览器验证 `http://127.0.0.1:5175/list?scene=tomorrow-events`：报名按钮正常渲染且未禁用，console 无 warn/error。
 - 当前边界：
   - 为避免替用户写入真实报名记录并触发通知邮件，本轮没有在浏览器里真实点击“报名 → 取消报名”的端到端数据写入流程。
+
+### 2026-05-31 12:00:29 +07 V3 地图活动流只保留清迈客栈活动
+
+- 背景：用户在手机截图中圈出 `/v3` 地图页“本地生活脉搏”的活动卡，要求删掉 Jing Jai、Tong Tung、Nong Ho 这类外部本地活动，只留下我们社区 / 清迈客栈的活动。
+- 本轮实现：
+  - 新增共用筛选函数 `isCmiInnEvent`：只保留 `isCmiRelated`、`sourceType = cmi`、地点或区域包含 `清迈客栈` 的活动。
+  - V3 地图“本地生活脉搏”抽屉、地图活动 marker、底部“活动”页统一使用该筛选，不再把 `community/manual` 友推或稳定本地市集自动混入。
+  - `/cmi-home` 客栈活动列表复用同一筛选函数，避免之后两个入口规则漂移。
+  - 活动库本身未删除外部活动种子，保留给周末 / 夜市等其他场景继续使用。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - `node --test src/data/cmi-events.test.ts src/lib/paths.test.ts` 通过，覆盖 Tong Tung 外部友推被排除、清迈客栈活动保留。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
+  - 本地浏览器验证 `http://127.0.0.1:5173/v3`：地图抽屉和底部“活动”页均不再出现 Jing Jai / Tong Tung / Nong Ho，WaytoAGI、CMI Talk、清迈客栈活动仍展示；点击 WaytoAGI 活动卡可打开详情，console 无 warn/error。

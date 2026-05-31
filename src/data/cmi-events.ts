@@ -1,5 +1,5 @@
 import type { CmiSceneId } from '@/data/cmi-scenes';
-import type { Category, MapMarker, Recommendation } from '@/types/types';
+import { CMI_INN_PLACE_NAME, type Category, type MapMarker, type Recommendation } from '../types/types.ts';
 
 export type CmiEventType =
   | 'cmi'
@@ -1173,6 +1173,12 @@ export const getCmiEventTimeBucketLabel = (
 
 export const getCmiEventTypeLabel = (type: CmiEventType) =>
   CMI_EVENT_TYPE_OPTIONS.find(option => option.id === type)?.label ?? type;
+
+export const isCmiInnEvent = (event: CmiEvent) =>
+  event.isCmiRelated ||
+  event.sourceType === 'cmi' ||
+  event.venueName.includes(CMI_INN_PLACE_NAME) ||
+  event.area.includes(CMI_INN_PLACE_NAME);
 
 export const formatCmiEventTime = (
   event: CmiEvent,

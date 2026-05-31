@@ -25,6 +25,7 @@ import {
   type CmiEvent,
   formatCmiEventTime,
   getUpcomingCmiEventsFromList,
+  isCmiInnEvent,
 } from '@/data/cmi-events';
 import {
   getProfilesByUserIds,
@@ -133,9 +134,7 @@ const cmiHomeIntroFacts: CmiHomeIntroFact[] = [
 ];
 
 const getPrimaryInnEvents = (events: CmiEvent[], referenceDate: Date) =>
-  getUpcomingCmiEventsFromList(events, referenceDate).filter(
-    event => event.isCmiRelated || event.venueName.includes('清迈客栈') || event.area.includes('清迈客栈')
-  );
+  getUpcomingCmiEventsFromList(events, referenceDate).filter(isCmiInnEvent);
 
 const formatBangkokDateTime = (value: string | number | undefined) => {
   if (!value) return '等待同步';

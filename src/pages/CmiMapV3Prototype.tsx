@@ -38,6 +38,7 @@ import {
   CMI_EVENTS,
   formatCmiEventTime,
   getCmiEventSortTime,
+  isCmiInnEvent,
   isCmiEventExpired,
   type CmiEvent,
 } from '@/data/cmi-events';
@@ -118,8 +119,6 @@ const SHEET_OPEN_THRESHOLD = -44;
 const SHEET_CLOSE_THRESHOLD = 54;
 const SHEET_MINIMIZE_THRESHOLD = 78;
 const SHEET_DRAG_LIMIT = 160;
-const curatedCommunityEventSourceTypes = new Set<CmiEvent['sourceType']>(['cmi', 'community', 'manual']);
-const curatedCommunityEventKeywords = ['CMI', CMI_INN_PLACE_NAME, 'MagicLab', 'WaytoAGI', 'NOMADAY', '友推', '合作'];
 
 const foodCategories = new Set<Category>(['吃饭', '咖啡', '市集']);
 const playCategories = new Set<Category>(['户外', '景点', '购物', '运动', '酒吧', '身心']);
@@ -235,25 +234,11 @@ function getUserInitial(name: string | null | undefined) {
 }
 
 function isCuratedCommunityEvent(event: CmiEvent) {
-  if (event.isCmiRelated || curatedCommunityEventSourceTypes.has(event.sourceType)) return true;
-
-  const eventText = [
-    event.title,
-    event.venueName,
-    event.area,
-    event.hostName,
-    event.sourceLabel,
-    event.organizerName,
-    ...event.tags,
-  ].filter(Boolean).join(' ');
-
-  return curatedCommunityEventKeywords.some(keyword => eventText.includes(keyword));
+  return isCmiInnEvent(event);
 }
 
 function getCuratedCommunityEventLabel(event: CmiEvent) {
-  if (event.sourceType === 'community' || event.sourceType === 'manual') return '社区友推';
-  if (event.isCmiRelated || event.sourceType === 'cmi' || event.venueName.includes(CMI_INN_PLACE_NAME)) return '清迈客栈';
-  return '合作活动';
+  return isCmiInnEvent(event) ? '清迈客栈' : '社区活动';
 }
 
 function formatTraceTime(value: string) {
@@ -1342,7 +1327,7 @@ function MapPulseSheet({
         {isLoading && <p className="cmi-v3-map-pulse-state">正在同步社区活动和动态</p>}
 
         {visibleEvents.length > 0 ? (
-          <div className="cmi-v3-map-pulse-row" aria-label="客栈合作活动">
+          <div className="cmi-v3-map-pulse-row" aria-label="清迈客栈活动">
             {visibleEvents.map(event => (
               <button
                 key={event.id}
@@ -1361,7 +1346,7 @@ function MapPulseSheet({
             ))}
           </div>
         ) : !isLoading ? (
-          <p className="cmi-v3-map-pulse-state">暂时没有新的客栈或合作活动。</p>
+          <p className="cmi-v3-map-pulse-state">暂时没有新的清迈客栈活动。</p>
         ) : null}
 
         {isExpanded && visibleRecommendations.length > 0 && (
@@ -1685,7 +1670,7 @@ function EventsMode({
 
       {!isLoading && (events.length === 0 || visibleEvents.length === 0) && (
         <p className="cmi-v3-inline-state">
-          {events.length === 0 ? '暂时还没有新的客栈、合作或友推社区活动。' : emptyEventMessage[activeEventTab]}
+          {events.length === 0 ? '暂时还没有新的清迈客栈活动。' : emptyEventMessage[activeEventTab]}
         </p>
       )}
     </ComicPage>
