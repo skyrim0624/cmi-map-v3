@@ -1328,6 +1328,7 @@ function MapMode({
           isLoading={isLoading}
           localWishlists={localWishlists}
           placedStickers={placedStickers}
+          profilesByAuthorKey={profilesByAuthorKey}
           recommendations={listRecommendations}
           searchQuery={searchQuery}
           onEventSelect={(event) => onNavigate('map', { eventId: event.id })}
@@ -1499,6 +1500,7 @@ function MapPulseSheet({
   isLoading,
   localWishlists,
   placedStickers,
+  profilesByAuthorKey,
   recommendations,
   searchQuery,
   onEventSelect,
@@ -1514,6 +1516,7 @@ function MapPulseSheet({
   isLoading: boolean;
   localWishlists: WishlistStateMap;
   placedStickers: PlacedStickerMap;
+  profilesByAuthorKey: ProfileLookup;
   recommendations: Recommendation[];
   searchQuery: string;
   onEventSelect: (event: CmiEvent) => void;
@@ -1601,6 +1604,9 @@ function MapPulseSheet({
               const categoryConfig = getCategoryConfig(recommendation.category);
               const imageUrl = recommendation.images[0] || categoryConfig.iconUrl;
               const categoryLabel = normalizeCategory(recommendation.category);
+              const authorProfile = getRecommendationAuthorProfile(recommendation, profilesByAuthorKey);
+              const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
+              const authorAvatarUrl = authorProfile?.avatar_url?.trim() || getFallbackAvatarUrl(authorName);
 
               return (
                 <article
@@ -1620,9 +1626,11 @@ function MapPulseSheet({
                   <img className="cmi-v3-map-pulse-trace-image" src={imageUrl} alt={recommendation.place_name} />
                   <div className="cmi-v3-map-pulse-trace-content">
                     <div className="cmi-v3-map-pulse-trace-head">
-                      <span className="cmi-v3-map-pulse-trace-avatar"><img src={categoryConfig.iconUrl} alt="" /></span>
+                      <span className="cmi-v3-map-pulse-trace-avatar">
+                        <img src={authorAvatarUrl} alt="" />
+                      </span>
                       <div>
-                        <strong>{recommendation.user_name || 'CMI 朋友'}</strong>
+                        <strong>{authorName}</strong>
                         <span>{categoryLabel}</span>
                       </div>
                       <em>...</em>
