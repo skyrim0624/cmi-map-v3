@@ -224,13 +224,11 @@
   height: 48px;
 }
 
-.cmi-v3-map-side-controls {
+.cmi-v3-map-locate-control {
   position: absolute;
-  right: 18px;
-  bottom: calc(var(--cmi-v3-map-nav-height) + 250px);
+  left: 18px;
+  bottom: calc(var(--cmi-v3-map-nav-height) + clamp(122px, 16svh, 136px) + 18px);
   z-index: 18;
-  display: grid;
-  gap: 12px;
 }
 
 .cmi-v3-map-side-button {
@@ -240,16 +238,6 @@
 
 .cmi-v3-map-side-button:first-child {
   color: #2575e6;
-}
-
-.cmi-v3-map-side-button.is-active {
-  background: #0d8d93;
-  color: #fff;
-  box-shadow: 0 14px 32px rgba(13, 141, 147, 0.32);
-}
-
-.cmi-v3-map-side-button.is-active svg {
-  fill: currentColor;
 }
 
 .cmi-v3-map-pin {
@@ -1052,10 +1040,17 @@
   box-shadow: 0 3px 0 rgba(22, 22, 22, 0.08);
 }
 
-.cmi-v3-map-bottom-icon svg {
+.cmi-v3-map-bottom-icon img {
   width: 25px;
   height: 25px;
-  overflow: visible;
+  object-fit: contain;
+  opacity: 0.88;
+}
+
+.cmi-v3-map-bottom-icon--egg img {
+  width: 27px;
+  height: 27px;
+  opacity: 0.94;
 }
 
 .cmi-v3-map-bottom button:first-child {
@@ -2157,14 +2152,13 @@
     height: 28px;
   }
 
-  .cmi-v3-map-layer-control,
-  .cmi-v3-map-side-controls {
+  .cmi-v3-map-layer-control {
     right: 12px;
   }
 
-  .cmi-v3-map-side-controls {
-    bottom: calc(env(safe-area-inset-bottom) + 318px);
-    gap: 10px;
+  .cmi-v3-map-locate-control {
+    left: 12px;
+    bottom: calc(var(--cmi-v3-map-nav-height) + clamp(122px, 16svh, 136px) + 14px);
   }
 
   .cmi-v3-map-layer-control button {
