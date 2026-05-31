@@ -649,8 +649,8 @@
   z-index: 21;
   display: flex;
   flex-direction: column;
-  height: clamp(210px, 30vh, 248px);
-  height: clamp(210px, 30svh, 248px);
+  height: clamp(122px, 16vh, 136px);
+  height: clamp(122px, 16svh, 136px);
   max-height: min(84vh, 670px);
   max-height: min(84svh, 670px);
   border-radius: 26px 26px 0 0;
