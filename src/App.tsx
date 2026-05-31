@@ -10,7 +10,7 @@ import { RouteGuard } from '@/components/common/RouteGuard';
 
 const AppShell: React.FC = () => {
   const location = useLocation();
-  const isV3Route = location.pathname === '/v3';
+  const isV3Route = location.pathname === '/' || location.pathname === '/v3';
   const shellClassName = [
     'flex justify-center overflow-hidden bg-neutral-100/50 dark:bg-neutral-900/50',
     isV3Route ? 'cmi-v3-app-shell' : 'h-[100dvh]',

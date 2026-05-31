@@ -39,8 +39,14 @@ export const routes: RouteConfig[] = [
     public: true,
   },
   {
-    name: '意图首页',
+    name: 'CMI Map 3.0',
     path: '/',
+    element: <CmiMapV3Prototype />,
+    public: true,
+  },
+  {
+    name: '旧版意图首页',
+    path: '/legacy-home',
     element: <SceneHome />,
     public: true,
   },
