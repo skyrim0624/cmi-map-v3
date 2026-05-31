@@ -1340,9 +1340,8 @@ function MapPulseSheet({
         ) : null}
 
         {isExpanded && visibleRecommendations.length > 0 && (
-          <div className="cmi-v3-map-pulse-feed" aria-label="附近动态">
+          <div className="cmi-v3-map-pulse-feed" aria-label="社区新鲜事">
             <div className="cmi-v3-map-pulse-section-label">
-              <strong>附近动态</strong>
               <span>社区新鲜事</span>
             </div>
             {visibleRecommendations.map(recommendation => {

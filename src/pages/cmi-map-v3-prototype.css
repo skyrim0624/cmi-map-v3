@@ -826,7 +826,7 @@
 .cmi-v3-map-pulse-section-label {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 10px;
   padding: 16px 18px 9px;
 }
