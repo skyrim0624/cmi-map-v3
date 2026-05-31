@@ -8,7 +8,7 @@
   --cmi-v3-muted: rgba(22, 22, 22, 0.66);
   --cmi-v3-viewport-height: 100vh;
   --cmi-v3-map-nav-height: calc(env(safe-area-inset-bottom) + 58px);
-  --cmi-v3-map-pulse-peek-height: clamp(82px, 10vh, 92px);
+  --cmi-v3-map-pulse-peek-height: clamp(96px, 12vh, 104px);
   position: relative;
   height: 100%;
   min-height: 100%;
@@ -24,7 +24,7 @@
 @supports (height: 100svh) {
   .cmi-v3-screen {
     --cmi-v3-viewport-height: 100svh;
-    --cmi-v3-map-pulse-peek-height: clamp(82px, 10svh, 92px);
+    --cmi-v3-map-pulse-peek-height: clamp(96px, 12svh, 104px);
   }
 }
 
@@ -854,45 +854,49 @@
   display: none;
 }
 
+.cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] {
+  padding-bottom: 0;
+}
+
 .cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-selected-note-grabber {
-  margin-bottom: 5px;
+  margin-bottom: 0;
 }
 
 .cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-handle-zone {
   position: absolute;
   inset: 0;
   z-index: 2;
-  padding-top: 6px;
+  padding-top: 9px;
 }
 
 .cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-body {
-  padding-top: 2px;
+  padding-top: 24px;
   overflow: hidden;
 }
 
 .cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-head h2 {
-  font-size: clamp(24px, 6vw, 28px);
-  line-height: 1;
+  font-size: clamp(25px, 6.1vw, 28px);
+  line-height: 1.02;
 }
 
 .cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-row {
-  gap: 10px;
-  margin-top: 5px;
-  padding: 0 18px;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 0 20px;
   overflow: hidden;
   pointer-events: none;
 }
 
 .cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-card {
-  flex-basis: min(54vw, 220px);
-  height: 48px;
-  border-radius: 16px 16px 0 0;
+  flex-basis: min(56vw, 232px);
+  height: 54px;
+  border-radius: 18px 18px 0 0;
   box-shadow: none;
-  opacity: 0.82;
+  opacity: 0.9;
 }
 
 .cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-card img {
-  height: 48px;
+  height: 54px;
 }
 
 .cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-card-copy {
