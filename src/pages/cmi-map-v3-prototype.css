@@ -31,6 +31,7 @@
 
 .cmi-v3-map-mode {
   --cmi-v3-map-nav-height: calc(env(safe-area-inset-bottom) + 58px);
+  --cmi-v3-map-pulse-peek-height: clamp(82px, 10vh, 92px);
   position: relative;
   height: 100%;
   min-height: 0;
@@ -38,6 +39,12 @@
   overflow: hidden;
   overscroll-behavior: none;
   background: #fbfcfb;
+}
+
+@supports (height: 100svh) {
+  .cmi-v3-map-mode {
+    --cmi-v3-map-pulse-peek-height: clamp(82px, 10svh, 92px);
+  }
 }
 
 .cmi-v3-live-map {
@@ -227,7 +234,7 @@
 .cmi-v3-map-locate-control {
   position: absolute;
   left: 18px;
-  bottom: calc(var(--cmi-v3-map-nav-height) + clamp(122px, 16svh, 136px) + 18px);
+  bottom: calc(var(--cmi-v3-map-nav-height) + var(--cmi-v3-map-pulse-peek-height) + 14px);
   z-index: 18;
 }
 
@@ -677,14 +684,13 @@
   z-index: 21;
   display: flex;
   flex-direction: column;
-  height: clamp(122px, 16vh, 136px);
-  height: clamp(122px, 16svh, 136px);
+  height: var(--cmi-v3-map-pulse-peek-height);
   max-height: min(84vh, 670px);
   max-height: min(84svh, 670px);
   border-radius: 26px 26px 0 0;
   background: #fff;
   box-shadow: 0 -10px 32px rgba(22, 22, 22, 0.18);
-  padding: 8px 0 16px;
+  padding: 6px 0 10px;
   overflow: hidden;
   transform: translateY(var(--cmi-v3-sheet-drag-y, 0));
   transition:
@@ -702,7 +708,29 @@
   height: calc(100vh - var(--cmi-v3-map-nav-height) - 80px);
   height: calc(var(--cmi-v3-viewport-height) - var(--cmi-v3-map-nav-height) - 80px);
   max-height: 670px;
+  padding: 8px 0 16px;
   box-shadow: 0 -14px 40px rgba(22, 22, 22, 0.22);
+}
+
+.cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-state,
+.cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-row,
+.cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-feed,
+.cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-actions {
+  display: none;
+}
+
+.cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-selected-note-grabber {
+  margin-bottom: 5px;
+}
+
+.cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-body {
+  padding-top: 2px;
+  overflow: hidden;
+}
+
+.cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-head h2 {
+  font-size: clamp(24px, 6vw, 28px);
+  line-height: 1;
 }
 
 .cmi-v3-map-pulse-sheet[data-sheet-state="minimized"] {
@@ -2246,7 +2274,7 @@
 
   .cmi-v3-map-locate-control {
     left: 12px;
-    bottom: calc(var(--cmi-v3-map-nav-height) + clamp(122px, 16svh, 136px) + 14px);
+    bottom: calc(var(--cmi-v3-map-nav-height) + var(--cmi-v3-map-pulse-peek-height) + 12px);
   }
 
   .cmi-v3-map-layer-control button {
