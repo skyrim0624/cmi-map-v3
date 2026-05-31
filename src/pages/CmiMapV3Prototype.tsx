@@ -1340,10 +1340,7 @@ function MapPulseSheet({
         ) : null}
 
         {isExpanded && visibleRecommendations.length > 0 && (
-          <div className="cmi-v3-map-pulse-feed" aria-label="社区新鲜事">
-            <div className="cmi-v3-map-pulse-section-label">
-              <span>社区新鲜事</span>
-            </div>
+          <div className="cmi-v3-map-pulse-feed" aria-label="社区动态列表">
             {visibleRecommendations.map(recommendation => {
               const categoryConfig = getCategoryConfig(recommendation.category);
               const imageUrl = recommendation.images[0] || categoryConfig.iconUrl;
