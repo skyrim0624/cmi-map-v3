@@ -257,6 +257,15 @@ function getRecommendationSummary(recommendation: Recommendation) {
   return reason || '这个地点还缺一句现场感，等社区成员补上。';
 }
 
+function normalizeSearchText(value: string) {
+  return value.trim().toLocaleLowerCase('zh-CN');
+}
+
+function textMatchesSearch(query: string, values: Array<string | null | undefined>) {
+  if (!query) return true;
+  return values.some(value => normalizeSearchText(value ?? '').includes(query));
+}
+
 function recommendationMatchesFilter(recommendation: Recommendation, filterId: MapFilterId) {
   if (filterId === 'all') return true;
   const category = normalizeCategory(recommendation.category);
@@ -264,6 +273,35 @@ function recommendationMatchesFilter(recommendation: Recommendation, filterId: M
   if (filterId === 'play') return playCategories.has(category);
   if (filterId === 'easter') return category === '彩蛋';
   return false;
+}
+
+function recommendationMatchesSearch(recommendation: Recommendation, query: string) {
+  const category = normalizeCategory(recommendation.category);
+  return textMatchesSearch(query, [
+    recommendation.place_name,
+    recommendation.reason,
+    recommendation.user_name,
+    category,
+    recommendation.input_category_id,
+    recommendation.primary_intent_id,
+    ...(recommendation.place_type_ids ?? []),
+    ...(recommendation.detail_tag_ids ?? []),
+  ]);
+}
+
+function eventMatchesSearch(event: CmiEvent, query: string) {
+  return textMatchesSearch(query, [
+    event.title,
+    event.summary,
+    event.venueName,
+    event.area,
+    event.hostName,
+    event.sourceLabel,
+    event.type,
+    event.language,
+    ...(event.tags ?? []),
+    ...(event.suitableFor ?? []),
+  ]);
 }
 
 function isWishlistedByUser(recommendation: Recommendation, userId: string | null) {
@@ -530,6 +568,7 @@ export default function CmiMapV3Prototype() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeScreen, setActiveScreen] = useState<ScreenId>(() => resolveScreenId(searchParams.get('screen')));
   const [activeFilter, setActiveFilter] = useState<MapFilterId>('all');
+  const [mapSearchQuery, setMapSearchQuery] = useState('');
   const [locationRequestKey, setLocationRequestKey] = useState(0);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [profilesByAuthorKey, setProfilesByAuthorKey] = useState<ProfileLookup>({});
@@ -676,11 +715,17 @@ export default function CmiMapV3Prototype() {
     [recommendations]
   );
 
+  const normalizedMapSearchQuery = useMemo(
+    () => normalizeSearchText(mapSearchQuery),
+    [mapSearchQuery]
+  );
+
   const filteredMapRecommendations = useMemo(
-    () => userSharedRecommendations.filter(recommendation =>
-      recommendationMatchesFilter(recommendation, activeFilter)
-    ),
-    [activeFilter, userSharedRecommendations]
+    () => userSharedRecommendations.filter(recommendation => {
+      if (normalizedMapSearchQuery) return recommendationMatchesSearch(recommendation, normalizedMapSearchQuery);
+      return recommendationMatchesFilter(recommendation, activeFilter);
+    }),
+    [activeFilter, normalizedMapSearchQuery, userSharedRecommendations]
   );
 
   const communityEvents = useMemo(
@@ -695,10 +740,15 @@ export default function CmiMapV3Prototype() {
 
   const visibleEvents = useMemo(
     () => {
+      if (normalizedMapSearchQuery) {
+        return communityEvents
+          .filter(event => eventMatchesSearch(event, normalizedMapSearchQuery))
+          .slice(0, 12);
+      }
       if (activeFilter !== 'events') return [];
       return communityEvents.slice(0, 12);
     },
-    [activeFilter, communityEvents]
+    [activeFilter, communityEvents, normalizedMapSearchQuery]
   );
 
   const mapMarkers = useMemo(
@@ -800,6 +850,12 @@ export default function CmiMapV3Prototype() {
     }
   }, [requireLoggedInUser, user]);
 
+  const handleMapSearchChange = useCallback((query: string) => {
+    setMapSearchQuery(query);
+    setSelectedMarker(null);
+    setSelectedEventId(null);
+  }, []);
+
   const handleRecommendationCardClick = useCallback(async (
     event: ReactMouseEvent<HTMLElement>,
     recommendationId: string
@@ -863,7 +919,8 @@ export default function CmiMapV3Prototype() {
             isLoading={isLoadingRecommendations || isLoadingEvents}
             markers={mapMarkers}
             recommendationsError={recommendationsError}
-            listEvents={communityEvents}
+            searchQuery={mapSearchQuery}
+            listEvents={normalizedMapSearchQuery ? visibleEvents : communityEvents}
             listRecommendations={filteredMapRecommendations}
             localWishlists={localWishlists}
             placedStickers={placedStickers}
@@ -879,6 +936,7 @@ export default function CmiMapV3Prototype() {
             }}
             onFilterChange={setActiveFilter}
             onLocateUser={() => setLocationRequestKey(current => current + 1)}
+            onSearchChange={handleMapSearchChange}
             onPlaceStamp={handleRecommendationCardClick}
             onStartStamp={handleStartStamp}
             onToggleWishlist={handleToggleWishlist}
@@ -976,12 +1034,14 @@ function MapMode({
   activeStickerId,
   profilesByAuthorKey,
   recommendationsError,
+  searchQuery,
   onClearSelection,
   onFilterChange,
   onLocateUser,
   onMarkerSelect,
   onNavigate,
   onOpenPath,
+  onSearchChange,
   onPlaceStamp,
   onStartStamp,
   onToggleWishlist,
@@ -1001,12 +1061,14 @@ function MapMode({
   activeStickerId: string | null;
   profilesByAuthorKey: ProfileLookup;
   recommendationsError: string | null;
+  searchQuery: string;
   onClearSelection: () => void;
   onFilterChange: (filterId: MapFilterId) => void;
   onLocateUser: () => void;
   onMarkerSelect: (marker: MapMarker) => void;
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
   onOpenPath: (path: string) => void;
+  onSearchChange: (query: string) => void;
   onPlaceStamp: (event: ReactMouseEvent<HTMLElement>, recommendationId: string) => void;
   onStartStamp: (recommendationId: string) => void;
   onToggleWishlist: (recommendation: Recommendation) => void;
@@ -1039,10 +1101,31 @@ function MapMode({
         <button type="button" className="cmi-v3-map-brand" onClick={() => onNavigate('feed')}>
           CMI Map
         </button>
-        <button type="button" className="cmi-v3-map-search" onClick={() => onNavigate('feed')}>
+        <form
+          className={`cmi-v3-map-search ${searchQuery.trim() ? 'has-value' : ''}`}
+          role="search"
+          onSubmit={(event) => event.preventDefault()}
+        >
           <Search size={16} strokeWidth={3} />
-          <span>搜动态 / 地点</span>
-        </button>
+          <input
+            aria-label="搜索动态、地点和活动"
+            enterKeyHint="search"
+            placeholder="搜动态 / 地点"
+            type="search"
+            value={searchQuery}
+            onChange={(event) => onSearchChange(event.target.value)}
+          />
+          {searchQuery.trim() && (
+            <button
+              type="button"
+              className="cmi-v3-map-search-clear"
+              aria-label="清空搜索"
+              onClick={() => onSearchChange('')}
+            >
+              <X size={15} strokeWidth={3} />
+            </button>
+          )}
+        </form>
         <button type="button" className="cmi-v3-round-button" onClick={() => onNavigate('feed')} aria-label="打开信息流">
           <List size={20} strokeWidth={3} />
         </button>
@@ -1115,6 +1198,7 @@ function MapMode({
           localWishlists={localWishlists}
           placedStickers={placedStickers}
           recommendations={listRecommendations}
+          searchQuery={searchQuery}
           onEventSelect={(event) => onNavigate('map', { eventId: event.id })}
           onOpenPath={onOpenPath}
           onPlaceStamp={onPlaceStamp}
@@ -1285,6 +1369,7 @@ function MapPulseSheet({
   localWishlists,
   placedStickers,
   recommendations,
+  searchQuery,
   onEventSelect,
   onOpenPath,
   onPlaceStamp,
@@ -1299,6 +1384,7 @@ function MapPulseSheet({
   localWishlists: WishlistStateMap;
   placedStickers: PlacedStickerMap;
   recommendations: Recommendation[];
+  searchQuery: string;
   onEventSelect: (event: CmiEvent) => void;
   onOpenPath: (path: string) => void;
   onPlaceStamp: (event: ReactMouseEvent<HTMLElement>, recommendationId: string) => void;
@@ -1311,6 +1397,12 @@ function MapPulseSheet({
   const sheetStyle = { '--cmi-v3-sheet-drag-y': `${dragOffset}px` } as CSSProperties;
   const visibleRecommendations = recommendations.slice(0, 8);
   const visibleEvents = events.filter(isCuratedCommunityEvent).slice(0, 4);
+  const trimmedSearchQuery = searchQuery.trim();
+  const isSearching = trimmedSearchQuery.length > 0;
+
+  useEffect(() => {
+    if (isSearching) setSnap('expanded');
+  }, [isSearching, setSnap]);
 
   const handleHeaderKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -1340,8 +1432,8 @@ function MapPulseSheet({
       <div className="cmi-v3-map-pulse-body">
         <div className="cmi-v3-map-pulse-head">
           <div>
-            <h2>清迈客栈新动态</h2>
-            <p>附近的人刚留下的新鲜事</p>
+            <h2>{isSearching ? `搜索：${trimmedSearchQuery}` : '清迈客栈新动态'}</h2>
+            <p>{isSearching ? `找到 ${visibleEvents.length + visibleRecommendations.length} 条相关内容` : '附近的人刚留下的新鲜事'}</p>
           </div>
         </div>
 
@@ -1367,7 +1459,9 @@ function MapPulseSheet({
             ))}
           </div>
         ) : !isLoading && visibleRecommendations.length === 0 ? (
-          <p className="cmi-v3-map-pulse-state">暂时没有新的清迈客栈活动。</p>
+          <p className="cmi-v3-map-pulse-state">
+            {isSearching ? '没有找到相关活动。' : '暂时没有新的清迈客栈活动。'}
+          </p>
         ) : null}
 
         {isExpanded && visibleRecommendations.length > 0 && (
@@ -1421,7 +1515,9 @@ function MapPulseSheet({
         )}
 
         {isExpanded && !isLoading && visibleRecommendations.length === 0 && (
-          <p className="cmi-v3-map-pulse-state">附近还没有新的社区动态。</p>
+          <p className="cmi-v3-map-pulse-state">
+            {isSearching ? '没有找到相关动态或地点。' : '附近还没有新的社区动态。'}
+          </p>
         )}
 
         {isExpanded && (
