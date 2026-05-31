@@ -875,7 +875,9 @@ export const LeafletMap = ({
     // 添加新标记
     markers.forEach((markerData) => {
       const markerVisual = getMapMarkerVisual(markerData);
-      const isEasterEggMarker = markerData.category === '彩蛋' || isEasterEggMarkerVisual(markerVisual);
+      const isEasterEggMarker = !markerVisual.isAvatar && (
+        markerData.category === '彩蛋' || isEasterEggMarkerVisual(markerVisual)
+      );
 
       if (isEasterEggMarker) {
         const icon = L.divIcon({

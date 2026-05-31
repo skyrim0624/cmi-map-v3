@@ -45,6 +45,7 @@ export type MapMarkerVisual = {
   accent: string;
   shadow: string;
   isCommunity: boolean;
+  isAvatar?: boolean;
 };
 
 const EASTER_EGG_ICON_PATHS = ['/map-icons/cmi-easter/', '/map-icons/cmi-easter-v2/'];
@@ -218,6 +219,7 @@ export const getMapMarkerVisual = (
         ...visual,
         label: markerData.visualOverride.label,
         iconUrl: markerData.visualOverride.iconUrl,
+        isAvatar: markerData.visualOverride.isAvatar,
       }
       : visual
   );
@@ -248,9 +250,13 @@ export const getMapMarkerVisual = (
 
 export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolean) => {
   const label = escapeHtml(visual.label);
+  const iconUrl = escapeHtml(visual.iconUrl);
   const iconSize = isHotspot ? 60 : 56;
   const imageSize = isHotspot ? 46 : 42;
   const tailTop = iconSize - 10;
+  const imageFit = visual.isAvatar ? 'cover' : 'contain';
+  const imageRadius = visual.isAvatar ? '999px' : '0';
+  const imageFilter = visual.isAvatar ? 'none' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))';
 
   return `
     <div title="${label}" aria-label="${label}" style="
@@ -270,12 +276,13 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
       justify-content:center;
       box-sizing:border-box;
     ">
-      <img src="${visual.iconUrl}" alt="${label}" loading="lazy" style="
+      <img src="${iconUrl}" alt="${label}" loading="lazy" style="
         width:${imageSize}px;
         height:${imageSize}px;
-        object-fit:contain;
+        object-fit:${imageFit};
+        border-radius:${imageRadius};
         display:block;
-        filter:drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+        filter:${imageFilter};
       " />
       ${visual.isCommunity ? `
         <div style="
@@ -308,6 +315,7 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
 
 export const renderEasterEggMarkerHtml = (visual: MapMarkerVisual) => {
   const label = escapeHtml(visual.label);
+  const iconUrl = escapeHtml(visual.iconUrl);
   const iconSize = visual.iconUrl.includes('easter-star') ? 34 : 30;
 
   return `
@@ -323,7 +331,7 @@ export const renderEasterEggMarkerHtml = (visual: MapMarkerVisual) => {
       justify-content:center;
       box-sizing:border-box;
     ">
-      <img src="${visual.iconUrl}" alt="${label}" loading="lazy" style="
+      <img src="${iconUrl}" alt="${label}" loading="lazy" style="
         width:${iconSize}px;
         height:${iconSize}px;
         object-fit:contain;
@@ -338,6 +346,7 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
   if (visuals.length > 0 && visuals.every(isEasterEggMarkerVisual)) {
     const displayedVisuals = visuals.slice(0, 3);
     const miniIcons = displayedVisuals.map((visual, index) => {
+      const iconUrl = escapeHtml(visual.iconUrl);
       const offsets = [
         { left: 8, top: 10, rotate: -8 },
         { left: 24, top: 7, rotate: 10 },
@@ -347,7 +356,7 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
       const iconSize = visual.iconUrl.includes('easter-star') ? 24 : 22;
 
       return `
-        <img src="${visual.iconUrl}" alt="" loading="lazy" style="
+        <img src="${iconUrl}" alt="" loading="lazy" style="
           position:absolute;
           left:${offset.left}px;
           top:${offset.top}px;
@@ -394,7 +403,13 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
     'translate(-4px, 12px) rotate(-12deg)',
   ];
   const displayedVisuals = visuals.slice(0, 3);
-  const miniIcons = displayedVisuals.map((visual, index) => `
+  const miniIcons = displayedVisuals.map((visual, index) => {
+    const iconUrl = escapeHtml(visual.iconUrl);
+    const imageFit = visual.isAvatar ? 'cover' : 'contain';
+    const imageRadius = visual.isAvatar ? '999px' : '0';
+    const imageFilter = visual.isAvatar ? 'none' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))';
+
+    return `
     <div aria-hidden="true" style="
       position:absolute;
       top:8px;
@@ -413,15 +428,17 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
       justify-content:center;
       box-sizing:border-box;
     ">
-      <img src="${visual.iconUrl}" alt="" loading="lazy" style="
+      <img src="${iconUrl}" alt="" loading="lazy" style="
         width:36px;
         height:36px;
-        object-fit:contain;
+        object-fit:${imageFit};
+        border-radius:${imageRadius};
         display:block;
-        filter:drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+        filter:${imageFilter};
       " />
     </div>
-  `).join('');
+  `;
+  }).join('');
   const remaining = count - displayedVisuals.length;
 
   return `

@@ -61,6 +61,7 @@ export interface MapMarker {
   visualOverride?: {
     label: string;
     iconUrl: string;
+    isAvatar?: boolean;
   };
 }
 

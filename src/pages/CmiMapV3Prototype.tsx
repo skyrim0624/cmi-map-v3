@@ -42,6 +42,7 @@ import {
   isCmiEventExpired,
   type CmiEvent,
 } from '@/data/cmi-events';
+import { isCommunityCuratedRecommendation } from '@/data/place-guides';
 import {
   getAllRecommendations,
   getProfilesByUserIds,
@@ -101,7 +102,7 @@ interface EventMarker extends MapMarker {
 }
 
 const mapFilters: FilterItem[] = [
-  { id: 'all', label: '全部' },
+  { id: 'all', label: '动态' },
   { id: 'food', label: '好吃', iconUrl: '/map-icons/cmi-flat-v2/direct-eat.png' },
   { id: 'play', label: '好玩', iconUrl: '/map-icons/cmi-flat-v2/direct-play.png' },
   { id: 'events', label: '活动', iconUrl: '/map-icons/cmi-flat-v2/home-events.png' },
@@ -120,6 +121,7 @@ const SHEET_OPEN_THRESHOLD = -28;
 const SHEET_CLOSE_THRESHOLD = 54;
 const SHEET_MINIMIZE_THRESHOLD = 96;
 const SHEET_DRAG_LIMIT = 160;
+const USER_AVATAR_FALLBACK_COLORS = ['#f6c85f', '#f28c6b', '#70b7a7', '#6f9fd8', '#b58ad9', '#ef9eb3'];
 
 const foodCategories = new Set<Category>(['吃饭', '咖啡', '市集']);
 const playCategories = new Set<Category>(['户外', '景点', '购物', '运动', '酒吧', '身心']);
@@ -250,32 +252,63 @@ function isWishlistedByUser(recommendation: Recommendation, userId: string | nul
   return recommendation.wishlists?.some(wishlist => wishlist.user_id === userId) ?? false;
 }
 
+// NOTE: 默认地图只显示真实用户留下的分享，运营精选和历史底库继续留给搜索、专题和地点页承载。
+function isUserSharedRecommendation(recommendation: Recommendation) {
+  return Boolean(recommendation.user_id) && !isCommunityCuratedRecommendation(recommendation);
+}
+
 function clampRatio(value: number) {
   return Math.min(100, Math.max(0, value));
 }
 
-function groupRecommendationsIntoMarkers(recommendations: Recommendation[]): MapMarker[] {
-  const markerMap = new globalThis.Map<string, MapMarker>();
+function escapeSvgText(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
 
-  recommendations.forEach(recommendation => {
-    const key = recommendation.place_name.trim();
-    if (!key) return;
+function getFallbackAvatarUrl(name: string) {
+  const initial = getUserInitial(name);
+  const colorIndex = Array.from(name || initial).reduce(
+    (sum, character) => sum + (character.codePointAt(0) ?? 0),
+    0
+  ) % USER_AVATAR_FALLBACK_COLORS.length;
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+      <rect width="96" height="96" rx="48" fill="${USER_AVATAR_FALLBACK_COLORS[colorIndex]}"/>
+      <text x="48" y="56" text-anchor="middle" font-family="Arial, sans-serif" font-size="38" font-weight="800" fill="#2f2a23">${escapeSvgText(initial)}</text>
+    </svg>
+  `;
 
-    if (!markerMap.has(key)) {
-      markerMap.set(key, {
-        id: recommendation.id,
-        place_name: recommendation.place_name,
-        category: recommendation.category,
-        latitude: recommendation.latitude,
-        longitude: recommendation.longitude,
-        recommendations: [],
-      });
-    }
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
 
-    markerMap.get(key)?.recommendations.push(recommendation);
+function getAuthorAvatarUrl(recommendation: Recommendation, profiles: ProfileLookup) {
+  const profile = getRecommendationAuthorProfile(recommendation, profiles);
+  const authorName = recommendation.user_name || profile?.user_name || 'CMI 朋友';
+  return profile?.avatar_url?.trim() || getFallbackAvatarUrl(authorName);
+}
+
+function getUserShareMarkers(recommendations: Recommendation[], profiles: ProfileLookup): MapMarker[] {
+  return recommendations.map(recommendation => {
+    const authorProfile = getRecommendationAuthorProfile(recommendation, profiles);
+    const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
+
+    return {
+      id: `share:${recommendation.id}`,
+      place_name: recommendation.place_name,
+      category: recommendation.category,
+      latitude: recommendation.latitude,
+      longitude: recommendation.longitude,
+      recommendations: [recommendation],
+      visualOverride: {
+        label: authorName,
+        iconUrl: getAuthorAvatarUrl(recommendation, profiles),
+        isAvatar: true,
+      },
+    };
   });
-
-  return Array.from(markerMap.values());
 }
 
 function getEventMarkers(events: CmiEvent[]): EventMarker[] {
@@ -594,11 +627,16 @@ export default function CmiMapV3Prototype() {
       });
   }, []);
 
-  const filteredRecommendations = useMemo(
-    () => recommendations.filter(recommendation =>
+  const userSharedRecommendations = useMemo(
+    () => recommendations.filter(isUserSharedRecommendation),
+    [recommendations]
+  );
+
+  const filteredMapRecommendations = useMemo(
+    () => userSharedRecommendations.filter(recommendation =>
       recommendationMatchesFilter(recommendation, activeFilter)
     ),
-    [activeFilter, recommendations]
+    [activeFilter, userSharedRecommendations]
   );
 
   const communityEvents = useMemo(
@@ -613,7 +651,7 @@ export default function CmiMapV3Prototype() {
 
   const visibleEvents = useMemo(
     () => {
-      if (activeFilter !== 'all' && activeFilter !== 'events') return [];
+      if (activeFilter !== 'events') return [];
       return communityEvents.slice(0, 12);
     },
     [activeFilter, communityEvents]
@@ -621,10 +659,10 @@ export default function CmiMapV3Prototype() {
 
   const mapMarkers = useMemo(
     () => [
-      ...groupRecommendationsIntoMarkers(filteredRecommendations),
+      ...getUserShareMarkers(filteredMapRecommendations, profilesByAuthorKey),
       ...getEventMarkers(visibleEvents),
     ],
-    [filteredRecommendations, visibleEvents]
+    [filteredMapRecommendations, profilesByAuthorKey, visibleEvents]
   );
 
   const feedRecommendations = useMemo(
@@ -779,7 +817,7 @@ export default function CmiMapV3Prototype() {
           markers={mapMarkers}
           recommendationsError={recommendationsError}
           listEvents={visibleEvents}
-          listRecommendations={filteredRecommendations}
+          listRecommendations={filteredMapRecommendations}
           localWishlists={localWishlists}
           placedStickers={placedStickers}
           activeRecIdForSticker={activeRecIdForSticker}
@@ -1297,7 +1335,7 @@ function MapPulseSheet({
               </button>
             ))}
           </div>
-        ) : !isLoading ? (
+        ) : !isLoading && visibleRecommendations.length === 0 ? (
           <p className="cmi-v3-map-pulse-state">暂时没有新的清迈客栈活动。</p>
         ) : null}
 
