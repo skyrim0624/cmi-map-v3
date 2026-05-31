@@ -1334,6 +1334,13 @@
   place-items: center;
 }
 
+.cmi-v3-map-bottom-add-button.is-active .cmi-v3-map-bottom-add-icon {
+  background: #fff0bd;
+  box-shadow:
+    3px 4px 0 rgba(22, 22, 22, 0.22),
+    0 0 0 5px rgba(148, 221, 230, 0.34);
+}
+
 .cmi-v3-fixed-footer button {
   min-height: 52px;
   border: 2px solid var(--cmi-v3-ink);

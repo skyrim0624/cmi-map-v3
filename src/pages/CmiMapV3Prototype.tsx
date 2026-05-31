@@ -85,7 +85,7 @@ import {
 import './cmi-map-v3-prototype.css';
 
 type ScreenId = 'map' | 'feed' | 'publish' | 'events' | 'eventDetail';
-type PrimaryScreenId = 'feed' | 'map' | 'events';
+type PrimaryScreenId = 'feed' | 'map' | 'events' | 'publish';
 type MapFilterId = 'all' | 'food' | 'play' | 'events' | 'easter';
 type FeedCardTone = 'paper' | 'yellow' | 'green' | 'pink';
 type EventStatusTone = 'open' | 'full' | 'ended';
@@ -123,6 +123,7 @@ const primaryScreenPositions: Record<PrimaryScreenId, number> = {
   feed: 0,
   map: 1,
   events: 2,
+  publish: 3,
 };
 const CMI_MAP_DEFAULT_ZOOM = 14.5;
 const SHEET_OPEN_THRESHOLD = -28;
@@ -152,7 +153,7 @@ function resolveScreenId(value: string | null): ScreenId {
 }
 
 function getPrimaryScreen(screen: ScreenId): PrimaryScreenId | null {
-  if (screen === 'feed' || screen === 'map' || screen === 'events') return screen;
+  if (screen === 'feed' || screen === 'map' || screen === 'events' || screen === 'publish') return screen;
   return null;
 }
 
@@ -1003,7 +1004,7 @@ export default function CmiMapV3Prototype() {
       {activePrimaryScreen && (
         <CmiV3BottomNav
           activeScreen={activePrimaryScreen}
-          onAdd={() => navigate('/mark')}
+          onAdd={() => handleNavigate('publish')}
           onNavigate={handleNavigate}
         />
       )}
@@ -1647,7 +1648,7 @@ function PublishMode({
   const selectedPlaceName = selectedMarker?.place_name || CMI_INN_PLACE_NAME;
 
   return (
-    <ComicPage title="留个彩蛋" actionLabel="返回" onTitleClick={() => onNavigate('feed')} onActionClick={() => onNavigate('feed')}>
+    <ComicPage title="添加" onTitleClick={() => onNavigate('map')}>
       <section className="cmi-v3-hard-card cmi-v3-publish-panel cmi-v3-dot-paper">
         <ChapterHeader left="New Moment" right="Use Existing Flow" />
         <h1>记录此刻</h1>
@@ -2194,8 +2195,9 @@ function CmiV3BottomNav({
       </button>
       <button
         type="button"
-        className="cmi-v3-map-bottom-add-button"
+        className={`cmi-v3-map-bottom-add-button ${activeScreen === 'publish' ? 'is-active' : ''}`}
         onClick={onAdd}
+        aria-current={activeScreen === 'publish' ? 'page' : undefined}
         aria-label="添加动态"
       >
         <span className="cmi-v3-map-bottom-add-icon">
