@@ -816,7 +816,7 @@ export default function CmiMapV3Prototype() {
           isLoading={isLoadingRecommendations || isLoadingEvents}
           markers={mapMarkers}
           recommendationsError={recommendationsError}
-          listEvents={visibleEvents}
+          listEvents={communityEvents}
           listRecommendations={filteredMapRecommendations}
           localWishlists={localWishlists}
           placedStickers={placedStickers}
