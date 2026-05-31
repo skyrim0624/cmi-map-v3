@@ -339,20 +339,41 @@
   height: 48px;
 }
 
-.cmi-v3-map-locate-control {
+.cmi-v3-map-quick-controls {
   position: absolute;
-  left: 18px;
+  right: 18px;
   bottom: calc(var(--cmi-v3-map-nav-height) + var(--cmi-v3-map-pulse-peek-height) + 14px);
   z-index: 18;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .cmi-v3-map-side-button {
   width: 58px;
   height: 58px;
+  overflow: hidden;
 }
 
-.cmi-v3-map-side-button:first-child {
-  color: #2575e6;
+.cmi-v3-map-side-button--locate {
+  border: 2px solid rgba(255, 255, 255, 0.74);
+  background: var(--cmi-v3-purple);
+  color: #fff;
+  box-shadow: 0 14px 30px rgba(80, 50, 135, 0.32);
+}
+
+.cmi-v3-map-side-button--profile {
+  border: 3px solid #fff;
+  background: #fff;
+  padding: 0;
+  box-shadow: 0 12px 28px rgba(22, 22, 22, 0.18);
+}
+
+.cmi-v3-map-side-button--profile img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .cmi-v3-map-pin {
@@ -2400,13 +2421,9 @@
     height: 40px;
   }
 
-  .cmi-v3-map-layer-control {
+  .cmi-v3-map-layer-control,
+  .cmi-v3-map-quick-controls {
     right: 12px;
-  }
-
-  .cmi-v3-map-locate-control {
-    left: 12px;
-    bottom: calc(var(--cmi-v3-map-nav-height) + var(--cmi-v3-map-pulse-peek-height) + 12px);
   }
 
   .cmi-v3-map-layer-control button {

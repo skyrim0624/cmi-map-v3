@@ -69,6 +69,7 @@ import {
   getCmiEventCreatePath,
   getCmiEventPath,
   getPlacePath,
+  getProfilePath,
 } from '@/lib/paths';
 import {
   CMI_INN_PLACE_NAME,
@@ -564,7 +565,7 @@ function useBottomSheetDrag(itemId: string) {
 
 export default function CmiMapV3Prototype() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeScreen, setActiveScreen] = useState<ScreenId>(() => resolveScreenId(searchParams.get('screen')));
   const [activeFilter, setActiveFilter] = useState<MapFilterId>('all');
@@ -908,6 +909,8 @@ export default function CmiMapV3Prototype() {
   }, [activeRecIdForSticker, activeStickerId, availableStickers, user]);
 
   const activePrimaryScreen = getPrimaryScreen(activeScreen);
+  const profileName = profile?.user_name || user?.email?.split('@')[0] || '游客';
+  const profileAvatarUrl = profile?.avatar_url?.trim() || getFallbackAvatarUrl(profileName);
 
   return (
     <div className={`cmi-v3-screen cmi-v3-screen--${activeScreen}`}>
@@ -920,6 +923,8 @@ export default function CmiMapV3Prototype() {
             markers={mapMarkers}
             recommendationsError={recommendationsError}
             searchQuery={mapSearchQuery}
+            profileAvatarUrl={profileAvatarUrl}
+            profileName={profileName}
             listEvents={normalizedMapSearchQuery ? visibleEvents : communityEvents}
             listRecommendations={filteredMapRecommendations}
             localWishlists={localWishlists}
@@ -936,6 +941,7 @@ export default function CmiMapV3Prototype() {
             }}
             onFilterChange={setActiveFilter}
             onLocateUser={() => setLocationRequestKey(current => current + 1)}
+            onOpenProfile={() => navigate(getProfilePath())}
             onSearchChange={handleMapSearchChange}
             onPlaceStamp={handleRecommendationCardClick}
             onStartStamp={handleStartStamp}
@@ -1035,12 +1041,15 @@ function MapMode({
   profilesByAuthorKey,
   recommendationsError,
   searchQuery,
+  profileAvatarUrl,
+  profileName,
   onClearSelection,
   onFilterChange,
   onLocateUser,
   onMarkerSelect,
   onNavigate,
   onOpenPath,
+  onOpenProfile,
   onSearchChange,
   onPlaceStamp,
   onStartStamp,
@@ -1062,12 +1071,15 @@ function MapMode({
   profilesByAuthorKey: ProfileLookup;
   recommendationsError: string | null;
   searchQuery: string;
+  profileAvatarUrl: string;
+  profileName: string;
   onClearSelection: () => void;
   onFilterChange: (filterId: MapFilterId) => void;
   onLocateUser: () => void;
   onMarkerSelect: (marker: MapMarker) => void;
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
   onOpenPath: (path: string) => void;
+  onOpenProfile: () => void;
   onSearchChange: (query: string) => void;
   onPlaceStamp: (event: ReactMouseEvent<HTMLElement>, recommendationId: string) => void;
   onStartStamp: (recommendationId: string) => void;
@@ -1151,9 +1163,22 @@ function MapMode({
         </button>
       </div>
 
-      <div className="cmi-v3-map-locate-control" aria-label="地图定位">
-        <button type="button" className="cmi-v3-map-side-button" onClick={onLocateUser} aria-label="定位到自己">
+      <div className="cmi-v3-map-quick-controls" aria-label="地图快捷操作">
+        <button
+          type="button"
+          className="cmi-v3-map-side-button cmi-v3-map-side-button--locate"
+          onClick={onLocateUser}
+          aria-label="定位到自己"
+        >
           <Navigation size={23} strokeWidth={3} />
+        </button>
+        <button
+          type="button"
+          className="cmi-v3-map-side-button cmi-v3-map-side-button--profile"
+          onClick={onOpenProfile}
+          aria-label="打开个人主页"
+        >
+          <img src={profileAvatarUrl} alt={`${profileName} 的头像`} />
         </button>
       </div>
 
