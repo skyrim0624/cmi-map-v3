@@ -29,6 +29,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LeafletMap } from '@/components/map/LeafletMap';
@@ -83,6 +84,7 @@ import {
 import './cmi-map-v3-prototype.css';
 
 type ScreenId = 'map' | 'feed' | 'publish' | 'events' | 'eventDetail';
+type PrimaryScreenId = 'feed' | 'map' | 'events';
 type MapFilterId = 'all' | 'food' | 'play' | 'events' | 'easter';
 type FeedCardTone = 'paper' | 'yellow' | 'green' | 'pink';
 type EventStatusTone = 'open' | 'full' | 'ended';
@@ -116,6 +118,11 @@ const eventTabs: Array<{ id: EventTabId; label: string }> = [
 ];
 
 const screenIds: ScreenId[] = ['map', 'feed', 'publish', 'events', 'eventDetail'];
+const primaryScreenPositions: Record<PrimaryScreenId, number> = {
+  feed: 0,
+  map: 1,
+  events: 2,
+};
 const CMI_MAP_DEFAULT_ZOOM = 14.5;
 const SHEET_OPEN_THRESHOLD = -28;
 const SHEET_CLOSE_THRESHOLD = 54;
@@ -128,12 +135,24 @@ const playCategories = new Set<Category>(['户外', '景点', '购物', '运动'
 
 const bottomNavIconUrls = {
   feed: '/map-icons/cmi-nav-v3/nav-feed.png',
-  add: '/map-icons/cmi-nav-v3/nav-add.png',
   events: '/map-icons/cmi-nav-v3/nav-events.png',
 } as const;
 
+interface ViewTransitionHandle {
+  finished: Promise<void>;
+}
+
+type ViewTransitionDocument = Document & {
+  startViewTransition?: (updateCallback: () => void) => ViewTransitionHandle;
+};
+
 function resolveScreenId(value: string | null): ScreenId {
   return screenIds.find(screen => screen === value) ?? 'map';
+}
+
+function getPrimaryScreen(screen: ScreenId): PrimaryScreenId | null {
+  if (screen === 'feed' || screen === 'map' || screen === 'events') return screen;
+  return null;
 }
 
 function getRecommendationTone(recommendation: Recommendation): FeedCardTone {
@@ -528,18 +547,43 @@ export default function CmiMapV3Prototype() {
   const [showStickerDrawer, setShowStickerDrawer] = useState(false);
 
   const handleNavigate = (screen: ScreenId, input?: { eventId?: string | null }) => {
-    setActiveScreen(screen);
-    if (input?.eventId) {
-      setSelectedEventId(input.eventId);
-      if (screen === 'map') setSelectedMarker(null);
-    } else if (screen !== 'eventDetail') {
-      setSelectedEventId(null);
+    const currentPrimaryScreen = getPrimaryScreen(activeScreen);
+    const nextPrimaryScreen = getPrimaryScreen(screen);
+    const direction =
+      currentPrimaryScreen && nextPrimaryScreen && currentPrimaryScreen !== nextPrimaryScreen
+        ? primaryScreenPositions[nextPrimaryScreen] < primaryScreenPositions[currentPrimaryScreen]
+          ? 'from-left'
+          : 'from-right'
+        : null;
+
+    const applyNavigation = () => {
+      setActiveScreen(screen);
+      if (input?.eventId) {
+        setSelectedEventId(input.eventId);
+        if (screen === 'map') setSelectedMarker(null);
+      } else if (screen !== 'eventDetail') {
+        setSelectedEventId(null);
+      }
+
+      const nextParams = new URLSearchParams();
+      if (screen !== 'map') nextParams.set('screen', screen);
+      if (input?.eventId) nextParams.set('event', input.eventId);
+      setSearchParams(nextParams, { replace: true });
+    };
+
+    const viewTransitionDocument = document as ViewTransitionDocument;
+    if (direction && viewTransitionDocument.startViewTransition) {
+      document.documentElement.dataset.cmiV3ScreenDirection = direction;
+      const transition = viewTransitionDocument.startViewTransition(() => {
+        flushSync(applyNavigation);
+      });
+      transition.finished.finally(() => {
+        delete document.documentElement.dataset.cmiV3ScreenDirection;
+      });
+      return;
     }
 
-    const nextParams = new URLSearchParams();
-    if (screen !== 'map') nextParams.set('screen', screen);
-    if (input?.eventId) nextParams.set('event', input.eventId);
-    setSearchParams(nextParams, { replace: true });
+    applyNavigation();
   };
 
   useEffect(() => {
@@ -807,85 +851,96 @@ export default function CmiMapV3Prototype() {
     toast.error('印章可能没有盖稳，请刷新重试');
   }, [activeRecIdForSticker, activeStickerId, availableStickers, user]);
 
+  const activePrimaryScreen = getPrimaryScreen(activeScreen);
+
   return (
     <div className={`cmi-v3-screen cmi-v3-screen--${activeScreen}`}>
-      {activeScreen === 'map' && (
-        <MapMode
-          activeFilter={activeFilter}
-          filters={mapFilters}
-          isLoading={isLoadingRecommendations || isLoadingEvents}
-          markers={mapMarkers}
-          recommendationsError={recommendationsError}
-          listEvents={communityEvents}
-          listRecommendations={filteredMapRecommendations}
-          localWishlists={localWishlists}
-          placedStickers={placedStickers}
-          activeRecIdForSticker={activeRecIdForSticker}
-          activeStickerId={activeStickerId}
-          profilesByAuthorKey={profilesByAuthorKey}
-          locationRequestKey={locationRequestKey}
-          selectedMarker={selectedMarker}
-          selectedEvent={selectedEventId ? selectedEvent : null}
-          onClearSelection={() => {
-            setSelectedMarker(null);
-            setSelectedEventId(null);
-          }}
-          onFilterChange={setActiveFilter}
-          onLocateUser={() => setLocationRequestKey(current => current + 1)}
-          onPlaceStamp={handleRecommendationCardClick}
-          onStartStamp={handleStartStamp}
-          onToggleWishlist={handleToggleWishlist}
-          onMarkerSelect={(marker) => {
-            if (isEventMarker(marker)) {
-              const event = events.find(item => item.id === marker.eventId);
-              setSelectedEventId(event?.id ?? marker.eventId);
+      <div className="cmi-v3-main-view" data-active-screen={activeScreen}>
+        {activeScreen === 'map' && (
+          <MapMode
+            activeFilter={activeFilter}
+            filters={mapFilters}
+            isLoading={isLoadingRecommendations || isLoadingEvents}
+            markers={mapMarkers}
+            recommendationsError={recommendationsError}
+            listEvents={communityEvents}
+            listRecommendations={filteredMapRecommendations}
+            localWishlists={localWishlists}
+            placedStickers={placedStickers}
+            activeRecIdForSticker={activeRecIdForSticker}
+            activeStickerId={activeStickerId}
+            profilesByAuthorKey={profilesByAuthorKey}
+            locationRequestKey={locationRequestKey}
+            selectedMarker={selectedMarker}
+            selectedEvent={selectedEventId ? selectedEvent : null}
+            onClearSelection={() => {
               setSelectedMarker(null);
-              return;
-            }
+              setSelectedEventId(null);
+            }}
+            onFilterChange={setActiveFilter}
+            onLocateUser={() => setLocationRequestKey(current => current + 1)}
+            onPlaceStamp={handleRecommendationCardClick}
+            onStartStamp={handleStartStamp}
+            onToggleWishlist={handleToggleWishlist}
+            onMarkerSelect={(marker) => {
+              if (isEventMarker(marker)) {
+                const event = events.find(item => item.id === marker.eventId);
+                setSelectedEventId(event?.id ?? marker.eventId);
+                setSelectedMarker(null);
+                return;
+              }
 
-            setSelectedMarker(marker);
-            setSelectedEventId(null);
-          }}
+              setSelectedMarker(marker);
+              setSelectedEventId(null);
+            }}
+            onNavigate={handleNavigate}
+            onOpenPath={navigate}
+          />
+        )}
+        {activeScreen === 'feed' && (
+          <FeedMode
+            isLoading={isLoadingRecommendations}
+            localWishlists={localWishlists}
+            placedStickers={placedStickers}
+            activeRecIdForSticker={activeRecIdForSticker}
+            activeStickerId={activeStickerId}
+            profilesByAuthorKey={profilesByAuthorKey}
+            recommendations={feedRecommendations}
+            onNavigate={handleNavigate}
+            onPlaceStamp={handleRecommendationCardClick}
+            onOpenPath={navigate}
+            onStartStamp={handleStartStamp}
+            onToggleWishlist={handleToggleWishlist}
+          />
+        )}
+        {activeScreen === 'publish' && (
+          <PublishMode
+            selectedMarker={selectedMarker}
+            onNavigate={handleNavigate}
+            onOpenPath={navigate}
+          />
+        )}
+        {activeScreen === 'events' && (
+          <EventsMode
+            events={communityEvents}
+            isLoading={isLoadingEvents}
+            onNavigate={handleNavigate}
+            onOpenPath={navigate}
+          />
+        )}
+        {activeScreen === 'eventDetail' && selectedEvent && (
+          <EventDetailMode
+            event={selectedEvent}
+            onNavigate={handleNavigate}
+            onOpenPath={navigate}
+          />
+        )}
+      </div>
+      {activePrimaryScreen && (
+        <CmiV3BottomNav
+          activeScreen={activePrimaryScreen}
+          onAdd={() => navigate('/mark')}
           onNavigate={handleNavigate}
-          onOpenPath={navigate}
-        />
-      )}
-      {activeScreen === 'feed' && (
-        <FeedMode
-          isLoading={isLoadingRecommendations}
-          localWishlists={localWishlists}
-          placedStickers={placedStickers}
-          activeRecIdForSticker={activeRecIdForSticker}
-          activeStickerId={activeStickerId}
-          profilesByAuthorKey={profilesByAuthorKey}
-          recommendations={feedRecommendations}
-          onNavigate={handleNavigate}
-          onPlaceStamp={handleRecommendationCardClick}
-          onOpenPath={navigate}
-          onStartStamp={handleStartStamp}
-          onToggleWishlist={handleToggleWishlist}
-        />
-      )}
-      {activeScreen === 'publish' && (
-        <PublishMode
-          selectedMarker={selectedMarker}
-          onNavigate={handleNavigate}
-          onOpenPath={navigate}
-        />
-      )}
-      {activeScreen === 'events' && (
-        <EventsMode
-          events={communityEvents}
-          isLoading={isLoadingEvents}
-          onNavigate={handleNavigate}
-          onOpenPath={navigate}
-        />
-      )}
-      {activeScreen === 'eventDetail' && selectedEvent && (
-        <EventDetailMode
-          event={selectedEvent}
-          onNavigate={handleNavigate}
-          onOpenPath={navigate}
         />
       )}
       <StickerDrawer
@@ -1069,30 +1124,6 @@ function MapMode({
         />
       )}
 
-      <footer className="cmi-v3-map-bottom">
-        <button type="button" onClick={() => onNavigate('feed')}>
-          <span className="cmi-v3-map-bottom-icon cmi-v3-map-bottom-icon--feed">
-            <img src={bottomNavIconUrls.feed} alt="" />
-          </span>
-          动态
-        </button>
-        <button
-          type="button"
-          className="cmi-v3-map-bottom-add-button"
-          onClick={() => onOpenPath('/mark')}
-          aria-label="留个彩蛋"
-        >
-          <span className="cmi-v3-map-bottom-icon cmi-v3-map-bottom-icon--egg">
-            <img src={bottomNavIconUrls.add} alt="" />
-          </span>
-        </button>
-        <button type="button" onClick={() => onNavigate('events')}>
-          <span className="cmi-v3-map-bottom-icon cmi-v3-map-bottom-icon--event">
-            <img src={bottomNavIconUrls.events} alt="" />
-          </span>
-          活动
-        </button>
-      </footer>
     </section>
   );
 }
@@ -1448,12 +1479,7 @@ function FeedMode({
   onToggleWishlist: (recommendation: Recommendation) => void;
 }) {
   return (
-    <ComicPage
-      title="CMI Map"
-      hideTitle
-      headerContent={<FeedEventSwitch activeScreen="feed" onNavigate={onNavigate} placement="top" />}
-      onTitleClick={() => onNavigate('map')}
-    >
+    <ComicPage title="动态" onTitleClick={() => onNavigate('map')}>
       <section className="cmi-v3-hard-card cmi-v3-feed-hero cmi-v3-dot-paper">
         <ChapterHeader left="Today in Chiang Mai" right="CMI Community Feed" />
         <img src="/cmi-home/yard-scene.jpg" alt="清迈客栈院子" />
@@ -1484,9 +1510,6 @@ function FeedMode({
         <p className="cmi-v3-inline-state">还没有新的社区动态。</p>
       )}
 
-      <button type="button" className="cmi-v3-floating-create" onClick={() => onOpenPath('/mark')}>
-        <Plus size={22} strokeWidth={3} />
-      </button>
     </ComicPage>
   );
 }
@@ -1616,21 +1639,7 @@ function EventsMode({
   );
 
   return (
-    <ComicPage
-      title="活动"
-      headerContent={<FeedEventSwitch activeScreen="events" onNavigate={onNavigate} placement="top" />}
-      footer={
-        <button
-          type="button"
-          className="cmi-v3-events-create-fixed"
-          aria-label="发布活动"
-          onClick={() => onOpenPath(getCmiEventCreatePath())}
-        >
-          <Plus size={22} strokeWidth={3} />
-        </button>
-      }
-      onTitleClick={() => onNavigate('feed')}
-    >
+    <ComicPage title="活动" onTitleClick={() => onNavigate('map')}>
       <section className="cmi-v3-hard-card cmi-v3-events-hero cmi-v3-dot-paper">
         <ChapterHeader left="CMI Events" right="what is happening" />
         <h1>最近可以去哪儿</h1>
@@ -2018,39 +2027,62 @@ function ComicPage({
   );
 }
 
-function FeedEventSwitch({
+function CmiV3BottomNav({
   activeScreen,
+  onAdd,
   onNavigate,
-  placement = 'content',
 }: {
-  activeScreen: 'map' | 'feed' | 'events';
+  activeScreen: PrimaryScreenId;
+  onAdd: () => void;
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
-  placement?: 'content' | 'top';
 }) {
   return (
-    <div className={`cmi-v3-mode-switch ${placement === 'top' ? 'cmi-v3-mode-switch--top' : ''}`}>
-      <button
-        type="button"
-        className={activeScreen === 'map' ? 'is-active' : undefined}
-        onClick={() => onNavigate('map')}
-      >
-        地图
-      </button>
+    <footer className="cmi-v3-map-bottom" aria-label="CMI Map 主导航">
       <button
         type="button"
         className={activeScreen === 'feed' ? 'is-active' : undefined}
+        aria-current={activeScreen === 'feed' ? 'page' : undefined}
         onClick={() => onNavigate('feed')}
       >
+        <span className="cmi-v3-map-bottom-icon cmi-v3-map-bottom-icon--feed">
+          <img src={bottomNavIconUrls.feed} alt="" />
+        </span>
         动态
       </button>
       <button
         type="button"
+        className={activeScreen === 'map' ? 'is-active' : undefined}
+        aria-current={activeScreen === 'map' ? 'page' : undefined}
+        onClick={() => onNavigate('map')}
+      >
+        <span className="cmi-v3-map-bottom-icon cmi-v3-map-bottom-icon--map">
+          <MapIcon size={23} strokeWidth={3} />
+        </span>
+        地图
+      </button>
+      <button
+        type="button"
         className={activeScreen === 'events' ? 'is-active' : undefined}
+        aria-current={activeScreen === 'events' ? 'page' : undefined}
         onClick={() => onNavigate('events')}
       >
+        <span className="cmi-v3-map-bottom-icon cmi-v3-map-bottom-icon--event">
+          <img src={bottomNavIconUrls.events} alt="" />
+        </span>
         活动
       </button>
-    </div>
+      <button
+        type="button"
+        className="cmi-v3-map-bottom-add-button"
+        onClick={onAdd}
+        aria-label="添加动态"
+      >
+        <span className="cmi-v3-map-bottom-add-icon">
+          <Plus size={24} strokeWidth={3.2} />
+        </span>
+        添加
+      </button>
+    </footer>
   );
 }
 
