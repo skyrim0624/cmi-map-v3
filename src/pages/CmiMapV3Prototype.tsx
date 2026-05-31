@@ -115,9 +115,9 @@ const eventTabs: Array<{ id: EventTabId; label: string }> = [
 ];
 
 const screenIds: ScreenId[] = ['map', 'feed', 'publish', 'events', 'eventDetail'];
-const SHEET_OPEN_THRESHOLD = -44;
+const SHEET_OPEN_THRESHOLD = -28;
 const SHEET_CLOSE_THRESHOLD = 54;
-const SHEET_MINIMIZE_THRESHOLD = 78;
+const SHEET_MINIMIZE_THRESHOLD = 96;
 const SHEET_DRAG_LIMIT = 160;
 
 const foodCategories = new Set<Category>(['吃饭', '咖啡', '市集']);
