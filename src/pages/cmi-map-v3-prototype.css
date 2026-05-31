@@ -826,12 +826,14 @@
   box-shadow: 0 -10px 32px rgba(22, 22, 22, 0.18);
   padding: 6px 0 10px;
   overflow: hidden;
-  transform: translateY(var(--cmi-v3-sheet-drag-y, 0));
+  transform: translate3d(0, var(--cmi-v3-sheet-drag-y, 0), 0);
   transition:
-    height 180ms ease,
-    transform 180ms ease,
-    box-shadow 180ms ease;
-  will-change: transform;
+    height 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 260ms ease;
+  backface-visibility: hidden;
+  contain: layout paint;
+  will-change: height, transform;
 }
 
 .cmi-v3-map-pulse-sheet.is-dragging {
@@ -854,6 +856,13 @@
 
 .cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-selected-note-grabber {
   margin-bottom: 5px;
+}
+
+.cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-handle-zone {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding-top: 6px;
 }
 
 .cmi-v3-map-pulse-sheet[data-sheet-state="collapsed"] .cmi-v3-map-pulse-body {
@@ -950,6 +959,13 @@
   justify-content: space-between;
   gap: 12px;
   padding: 0 18px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.cmi-v3-map-pulse-sheet.is-dragging .cmi-v3-map-pulse-head {
+  cursor: grabbing;
 }
 
 .cmi-v3-map-pulse-head h2,
@@ -972,8 +988,11 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding-top: 8px;
   scrollbar-width: none;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .cmi-v3-map-pulse-body::-webkit-scrollbar {

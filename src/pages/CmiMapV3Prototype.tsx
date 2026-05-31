@@ -130,6 +130,8 @@ const SHEET_OPEN_THRESHOLD = -28;
 const SHEET_CLOSE_THRESHOLD = 54;
 const SHEET_MINIMIZE_THRESHOLD = 96;
 const SHEET_DRAG_LIMIT = 160;
+const SHEET_TAP_SLOP = 8;
+const SHEET_FLING_VELOCITY = 0.42;
 const USER_AVATAR_FALLBACK_COLORS = ['#f6c85f', '#f28c6b', '#70b7a7', '#6f9fd8', '#b58ad9', '#ef9eb3'];
 
 const foodCategories = new Set<Category>(['吃饭', '咖啡', '市集']);
@@ -394,11 +396,34 @@ function isEventMarker(marker: MapMarker): marker is EventMarker {
   return marker.id.startsWith('event:') && 'eventId' in marker;
 }
 
+function supportsPointerEvents() {
+  return typeof window !== 'undefined' && 'PointerEvent' in window;
+}
+
+function getAdjacentSheetSnap(current: SheetSnap, direction: 'up' | 'down') {
+  if (direction === 'up') {
+    if (current === 'minimized') return 'collapsed';
+    return 'expanded';
+  }
+
+  if (current === 'expanded') return 'collapsed';
+  return 'minimized';
+}
+
 function useBottomSheetDrag(itemId: string) {
   const [snap, setSnap] = useState<SheetSnap>('collapsed');
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef<{ y: number; snap: SheetSnap; source: SheetDragSource } | null>(null);
+  const dragStartRef = useRef<{
+    lastTime: number;
+    lastY: number;
+    snap: SheetSnap;
+    source: SheetDragSource;
+    velocityY: number;
+    y: number;
+  } | null>(null);
+  const pendingDragOffsetRef = useRef(0);
+  const dragFrameRef = useRef<number | null>(null);
   const suppressNextClickRef = useRef(false);
 
   useEffect(() => {
@@ -406,37 +431,77 @@ function useBottomSheetDrag(itemId: string) {
     setDragOffset(0);
     setIsDragging(false);
     dragStartRef.current = null;
+    pendingDragOffsetRef.current = 0;
+    if (dragFrameRef.current !== null) {
+      window.cancelAnimationFrame(dragFrameRef.current);
+      dragFrameRef.current = null;
+    }
   }, [itemId]);
+
+  useEffect(() => () => {
+    if (dragFrameRef.current !== null) {
+      window.cancelAnimationFrame(dragFrameRef.current);
+    }
+  }, []);
 
   const isInteractiveTarget = (target: EventTarget) => {
     if (!(target instanceof Element)) return false;
     return Boolean(target.closest('button, a'));
   };
 
-  const updateDrag = useCallback((clientY: number) => {
-    if (!dragStartRef.current) return;
-
-    const deltaY = clientY - dragStartRef.current.y;
-    setDragOffset(Math.max(-SHEET_DRAG_LIMIT, Math.min(SHEET_DRAG_LIMIT, deltaY)));
+  const flushDragOffset = useCallback(() => {
+    dragFrameRef.current = null;
+    setDragOffset(pendingDragOffsetRef.current);
   }, []);
+
+  const updateDrag = useCallback((clientY: number) => {
+    const dragStart = dragStartRef.current;
+    if (!dragStart) return;
+
+    const now = performance.now();
+    const elapsed = Math.max(16, now - dragStart.lastTime);
+    dragStart.velocityY = (clientY - dragStart.lastY) / elapsed;
+    dragStart.lastY = clientY;
+    dragStart.lastTime = now;
+
+    const deltaY = clientY - dragStart.y;
+    pendingDragOffsetRef.current = Math.max(-SHEET_DRAG_LIMIT, Math.min(SHEET_DRAG_LIMIT, deltaY));
+    if (dragFrameRef.current === null) {
+      dragFrameRef.current = window.requestAnimationFrame(flushDragOffset);
+    }
+  }, [flushDragOffset]);
 
   const settleDrag = useCallback((clientY: number) => {
     const dragStart = dragStartRef.current;
     if (!dragStart) return;
 
     const deltaY = clientY - dragStart.y;
-    if (Math.abs(deltaY) > 8) {
+    const velocityY = dragStart.velocityY;
+    if (Math.abs(deltaY) > SHEET_TAP_SLOP) {
       suppressNextClickRef.current = true;
       window.setTimeout(() => {
         suppressNextClickRef.current = false;
       }, 250);
     }
+
+    if (dragFrameRef.current !== null) {
+      window.cancelAnimationFrame(dragFrameRef.current);
+      dragFrameRef.current = null;
+    }
+
     setSnap(current => {
-      if (deltaY <= SHEET_OPEN_THRESHOLD) return dragStart.snap === 'minimized' ? 'collapsed' : 'expanded';
-      if (deltaY >= SHEET_MINIMIZE_THRESHOLD) return dragStart.snap === 'expanded' ? 'collapsed' : 'minimized';
-      if (deltaY >= SHEET_CLOSE_THRESHOLD && dragStart.snap === 'expanded') return 'collapsed';
+      if (velocityY <= -SHEET_FLING_VELOCITY || deltaY <= SHEET_OPEN_THRESHOLD) {
+        return getAdjacentSheetSnap(dragStart.snap, 'up');
+      }
+      if (
+        velocityY >= SHEET_FLING_VELOCITY ||
+        deltaY >= (dragStart.snap === 'expanded' ? SHEET_CLOSE_THRESHOLD : SHEET_MINIMIZE_THRESHOLD)
+      ) {
+        return getAdjacentSheetSnap(dragStart.snap, 'down');
+      }
       return current;
     });
+    pendingDragOffsetRef.current = 0;
     setDragOffset(0);
     setIsDragging(false);
     dragStartRef.current = null;
@@ -445,7 +510,14 @@ function useBottomSheetDrag(itemId: string) {
   const startDrag = useCallback((clientY: number, source: SheetDragSource) => {
     if (dragStartRef.current) return;
 
-    dragStartRef.current = { y: clientY, snap, source };
+    dragStartRef.current = {
+      lastTime: performance.now(),
+      lastY: clientY,
+      snap,
+      source,
+      velocityY: 0,
+      y: clientY,
+    };
     setIsDragging(true);
     setDragOffset(0);
   }, [snap]);
@@ -453,13 +525,35 @@ function useBottomSheetDrag(itemId: string) {
   useEffect(() => {
     if (!isDragging) return;
 
+    const resetDrag = () => {
+      if (dragFrameRef.current !== null) {
+        window.cancelAnimationFrame(dragFrameRef.current);
+        dragFrameRef.current = null;
+      }
+      pendingDragOffsetRef.current = 0;
+      setDragOffset(0);
+      setIsDragging(false);
+      dragStartRef.current = null;
+    };
+
+    const handleWindowPointerMove = (event: PointerEvent) => {
+      if (dragStartRef.current?.source !== 'pointer') return;
+      event.preventDefault();
+      updateDrag(event.clientY);
+    };
+
+    const handleWindowPointerUp = (event: PointerEvent) => {
+      if (dragStartRef.current?.source !== 'pointer') return;
+      settleDrag(event.clientY);
+    };
+
     const handleMouseMove = (event: MouseEvent) => {
-      if (dragStartRef.current?.source !== 'mouse' && dragStartRef.current?.source !== 'pointer') return;
+      if (dragStartRef.current?.source !== 'mouse') return;
       updateDrag(event.clientY);
     };
 
     const handleMouseUp = (event: MouseEvent) => {
-      if (dragStartRef.current?.source !== 'mouse' && dragStartRef.current?.source !== 'pointer') return;
+      if (dragStartRef.current?.source !== 'mouse') return;
       settleDrag(event.clientY);
     };
 
@@ -477,43 +571,53 @@ function useBottomSheetDrag(itemId: string) {
       settleDrag(touch?.clientY ?? dragStartRef.current.y);
     };
 
+    window.addEventListener('pointermove', handleWindowPointerMove, { passive: false });
+    window.addEventListener('pointerup', handleWindowPointerUp);
+    window.addEventListener('pointercancel', resetDrag);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('touchend', handleTouchEnd);
-    window.addEventListener('touchcancel', handleTouchEnd);
+    window.addEventListener('touchcancel', resetDrag);
 
     return () => {
+      window.removeEventListener('pointermove', handleWindowPointerMove);
+      window.removeEventListener('pointerup', handleWindowPointerUp);
+      window.removeEventListener('pointercancel', resetDrag);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
-      window.removeEventListener('touchcancel', handleTouchEnd);
+      window.removeEventListener('touchcancel', resetDrag);
     };
   }, [isDragging, settleDrag, updateDrag]);
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
     if (isInteractiveTarget(event.target)) return;
 
+    event.preventDefault();
     startDrag(event.clientY, 'pointer');
-    event.currentTarget.setPointerCapture(event.pointerId);
   };
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLElement>) => {
     if (dragStartRef.current?.source !== 'pointer') return;
+    event.preventDefault();
     updateDrag(event.clientY);
   };
 
   const handlePointerUp = (event: ReactPointerEvent<HTMLElement>) => {
     if (dragStartRef.current?.source !== 'pointer') return;
 
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
     settleDrag(event.clientY);
   };
 
   const handlePointerCancel = () => {
+    if (dragFrameRef.current !== null) {
+      window.cancelAnimationFrame(dragFrameRef.current);
+      dragFrameRef.current = null;
+    }
+    pendingDragOffsetRef.current = 0;
     setDragOffset(0);
     setIsDragging(false);
     dragStartRef.current = null;
@@ -525,6 +629,7 @@ function useBottomSheetDrag(itemId: string) {
   };
 
   const handleTouchStart = (event: ReactTouchEvent<HTMLElement>) => {
+    if (supportsPointerEvents()) return;
     if (isInteractiveTarget(event.target)) return;
     const touch = event.touches[0];
     if (!touch) return;
@@ -1456,7 +1561,7 @@ function MapPulseSheet({
       </div>
 
       <div className="cmi-v3-map-pulse-body">
-        <div className="cmi-v3-map-pulse-head">
+        <div className="cmi-v3-map-pulse-head" {...dragHandlers}>
           <div>
             <h2>{isSearching ? `搜索：${trimmedSearchQuery}` : '清迈客栈新动态'}</h2>
             <p>{isSearching ? `找到 ${visibleEvents.length + visibleRecommendations.length} 条相关内容` : '附近的人刚留下的新鲜事'}</p>
