@@ -2388,6 +2388,12 @@
 }
 
 .cmi-v3-screen--feed .cmi-v3-comic-scroll,
+.cmi-v3-screen--events .cmi-v3-comic-scroll,
+.cmi-v3-screen--publish .cmi-v3-comic-scroll {
+  padding-top: calc(env(safe-area-inset-top) + 28px);
+}
+
+.cmi-v3-screen--feed .cmi-v3-comic-scroll,
 .cmi-v3-screen--events .cmi-v3-comic-scroll {
   padding-bottom: calc(var(--cmi-v3-map-nav-height) + 28px);
 }

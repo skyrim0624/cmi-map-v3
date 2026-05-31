@@ -1601,7 +1601,7 @@ function FeedMode({
   onToggleWishlist: (recommendation: Recommendation) => void;
 }) {
   return (
-    <ComicPage title="动态" onTitleClick={() => onNavigate('map')}>
+    <ComicPage title="动态" hideTitle onTitleClick={() => onNavigate('map')}>
       <section className="cmi-v3-hard-card cmi-v3-feed-hero cmi-v3-dot-paper">
         <ChapterHeader left="Today in Chiang Mai" right="CMI Community Feed" />
         <img src="/cmi-home/yard-scene.jpg" alt="清迈客栈院子" />
@@ -1648,7 +1648,7 @@ function PublishMode({
   const selectedPlaceName = selectedMarker?.place_name || CMI_INN_PLACE_NAME;
 
   return (
-    <ComicPage title="添加" onTitleClick={() => onNavigate('map')}>
+    <ComicPage title="添加" hideTitle onTitleClick={() => onNavigate('map')}>
       <section className="cmi-v3-hard-card cmi-v3-publish-panel cmi-v3-dot-paper">
         <ChapterHeader left="New Moment" right="Use Existing Flow" />
         <h1>记录此刻</h1>
@@ -1761,7 +1761,7 @@ function EventsMode({
   );
 
   return (
-    <ComicPage title="活动" onTitleClick={() => onNavigate('map')}>
+    <ComicPage title="活动" hideTitle onTitleClick={() => onNavigate('map')}>
       <section className="cmi-v3-hard-card cmi-v3-events-hero cmi-v3-dot-paper">
         <ChapterHeader left="CMI Events" right="what is happening" />
         <h1>最近可以去哪儿</h1>
