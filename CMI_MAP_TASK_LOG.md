@@ -900,3 +900,21 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
   - 本地浏览器验证 `http://localhost:5173/?screen=map`：底栏显示“地图 / 动态 / 活动 / 添加”，四个入口均为 SVG 图标，添加图标为 56px 圆形凸起；点击“动态”和“活动”可切换到对应页面。
+
+### 2026-06-01 13:09:31 +07 V3 动态盖戳刷新后保留
+
+- 背景：用户反馈在 `/v3` 动态卡片上盖章后，刷新页面看起来会消失，怀疑数据库没有配置。
+- 排查结论：
+  - Supabase `stickers` / `placed_stickers` 已配置，远端已有盖戳记录；截图中的“今夜的双龙寺”也已能在数据库查到一枚 `stamp-good-lucky`。
+  - 问题集中在前端回填和失败态：V3 动态流没有先稳定使用推荐数据里已返回的 `placed_stickers`，保存失败时也会留下本地临时印章，容易造成“刷新后没了”的错觉。
+- 本轮实现：
+  - V3 动态流加载推荐后，立即用推荐数据内的 `placed_stickers` 回填；再按当前可见动态补拉盖戳记录并合并，覆盖地图抽屉和动态页两个入口。
+  - 新增盖戳状态工具函数：回填、合并、保存成功替换临时印章、保存失败移除临时印章。
+  - 地点详情页同步使用同一套失败回滚逻辑，避免同类盖戳入口出现假成功。
+- 验证结果：
+  - `node --test --experimental-strip-types src/features/interactions/recommendation-card-interactions.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - `pnpm exec biome lint src/features/interactions/recommendation-card-interactions.ts src/features/interactions/recommendation-card-interactions.test.ts src/pages/CmiMapV3Prototype.tsx src/pages/PlaceDetail.tsx` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地浏览器验证 `http://localhost:5174/v3?screen=feed`：刷新后第一条“今夜的双龙寺”仍显示 1 枚盖戳，动态页共 2 枚盖戳，console 无 warn/error。
+  - 本地浏览器验证 `http://localhost:5174/v3`：展开地图底部动态后，第一条动态仍显示 1 枚盖戳，抽屉共 2 枚盖戳，console 无 warn/error。

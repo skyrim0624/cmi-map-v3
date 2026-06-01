@@ -63,6 +63,10 @@ import {
   appendStickerPlacement,
   applyWishlistState,
   createOptimisticStickerPlacement,
+  getRecommendationStickerPlacements,
+  mergeStickerPlacementMaps,
+  removeStickerPlacement,
+  replaceStickerPlacement,
   type PlacedStickerMap,
   type WishlistStateMap,
 } from '@/features/interactions/recommendation-card-interactions';
@@ -796,6 +800,7 @@ export default function CmiMapV3Prototype() {
       .then(data => {
         const publicRecommendations = data.filter(isPublicMapRecommendation);
         setRecommendations(publicRecommendations);
+        setPlacedStickers(getRecommendationStickerPlacements(publicRecommendations));
         setSelectedMarker(current => {
           if (!current) return null;
           const stillExists = publicRecommendations.some(recommendation =>
@@ -929,28 +934,39 @@ export default function CmiMapV3Prototype() {
     [recommendations]
   );
 
+  const stickerSourceRecommendations = useMemo(
+    () => {
+      const recommendationsById = new Map<string, Recommendation>();
+      [...feedRecommendations, ...filteredMapRecommendations].forEach(recommendation => {
+        recommendationsById.set(recommendation.id, recommendation);
+      });
+      return Array.from(recommendationsById.values());
+    },
+    [feedRecommendations, filteredMapRecommendations]
+  );
+
   useEffect(() => {
     let isActive = true;
-    if (feedRecommendations.length === 0) {
-      setPlacedStickers({});
+    if (stickerSourceRecommendations.length === 0) {
       return () => {
         isActive = false;
       };
     }
 
-    loadRecommendationStickerPlacements(feedRecommendations)
+    loadRecommendationStickerPlacements(stickerSourceRecommendations)
       .then(nextPlacedStickers => {
-        if (isActive) setPlacedStickers(nextPlacedStickers);
+        if (isActive) {
+          setPlacedStickers(current => mergeStickerPlacementMaps(current, nextPlacedStickers));
+        }
       })
       .catch(error => {
         console.error('CMI Map 3.0 盖戳数据加载失败:', error);
-        if (isActive) setPlacedStickers({});
       });
 
     return () => {
       isActive = false;
     };
-  }, [feedRecommendations]);
+  }, [stickerSourceRecommendations]);
 
   useEffect(() => {
     if (!showStickerDrawer || availableStickers.length > 0) return;
@@ -1059,26 +1075,26 @@ export default function CmiMapV3Prototype() {
     setActiveStickerId(null);
     setActiveRecIdForSticker(null);
 
-    const savedPlacement = await placeRecommendationSticker({
-      recommendation_id: recommendationId,
-      user_id: user.id,
-      sticker_id: selectedStickerId,
-      x_ratio: xRatio,
-      y_ratio: yRatio,
-      rotation,
-    });
+    try {
+      const savedPlacement = await placeRecommendationSticker({
+        recommendation_id: recommendationId,
+        user_id: user.id,
+        sticker_id: selectedStickerId,
+        x_ratio: xRatio,
+        y_ratio: yRatio,
+        rotation,
+      });
 
-    if (savedPlacement) {
-      setPlacedStickers(current => ({
-        ...current,
-        [recommendationId]: (current[recommendationId] ?? []).map(placement =>
-          placement.id === optimisticPlacement.id ? savedPlacement : placement
-        ),
-      }));
-      return;
+      if (!savedPlacement) throw new Error('盖戳没有保存到数据库');
+
+      setPlacedStickers(current =>
+        replaceStickerPlacement(current, recommendationId, optimisticPlacement.id, savedPlacement)
+      );
+    } catch (error) {
+      console.error('CMI Map 3.0 盖戳保存失败:', error);
+      setPlacedStickers(current => removeStickerPlacement(current, recommendationId, optimisticPlacement.id));
+      toast.error('盖戳没有保存成功，请稍后再试');
     }
-
-    toast.error('印章可能没有盖稳，请刷新重试');
   }, [activeRecIdForSticker, activeStickerId, availableStickers, user]);
 
   const activePrimaryScreen = getPrimaryScreen(activeScreen);
