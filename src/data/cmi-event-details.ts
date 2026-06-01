@@ -41,7 +41,7 @@ export const CMI_EVENT_POSTER_BY_ID: Partial<Record<string, string>> = {
   'cmi-waytoagi-codex-maker-lab-2026-05-31':
     '/cmi-home/event-posters/cmi-waytoagi-codex-maker-lab-2026-05-31.png',
   'cmi-five-minute-music-kid-a-2026-06-02':
-    'https://sfpcpxlxslnulzlmjcby.supabase.co/storage/v1/object/public/cmi-event-posters/posters/cmi-map-card-fix-20260530/cmi-five-minute-music-kid-a-2026-06-02.png',
+    '/cmi-home/event-posters/cmi-five-minute-music-kid-a-2026-06-02.png',
   'cmi-talk-fathers-day-speaker-call-2026-06-07':
     '/cmi-home/event-posters/cmi-talk-fathers-day-speaker-call-2026-06-07.png',
 };
@@ -429,50 +429,107 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
   'cmi-five-minute-music-kid-a-2026-06-02': {
     eventId: 'cmi-five-minute-music-kid-a-2026-06-02',
     posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-five-minute-music-kid-a-2026-06-02']!,
-    postTitle: '“五分钟”音乐会｜一起听 Radiohead 的《Kid A》',
+    postTitle: '🎧 “五分钟”音乐会：一起听 Radiohead 的《Kid A》',
     postBlocks: [
       {
-        kind: 'paragraph',
-        text: '你有多久没有好好听音乐了？',
+        kind: 'heading',
+        text: '❓先问一个问题',
       },
       {
         kind: 'paragraph',
-        text: '6 月 2 日周二晚 19:00，我们在清迈客栈做一场很小的“五分钟”音乐会。',
+        text: '你有多久没有认真听完一首歌了？',
       },
       {
         kind: 'paragraph',
-        text: '它不是只听五分钟，而是把平时被切碎的五分钟拿回来：不刷手机、不当背景音、不赶下一件事，大家围坐在一起，完整听完 Radiohead 的《Kid A》。',
+        text: '不是跑步的时候放着，不是工作的时候垫着，也不是前奏响起 10 秒后觉得“不太对味”就立刻切走。',
       },
       {
         kind: 'paragraph',
-        text: '《Kid A》不是一张特别容易进入的唱片。它冷、碎、陌生，也非常适合在一个安静的晚上被认真听完。我们会边听边聊：这张专辑为什么在 2000 年之后不断被提起，它的声音、结构和情绪为什么值得反复听。',
+        text: '而是真的坐下来，把一首歌从头听到尾。',
       },
       {
         kind: 'heading',
-        text: '适合谁来',
+        text: '🌊 音乐太多之后',
+      },
+      {
+        kind: 'paragraph',
+        text: '现在听音乐太方便了。打开手机，搜索一下，就有无数首歌躺在那里。喜欢就循环，不喜欢就划走。没关系，下一首马上就来，算法已经准备好了。',
+      },
+      {
+        kind: 'paragraph',
+        text: '但这也带来一个问题：当音乐随时都可以被拥有，它好像也就不重要了。',
+      },
+      {
+        kind: 'heading',
+        text: '📻 为什么想做这件事',
+      },
+      {
+        kind: 'paragraph',
+        text: '我最近跑步时听到一期播客。主持人和嘉宾在聊他们年轻时反复听过的专辑。那种感觉很有意思，不是简单说“这首歌好听”，而是他们真的和那些音乐待了很久，反复听，反复想，像在“把玩”一件作品。',
+      },
+      {
+        kind: 'paragraph',
+        text: '我就在想，我们是不是已经很久没有这样听音乐了。',
+      },
+      {
+        kind: 'heading',
+        text: '⏱️ “五分钟”怎么玩',
+      },
+      {
+        kind: 'paragraph',
+        text: '所以我想发起一个很小的活动，叫“五分钟”。',
+      },
+      {
+        kind: 'paragraph',
+        text: '5 分钟，差不多就是一首歌的长度。',
+      },
+      {
+        kind: 'paragraph',
+        text: '所以这一次，我们先不切走。',
+      },
+      {
+        kind: 'paragraph',
+        text: '我们会一起围坐下来，按照顺序听完整张专辑。每听完一首，就停下来几分钟，给我们脆弱的专注力一点喘息的时间，也聊几句：',
       },
       {
         kind: 'list',
         items: [
-          '认真听过或一直想听 Radiohead 的朋友',
-          '想练习把注意力重新放回声音里的人',
-          '喜欢专辑共听、音乐聊天和小型现场感的人',
-          '想在清迈找一个不用用力社交的周二晚上',
+          '刚刚听到了什么？',
+          '哪一个声音、旋律或者细节，让你突然注意到它？',
+          '为什么这首歌会被认为是经典？',
         ],
+      },
+      {
+        kind: 'paragraph',
+        text: '过程中，我们也会借助 AI，补一点专辑背景、作者信息和乐理知识。但重点不是把歌分析得很厉害，而是试试：当我们真的给一首“不顺耳”的音乐一点时间，我们到底能听到什么。',
+      },
+      {
+        kind: 'paragraph',
+        text: '如果你也觉得自己已经很久没有认真听完一首歌，如果你也想知道一张经典专辑为什么值得被反复谈起，欢迎来这场“五分钟”音乐会。',
+      },
+      {
+        kind: 'paragraph',
+        text: '我们一起从耳朵里，重新找回一点听音乐的耐心。',
       },
       {
         kind: 'heading',
-        text: '活动信息',
+        text: '💿 本期专辑',
       },
       {
-        kind: 'list',
-        items: [
-          '活动时间：6 月 2 日（周二）19:00',
-          '活动地点：清迈客栈',
-          '收听专辑：Radiohead《Kid A》',
-          '场地费用：免费参与',
-          '参与方式：添加微信 skyrim0216 报名',
-        ],
+        kind: 'paragraph',
+        text: '本期活动，我们会一起听 Radiohead 的《Kid A》。',
+      },
+      {
+        kind: 'paragraph',
+        text: '这张专辑发行于 2000 年，是 Radiohead 在《OK Computer》之后交出的第四张录音室专辑。它没有继续做一张更“好入口”的摇滚专辑，而是转向了电子、合成器、冷感人声、破碎节奏，以及一些爵士和环境音乐的影子。它刚发行时曾让不少听众和评论者感到困惑，但后来逐渐被视为 21 世纪初最重要的专辑之一。很多人也把它看作 Radiohead 最关键的一次转向：一张不讨好耳朵，却改变了很多人听摇滚和电子音乐方式的作品。',
+      },
+      {
+        kind: 'paragraph',
+        text: '它不一定一上来就顺耳。甚至对很多第一次听的人来说，它可能有点“难听”，是那种你平时会在 10 秒内切走的音乐。',
+      },
+      {
+        kind: 'paragraph',
+        text: '但也正因为这样，它很适合作为“五分钟”音乐会的第一张专辑。',
       },
     ],
   },

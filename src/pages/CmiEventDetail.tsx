@@ -1,13 +1,11 @@
 import {
   ArrowLeft,
-  CalendarDays,
   Check,
   Clock3,
   Copy,
   Loader2,
   type LucideIcon,
   MapPin,
-  MessageSquareText,
   Navigation,
   Send,
   Share2,
@@ -29,8 +27,6 @@ import {
   type CmiEvent,
   formatCmiEventTime,
   getCmiEventById,
-  getCmiEventTimeBucketLabel,
-  getCmiEventTypeLabel,
 } from '@/data/cmi-events';
 import {
   type CmiEventPublicRegistration,
@@ -183,11 +179,12 @@ export default function CmiEventDetail() {
 
   const detailContent = getCmiEventDetailContent(eventId);
   const posterUrl =
-    event?.coverImageUrl ??
     detailContent?.posterUrl ??
+    event?.coverImageUrl ??
     getCmiEventPosterUrl(eventId) ??
     '/cmi-home/event-ai-courtyard.png';
   const postTitle = detailContent?.postTitle ?? event?.title ?? '活动详情';
+  const postSummary = detailContent ? null : event?.summary;
   const bodyPostBlocks = blocksFromText(event?.detailBody);
   const postBlocks =
     detailContent?.postBlocks ??
@@ -538,67 +535,53 @@ export default function CmiEventDetail() {
 
   return (
     <div className="min-h-[100dvh] bg-[#050505] text-[#050505]">
-      <div className="mx-auto min-h-[100dvh] max-w-[520px] bg-[#8b61ee]">
-        <header className="sticky top-0 z-40 border-b-[3px] border-[#050505] bg-[#fff7df]/94 px-4 py-[calc(env(safe-area-inset-top)+10px)] pb-3 backdrop-blur-md">
-          <div className="flex items-center justify-between gap-3">
+      <div className="relative mx-auto min-h-[100dvh] max-w-[520px] bg-[#8b61ee]">
+        <header className="pointer-events-none absolute left-0 right-0 top-0 z-40 flex items-start justify-between gap-3 px-4 pt-[calc(env(safe-area-inset-top)+14px)]">
+          <Button
+            variant="ghost"
+            className="pointer-events-auto min-h-11 rounded-full border-[3px] border-[#050505] bg-white px-4 text-base font-black text-[#050505] shadow-[4px_5px_0_rgba(5,5,5,0.18)]"
+            onClick={() => navigate(-1)}
+            aria-label="返回上一页"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            返回
+          </Button>
+          {canManageEvent && (
             <Button
               variant="ghost"
-              className="min-h-11 rounded-full border-[3px] border-[#050505] bg-white px-4 text-base font-black text-[#050505] shadow-[4px_5px_0_rgba(5,5,5,0.16)]"
-              onClick={() => navigate(-1)}
-              aria-label="返回上一页"
+              className="pointer-events-auto min-h-10 rounded-full border-[3px] border-[#050505] bg-[#ffe466] px-3 text-xs font-black text-[#050505] shadow-[3px_4px_0_rgba(5,5,5,0.16)]"
+              onClick={() => navigate(getCmiEventManagePath(event.id))}
             >
-              <ArrowLeft className="h-4 w-4" />
-              返回
+              管理
             </Button>
-            {canManageEvent ? (
-              <Button
-                variant="ghost"
-                className="min-h-10 rounded-full border-[3px] border-[#050505] bg-[#ffe466] px-3 text-xs font-black text-[#050505] shadow-[3px_4px_0_rgba(5,5,5,0.14)]"
-                onClick={() => navigate(getCmiEventManagePath(event.id))}
-              >
-                管理
-              </Button>
-            ) : (
-              <span className="rounded-full border-[3px] border-[#050505] bg-[#ffe466] px-3 py-1.5 text-[12px] font-black text-[#050505] shadow-[3px_4px_0_rgba(5,5,5,0.14)]">
-                活动详情
-              </span>
-            )}
-          </div>
+          )}
         </header>
 
-        <main className="px-4 pb-32 pt-4">
-          <section className="overflow-hidden rounded-[1.5rem] border-[4px] border-[#050505] bg-[#fff7df] shadow-[5px_6px_0_rgba(5,5,5,0.22)]">
+        <main className="pb-32">
+          <section className="overflow-hidden border-b-[4px] border-[#050505] bg-[#0d45a3]">
             <img
               src={posterUrl}
               alt={`${event.title}活动海报`}
-              className="max-h-[82vh] w-full bg-[#fff7df] object-contain"
+              className="block h-auto w-full"
               loading="eager"
             />
           </section>
 
-          <section className="mt-5 rounded-[1.4rem] border-[4px] border-[#050505] bg-[#fffaf0] p-5 shadow-[5px_6px_0_rgba(5,5,5,0.2)]">
-            <div className="mb-3 flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full border-[2px] border-[#050505] bg-[#dff4df] px-3 py-1.5 text-[12px] font-black text-[#245d37]">
-                <CalendarDays className="h-3.5 w-3.5" />
-                {getCmiEventTimeBucketLabel(event, referenceDate)}
-              </span>
-              <span className="rounded-full border-[2px] border-[#050505] bg-[#f2e8ff] px-3 py-1.5 text-[12px] font-black text-[#6b4ca8]">
-                {getCmiEventTypeLabel(event.type)}
-              </span>
-            </div>
-            <p className="text-[12px] font-black uppercase text-[#6b4ca8]">活动推文</p>
-            <h1 className="mt-2 break-words text-[2rem] font-black leading-[1.06] text-[#050505]">
+          <section className="border-b-[4px] border-[#050505] bg-[#fffaf0] px-5 py-6">
+            <h1 className="break-words text-[2rem] font-black leading-[1.08] text-[#050505]">
               {postTitle}
             </h1>
-            <p className="mt-4 text-[16px] font-black leading-[1.75] text-[#050505]">
-              {event.summary}
-            </p>
+            {postSummary && (
+              <p className="mt-4 text-[16px] font-black leading-[1.75] text-[#050505]">
+                {postSummary}
+              </p>
+            )}
             <div className="mt-5 space-y-3.5 border-t-[3px] border-dashed border-[#050505]/20 pt-5">
               {postBlocks.map(renderPostBlock)}
             </div>
           </section>
 
-          <section className="mt-5 rounded-[1.4rem] border-[4px] border-[#050505] bg-white p-5 shadow-[5px_6px_0_rgba(5,5,5,0.2)]">
+          <section className="bg-white px-5 py-6">
             <div className="mb-2 flex items-center gap-2">
               <Ticket className="h-5 w-5 text-[#6b4ca8]" strokeWidth={2.5} />
               <h2 className="text-[1.35rem] font-black leading-tight text-[#050505]">基本信息</h2>
@@ -607,21 +590,6 @@ export default function CmiEventDetail() {
             <EventInfoRow Icon={MapPin} label="地点" value={locationLabel} />
             <EventInfoRow Icon={Ticket} label="费用" value={event.priceLabel} />
             <EventInfoRow Icon={Send} label="报名方式" value={registrationInfoValue} />
-            {event.suitableFor.length > 0 && (
-              <div className="pt-4">
-                <p className="text-[11px] font-black leading-none text-[#6b4ca8]">适合人群</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {event.suitableFor.map(item => (
-                    <span
-                      key={item}
-                      className="rounded-full border-[2px] border-[#050505] bg-[#fff7df] px-3 py-1.5 text-xs font-black text-[#050505]"
-                    >
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
             {visibleAttendees.length > 0 && (
               <div className="pt-4">
                 <p className="flex items-center gap-1.5 text-[11px] font-black leading-none text-[#6b4ca8]">
@@ -643,7 +611,7 @@ export default function CmiEventDetail() {
           </section>
         </main>
 
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t-[4px] border-[#050505] bg-[#8b61ee]/94 px-3 pb-[calc(0.875rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t-[4px] border-[#050505] bg-[#8b61ee] px-3 pb-[calc(0.875rem+env(safe-area-inset-bottom))] pt-3">
           <div className="mx-auto grid max-w-[520px] grid-cols-3 gap-2">
             <button
               type="button"

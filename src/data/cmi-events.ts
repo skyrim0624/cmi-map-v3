@@ -123,7 +123,7 @@ export const CMI_EVENT_TIME_BUCKET_LABELS: Record<CmiEventTimeBucket, string> = 
   stable: '稳定活动',
 };
 
-export const CMI_EVENTS_LAST_MAINTAINED_AT = '2026-05-27T16:18:55+07:00';
+export const CMI_EVENTS_LAST_MAINTAINED_AT = '2026-06-01T13:00:00+07:00';
 
 export const CMI_EVENTS: CmiEvent[] = [
   {
@@ -402,6 +402,32 @@ export const CMI_EVENTS: CmiEvent[] = [
     tags: ['CMI', 'WaytoAGI', 'AI切磋大会', 'Codex', '工作坊', '免费'],
     summary: 'WaytoAGI 第24期 AI 切磋大会清迈站，在清迈客栈用 Codex 现场做出可演示的小作品。',
     coverImageUrl: '/cmi-home/event-posters/cmi-waytoagi-codex-maker-lab-2026-05-31.png',
+  },
+  {
+    id: 'cmi-five-minute-music-kid-a-2026-06-02',
+    title: '“五分钟”音乐会｜一起听 Radiohead 的《Kid A》',
+    type: 'music',
+    startAt: '2026-06-02T19:00:00+07:00',
+    venueName: '清迈客栈',
+    area: 'CMI / 清迈客栈',
+    mapLocation: { latitude: 18.7932, longitude: 98.9874, category: '清迈客栈' },
+    priceLabel: '免费参与',
+    registrationLabel: '添加微信 skyrim0216 报名',
+    sourceType: 'cmi',
+    sourceLabel: 'CMI 活动宣传内容文件夹',
+    hostName: 'CMI 社区',
+    language: '中文',
+    suitableFor: ['音乐共听', 'Radiohead', '专辑聆听', '轻社交'],
+    isCmiRelated: true,
+    isVerified: true,
+    verificationStatus: 'verified',
+    lastCheckedAt: '2026-06-01T13:00:00+07:00',
+    nextCheckBefore: '2026-06-02T12:00:00+07:00',
+    reliabilityNote:
+      '信息来自 6.2 五分钟音乐会公众号推文、发布页与最终海报；时间、地点、费用和微信报名方式均明确。',
+    tags: ['CMI', '音乐', 'Radiohead', '专辑共听', '免费', '清迈客栈'],
+    summary: '在清迈客栈围坐完整聆听 Radiohead《Kid A》的小型音乐会，把注意力重新放回一张经典专辑。',
+    coverImageUrl: '/cmi-home/event-posters/cmi-five-minute-music-kid-a-2026-06-02.png',
   },
   {
     id: 'cmi-talk-fathers-day-speaker-call-2026-06-07',
