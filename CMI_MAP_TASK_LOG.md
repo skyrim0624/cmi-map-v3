@@ -1009,3 +1009,5 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
   - 本地生产预览 375px 手机视口直开活动页，点击左上“返回”后从 `/events/cmi-five-minute-music-kid-a-2026-06-02?verify=back-fallback-2` 跳到 `/`，按钮不再无反应。
+  - 已部署 v3 项目 `https://10742fc5.cmi-map-v3.pages.dev` 和正式站 `https://150da98b.cmi-map.pages.dev`，Source 为 `558d5f1`。
+  - 新正式部署地址 375px 手机视口直开活动页，点击左上“返回”后从活动详情跳到 `/`，console 无 warn/error。
