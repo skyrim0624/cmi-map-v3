@@ -1723,10 +1723,9 @@ function FeedMode({
   return (
     <ComicPage title="动态" hideTitle onTitleClick={() => onNavigate('map')}>
       <section className="cmi-v3-hard-card cmi-v3-feed-hero cmi-v3-dot-paper">
-        <ChapterHeader left="Today in Chiang Mai" right="CMI Community Feed" />
+        <ChapterHeader left="CMI MAP" />
         <img src="/cmi-home/yard-scene.jpg" alt="清迈客栈院子" />
-        <h1>今天清迈发生了什么</h1>
-        <p>附近的人留下了新的吃饭、散步和小发现。</p>
+        <h1>大家都在干嘛？</h1>
       </section>
 
       {isLoading && <p className="cmi-v3-inline-state">正在同步社区动态</p>}
@@ -2331,11 +2330,11 @@ function CmiV3BottomNav({
   );
 }
 
-function ChapterHeader({ left, right }: { left: string; right: string }) {
+function ChapterHeader({ left, right }: { left: string; right?: string }) {
   return (
     <div className="cmi-v3-chapter-row">
       <span>{left}</span>
-      <span>{right}</span>
+      {right && <span>{right}</span>}
     </div>
   );
 }
