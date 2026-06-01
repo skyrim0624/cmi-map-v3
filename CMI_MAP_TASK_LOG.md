@@ -1118,6 +1118,9 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
   - 本地生产预览 `http://127.0.0.1:4173/events/cmi-five-minute-music-kid-a-2026-06-02?verify=event-recaps-local`：活动详情页在“基本信息”下方显示“活动返图”区块；未登录点击“返图”会进入登录页，登录后回到预选当前活动的打卡流程；console 无 warn/error。
+  - 已部署 v3 项目 `https://53e82237.cmi-map-v3.pages.dev` 和正式站 `https://e81cd1ab.cmi-map.pages.dev`，Source 为 `9e72ba4`。
+  - 线上预览 `https://e81cd1ab.cmi-map.pages.dev/events/cmi-five-minute-music-kid-a-2026-06-02?verify=event-recaps-9e72ba4` 复查通过：基本信息、活动返图、返图按钮均存在，console 无 warn/error。
+  - 正式域名 `https://cmimap.com/events/cmi-five-minute-music-kid-a-2026-06-02?verify=event-recaps-9e72ba4-fresh` 刷新 service worker 后复查通过：基本信息、活动返图、返图按钮均存在，console 无 warn/error。
 
 ### 2026-06-01 21:12:26 +07 登录错误提示与 Google 入口隐藏
 
