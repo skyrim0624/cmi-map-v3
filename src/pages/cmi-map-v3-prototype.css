@@ -2639,6 +2639,72 @@
   padding: 14px;
 }
 
+.cmi-v3-events-hero-head {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-height: 50px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 2px;
+}
+
+.cmi-v3-events-hero-head > span {
+  flex: 1 1 auto;
+  padding-top: 1px;
+  font-size: 12px;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+.cmi-v3-events-create-button {
+  position: relative;
+  flex: 0 0 auto;
+  min-height: 44px;
+  border: 2px solid var(--cmi-v3-ink);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 3px 4px 0 rgba(22, 22, 22, 0.24);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  color: var(--cmi-v3-ink);
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cmi-v3-events-create-button::before,
+.cmi-v3-events-create-button::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border-radius: 999px;
+  background: var(--cmi-v3-ink);
+}
+
+.cmi-v3-events-create-button::before {
+  top: -14px;
+  right: 16px;
+  width: 4px;
+  height: 16px;
+  transform: rotate(8deg);
+}
+
+.cmi-v3-events-create-button::after {
+  top: -10px;
+  right: -9px;
+  width: 4px;
+  height: 15px;
+  box-shadow: -10px 9px 0 var(--cmi-v3-ink);
+  transform: rotate(44deg);
+}
+
 .cmi-v3-event-tabs {
   position: relative;
   z-index: 2;

@@ -1,6 +1,7 @@
 import {
   Bookmark,
   Calendar,
+  CalendarPlus,
   Camera,
   Layers,
   List,
@@ -2332,7 +2333,17 @@ function EventsMode({
     <>
       <ComicPage title="活动" hideTitle onTitleClick={() => onNavigate('map')}>
         <section className="cmi-v3-hard-card cmi-v3-events-hero cmi-v3-dot-paper">
-          <ChapterHeader left="CMI Events" />
+          <div className="cmi-v3-events-hero-head">
+            <span>CMI Events</span>
+            <button
+              type="button"
+              className="cmi-v3-events-create-button"
+              onClick={() => onOpenPath(getCmiEventCreatePath())}
+            >
+              <CalendarPlus size={18} strokeWidth={3} />
+              <span>发起活动</span>
+            </button>
+          </div>
           <h1>清迈客栈的活动！</h1>
           <p>社区空间提供给大家使用，可以来办活动！</p>
           <div className="cmi-v3-event-tabs">
@@ -3046,7 +3057,7 @@ function CmiV3BottomNav({
         <span className="cmi-v3-map-bottom-add-icon">
           <Plus size={36} strokeWidth={3.2} />
         </span>
-        添加
+        打卡拍照
       </button>
     </footer>
   );
