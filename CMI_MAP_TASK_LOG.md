@@ -900,6 +900,8 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
   - 本地浏览器验证 `http://localhost:5173/?screen=map`：底栏显示“地图 / 动态 / 活动 / 添加”，四个入口均为 SVG 图标，添加图标为 56px 圆形凸起；点击“动态”和“活动”可切换到对应页面。
+  - 已部署 v3 项目 `https://62069c7f.cmi-map-v3.pages.dev` 和正式站 `https://4230e572.cmi-map.pages.dev`，Source 为 `329901c`。
+  - 正式域名 `https://www.cmimap.com/` 已确认加载新资源：底部动态 / 活动不再使用旧 PNG，添加按钮为 56px 圆形凸起；旧 PWA 会在刷新后切到新版本。
 
 ### 2026-06-01 13:09:31 +07 V3 动态盖戳刷新后保留
 
