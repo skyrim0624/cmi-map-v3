@@ -56,6 +56,9 @@
   - 地点候选点击后自动写入地点标签、同步地图中心；手动拖地图不再回写 Leaflet 默认中心，避免反复重建导致屏幕抖动。
   - 地图准星从大十字线改为更轻的地图图标与中心点。
 - 验证：`tsgo`、目标文件 `biome lint`、`MarkPlace.test.ts`、生产构建均通过；本地 `/mark` 可视验证被登录保护拦截，已确认登录页加载无控制台错误。
+- 已提交并推送：`360c6a1 Improve album check-in place binding`。
+- 已部署 v3 项目 `https://1f2a69bf.cmi-map-v3.pages.dev` 和正式站 `https://1d2af6d6.cmi-map.pages.dev`，Source 为 `360c6a1`。
+- 正式域名 `https://cmimap.com` 服务器资源已确认包含新地点搜索文案、地点确认文案和地点绑定逻辑；旧 PWA 缓存用户可能需要刷新后切到新包。
 
 ### 2026-06-01 活动报名统一改为 CMI Map 一键报名
 
