@@ -44,6 +44,8 @@ export const CMI_EVENT_POSTER_BY_ID: Partial<Record<string, string>> = {
     '/cmi-home/event-posters/cmi-waytoagi-codex-maker-lab-2026-05-31.png',
   'cmi-five-minute-music-kid-a-2026-06-02':
     '/cmi-home/event-posters/cmi-five-minute-music-kid-a-2026-06-02.png?v=20260601-mobile-share',
+  'cmi-curiosity-old-city-temples-2026-06-03':
+    '/cmi-home/event-posters/cmi-curiosity-old-city-temples-2026-06-03.jpg',
   'cmi-talk-fathers-day-speaker-call-2026-06-07':
     '/cmi-home/event-posters/cmi-talk-fathers-day-speaker-call-2026-06-07.png',
 };
@@ -64,6 +66,10 @@ export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = 
     '/cmi-home/event-card-backgrounds/cmi-tiandi-xuanhuang-baraka-2026-05-30.jpg',
   'cmi-waytoagi-codex-maker-lab-2026-05-31':
     '/cmi-home/event-card-backgrounds/cmi-waytoagi-codex-maker-lab-2026-05-31.jpg',
+  'cmi-five-minute-music-kid-a-2026-06-02':
+    '/cmi-home/event-card-backgrounds/cmi-five-minute-music-kid-a-2026-06-02.jpg',
+  'cmi-curiosity-old-city-temples-2026-06-03':
+    '/cmi-home/event-card-backgrounds/cmi-curiosity-old-city-temples-2026-06-03.jpg',
   'cmi-talk-fathers-day-speaker-call-2026-06-07':
     '/cmi-home/event-card-backgrounds/cmi-talk-fathers-day-speaker-call-2026-06-07.jpg',
 };
@@ -532,6 +538,48 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
       {
         kind: 'paragraph',
         text: '但也正因为这样，它很适合作为“五分钟”音乐会的第一张专辑。',
+      },
+    ],
+  },
+  'cmi-curiosity-old-city-temples-2026-06-03': {
+    eventId: 'cmi-curiosity-old-city-temples-2026-06-03',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-curiosity-old-city-temples-2026-06-03']!,
+    postTitle: '古城与古寺｜清迈古城与佛寺文化',
+    postBlocks: [
+      {
+        kind: 'paragraph',
+        text: '6 月 3 日晚，清迈客栈邀请维果老师带大家走进清迈古城，理解兰纳王朝的历史脉络、佛寺建筑和日常信仰。',
+      },
+      {
+        kind: 'paragraph',
+        text: '如果你刚到清迈，或者一直想知道古城、城墙和寺庙背后的故事，这场分享适合用一个晚上重新认识这座城市。',
+      },
+      {
+        kind: 'heading',
+        text: '分享嘉宾',
+      },
+      {
+        kind: 'list',
+        items: [
+          '维果',
+          '清华大学校友会“何以中国”人文游学项目导师',
+          '北京大学《北大校史与北大学脉》课程组指导教师',
+          '中国人民大学全国中学历史教学创新研修班项目导师',
+        ],
+      },
+      {
+        kind: 'heading',
+        text: '活动信息',
+      },
+      {
+        kind: 'list',
+        items: [
+          '活动时间：2026 年 6 月 3 日（周三）19:00-20:30',
+          '活动地点：清迈客栈（活动空间）',
+          '线上观看：腾讯会议直播，会议号 105-998-819',
+          '费用说明：免费参与',
+          CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
+        ],
       },
     ],
   },

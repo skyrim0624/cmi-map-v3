@@ -81,19 +81,19 @@
 
 Time Out 的本周末专题可以作为及时线索源；如果只用 Time Out，`reliabilityNote` 必须写明“出发前仍建议复核场地方动态”。Citylife、主办方官网、场地方页面和 CMI 自有公告优先级更高。
 
-最新一次维护：2026-05-27 16:18 ICT，本轮扫描 `五月活动` 与 `六月活动` 发现新增候选：`/Users/andreas/CMI/活动宣传内容/五月活动/5.27 天地玄黄观影（Magic lab）`，核实后发布为 `cmi-tiandi-xuanhuang-baraka-2026-05-30`（发布中使用官方海报）。
+最新一次维护：2026-06-01 22:00 ICT，本轮扫描 `五月活动` 与 `六月活动` 发现新增候选：`/Users/andreas/CMI/活动宣传内容/六月活动/6.3 好奇社活动：古城与古寺——清迈古城与佛寺文化`，核实后发布为 `cmi-curiosity-old-city-temples-2026-06-03`（发布中使用官方海报）。同时补齐 `cmi-five-minute-music-kid-a-2026-06-02` 的首页卡片背景图。
 
 同步动作：
 
-- 远程 `public.cmi_events` 已新增/更新：新增 `published` 活动 `cmi-tiandi-xuanhuang-baraka-2026-05-30`，并保留 `source_label = CMI 活动宣传内容文件夹`。
-- 已归档已结束活动：0 条；到 `next_check_before` 需复核活动：0 条；仍可参加活动 `last_checked_at` 已刷新，复核时间按新事件 17:00 及现有逻辑更新。
-- 本地兜底 `src/data/cmi-events.ts` 已同步更新维护时间、事件条目与 `coverImageUrl`；`src/data/cmi-event-details.ts` 已补充对应详情页与首页卡片背景映射。
-- 已补充可审计 SQL：`supabase/migrations/20260527161028_publish_cmi_tiandi_xuanhuang_baraka.sql`（同步包含状态归档/复核刷新与新增事件 upsert）。
+- 远程 `public.cmi_events` 已新增/更新：新增 `published` 活动 `cmi-curiosity-old-city-temples-2026-06-03`，并保留 `source_label = CMI 活动宣传内容文件夹`。
+- 已归档已结束活动：14 条；到 `next_check_before` 需复核活动：0 条；仍可参加活动暂无需要刷新复核时间的条目。
+- 本地兜底 `src/data/cmi-events.ts` 已同步更新维护时间、事件条目与 `coverImageUrl`；`src/data/cmi-event-details.ts` 已补充 6.3 详情页、首页卡片背景映射，并补齐 6.2 音乐会首页卡片背景映射。
+- 已补充可审计 SQL：`supabase/migrations/20260601220029_sync_cmi_inn_events_and_publish_curiosity.sql`（同步包含状态归档/复核刷新与新增事件 upsert）。
 
 当前远程与本地可见的 future CMI / 清迈客栈活动：
-`cmi-mindfulness-hour-2026-05-28`、`cmi-financial-literacy-sharing-2026-05-29`、`cmi-tiandi-xuanhuang-baraka-2026-05-30`、`cmi-waytoagi-codex-maker-lab-2026-05-31`、`cmi-talk-fathers-day-speaker-call-2026-06-07`。
+`cmi-five-minute-music-kid-a-2026-06-02`、`cmi-curiosity-old-city-temples-2026-06-03`、`cmi-talk-fathers-day-speaker-call-2026-06-07`。
 
-类型检查和生产构建在本轮均已通过；`/cmi-home` 基础验证通过构建产物检查和远程活动条目核对。
+类型检查和生产构建在本轮均已通过；`/cmi-home` 基础验证通过构建产物检查、远程活动条目核对和本地预览静态资源检查。
 
 ## 类型标签
 

@@ -123,7 +123,7 @@ export const CMI_EVENT_TIME_BUCKET_LABELS: Record<CmiEventTimeBucket, string> = 
   stable: '稳定活动',
 };
 
-export const CMI_EVENTS_LAST_MAINTAINED_AT = '2026-06-01T13:00:00+07:00';
+export const CMI_EVENTS_LAST_MAINTAINED_AT = '2026-06-01T22:00:29+07:00';
 export const CMI_MAP_EVENT_REGISTRATION_LABEL = 'CMI Map 一键报名';
 export const CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE =
   '参与方式：通过 CMI Map 一键报名；报名成功后，确认邮件会附上微信群、联系人二维码和到场指引。';
@@ -436,6 +436,38 @@ export const CMI_EVENTS: CmiEvent[] = [
     registrationStatus: 'open',
     attendeeVisibility: 'public',
     coverImageUrl: '/cmi-home/event-posters/cmi-five-minute-music-kid-a-2026-06-02.png?v=20260601-mobile-share',
+  },
+  {
+    id: 'cmi-curiosity-old-city-temples-2026-06-03',
+    title: '古城与古寺｜清迈古城与佛寺文化',
+    type: 'cmi',
+    startAt: '2026-06-03T19:00:00+07:00',
+    endAt: '2026-06-03T20:30:00+07:00',
+    venueName: '清迈客栈',
+    area: 'CMI / 清迈客栈',
+    mapLocation: { latitude: 18.7932, longitude: 98.9874, category: '清迈客栈' },
+    priceLabel: '免费参与',
+    registrationLabel: CMI_MAP_EVENT_REGISTRATION_LABEL,
+    sourceType: 'cmi',
+    sourceLabel: 'CMI 活动宣传内容文件夹',
+    hostName: '好奇社 × Paradornparp International House',
+    language: '中文',
+    suitableFor: ['清迈历史文化', '佛寺文化', '新来清迈', '人文分享'],
+    isCmiRelated: true,
+    isVerified: true,
+    verificationStatus: 'verified',
+    lastCheckedAt: '2026-06-01T22:00:29+07:00',
+    nextCheckBefore: '2026-06-03T17:00:00+07:00',
+    reliabilityNote:
+      '信息来自 6.3 好奇社活动推文、同目录发布页和官方海报；时间、地点、费用、线上观看链接与扫码报名说明均明确，地点为清迈客栈活动空间。',
+    tags: ['CMI', '清迈客栈', '好奇社', '文化分享', '古城', '佛寺', '免费'],
+    summary: '一场在清迈客栈举办的清迈古城与佛寺文化分享，带大家从历史、信仰和寺庙建筑重新认识这座城市。',
+    organizerName: '好奇社 × Paradornparp International House',
+    organizerEmail: 'events@cmimap.com',
+    registrationEnabled: true,
+    registrationStatus: 'open',
+    attendeeVisibility: 'count-only',
+    coverImageUrl: '/cmi-home/event-posters/cmi-curiosity-old-city-temples-2026-06-03.jpg',
   },
   {
     id: 'cmi-talk-fathers-day-speaker-call-2026-06-07',
