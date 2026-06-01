@@ -1,10 +1,9 @@
 import { lazy, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import { getSceneMapPath } from '@/lib/paths';
+import { getCmiFeedPath, getSceneMapPath } from '@/lib/paths';
 
 const MapView = lazy(() => import('./pages/MapView'));
 const SceneHome = lazy(() => import('./pages/SceneHome'));
-const CmiBlackboardPage = lazy(() => import('./pages/CmiBlackboardPage'));
 const ListView = lazy(() => import('./pages/ListView'));
 const PlaceDetail = lazy(() => import('./pages/PlaceDetail'));
 const AddTrace = lazy(() => import('./pages/AddTrace'));
@@ -57,9 +56,9 @@ export const routes: RouteConfig[] = [
     public: true,
   },
   {
-    name: '一起出发看板',
+    name: '旧动态入口',
     path: '/blackboard',
-    element: <CmiBlackboardPage />,
+    element: <Navigate to={getCmiFeedPath()} replace />,
     public: true,
   },
   {

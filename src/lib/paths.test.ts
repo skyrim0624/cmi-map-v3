@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getCmiBlackboardPath, getMarkPlacePath, getPublicCmiEventUrl } from './paths.ts';
+import { getCmiBlackboardPath, getCmiFeedPath, getMarkPlacePath, getPublicCmiEventUrl } from './paths.ts';
 
 test('活动分享链接指向生产站活动详情页', () => {
   assert.equal(
@@ -9,10 +9,17 @@ test('活动分享链接指向生产站活动详情页', () => {
   );
 });
 
-test('活动可以生成论坛发帖预填入口', () => {
+test('旧发帖入口回到动态页并保留活动参数', () => {
   assert.equal(
     getCmiBlackboardPath({ compose: true, eventId: 'cmi-mindfulness-hour-2026-05-28' }),
-    '/blackboard?compose=1&event=cmi-mindfulness-hour-2026-05-28'
+    '/?screen=feed&compose=1&event=cmi-mindfulness-hour-2026-05-28'
+  );
+});
+
+test('动态页入口承接旧发帖参数', () => {
+  assert.equal(
+    getCmiFeedPath({ placeName: '清迈客栈', locationLabel: '清迈客栈 · Nimman' }),
+    '/?screen=feed&place=%E6%B8%85%E8%BF%88%E5%AE%A2%E6%A0%88&location=%E6%B8%85%E8%BF%88%E5%AE%A2%E6%A0%88+%C2%B7+Nimman'
   );
 });
 

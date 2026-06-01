@@ -63,7 +63,7 @@ import {
 } from '@/lib/easter-icons';
 import { warmupImages } from '@/lib/image-warmup';
 import { getMapMarkerVisual } from '@/lib/map-marker-visual';
-import { getCmiBlackboardPath, getCmiEventCreatePath, getPersonMapPath, getPlacePath, getSceneListPath, getSceneMapPath } from '@/lib/paths';
+import { getCmiEventCreatePath, getCmiFeedPath, getPersonMapPath, getPlacePath, getSceneListPath, getSceneMapPath } from '@/lib/paths';
 import {
   isEasterEggRecommendation,
   isPublicMapRecommendation,
@@ -789,7 +789,7 @@ export default function MapView() {
   const handleSelectedExternalPlacePost = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     if (!selectedExternalPlace) return;
-    navigate(getCmiBlackboardPath({
+    navigate(getCmiFeedPath({
       compose: true,
       placeName: selectedExternalPlace.placeName,
       locationLabel: `${selectedExternalPlace.placeName} · ${selectedExternalPlace.areaLabel}`,
@@ -2145,7 +2145,7 @@ export default function MapView() {
             </div>
 
             <div className="rounded-2xl border border-primary/15 bg-primary/5 px-3 py-2 text-sm font-bold leading-relaxed text-foreground/85">
-              这个地点还没有 CMI 痕迹。可以先用它发活动、发帖，或补录一条真实体验。
+              这个地点还没有 CMI 痕迹。可以先用它发活动、发动态，或补录一条真实体验。
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -2171,7 +2171,7 @@ export default function MapView() {
                 onClick={handleSelectedExternalPlacePost}
               >
                 <List className="h-4 w-4" strokeWidth={2.5} />
-                发帖
+                发动态
               </button>
               <button
                 type="button"

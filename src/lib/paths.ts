@@ -67,21 +67,22 @@ export const getCmiEventCreatePath = (input?: {
 export const getCmiEventManagePath = (eventId: string) =>
   `/events/${encodeURIComponent(eventId)}/manage`;
 
-export const getCmiBlackboardPath = (input?: {
+export const getCmiFeedPath = (input?: {
   compose?: boolean;
   eventId?: string | null;
   placeName?: string | null;
   locationLabel?: string | null;
 }) => {
-  const searchParams = new URLSearchParams();
+  const searchParams = new URLSearchParams({ screen: 'feed' });
   if (input?.compose) searchParams.set('compose', '1');
   if (input?.eventId) searchParams.set('event', input.eventId);
   if (input?.placeName) searchParams.set('place', input.placeName);
   if (input?.locationLabel) searchParams.set('location', input.locationLabel);
 
-  const query = searchParams.toString();
-  return query ? `/blackboard?${query}` : '/blackboard';
+  return `/?${searchParams.toString()}`;
 };
+
+export const getCmiBlackboardPath = getCmiFeedPath;
 
 export const getAiRouteLabPath = () => '/ai-route-lab';
 

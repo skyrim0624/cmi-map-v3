@@ -1,5 +1,5 @@
 import { LogIn, Plus } from 'lucide-react';
-import { Fragment, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { HomeSceneSection } from '@/components/home/home-scene-section';
@@ -9,7 +9,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCmiHomeSections } from '@/data/cmi-home-sections';
-import { CmiBlackboardHomeCard } from '@/features/home/blackboard/cmi-blackboard';
 import { preloadImages, warmupImages } from '@/lib/image-warmup';
 import { getSceneEntryPath } from '@/lib/paths';
 
@@ -113,18 +112,12 @@ export default function SceneHome() {
 
         <div className="space-y-6">
           {visibleHomeSections.map(section => (
-            <Fragment key={section.id}>
-              <HomeSceneSection
-                section={section}
-                onSceneSelect={scene => navigate(scene.id === 'pick-for-me' ? '/list' : getSceneEntryPath(scene))}
-                onFeatureSelect={path => navigate(path)}
-                trailingSceneCard={
-                  section.id === 'inspiration-intent'
-                    ? <CmiBlackboardHomeCard onOpen={() => navigate('/blackboard')} />
-                    : undefined
-                }
-              />
-            </Fragment>
+            <HomeSceneSection
+              key={section.id}
+              section={section}
+              onSceneSelect={scene => navigate(scene.id === 'pick-for-me' ? '/list' : getSceneEntryPath(scene))}
+              onFeatureSelect={path => navigate(path)}
+            />
           ))}
         </div>
       </main>

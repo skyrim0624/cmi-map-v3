@@ -60,6 +60,10 @@ import {
   registerForCmiEvent,
 } from '@/db/cmi-events';
 import {
+  getBlackboardPosts,
+  type BlackboardPostRecord,
+} from '@/db/blackboard-posts';
+import {
   appendStickerPlacement,
   applyWishlistState,
   createOptimisticStickerPlacement,
@@ -87,15 +91,16 @@ import { getRecommendationLinkedEvent } from '@/lib/cmi-recommendation-events';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
 import {
   getAddTracePath,
-  getCmiBlackboardPath,
   getCmiEventCreatePath,
   getCmiEventPath,
+  getCmiFeedPath,
   getMarkPlacePath,
   getPlacePath,
   getProfilePath,
   getPublicCmiEventUrl,
 } from '@/lib/paths';
 import { createCmiEventShareCard } from '@/lib/cmi-event-share-card';
+import { formatBlackboardCreatedLabel } from '@/features/home/blackboard/blackboard-model';
 import {
   CMI_INN_PLACE_NAME,
   getCategoryConfig,
@@ -139,6 +144,20 @@ interface RecommendationEventBadge {
   title: string;
   posterUrl?: string;
 }
+
+type CmiV3FeedItem =
+  | {
+      id: string;
+      type: 'recommendation';
+      createdAt: string;
+      recommendation: Recommendation;
+    }
+  | {
+      id: string;
+      type: 'forumPost';
+      createdAt: string;
+      post: BlackboardPostRecord;
+    };
 
 interface EventMarker extends MapMarker {
   eventId: string;
@@ -321,6 +340,37 @@ function getRecommendationEventBadge(
     title: event?.title ?? linkedEvent.title ?? '活动现场',
     posterUrl: event ? getCmiEventCardImageUrl(event) : undefined,
   };
+}
+
+function getBlackboardPostAuthorProfile(post: BlackboardPostRecord, profiles: ProfileLookup) {
+  return profiles[getProfileLookupKey(post.author_id)]
+    ?? profiles[getProfileLookupKey(post.author_name)]
+    ?? null;
+}
+
+function getBlackboardPostImageUrl(post: BlackboardPostRecord, events: CmiEvent[]) {
+  const uploadedImageUrl = post.image_urls?.find(Boolean);
+  if (uploadedImageUrl) return uploadedImageUrl;
+
+  const linkedEvent = post.linked_event_id
+    ? events.find(event => event.id === post.linked_event_id)
+    : null;
+  return linkedEvent ? getCmiEventCardImageUrl(linkedEvent) : '';
+}
+
+function getBlackboardPostTargetPath(post: BlackboardPostRecord) {
+  if (post.linked_event_id) return getCmiEventPath(post.linked_event_id);
+  if (post.linked_place_name) return getPlacePath(post.linked_place_name);
+  return '';
+}
+
+function getFeedItemSortTime(value: string) {
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function sortCmiV3FeedItems(feedItems: CmiV3FeedItem[]) {
+  return [...feedItems].sort((left, right) => getFeedItemSortTime(right.createdAt) - getFeedItemSortTime(left.createdAt));
 }
 
 function normalizeSearchText(value: string) {
@@ -740,13 +790,16 @@ export default function CmiMapV3Prototype() {
   const [mapSearchQuery, setMapSearchQuery] = useState('');
   const [locationRequestKey, setLocationRequestKey] = useState(0);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [blackboardPosts, setBlackboardPosts] = useState<BlackboardPostRecord[]>([]);
   const [profilesByAuthorKey, setProfilesByAuthorKey] = useState<ProfileLookup>({});
   const [events, setEvents] = useState<CmiEvent[]>(CMI_EVENTS);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(() => searchParams.get('event'));
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
+  const [isLoadingBlackboardPosts, setIsLoadingBlackboardPosts] = useState(true);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
+  const [blackboardPostsError, setBlackboardPostsError] = useState<string | null>(null);
   const [localWishlists, setLocalWishlists] = useState<WishlistStateMap>({});
   const [availableStickers, setAvailableStickers] = useState<Sticker[]>([]);
   const [placedStickers, setPlacedStickers] = useState<PlacedStickerMap>({});
@@ -821,9 +874,39 @@ export default function CmiMapV3Prototype() {
 
   useEffect(() => {
     let isActive = true;
-    const userIds = recommendations.map(recommendation => recommendation.user_id);
-    const userNames = recommendations
-      .map(recommendation => recommendation.user_name)
+    setIsLoadingBlackboardPosts(true);
+    setBlackboardPostsError(null);
+
+    getBlackboardPosts()
+      .then(data => {
+        if (!isActive) return;
+        setBlackboardPosts(data);
+      })
+      .catch(error => {
+        console.warn('CMI Map 3.0 动态帖子加载失败:', error);
+        if (!isActive) return;
+        setBlackboardPosts([]);
+        setBlackboardPostsError('帖子动态暂时没连上');
+      })
+      .finally(() => {
+        if (isActive) setIsLoadingBlackboardPosts(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+    const userIds = [
+      ...recommendations.map(recommendation => recommendation.user_id),
+      ...blackboardPosts.map(post => post.author_id),
+    ];
+    const userNames = [
+      ...recommendations.map(recommendation => recommendation.user_name),
+      ...blackboardPosts.map(post => post.author_name),
+    ]
       .filter(name => Boolean(getProfileLookupKey(name)));
     const hasLookupInput = userIds.some(Boolean) || userNames.length > 0;
 
@@ -855,7 +938,7 @@ export default function CmiMapV3Prototype() {
     return () => {
       isActive = false;
     };
-  }, [recommendations]);
+  }, [blackboardPosts, recommendations]);
 
   useEffect(() => {
     const nextWishlists: WishlistStateMap = {};
@@ -1152,8 +1235,10 @@ export default function CmiMapV3Prototype() {
         )}
         {activeScreen === 'feed' && (
           <FeedMode
+            blackboardPosts={blackboardPosts}
+            blackboardPostsError={blackboardPostsError}
             events={communityEvents}
-            isLoading={isLoadingRecommendations}
+            isLoading={isLoadingRecommendations || isLoadingBlackboardPosts}
             localWishlists={localWishlists}
             placedStickers={placedStickers}
             activeRecIdForSticker={activeRecIdForSticker}
@@ -1770,6 +1855,8 @@ function EventSheetBody({ event }: { event: CmiEvent }) {
 }
 
 function FeedMode({
+  blackboardPosts,
+  blackboardPostsError,
   events,
   recommendations,
   isLoading,
@@ -1784,6 +1871,8 @@ function FeedMode({
   onStartStamp,
   onToggleWishlist,
 }: {
+  blackboardPosts: BlackboardPostRecord[];
+  blackboardPostsError: string | null;
   events: CmiEvent[];
   recommendations: Recommendation[];
   isLoading: boolean;
@@ -1798,35 +1887,60 @@ function FeedMode({
   onStartStamp: (recommendationId: string) => void;
   onToggleWishlist: (recommendation: Recommendation) => void;
 }) {
+  const feedItems = useMemo<CmiV3FeedItem[]>(
+    () => sortCmiV3FeedItems([
+      ...blackboardPosts.map(post => ({
+        id: `forum:${post.id}`,
+        type: 'forumPost' as const,
+        createdAt: post.created_at,
+        post,
+      })),
+      ...recommendations.map(recommendation => ({
+        id: `recommendation:${recommendation.id}`,
+        type: 'recommendation' as const,
+        createdAt: recommendation.created_at,
+        recommendation,
+      })),
+    ]).slice(0, 60),
+    [blackboardPosts, recommendations]
+  );
+
   return (
     <ComicPage title="动态" hideTitle onTitleClick={() => onNavigate('map')}>
-      <section className="cmi-v3-hard-card cmi-v3-feed-hero cmi-v3-dot-paper">
-        <ChapterHeader left="CMI MAP" />
-        <img src="/cmi-home/yard-scene.jpg" alt="清迈客栈院子" />
-        <h1>大家都在干嘛？</h1>
-      </section>
-
       {isLoading && <p className="cmi-v3-inline-state">正在同步社区动态</p>}
+      {blackboardPostsError && <p className="cmi-v3-inline-state">{blackboardPostsError}</p>}
 
-      {recommendations.map(recommendation => (
-        <RecommendationFeedCard
-          key={recommendation.id}
-          activeRecIdForSticker={activeRecIdForSticker}
-          activeStickerId={activeStickerId}
-          authorProfile={getRecommendationAuthorProfile(recommendation, profilesByAuthorKey)}
-          isWishlisted={localWishlists[recommendation.id] ?? false}
-          linkedEventBadge={getRecommendationEventBadge(recommendation, events)}
-          placedStickers={placedStickers[recommendation.id] ?? []}
-          recommendation={recommendation}
-          onComment={() => onOpenPath(getAddTracePath(recommendation.place_name))}
-          onPlaceStamp={onPlaceStamp}
-          onSelect={() => onOpenPath(getPlacePath(recommendation.place_name))}
-          onStartStamp={() => onStartStamp(recommendation.id)}
-          onToggleWishlist={() => onToggleWishlist(recommendation)}
-        />
-      ))}
+      <div className="cmi-v3-feed-stream" aria-label="社区动态列表">
+        {feedItems.map(feedItem => (
+          feedItem.type === 'forumPost' ? (
+            <BlackboardFeedCard
+              key={feedItem.id}
+              authorProfile={getBlackboardPostAuthorProfile(feedItem.post, profilesByAuthorKey)}
+              events={events}
+              post={feedItem.post}
+              onOpenPath={onOpenPath}
+            />
+          ) : (
+            <RecommendationFeedCard
+              key={feedItem.id}
+              activeRecIdForSticker={activeRecIdForSticker}
+              activeStickerId={activeStickerId}
+              authorProfile={getRecommendationAuthorProfile(feedItem.recommendation, profilesByAuthorKey)}
+              isWishlisted={localWishlists[feedItem.recommendation.id] ?? false}
+              linkedEventBadge={getRecommendationEventBadge(feedItem.recommendation, events)}
+              placedStickers={placedStickers[feedItem.recommendation.id] ?? []}
+              recommendation={feedItem.recommendation}
+              onComment={() => onOpenPath(getAddTracePath(feedItem.recommendation.place_name))}
+              onPlaceStamp={onPlaceStamp}
+              onSelect={() => onOpenPath(getPlacePath(feedItem.recommendation.place_name))}
+              onStartStamp={() => onStartStamp(feedItem.recommendation.id)}
+              onToggleWishlist={() => onToggleWishlist(feedItem.recommendation)}
+            />
+          )
+        ))}
+      </div>
 
-      {!isLoading && recommendations.length === 0 && (
+      {!isLoading && feedItems.length === 0 && (
         <p className="cmi-v3-inline-state">还没有新的社区动态。</p>
       )}
 
@@ -2173,7 +2287,7 @@ function EventsMode({
           onClose={() => setShareSheetEvent(null)}
           onShareToBlackboard={() => {
             setShareSheetEvent(null);
-            navigate(getCmiBlackboardPath({ compose: true, eventId: shareSheetEvent.id }));
+            navigate(getCmiFeedPath({ compose: true, eventId: shareSheetEvent.id }));
           }}
           onShareOutside={() => {
             void handleShareEventExternally(shareSheetEvent).finally(() => setShareSheetEvent(null));
@@ -2246,6 +2360,88 @@ function EventPosterWatermark({
       {badge.posterUrl && <img src={badge.posterUrl} alt="" />}
       <span>{badge.title}</span>
     </span>
+  );
+}
+
+function BlackboardFeedCard({
+  authorProfile,
+  events,
+  post,
+  onOpenPath,
+}: {
+  authorProfile: PublicProfile | null;
+  events: CmiEvent[];
+  post: BlackboardPostRecord;
+  onOpenPath: (path: string) => void;
+}) {
+  const authorName = post.author_name || authorProfile?.user_name || 'CMI 朋友';
+  const avatarUrl = authorProfile?.avatar_url?.trim() || getFallbackAvatarUrl(authorName);
+  const imageUrl = getBlackboardPostImageUrl(post, events);
+  const targetPath = getBlackboardPostTargetPath(post);
+  const linkedEvent = post.linked_event_id
+    ? events.find(event => event.id === post.linked_event_id)
+    : null;
+  const linkedEventTitle = post.linked_event_title || linkedEvent?.title || '';
+  const metaItems = [post.time_label, post.location_label, post.people_label]
+    .map(item => item?.trim())
+    .filter(Boolean);
+
+  const openTarget = () => {
+    if (targetPath) onOpenPath(targetPath);
+  };
+
+  const handleKeyDown = (keyboardEvent: KeyboardEvent<HTMLElement>) => {
+    if (!targetPath || (keyboardEvent.key !== 'Enter' && keyboardEvent.key !== ' ')) return;
+    keyboardEvent.preventDefault();
+    openTarget();
+  };
+
+  return (
+    <article
+      className={`cmi-v3-feed-card cmi-v3-forum-post-card ${imageUrl ? '' : 'cmi-v3-forum-post-card--text-only'}`}
+      role={targetPath ? 'link' : undefined}
+      tabIndex={targetPath ? 0 : undefined}
+      onClick={openTarget}
+      onKeyDown={handleKeyDown}
+    >
+      <div className="cmi-v3-forum-post-media" aria-hidden="true">
+        {imageUrl ? (
+          <img src={imageUrl} alt="" />
+        ) : (
+          <span>
+            <Users size={23} strokeWidth={2.7} />
+          </span>
+        )}
+      </div>
+
+      <div className="cmi-v3-forum-post-content">
+        <div className="cmi-v3-feed-head cmi-v3-forum-post-head">
+          <span className="cmi-v3-avatar cmi-v3-feed-user-avatar">
+            <img src={avatarUrl} alt="" />
+          </span>
+          <div>
+            <strong>{authorName}</strong>
+            <span>{formatBlackboardCreatedLabel(post.created_at)}</span>
+          </div>
+        </div>
+
+        {linkedEventTitle && (
+          <div className="cmi-v3-feed-reference">
+            <Megaphone size={15} strokeWidth={2.8} />
+            <span>{`引用活动：${linkedEventTitle}`}</span>
+          </div>
+        )}
+
+        <h2>{post.title}</h2>
+        <p>{post.body}</p>
+
+        {metaItems.length > 0 && (
+          <div className="cmi-v3-feed-meta-line" aria-label="动态补充信息">
+            {metaItems.slice(0, 3).map(item => <span key={item}>{item}</span>)}
+          </div>
+        )}
+      </div>
+    </article>
   );
 }
 
@@ -2581,8 +2777,8 @@ function EventShareSheet({
         <button type="button" className="cmi-v3-event-share-option is-primary" onClick={onShareToBlackboard}>
           <MessageCircle size={20} strokeWidth={3} />
           <span>
-            <strong>发到 CMI Map 论坛帖子</strong>
-            <em>自动引用活动，帖子左侧使用方形海报。</em>
+            <strong>回到动态页</strong>
+            <em>活动招募帖子现在统一显示在动态信息流里。</em>
           </span>
         </button>
 

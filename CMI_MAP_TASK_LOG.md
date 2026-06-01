@@ -1023,3 +1023,21 @@
   - `pnpm exec biome lint src/pages/CmiMapV3Prototype.tsx` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地生产预览 `http://127.0.0.1:4173/?verify=marker-text-center` 确认：15 个 fallback SVG marker 全部包含居中基线属性，点击 fallback marker 后详情面板正常打开，当前地图页无新增 console warn/error。
+
+### 2026-06-01 14:19:37 +07 动态页合并生活板信息流
+
+- 背景：用户认为独立“清迈生活板”没有必要，活动招募、约搭子、求助和普通帖子应统一出现在动态页；同时希望动态页更像论坛信息流，减少大卡片、大留白和正式展陈感。
+- 本轮实现：
+  - `/blackboard` 旧入口改为跳转到 V3 动态页，旧发帖参数由动态页路径承接。
+  - V3 动态页加载 `blackboard_posts`，与地点动态按发布时间合并为同一条信息流。
+  - 去掉动态页原来的大 hero 卡片，未加入生活板顶部的“全部 / 精选 / 找搭子 / 求助”等筛选栏。
+  - 动态卡片改为白底、细分割线、窄边距、左侧方图/占位图的紧凑排版；活动招募帖保留“引用活动”胶囊提示。
+  - 旧首页卡片、地图外部地点“发帖”入口和个人页帖子回退入口都改为动态页语义。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/routes.tsx src/lib/paths.ts src/lib/paths.test.ts src/pages/CmiMapV3Prototype.tsx src/pages/MapView.tsx src/pages/PersonMap.tsx src/pages/SceneHome.tsx src/pages/cmi-map-v3-prototype.css` 通过。
+  - `node --experimental-strip-types --test src/lib/paths.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
+  - 本地浏览器验证 `http://localhost:5173/?screen=feed&verify=merged-feed-local`：动态流存在 16 张卡片，其中 4 张来自生活板帖子、12 张来自地点动态；旧 hero、旧生活板标题和顶部分类筛选均不存在，console 无 warn/error。
+  - 本地浏览器验证 `/blackboard?verify=redirect-check` 会跳转到 `/?screen=feed`，不再展示独立生活板页面。

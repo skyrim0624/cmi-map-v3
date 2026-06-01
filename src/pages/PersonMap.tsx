@@ -32,7 +32,7 @@ import {
   type PublicProfileTabId,
 } from '@/features/profiles/public-profile-page';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
-import { getCmiBlackboardPath, getPlacePath } from '@/lib/paths';
+import { getCmiFeedPath, getPlacePath } from '@/lib/paths';
 import { cn } from '@/lib/utils';
 import type { Category, PlacedSticker, Recommendation, Sticker } from '@/types/types';
 import { CATEGORIES, categoryMatchesFilter, getCategoryIconUrl } from '@/types/types';
@@ -130,7 +130,7 @@ function BlackboardPostCard({ post }: { post: BlackboardPostRecord }) {
           navigate(getPlacePath(post.linked_place_name));
           return;
         }
-        navigate(getCmiBlackboardPath());
+        navigate(getCmiFeedPath());
       }}
     >
       {imageUrl ? (
