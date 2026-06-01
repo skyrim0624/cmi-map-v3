@@ -400,7 +400,7 @@ function getFallbackAvatarUrl(name: string) {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
       <rect width="96" height="96" rx="48" fill="${USER_AVATAR_FALLBACK_COLORS[colorIndex]}"/>
-      <text x="48" y="56" text-anchor="middle" font-family="Arial, sans-serif" font-size="38" font-weight="800" fill="#2f2a23">${escapeSvgText(initial)}</text>
+      <text x="48" y="48" text-anchor="middle" dominant-baseline="central" alignment-baseline="middle" font-family="Arial, sans-serif" font-size="38" font-weight="800" fill="#2f2a23">${escapeSvgText(initial)}</text>
     </svg>
   `;
 

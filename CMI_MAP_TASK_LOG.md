@@ -1011,3 +1011,15 @@
   - 本地生产预览 375px 手机视口直开活动页，点击左上“返回”后从 `/events/cmi-five-minute-music-kid-a-2026-06-02?verify=back-fallback-2` 跳到 `/`，按钮不再无反应。
   - 已部署 v3 项目 `https://10742fc5.cmi-map-v3.pages.dev` 和正式站 `https://150da98b.cmi-map.pages.dev`，Source 为 `558d5f1`。
   - 新正式部署地址 375px 手机视口直开活动页，点击左上“返回”后从活动详情跳到 `/`，console 无 warn/error。
+
+### 2026-06-01 14:11:55 +07 V3 地图 fallback 头像文字居中
+
+- 背景：用户在 V3 地图页评论 marker，指出 fallback 头像里的文字需要放在中间。
+- 本轮实现：
+  - 调整 CMI Map 3.0 fallback SVG 头像文字，从固定下沉的 `y=56` 改为圆心 `y=48`。
+  - 增加 `dominant-baseline="central"` 和 `alignment-baseline="middle"`，让英文、数字和中文首字在 marker 圆形中垂直居中。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/CmiMapV3Prototype.tsx` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地生产预览 `http://127.0.0.1:4173/?verify=marker-text-center` 确认：15 个 fallback SVG marker 全部包含居中基线属性，点击 fallback marker 后详情面板正常打开，当前地图页无新增 console warn/error。
