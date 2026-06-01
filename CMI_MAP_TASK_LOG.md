@@ -1103,6 +1103,18 @@
   - 正式域名 `https://cmimap.com` 服务器响应已指向新 bundle `CmiMapV3Prototype-D2mimRUH.js` / `CmiMapV3Prototype-Z789aAjj.css`；线上 JS 包内 `eventDetail` 和 `EventDetailMode` 均为 0 次，保留 `打开活动页` 入口。
   - 同一台浏览器若仍看到旧“活动详情 / 正式页”页面，是旧 PWA 缓存或旧 Service Worker 尚未切换，需要刷新后拿到新包。
 
+### 2026-06-01 22:32:21 +07 活动页主标题压缩
+
+- 背景：用户在手机截图中指出活动页 hero 标题“活动就来清迈客栈！”在窄屏会把“栈！”单独折到下一行，视觉上像标题拐弯。
+- 本轮实现：
+  - 将活动页主标题改为更短的“清迈客栈的活动！”，保留活动页定位，同时减少窄屏换行风险。
+- 验证结果：
+  - `git diff --check -- src/pages/CmiMapV3Prototype.tsx CMI_MAP_TASK_LOG.md` 通过。
+  - `pnpm exec biome lint src/pages/CmiMapV3Prototype.tsx` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地浏览器验证 `http://127.0.0.1:5173/?screen=events&verify=event-title-copy`：390px 手机宽度下标题显示为一行“清迈客栈的活动！”，不再把末尾文字折到下一行；活动分页按钮可点击切换，console 无 warn/error。
+
 ### 2026-06-01 20:57:46 +07 活动返图 Tag 与详情页汇总
 
 - 背景：用户希望活动邀请帖之外，活动中或活动结束后的回顾/返图打卡也能关联活动；漏打活动 Tag 时可以回到自己发过的打卡补改；所有关联照片要汇总到活动详情页信息下方。
