@@ -1070,3 +1070,18 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地生产预览 `http://127.0.0.1:4173/?verify=location-center-marker-size` 确认头像 marker 可见尺寸为 `60x60 / 35x35` 和热点 `64x64 / 38x38`，当前页无新增 console warn/error。
   - 可控定位验证 `http://127.0.0.1:4173/?verify=location-center-marker-size-puppeteer`：模拟清迈坐标后，用户定位点中心与地图容器中心偏差为 `x=-1px, y=-1px`。
+
+### 2026-06-01 20:35:35 +07 动态页顶部中心区
+
+- 背景：用户认可动态页当前密集信息流方向，但指出页面一打开如果全是帖子会缺少中心点；需要在顶部保留页面标题或社区精选内容，同时不要恢复旧的“全部 / 精选 / 找搭子 / 求助”筛选栏。
+- 本轮实现：
+  - 在动态页列表前新增一个紧凑顶部中心区，保留“动态”标题和 CMI MAP 标识。
+  - 顶部精选优先取已精选的论坛帖；如果没有精选帖，则使用最新论坛帖；再没有帖子时才回退到最新地点动态。
+  - 顶部精选内容从下面信息流中移除，避免同一条内容重复出现。
+  - 顶部区域使用白底和冷灰，不使用旧生活板顶部分类标签，也不恢复独立生活板入口。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/CmiMapV3Prototype.tsx src/pages/cmi-map-v3-prototype.css` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
+  - 本地浏览器首次验证确认顶部中心区和“动态”标题已出现；随后 localhost 被 Browser 安全策略拦截，因此最终以 Cloudflare Pages 预览地址做线上复查。

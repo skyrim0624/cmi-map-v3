@@ -1904,14 +1904,34 @@ function FeedMode({
     ]).slice(0, 60),
     [blackboardPosts, recommendations]
   );
+  const featuredFeedItem = useMemo(
+    () => feedItems.find(feedItem => feedItem.type === 'forumPost' && Boolean(feedItem.post.is_featured))
+      ?? feedItems.find(feedItem => feedItem.type === 'forumPost')
+      ?? feedItems[0]
+      ?? null,
+    [feedItems]
+  );
+  const streamFeedItems = useMemo(
+    () => featuredFeedItem
+      ? feedItems.filter(feedItem => feedItem.id !== featuredFeedItem.id)
+      : feedItems,
+    [featuredFeedItem, feedItems]
+  );
 
   return (
     <ComicPage title="动态" hideTitle onTitleClick={() => onNavigate('map')}>
+      <FeedCenterPanel
+        item={featuredFeedItem}
+        events={events}
+        profilesByAuthorKey={profilesByAuthorKey}
+        onOpenPath={onOpenPath}
+      />
+
       {isLoading && <p className="cmi-v3-inline-state">正在同步社区动态</p>}
       {blackboardPostsError && <p className="cmi-v3-inline-state">{blackboardPostsError}</p>}
 
       <div className="cmi-v3-feed-stream" aria-label="社区动态列表">
-        {feedItems.map(feedItem => (
+        {streamFeedItems.map(feedItem => (
           feedItem.type === 'forumPost' ? (
             <BlackboardFeedCard
               key={feedItem.id}
@@ -2360,6 +2380,113 @@ function EventPosterWatermark({
       {badge.posterUrl && <img src={badge.posterUrl} alt="" />}
       <span>{badge.title}</span>
     </span>
+  );
+}
+
+function FeedCenterPanel({
+  events,
+  item,
+  profilesByAuthorKey,
+  onOpenPath,
+}: {
+  events: CmiEvent[];
+  item: CmiV3FeedItem | null;
+  profilesByAuthorKey: ProfileLookup;
+  onOpenPath: (path: string) => void;
+}) {
+  const content = useMemo(() => {
+    if (!item) return null;
+
+    if (item.type === 'forumPost') {
+      const post = item.post;
+      const authorProfile = getBlackboardPostAuthorProfile(post, profilesByAuthorKey);
+      const authorName = post.author_name || authorProfile?.user_name || 'CMI 朋友';
+      const targetPath = getBlackboardPostTargetPath(post);
+      const linkedEvent = post.linked_event_id
+        ? events.find(event => event.id === post.linked_event_id)
+        : null;
+
+      return {
+        authorName,
+        body: post.body,
+        imageUrl: getBlackboardPostImageUrl(post, events),
+        label: post.is_featured ? '社区精选' : '正在发生',
+        meta: formatBlackboardCreatedLabel(post.created_at),
+        targetPath,
+        title: post.title,
+        reference: post.linked_event_title || linkedEvent?.title || '',
+      };
+    }
+
+    const recommendation = item.recommendation;
+    const authorProfile = getRecommendationAuthorProfile(recommendation, profilesByAuthorKey);
+    const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
+    const categoryConfig = getCategoryConfig(recommendation.category);
+
+    return {
+      authorName,
+      body: getRecommendationSummary(recommendation),
+      imageUrl: recommendation.images[0] || categoryConfig.iconUrl,
+      label: '社区精选',
+      meta: `${normalizeCategory(recommendation.category)} · ${formatTraceTime(recommendation.created_at)}`,
+      targetPath: getPlacePath(recommendation.place_name),
+      title: recommendation.place_name,
+      reference: '',
+    };
+  }, [events, item, profilesByAuthorKey]);
+
+  const openTarget = () => {
+    if (content?.targetPath) onOpenPath(content.targetPath);
+  };
+
+  const handleKeyDown = (keyboardEvent: KeyboardEvent<HTMLElement>) => {
+    if (!content?.targetPath || (keyboardEvent.key !== 'Enter' && keyboardEvent.key !== ' ')) return;
+    keyboardEvent.preventDefault();
+    openTarget();
+  };
+
+  return (
+    <section className="cmi-v3-feed-center" aria-label="动态页标题和精选">
+      <div className="cmi-v3-feed-center-heading">
+        <div>
+          <span>CMI MAP</span>
+          <h1>动态</h1>
+        </div>
+        <em>{content?.label ?? '社区精选'}</em>
+      </div>
+
+      {content && (
+        <article
+          className="cmi-v3-feed-featured"
+          role={content.targetPath ? 'link' : undefined}
+          tabIndex={content.targetPath ? 0 : undefined}
+          onClick={openTarget}
+          onKeyDown={handleKeyDown}
+        >
+          <div className="cmi-v3-feed-featured-media">
+            {content.imageUrl ? (
+              <img src={content.imageUrl} alt="" />
+            ) : (
+              <Megaphone size={26} strokeWidth={2.7} />
+            )}
+          </div>
+          <div className="cmi-v3-feed-featured-copy">
+            <div className="cmi-v3-feed-featured-meta">
+              <strong>{content.authorName}</strong>
+              <span>{content.meta}</span>
+            </div>
+            {content.reference && (
+              <div className="cmi-v3-feed-featured-reference">
+                <Megaphone size={14} strokeWidth={2.8} />
+                <span>{content.reference}</span>
+              </div>
+            )}
+            <h2>{content.title}</h2>
+            <p>{content.body}</p>
+          </div>
+        </article>
+      )}
+    </section>
   );
 }
 
