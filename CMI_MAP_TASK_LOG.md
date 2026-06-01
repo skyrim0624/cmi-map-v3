@@ -932,3 +932,15 @@
   - `pnpm exec biome lint src/pages/CmiEventDetail.tsx` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地浏览器验证活动详情页：海报底部边框为 `0px`，蓝底与正文直接衔接，console 无 warn/error。
+
+### 2026-06-01 13:27:51 +07 活动详情推文改为无衬线作品说明排版
+
+- 背景：用户指出活动详情页推文正文不应使用宋体，希望改成黑体 / 无衬线，并参考艺术作品、摄影作品的展示排版。
+- 本轮实现：
+  - 推文标题、章节标题、正文和列表统一切换到 `PingFang SC` / `Noto Sans SC` / `Source Han Sans SC` 等无衬线字体栈。
+  - 调整标题字重、正文行距、章节间距和正文网格密度，让版式更像展览说明 / 摄影作品文字，而不是宋体长文。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - `pnpm exec biome lint src/pages/CmiEventDetail.tsx src/index.css` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地浏览器验证活动详情页：正文区字体族为无衬线黑体栈，标题字重 `900`，正文 16px / 29.12px 行高，无横向溢出，console 无 warn/error。

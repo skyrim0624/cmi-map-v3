@@ -153,17 +153,19 @@ All colors MUST be HSL.
 @layer utilities {
   .cmi-event-post-section {
     background-image:
-      linear-gradient(90deg, rgba(23, 16, 31, 0.035) 1px, transparent 1px),
-      linear-gradient(rgba(23, 16, 31, 0.025) 1px, transparent 1px);
-    background-size: 28px 28px;
+      linear-gradient(90deg, rgba(18, 24, 39, 0.04) 1px, transparent 1px),
+      linear-gradient(rgba(18, 24, 39, 0.03) 1px, transparent 1px);
+    background-size: 36px 36px;
   }
 
   .cmi-event-post-title,
   .cmi-event-post-heading,
   .cmi-event-post-paragraph,
   .cmi-event-post-list {
-    font-family: "Iowan Old Style", "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "STSong", serif;
+    font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
     letter-spacing: 0;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "kern";
     text-rendering: optimizeLegibility;
   }
 

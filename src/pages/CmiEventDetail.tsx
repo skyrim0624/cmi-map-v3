@@ -123,12 +123,12 @@ const renderPostBlock = (block: CmiEventDetailBlock, index: number) => {
       <h3
         key={`${block.kind}-${index}`}
         className={cn(
-          'cmi-event-post-heading flex items-start gap-2.5 text-[1.42rem] font-semibold leading-[1.28] text-[#17101f]',
-          index === 0 ? 'mt-0' : 'mt-9'
+          'cmi-event-post-heading flex items-center gap-3 text-[1.2rem] font-black leading-[1.2] text-[#121827]',
+          index === 0 ? 'mt-0' : 'mt-10'
         )}
       >
         {marker && (
-          <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#17101f] text-[1rem] leading-none text-[#f6efe4]">
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#121827] text-[0.95rem] leading-none text-[#f7f1e7]">
             {marker}
           </span>
         )}
@@ -141,11 +141,11 @@ const renderPostBlock = (block: CmiEventDetailBlock, index: number) => {
     return (
       <ul
         key={`${block.kind}-${index}`}
-        className="cmi-event-post-list my-1 space-y-2.5 border-l-[3px] border-[#c33a4b]/70 pl-4"
+        className="cmi-event-post-list my-2 space-y-2.5 border-l-[3px] border-[#121827]/18 pl-4"
       >
         {block.items.map(item => (
-          <li key={item} className="flex gap-2 text-[16px] font-medium leading-[1.78] text-[#2f2736]">
-            <span className="mt-[0.78rem] h-1 w-1 shrink-0 rounded-full bg-[#c33a4b]" />
+          <li key={item} className="flex gap-2 text-[15px] font-semibold leading-[1.75] text-[#25304a]">
+            <span className="mt-[0.72rem] h-1 w-1 shrink-0 rounded-full bg-[#121827]" />
             <span>{item}</span>
           </li>
         ))}
@@ -156,7 +156,7 @@ const renderPostBlock = (block: CmiEventDetailBlock, index: number) => {
   return (
     <p
       key={`${block.kind}-${index}`}
-      className="cmi-event-post-paragraph whitespace-pre-line text-[17px] font-medium leading-[1.92] text-[#342d3a]"
+      className="cmi-event-post-paragraph whitespace-pre-line text-[16px] font-medium leading-[1.82] text-[#25304a]"
     >
       {block.text}
     </p>
@@ -606,16 +606,16 @@ export default function CmiEventDetail() {
             />
           </section>
 
-          <section className="cmi-event-post-section border-b-[4px] border-[#050505] bg-[#f6efe4] px-6 pb-8 pt-7">
-            <h1 className="cmi-event-post-title break-words text-[1.9rem] font-semibold leading-[1.2] text-[#17101f]">
+          <section className="cmi-event-post-section border-b-[4px] border-[#050505] bg-[#f6f1e8] px-6 pb-10 pt-8">
+            <h1 className="cmi-event-post-title break-words text-[2rem] font-black leading-[1.08] text-[#121827]">
               {postTitle}
             </h1>
             {postSummary && (
-              <p className="cmi-event-post-paragraph mt-5 text-[17px] font-medium leading-[1.9] text-[#342d3a]">
+              <p className="cmi-event-post-paragraph mt-5 text-[16px] font-semibold leading-[1.75] text-[#25304a]">
                 {postSummary}
               </p>
             )}
-            <div className="mt-6 space-y-4 border-t border-[#17101f]/14 pt-7">
+            <div className="mt-7 space-y-5 border-t-[2px] border-[#121827]/10 pt-8">
               {postBlocks.map(renderPostBlock)}
             </div>
           </section>
