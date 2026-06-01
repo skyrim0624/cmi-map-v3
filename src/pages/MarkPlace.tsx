@@ -654,7 +654,7 @@ export default function MarkPlace() {
             markCameraReady();
           }
         } catch (err) {
-          console.error("相机权限获取失败:", err);
+          console.warn("相机权限获取失败:", err);
           if (!alive) return;
           const errorName = err instanceof DOMException ? err.name : '';
           const blocked = errorName === 'NotAllowedError' || errorName === 'PermissionDeniedError';
