@@ -302,6 +302,27 @@ export default function MarkPlace() {
   const selectedEvent = selectedEventId
     ? eventOptions.find(event => event.id === selectedEventId) ?? getCmiEventById(selectedEventId)
     : null;
+  const selectedPlaceLabel = pickedPlaceName;
+  const publishCategoryOptions = useMemo(() => {
+    const priorityCategoryIds = new Set(['cmi-inn', 'easter']);
+    const priorityOptions = inputCategoryOptions.filter(option => priorityCategoryIds.has(option.id));
+    const regularOptions = inputCategoryOptions.filter(option => !priorityCategoryIds.has(option.id));
+    return [...priorityOptions, ...regularOptions];
+  }, [inputCategoryOptions]);
+  const selectedPublishCategoryOption = selectedInputCategoryId
+    ? inputCategoryOptions.find(option => option.id === selectedInputCategoryId) ?? null
+    : null;
+  const publishButtonLabel = selectedCat === CMI_INN_CATEGORY
+    ? '发布到客栈'
+    : selectedCat === '彩蛋'
+      ? '发布彩蛋'
+      : '发布动态';
+  const publishSummaryLabel = selectedPublishCategoryOption?.label ?? selectedCat;
+  const publishSummaryDetail = selectedEvent
+    ? `已关联活动：${selectedEvent.title}`
+    : selectedPlaceLabel
+      ? `地点：${selectedPlaceLabel}`
+      : '活动可不关联，选好标签就能发布';
   const debouncedPlaceSearchQuery = useDebounce(placeSearchQuery, 480);
   const cameraDateLabel = `${new Date().getMonth() + 1} / ${new Date().getDate()}`;
   const filteredEasterIcons = useMemo(() => {
@@ -331,7 +352,6 @@ export default function MarkPlace() {
     ...visibleInternalPlaceCandidates,
     ...visibleExternalPlaceCandidates,
   ];
-  const selectedPlaceLabel = pickedPlaceName;
 
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<InstanceType<SpeechRecognitionConstructor> | null>(null);
@@ -835,6 +855,23 @@ export default function MarkPlace() {
     if (pickedPlaceName && pickedPlaceName !== value.trim()) {
       setPickedPlaceName('');
       setLocationName('手动选点');
+    }
+  };
+
+  const handleCategoryOptionSelect = (option: (typeof inputCategoryOptions)[number]) => {
+    setSelectedInputCategoryId(option.id);
+    setSelectedCat(option.storedCategory);
+
+    if (option.storedCategory === CMI_INN_CATEGORY) {
+      const nextCenter = {
+        lat: CMI_INN_COORDINATES.latitude,
+        lng: CMI_INN_COORDINATES.longitude,
+      };
+      setPickedPlaceName(CMI_INN_PLACE_NAME);
+      setPlaceSearchQuery(CMI_INN_PLACE_NAME);
+      setLocationName(`已选：${CMI_INN_PLACE_NAME}`);
+      setCenter(nextCenter);
+      setMapDefaultCenter(nextCenter);
     }
   };
 
@@ -1416,37 +1453,46 @@ export default function MarkPlace() {
             )}
 
             {stage === 'category' && (
-              <div className="w-full flex flex-col items-center gap-3 py-4 animate-in slide-in-from-bottom-10 fade-in">
-                <div className="mb-1 text-center">
-                  <p className="text-stone-600 font-bold">最后一步，粗略分一下就行</p>
-                  <p className="mt-1 text-xs font-medium text-stone-400">选不准也没关系，CMI 后面可以再整理。</p>
-                </div>
-                <div className="flex flex-wrap justify-center gap-2.5 w-full max-w-sm">
-                  {inputCategoryOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      onClick={() => {
-                        setSelectedInputCategoryId(option.id);
-                        setSelectedCat(option.storedCategory);
-                      }}
-                      disabled={uploading}
-                      title={option.description}
-                      className={`flex items-center gap-2 px-3.5 py-2 rounded-full border shadow-sm transition-all text-stone-600 font-medium text-sm ${selectedInputCategoryId === option.id ? 'bg-primary/10 border-primary text-primary scale-105 ring-2 ring-primary/20' : 'bg-white border-stone-200 hover:scale-105 active:scale-95'}`}
-                    >
-                      {option.storedCategory === '彩蛋' ? (
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#ffe06f] p-0.5 shadow-[inset_0_0_0_2px_rgba(255,255,255,0.7),0_3px_8px_rgba(136,101,17,0.14)]">
-                          <img src={selectedEasterIcon.url} alt="" className="h-6 w-6 object-contain" />
-                        </span>
-                      ) : option.storedCategory === CMI_INN_CATEGORY ? (
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white p-0.5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08),0_3px_8px_rgba(0,0,0,0.12)]">
-                          <img src={option.iconUrl ?? getCategoryIconUrl(option.storedCategory)} alt="" className="h-full w-full object-contain" />
-                        </span>
-                      ) : (
-                        <img src={option.iconUrl ?? getCategoryIconUrl(option.storedCategory)} alt="" className="w-5 h-5 object-contain" />
-                      )}
-                      <span>{option.label}</span>
-                    </button>
-                  ))}
+              <div className="w-full flex flex-col items-center gap-3 py-4 pb-[calc(env(safe-area-inset-bottom)+7.5rem)] animate-in slide-in-from-bottom-10 fade-in">
+                <div className="w-full max-w-sm rounded-3xl border border-stone-200 bg-white/90 p-3 shadow-sm">
+                  <div className="mb-2 flex items-start justify-between gap-3 text-left">
+                    <div>
+                      <p className="text-sm font-black text-stone-800">选择发布标签</p>
+                      <p className="mt-0.5 text-xs font-semibold leading-relaxed text-stone-500">
+                        清迈客栈、彩蛋和普通地点动态都在这里选。
+                      </p>
+                    </div>
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={2.8} />
+                  </div>
+                  <div className="flex flex-wrap gap-2.5">
+                    {publishCategoryOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => handleCategoryOptionSelect(option)}
+                        disabled={uploading}
+                        title={option.description}
+                        className={`flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-black shadow-sm transition-all disabled:opacity-50 ${
+                          selectedInputCategoryId === option.id
+                            ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20'
+                            : 'border-stone-200 bg-white text-stone-700 hover:border-primary/40 active:scale-95'
+                        }`}
+                      >
+                        {option.storedCategory === '彩蛋' ? (
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#ffe06f] p-0.5 shadow-[inset_0_0_0_2px_rgba(255,255,255,0.7),0_3px_8px_rgba(136,101,17,0.14)]">
+                            <img src={selectedEasterIcon.url} alt="" className="h-6 w-6 object-contain" />
+                          </span>
+                        ) : option.storedCategory === CMI_INN_CATEGORY ? (
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white p-0.5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08),0_3px_8px_rgba(0,0,0,0.12)]">
+                            <img src={option.iconUrl ?? getCategoryIconUrl(option.storedCategory)} alt="" className="h-full w-full object-contain" />
+                          </span>
+                        ) : (
+                          <img src={option.iconUrl ?? getCategoryIconUrl(option.storedCategory)} alt="" className="h-5 w-5 object-contain" />
+                        )}
+                        <span>{option.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 {(isLoadingEventOptions || eventOptions.length > 0 || selectedEvent) && (
                   <div className="mt-2 w-full max-w-sm rounded-3xl border border-stone-200 bg-white/85 p-3 shadow-sm">
@@ -1574,20 +1620,29 @@ export default function MarkPlace() {
                     </div>
                   </div>
                 )}
-                {selectedCat && !uploading && (
-                  <button 
-                    onClick={() => handleSubmitFinal(selectedCat)}
-                    className="mt-4 w-full max-w-[200px] h-12 bg-primary text-white font-bold rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all animate-in zoom-in-95 flex items-center justify-center gap-2"
-                  >
-                    <span>{selectedCat === CMI_INN_CATEGORY ? '发布到客栈主页' : selectedCat === '彩蛋' ? '发布彩蛋' : '发布印戳'}</span>
-                  </button>
-                )}
-                {uploading && (
-                  <div className="mt-4 flex flex-col items-center gap-2 text-stone-500">
-                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                    <span className="text-sm font-medium">打包回忆中，请稍候...</span>
+                <div className="fixed inset-x-0 bottom-0 z-[1100] bg-gradient-to-t from-stone-50 via-stone-50/95 to-transparent px-6 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-5">
+                  <div className="mx-auto flex max-w-sm items-center gap-3 rounded-[1.75rem] border border-stone-200 bg-white/95 p-2 shadow-[0_-10px_32px_rgba(0,0,0,0.12)] backdrop-blur">
+                    <div className="min-w-0 flex-1 px-2">
+                      <p className="truncate text-sm font-black text-stone-800">
+                        {publishSummaryLabel || '先选一个标签'}
+                      </p>
+                      <p className="mt-0.5 truncate text-[11px] font-bold text-stone-400">
+                        {uploading ? '正在打包发布...' : publishSummaryDetail}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (selectedCat) void handleSubmitFinal(selectedCat);
+                      }}
+                      disabled={!selectedCat || uploading}
+                      className="flex h-12 min-w-[112px] items-center justify-center gap-2 rounded-3xl bg-primary px-4 text-sm font-black text-white shadow-lg shadow-primary/20 transition active:scale-95 disabled:bg-stone-300 disabled:shadow-none"
+                    >
+                      {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                      <span>{selectedCat ? publishButtonLabel : '选标签'}</span>
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
             )}
 

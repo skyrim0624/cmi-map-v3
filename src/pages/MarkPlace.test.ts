@@ -32,3 +32,10 @@ test('网页相机拍照输出正方形并提供焦距控制', () => {
   assert.match(source, /type="range"/);
   assert.match(source, /handleCameraZoomChange/);
 });
+
+test('发布前分类页固定显示特殊标签和发布按钮', () => {
+  assert.match(source, /const priorityCategoryIds = new Set\(\['cmi-inn', 'easter'\]\)/);
+  assert.match(source, /清迈客栈、彩蛋和普通地点动态都在这里选。/);
+  assert.match(source, /fixed inset-x-0 bottom-0 z-\[1100\]/);
+  assert.match(source, /selectedCat \? publishButtonLabel : '选标签'/);
+});
