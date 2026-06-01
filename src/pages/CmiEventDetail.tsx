@@ -648,11 +648,11 @@ export default function CmiEventDetail() {
           </section>
         </main>
 
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t-[4px] border-[#050505] bg-[#8b61ee] px-3 pb-[calc(0.875rem+env(safe-area-inset-bottom))] pt-3">
+        <div className="pointer-events-none fixed bottom-0 left-0 right-0 z-50 px-3 pb-[calc(0.875rem+env(safe-area-inset-bottom))] pt-3">
           <div className="mx-auto grid max-w-[520px] grid-cols-3 gap-2">
             <button
               type="button"
-              className="flex min-h-14 min-w-0 items-center justify-center gap-1.5 rounded-full border-[3px] border-[#050505] bg-white px-2 text-[14px] font-black text-[#050505] shadow-[3px_4px_0_rgba(5,5,5,0.18)] transition active:scale-95 disabled:opacity-80"
+              className="pointer-events-auto flex min-h-14 min-w-0 items-center justify-center gap-1.5 rounded-full border-[3px] border-[#050505] bg-white px-2 text-[14px] font-black text-[#050505] shadow-[3px_4px_0_rgba(5,5,5,0.18)] transition active:scale-95 disabled:opacity-80"
               onClick={() => void handleShareEvent()}
               disabled={sharingEvent}
             >
@@ -661,7 +661,7 @@ export default function CmiEventDetail() {
             </button>
             <button
               type="button"
-              className={getRegistrationButtonClass(registrationButtonState?.tone ?? 'closed')}
+              className={cn('pointer-events-auto', getRegistrationButtonClass(registrationButtonState?.tone ?? 'closed'))}
               onClick={handleRegistrationAction}
               disabled={registrationButtonState?.disabled ?? true}
               aria-label={registrationButtonState?.ariaLabel ?? '报名活动'}
@@ -679,7 +679,7 @@ export default function CmiEventDetail() {
             </button>
             <button
               type="button"
-              className="flex min-h-14 min-w-0 items-center justify-center gap-1.5 rounded-full border-[3px] border-[#050505] bg-[#160f25] px-2 text-[14px] font-black text-white shadow-[3px_4px_0_rgba(5,5,5,0.18)] transition active:scale-95"
+              className="pointer-events-auto flex min-h-14 min-w-0 items-center justify-center gap-1.5 rounded-full border-[3px] border-[#050505] bg-[#160f25] px-2 text-[14px] font-black text-white shadow-[3px_4px_0_rgba(5,5,5,0.18)] transition active:scale-95"
               onClick={handleOpenGoogleMaps}
             >
               <Navigation className="h-4 w-4" />
