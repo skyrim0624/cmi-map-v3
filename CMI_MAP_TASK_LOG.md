@@ -988,3 +988,7 @@
   - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
   - 本地生产预览 `http://127.0.0.1:4173/events/cmi-five-minute-music-kid-a-2026-06-02` 在 375px 手机视口下确认：海报 `currentSrc` 带版本号，`naturalWidth=936` / `naturalHeight=1681`，页面不再出现坏图。
   - 本地生产预览点击“分享”：未出现“活动卡片生成失败”；自动化点击触发的 `navigator.share` 用户手势限制已按现有逻辑降级处理。
+  - 已部署 v3 项目 `https://fbd499fb.cmi-map-v3.pages.dev` 和正式站 `https://c39cf96a.cmi-map.pages.dev`，Source 为 `1ae4e61`。
+  - 正式域名 `https://cmimap.com/sw.js` 已确认使用 `NetworkFirst` 和 `cmi-map-runtime-images-v2`；带版本号海报 URL 返回 200 PNG。
+  - 新正式部署地址手机视口验证：海报 `currentSrc` 带 `?v=20260601-mobile-share`，图片尺寸正常，点击“分享”未出现卡片生成失败。
+  - 注意：已被旧 service worker 控制的浏览器可能还会短时间读取旧页面包；刷新/重新打开后会切到新 service worker。
