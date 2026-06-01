@@ -1134,6 +1134,7 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm exec biome lint src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地预览 `http://127.0.0.1:4173/?verify=hide-ended-events-local` 复查通过：底部“清迈客栈新动态”只展示 6/2、6/7 未结束活动，5/30 夜行活动不再出现，console 无 warn/error。
 
 ### 2026-06-01 21:24:52 +07 邮箱验证码找回密码
 
