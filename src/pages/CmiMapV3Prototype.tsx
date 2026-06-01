@@ -2448,11 +2448,7 @@ function FeedCenterPanel({
   return (
     <section className="cmi-v3-feed-center" aria-label="动态页标题和精选">
       <div className="cmi-v3-feed-center-heading">
-        <div>
-          <span>CMI MAP</span>
-          <h1>动态</h1>
-        </div>
-        <em>{content?.label ?? '社区精选'}</em>
+        <h1>看看大家在做什么！</h1>
       </div>
 
       {content && (

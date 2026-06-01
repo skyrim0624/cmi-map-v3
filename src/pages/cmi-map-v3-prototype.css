@@ -1926,7 +1926,7 @@
 
 .cmi-v3-screen--feed .cmi-v3-comic-page,
 .cmi-v3-screen--feed .cmi-v3-comic-scroll {
-  background: #fff;
+  background: #fbfcfb;
 }
 
 .cmi-v3-screen--feed .cmi-v3-comic-scroll {
@@ -1940,43 +1940,23 @@
 
 .cmi-v3-feed-center {
   border-bottom: 1px solid rgba(22, 22, 22, 0.1);
-  background: #fff;
+  background: #fbfcfb;
   padding: 18px 14px 14px;
 }
 
 .cmi-v3-feed-center-heading {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.cmi-v3-feed-center-heading span {
-  display: block;
-  color: rgba(22, 22, 22, 0.44);
-  font-size: 11px;
-  font-weight: 950;
-  letter-spacing: 0;
+  align-items: flex-start;
 }
 
 .cmi-v3-feed-center-heading h1 {
-  margin: 2px 0 0;
+  margin: 0;
   color: #202020;
-  font-size: 36px;
+  font-size: 34px;
   font-weight: 950;
-  line-height: 0.98;
+  line-height: 1.06;
   letter-spacing: 0;
-}
-
-.cmi-v3-feed-center-heading em {
-  flex: 0 0 auto;
-  border-radius: 999px;
-  background: rgba(22, 22, 22, 0.06);
-  padding: 6px 10px;
-  color: rgba(22, 22, 22, 0.58);
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 900;
+  text-wrap: balance;
 }
 
 .cmi-v3-feed-featured {
@@ -1986,7 +1966,7 @@
   margin-top: 13px;
   border: 1px solid rgba(22, 22, 22, 0.1);
   border-radius: 8px;
-  background: #f7fafc;
+  background: rgba(255, 255, 255, 0.92);
   padding: 10px;
   cursor: pointer;
 }
@@ -2089,7 +2069,7 @@
 .cmi-v3-feed-stream {
   overflow: hidden;
   border-top: 1px solid rgba(22, 22, 22, 0.08);
-  background: #fff;
+  background: #fbfcfb;
 }
 
 .cmi-v3-feed-center + .cmi-v3-feed-stream {
