@@ -251,8 +251,8 @@ export const getMapMarkerVisual = (
 export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolean) => {
   const label = escapeHtml(visual.label);
   const iconUrl = escapeHtml(visual.iconUrl);
-  const iconSize = isHotspot ? 60 : 56;
-  const imageSize = isHotspot ? 46 : 42;
+  const iconSize = visual.isAvatar ? (isHotspot ? 52 : 48) : (isHotspot ? 54 : 50);
+  const imageSize = visual.isAvatar ? (isHotspot ? 38 : 35) : (isHotspot ? 40 : 37);
   const tailTop = iconSize - 10;
   const imageFit = visual.isAvatar ? 'cover' : 'contain';
   const imageRadius = visual.isAvatar ? '999px' : '0';

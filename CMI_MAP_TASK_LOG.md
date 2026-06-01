@@ -1055,3 +1055,18 @@
   - `pnpm exec wrangler --version` 输出 `4.95.0`。
   - `pnpm exec wrangler pages deploy --help` 正常输出 Pages 部署参数说明。
   - 本轮只暂存并提交 `package.json`、`pnpm-lock.yaml` 和本日志；工作区中既有的 marker / 定位相关未提交改动不纳入本轮。
+
+### 2026-06-01 14:35:01 +07 V3 默认定位居中与 marker 缩小
+
+- 背景：用户在手机打开 CMI Map 后，发现用户当前位置显示在右侧而不是地图中心；同时用户头像 marker 和地点 marker 都偏大，但彩蛋 marker 当前尺寸合适。
+- 本轮实现：
+  - V3 地图页首次打开即开启用户定位聚焦，不再等用户点击定位按钮。
+  - 定位成功后直接把用户坐标放在地图物理中心，移除此前的纵向偏移。
+  - 用户头像 marker 缩小到 48px / 热点 52px，地点 / 活动等普通 marker 缩小到 50px / 热点 54px。
+  - 彩蛋 marker 仍走独立渲染分支，尺寸保持不变。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/components/map/LeafletMap.tsx src/lib/map-marker-visual.ts src/pages/CmiMapV3Prototype.tsx` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地生产预览 `http://127.0.0.1:4173/?verify=location-center-marker-size` 确认头像 marker 可见尺寸为 `60x60 / 35x35` 和热点 `64x64 / 38x38`，当前页无新增 console warn/error。
+  - 可控定位验证 `http://127.0.0.1:4173/?verify=location-center-marker-size-puppeteer`：模拟清迈坐标后，用户定位点中心与地图容器中心偏差为 `x=-1px, y=-1px`。

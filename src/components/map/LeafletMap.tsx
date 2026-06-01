@@ -750,8 +750,6 @@ export const LeafletMap = ({
                 if (!constrainToChiangMai || chiangMaiBounds.contains(userLatLng)) {
                   hasFocusedUserLocationRef.current = true;
                   map.setView(userLatLng, Math.max(map.getZoom(), locationZoom), { animate: false });
-                  const mapSize = map.getSize();
-                  map.panBy(L.point(0, mapSize.y * 0.12), { animate: false });
                 }
               }
             } catch (error) {
@@ -954,8 +952,11 @@ export const LeafletMap = ({
       `).join('');
 
       const isHotspot = totalUpvotes > 0;
-      const rootWidth = isHotspot ? 72 : 68;
-      const rootHeight = isHotspot ? 72 : 68;
+      const rootWidth = markerVisual.isAvatar ? (isHotspot ? 64 : 60) : (isHotspot ? 66 : 62);
+      const rootHeight = markerVisual.isAvatar ? (isHotspot ? 64 : 60) : (isHotspot ? 66 : 62);
+      const iconAnchor = markerVisual.isAvatar
+        ? (isHotspot ? [32, 58] as [number, number] : [30, 54] as [number, number])
+        : (isHotspot ? [33, 60] as [number, number] : [31, 56] as [number, number]);
       
       const icon = L.divIcon({
         className: 'custom-marker-icon bg-transparent border-none',
@@ -989,8 +990,8 @@ export const LeafletMap = ({
             ${stickersHtml}
           </div>
         `,
-        iconSize: isHotspot ? [72, 72] : [68, 68],
-        iconAnchor: isHotspot ? [36, 64] : [34, 60]
+        iconSize: [rootWidth, rootHeight],
+        iconAnchor
       });
 
       const marker = L.marker([markerData.latitude, markerData.longitude], { icon });

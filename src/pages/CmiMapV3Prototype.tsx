@@ -1378,7 +1378,7 @@ function MapMode({
         markers={markers}
         onMarkerClick={onMarkerSelect}
         defaultZoom={CMI_MAP_DEFAULT_ZOOM}
-        focusUserLocation={locationRequestKey > 0}
+        focusUserLocation
         locationZoom={16}
         constrainToChiangMai
         className="cmi-v3-live-map"
