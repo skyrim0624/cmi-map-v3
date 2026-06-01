@@ -30,7 +30,7 @@ import {
   useState,
 } from 'react';
 import { flushSync } from 'react-dom';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LeafletMap } from '@/components/map/LeafletMap';
 import { getCmiEventCardImageUrl } from '@/components/intent/event-card-presentation';
@@ -50,7 +50,11 @@ import {
   getProfilesByUserNames,
   type PublicProfile,
 } from '@/db/api';
-import { getPublishedCmiEvents } from '@/db/cmi-events';
+import {
+  getCurrentUserCmiEventRegistrations,
+  getPublishedCmiEvents,
+  registerForCmiEvent,
+} from '@/db/cmi-events';
 import {
   appendStickerPlacement,
   applyWishlistState,
@@ -64,6 +68,11 @@ import {
   placeRecommendationSticker,
   toggleRecommendationWishlist,
 } from '@/features/interactions/interaction-service';
+import {
+  getEventListRegistrationButtonState,
+  isCapacityFullRegistrationError,
+  type EventListRegistrationButtonState,
+} from '@/features/cmi-events/event-list-registration-state';
 import {
   getAddTracePath,
   getCmiEventCreatePath,
@@ -1842,8 +1851,14 @@ function EventsMode({
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
   onOpenPath: (path: string) => void;
 }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user, profile } = useAuth();
   const [activeEventTab, setActiveEventTab] = useState<EventTabId>('upcoming');
   const [sharingEventIds, setSharingEventIds] = useState<Record<string, boolean>>({});
+  const [registeredEventIds, setRegisteredEventIds] = useState<Record<string, boolean>>({});
+  const [registeringEventIds, setRegisteringEventIds] = useState<Record<string, boolean>>({});
+  const [fullEventIds, setFullEventIds] = useState<Record<string, boolean>>({});
   const referenceDate = useMemo(() => new Date(), []);
   const eventGroups = useMemo(() => {
     const nextOngoingEvents: CmiEvent[] = [];
@@ -1879,6 +1894,10 @@ function EventsMode({
         : activeEventTab === 'joined'
           ? eventGroups.joined
           : eventGroups.upcomingEvents;
+  const visibleEventIdsKey = useMemo(
+    () => visibleEvents.map(event => event.id).join('|'),
+    [visibleEvents]
+  );
   const emptyEventMessage: Record<EventTabId, string> = {
     ongoing: '现在没有正在发生的活动。',
     upcoming: '暂时没有未开始活动。',
@@ -1886,11 +1905,112 @@ function EventsMode({
     joined: '你参加的活动之后会放在这里。',
   };
 
+  useEffect(() => {
+    let isMounted = true;
+    const eventIds = visibleEventIdsKey.split('|').filter(Boolean);
+
+    if (eventIds.length === 0 || !user?.id) {
+      setRegisteredEventIds({});
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    getCurrentUserCmiEventRegistrations(eventIds, user.id)
+      .then(registrations => {
+        if (!isMounted) return;
+
+        setRegisteredEventIds(
+          eventIds.reduce<Record<string, boolean>>((state, eventId) => {
+            state[eventId] = registrations.some(registration => registration.eventId === eventId);
+            return state;
+          }, {})
+        );
+      })
+      .catch(error => {
+        console.error('CMI Map 3.0 当前用户报名状态加载失败:', error);
+        if (isMounted) setRegisteredEventIds({});
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, visibleEventIdsKey]);
+
+  const handleQuickRegisterEvent = async (event: CmiEvent) => {
+    if (!user?.id || !user.email) {
+      toast('登录后可以一键报名', { description: '注册只需要一个邮箱。' });
+      navigate('/login', { state: { from: `${location.pathname}${location.search}` } });
+      return;
+    }
+
+    if (registeredEventIds[event.id]) {
+      toast('你已经报名这个活动了');
+      return;
+    }
+
+    if (fullEventIds[event.id] || event.registrationStatus === 'closed') {
+      toast.error('这个活动名额已满');
+      return;
+    }
+
+    if (!event.registrationEnabled) {
+      toast.error('这个活动暂时不能一键报名', { description: event.registrationLabel });
+      return;
+    }
+
+    const attendeeName = profile?.user_name?.trim() || user.email.split('@')[0] || 'CMI 朋友';
+
+    setRegisteringEventIds(prev => ({ ...prev, [event.id]: true }));
+    try {
+      const result = await registerForCmiEvent({
+        eventId: event.id,
+        attendeeName,
+        attendeeEmail: user.email,
+        note: '从 CMI Map 3.0 活动卡片一键报名',
+        userId: user.id,
+      });
+
+      setRegisteredEventIds(prev => ({ ...prev, [event.id]: true }));
+
+      if (result.notificationError) {
+        toast.warning('报名成功，邮件通知稍后需要补发');
+      } else {
+        toast.success('报名成功');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '请稍后重试';
+      const normalizedMessage = message.toLowerCase();
+
+      if (normalizedMessage.includes('duplicate')) {
+        setRegisteredEventIds(prev => ({ ...prev, [event.id]: true }));
+        toast('你已经报名这个活动了');
+        return;
+      }
+
+      if (isCapacityFullRegistrationError(message)) {
+        setFullEventIds(prev => ({ ...prev, [event.id]: true }));
+        toast.error('这个活动名额已满');
+        return;
+      }
+
+      toast.error('报名失败', { description: message });
+    } finally {
+      setRegisteringEventIds(prev => ({ ...prev, [event.id]: false }));
+    }
+  };
+
   const renderEventCard = (event: CmiEvent) => (
     <EventListCard
       key={event.id}
       event={event}
       isSharing={Boolean(sharingEventIds[event.id])}
+      registrationState={getEventListRegistrationButtonState({
+        event,
+        hasRegistered: Boolean(registeredEventIds[event.id]),
+        isRegistering: Boolean(registeringEventIds[event.id]),
+        isMarkedFull: Boolean(fullEventIds[event.id]),
+      })}
       onOpenRealPage={() => onOpenPath(getCmiEventPath(event.id))}
       onOpenMap={() => {
         if (!event.mapLocation) {
@@ -1899,6 +2019,7 @@ function EventsMode({
         }
         onNavigate('map', { eventId: event.id });
       }}
+      onRegister={() => handleQuickRegisterEvent(event)}
       onShare={() => handleShareEvent(event)}
     />
   );
@@ -2217,14 +2338,18 @@ function StickerDrawer({
 function EventListCard({
   event,
   isSharing,
+  registrationState,
   onOpenRealPage,
   onOpenMap,
+  onRegister,
   onShare,
 }: {
   event: CmiEvent;
   isSharing: boolean;
+  registrationState: EventListRegistrationButtonState;
   onOpenRealPage: () => void;
   onOpenMap: () => void;
+  onRegister: () => void;
   onShare: () => void;
 }) {
   const registrationPreviewLabel = event.registrationLabel.includes('http')
@@ -2232,9 +2357,25 @@ function EventListCard({
     : event.registrationLabel;
   const visibleTags = event.tags.slice(0, 4);
   const statusBadge = getEventStatusBadge(event);
+  const handleActionClick = (clickEvent: ReactMouseEvent<HTMLButtonElement>, action: () => void) => {
+    clickEvent.stopPropagation();
+    action();
+  };
+  const handleCardKeyDown = (keyboardEvent: KeyboardEvent<HTMLElement>) => {
+    if (keyboardEvent.key !== 'Enter' && keyboardEvent.key !== ' ') return;
+    keyboardEvent.preventDefault();
+    onOpenRealPage();
+  };
 
   return (
-    <article className={`cmi-v3-event-card cmi-v3-feed-card--${getEventTone(event)}`}>
+    <article
+      className={`cmi-v3-event-card cmi-v3-feed-card--${getEventTone(event)}`}
+      role="link"
+      tabIndex={0}
+      aria-label={`查看 ${event.title} 活动详情`}
+      onClick={onOpenRealPage}
+      onKeyDown={handleCardKeyDown}
+    >
       <div className="cmi-v3-event-card-media">
         <img src={getCmiEventCardImageUrl(event)} alt={`${event.title}活动海报`} />
         <span className={`cmi-v3-event-status-badge cmi-v3-event-status-badge--${statusBadge.tone}`}>
@@ -2273,9 +2414,23 @@ function EventListCard({
         </div>
 
         <div className="cmi-v3-card-actions cmi-v3-event-card-actions">
-          <button type="button" onClick={onShare} disabled={isSharing}>{isSharing ? '生成中' : '分享'}</button>
-          <button type="button" onClick={onOpenRealPage}>报名</button>
-          <button type="button" onClick={onOpenMap}>地图</button>
+          <button type="button" onClick={(clickEvent) => handleActionClick(clickEvent, onShare)} disabled={isSharing}>{isSharing ? '生成中' : '分享'}</button>
+          <button
+            type="button"
+            className={`cmi-v3-event-register-button--${registrationState.tone}`}
+            aria-disabled={registrationState.disabled}
+            tabIndex={registrationState.disabled ? -1 : undefined}
+            onClick={(clickEvent) => {
+              clickEvent.stopPropagation();
+              if (registrationState.disabled) return;
+              onRegister();
+            }}
+            onKeyDown={(keyboardEvent) => keyboardEvent.stopPropagation()}
+            aria-label={registrationState.ariaLabel}
+          >
+            {registrationState.label}
+          </button>
+          <button type="button" onClick={(clickEvent) => handleActionClick(clickEvent, onOpenMap)}>地图</button>
         </div>
       </div>
     </article>

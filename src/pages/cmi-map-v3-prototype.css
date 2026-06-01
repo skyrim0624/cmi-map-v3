@@ -2150,6 +2150,19 @@
   background: var(--cmi-v3-paper);
   overflow: hidden;
   padding: 12px;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.cmi-v3-event-card:focus-visible {
+  outline: 3px solid var(--cmi-v3-blue);
+  outline-offset: 3px;
+}
+
+.cmi-v3-event-card:active {
+  transform: translateY(1px);
 }
 
 .cmi-v3-event-card-media {
@@ -2296,6 +2309,32 @@
   min-height: 38px;
   justify-content: center;
   padding: 0 10px;
+}
+
+.cmi-v3-event-card-actions button:disabled,
+.cmi-v3-event-card-actions button[aria-disabled="true"] {
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cmi-v3-event-card-actions .cmi-v3-event-register-button--active {
+  background: #d9ecff;
+}
+
+.cmi-v3-event-card-actions .cmi-v3-event-register-button--busy {
+  background: var(--cmi-v3-yellow);
+  box-shadow: none;
+}
+
+.cmi-v3-event-card-actions .cmi-v3-event-register-button--registered {
+  background: var(--cmi-v3-green);
+  box-shadow: none;
+}
+
+.cmi-v3-event-card-actions .cmi-v3-event-register-button--closed {
+  background: #d9d9d9;
+  color: rgba(22, 22, 22, 0.58);
+  box-shadow: none;
 }
 
 .cmi-v3-detail-poster {
