@@ -544,42 +544,72 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
   'cmi-curiosity-old-city-temples-2026-06-03': {
     eventId: 'cmi-curiosity-old-city-temples-2026-06-03',
     posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-curiosity-old-city-temples-2026-06-03']!,
-    postTitle: '古城与古寺｜清迈古城与佛寺文化',
+    postTitle: '🏯《古城与古寺——清迈古城与佛寺文化》',
     postBlocks: [
       {
         kind: 'paragraph',
-        text: '6 月 3 日晚，清迈客栈邀请维果老师带大家走进清迈古城，理解兰纳王朝的历史脉络、佛寺建筑和日常信仰。',
+        text: '当塔佩门的砖墙穿越七百年的时光，\n当古寺的钟声依旧回荡在古城上空，\n你是否真正了解清迈这座城市背后的历史与信仰？',
       },
       {
         kind: 'paragraph',
-        text: '如果你刚到清迈，或者一直想知道古城、城墙和寺庙背后的故事，这场分享适合用一个晚上重新认识这座城市。',
+        text: '6月3日晚，我们邀请到维果老师，与大家一起走进清迈古城，探寻兰纳王朝的历史脉络，解读佛寺建筑的文化密码，感受古城与古寺交织而成的独特魅力。',
       },
       {
         kind: 'heading',
-        text: '分享嘉宾',
+        text: '🎤 分享嘉宾：维果',
       },
       {
         kind: 'list',
         items: [
-          '维果',
           '清华大学校友会“何以中国”人文游学项目导师',
           '北京大学《北大校史与北大学脉》课程组指导教师',
           '中国人民大学全国中学历史教学创新研修班项目导师',
+          '南开大学历史学科人才培养项目组核心成员',
         ],
       },
       {
         kind: 'heading',
-        text: '活动信息',
+        text: '📅 时间',
       },
       {
-        kind: 'list',
-        items: [
-          '活动时间：2026 年 6 月 3 日（周三）19:00-20:30',
-          '活动地点：清迈客栈（活动空间）',
-          '线上观看：腾讯会议直播，会议号 105-998-819',
-          '费用说明：免费参与',
-          CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
-        ],
+        kind: 'paragraph',
+        text: '2026年6月3日（周三）\n19:00—20:30',
+      },
+      {
+        kind: 'heading',
+        text: '📍 地点',
+      },
+      {
+        kind: 'paragraph',
+        text: '清迈客栈（活动空间）\n清迈最大的华人社区，一个有温度的大家庭',
+      },
+      {
+        kind: 'heading',
+        text: '💻 线上观看',
+      },
+      {
+        kind: 'paragraph',
+        text: '腾讯会议直播：https://meeting.tencent.com/dm/XamWIJ1MrYzG\n会议号：105-998-819',
+      },
+      {
+        kind: 'heading',
+        text: '🖊️ 报名',
+      },
+      {
+        kind: 'paragraph',
+        text: '免费参与。名额有限，欢迎扫码报名。',
+      },
+      {
+        kind: 'heading',
+        text: '🤝 联合主办',
+      },
+      {
+        kind: 'paragraph',
+        text: 'Curionrsty × Paradornparp International House',
+      },
+      {
+        kind: 'paragraph',
+        text: '无论你是历史文化爱好者，还是刚来到清迈的新朋友，都欢迎来到现场，一起在古城与古寺之间，重新认识这座充满故事的城市。',
       },
     ],
   },
