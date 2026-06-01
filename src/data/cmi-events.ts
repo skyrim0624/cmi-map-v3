@@ -435,7 +435,7 @@ export const CMI_EVENTS: CmiEvent[] = [
     registrationEnabled: true,
     registrationStatus: 'open',
     attendeeVisibility: 'public',
-    coverImageUrl: '/cmi-home/event-posters/cmi-five-minute-music-kid-a-2026-06-02.png',
+    coverImageUrl: '/cmi-home/event-posters/cmi-five-minute-music-kid-a-2026-06-02.png?v=20260601-mobile-share',
   },
   {
     id: 'cmi-talk-fathers-day-speaker-call-2026-06-07',

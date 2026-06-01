@@ -65,11 +65,16 @@ export default defineConfig({
           {
             urlPattern: ({ request, sameOrigin }) =>
               sameOrigin && request.destination === "image",
-            handler: "CacheFirst",
+            handler: "NetworkFirst",
             options: {
-              cacheName: "cmi-map-runtime-images",
+              cacheName: "cmi-map-runtime-images-v2",
+              networkTimeoutSeconds: 4,
               cacheableResponse: {
-                statuses: [0, 200],
+                statuses: [200],
+              },
+              expiration: {
+                maxEntries: 180,
+                maxAgeSeconds: 7 * 24 * 60 * 60,
               },
             },
           },

@@ -970,3 +970,21 @@
   - `pnpm exec biome lint src/pages/CmiEventDetail.tsx src/index.css` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地浏览器验证活动详情页：正文区背景为 `rgb(255, 255, 255)`，`background-image: none`，无横向溢出，console 无 warn/error。
+
+### 2026-06-01 13:43:36 +07 活动详情海报移动端缓存与分享卡失败修复
+
+- 背景：用户用手机打开 `https://cmimap.com/events/cmi-five-minute-music-kid-a-2026-06-02`，发现活动海报显示为蓝底坏图图标，点击“分享”后提示“活动卡片生成失败，请稍后再试”。
+- 排查结论：
+  - 线上原始海报文件当前可正常返回 200 PNG，本地和桌面浏览器也能解码。
+  - 生产 PWA 对同源图片使用 `CacheFirst`，手机端如果曾缓存过坏响应，会继续优先读旧坏缓存，导致详情页海报和分享卡生成器同时失败。
+- 本轮实现：
+  - Radiohead 活动海报 URL 增加 `?v=20260601-mobile-share`，绕开旧手机图片缓存。
+  - PWA 同源图片运行时缓存从 `CacheFirst` 改为 `NetworkFirst`，并切到新缓存名 `cmi-map-runtime-images-v2`，避免坏图长期滞留。
+  - 活动分享卡生成器在同源图片加载失败时自动追加一次 `cmiCardRetry` 参数重试，给旧缓存失败态加自愈路径。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/data/cmi-events.ts src/data/cmi-event-details.ts src/lib/cmi-event-share-card.ts vite.config.prod.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
+  - 本地生产预览 `http://127.0.0.1:4173/events/cmi-five-minute-music-kid-a-2026-06-02` 在 375px 手机视口下确认：海报 `currentSrc` 带版本号，`naturalWidth=936` / `naturalHeight=1681`，页面不再出现坏图。
+  - 本地生产预览点击“分享”：未出现“活动卡片生成失败”；自动化点击触发的 `navigator.share` 用户手势限制已按现有逻辑降级处理。

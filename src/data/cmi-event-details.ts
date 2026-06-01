@@ -43,7 +43,7 @@ export const CMI_EVENT_POSTER_BY_ID: Partial<Record<string, string>> = {
   'cmi-waytoagi-codex-maker-lab-2026-05-31':
     '/cmi-home/event-posters/cmi-waytoagi-codex-maker-lab-2026-05-31.png',
   'cmi-five-minute-music-kid-a-2026-06-02':
-    '/cmi-home/event-posters/cmi-five-minute-music-kid-a-2026-06-02.png',
+    '/cmi-home/event-posters/cmi-five-minute-music-kid-a-2026-06-02.png?v=20260601-mobile-share',
   'cmi-talk-fathers-day-speaker-call-2026-06-07':
     '/cmi-home/event-posters/cmi-talk-fathers-day-speaker-call-2026-06-07.png',
 };

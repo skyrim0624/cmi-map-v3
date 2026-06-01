@@ -67,7 +67,20 @@ const getAbsoluteAssetUrl = (url: string) => {
   return new URL(url, window.location.origin).toString();
 };
 
-const loadImage = (src: string) =>
+const getCacheRetryUrl = (src: string) => {
+  if (src.startsWith('data:')) return null;
+
+  try {
+    const url = new URL(getAbsoluteAssetUrl(src));
+    if (url.origin !== window.location.origin) return null;
+    url.searchParams.set('cmiCardRetry', String(Date.now()));
+    return url.toString();
+  } catch {
+    return null;
+  }
+};
+
+const loadImageOnce = (src: string) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
     image.crossOrigin = 'anonymous';
@@ -75,6 +88,17 @@ const loadImage = (src: string) =>
     image.onerror = () => reject(new Error(`Cannot load image: ${src}`));
     image.src = getAbsoluteAssetUrl(src);
   });
+
+const loadImage = async (src: string) => {
+  try {
+    return await loadImageOnce(src);
+  } catch (error) {
+    const retryUrl = getCacheRetryUrl(src);
+    if (!retryUrl) throw error;
+    // NOTE: 手机端可能被旧 service worker 缓住过坏图片响应，分享卡本地图像失败时用新查询参数自愈一次。
+    return loadImageOnce(retryUrl);
+  }
+};
 
 const wrapText = (
   context: CanvasRenderingContext2D,
