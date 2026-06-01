@@ -573,25 +573,27 @@ export default function CmiEventDetail() {
   return (
     <div className="min-h-[100dvh] bg-[#050505] text-[#050505]">
       <div className="relative mx-auto min-h-[100dvh] max-w-[520px] bg-[#8b61ee]">
-        <header className="pointer-events-none absolute left-0 right-0 top-0 z-40 flex items-start justify-between gap-3 px-4 pt-[calc(env(safe-area-inset-top)+14px)]">
-          <Button
-            variant="ghost"
-            className="pointer-events-auto min-h-11 rounded-full border-[3px] border-[#050505] bg-white px-4 text-base font-black text-[#050505] shadow-[4px_5px_0_rgba(5,5,5,0.18)]"
-            onClick={() => navigate(-1)}
-            aria-label="返回上一页"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            返回
-          </Button>
-          {canManageEvent && (
+        <header className="pointer-events-none fixed inset-x-0 top-0 z-[60] pt-[calc(env(safe-area-inset-top)+14px)]">
+          <div className="mx-auto flex max-w-[520px] items-start justify-between gap-3 px-4">
             <Button
               variant="ghost"
-              className="pointer-events-auto min-h-10 rounded-full border-[3px] border-[#050505] bg-[#ffe466] px-3 text-xs font-black text-[#050505] shadow-[3px_4px_0_rgba(5,5,5,0.16)]"
-              onClick={() => navigate(getCmiEventManagePath(event.id))}
+              className="pointer-events-auto min-h-11 rounded-full border-[3px] border-[#050505] bg-white px-4 text-base font-black text-[#050505] shadow-[4px_5px_0_rgba(5,5,5,0.18)]"
+              onClick={() => navigate(-1)}
+              aria-label="返回上一页"
             >
-              管理
+              <ArrowLeft className="h-4 w-4" />
+              返回
             </Button>
-          )}
+            {canManageEvent && (
+              <Button
+                variant="ghost"
+                className="pointer-events-auto min-h-10 rounded-full border-[3px] border-[#050505] bg-[#ffe466] px-3 text-xs font-black text-[#050505] shadow-[3px_4px_0_rgba(5,5,5,0.16)]"
+                onClick={() => navigate(getCmiEventManagePath(event.id))}
+              >
+                管理
+              </Button>
+            )}
+          </div>
         </header>
 
         <main className="pb-32">

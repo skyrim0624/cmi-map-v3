@@ -876,3 +876,15 @@
   - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
   - 本地浏览器验证活动详情页：底栏背景为透明、顶部边线为 0，只剩三个按钮。
   - 已部署正式站 `https://730b7ed9.cmi-map.pages.dev` 和 v3 项目 `https://8592f055.cmi-map-v3.pages.dev`。
+
+### 2026-06-01 13:03:18 +07 活动详情返回按钮固定在左上角
+
+- 背景：用户在 `/events/cmi-five-minute-music-kid-a-2026-06-02` 评论指出返回按钮应固定在左上角，即便下滑也始终存在。
+- 本轮实现：
+  - 活动详情页头部从海报内绝对定位改为视口固定定位。
+  - 头部内部仍按 `520px` 页面宽度居中，保证手机和桌面下返回按钮都贴近内容左侧。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - `pnpm exec biome lint src/pages/CmiEventDetail.tsx` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地浏览器验证活动详情页：下滑到正文后返回按钮仍停留在左上角，坐标不变，console 无 warn/error。
