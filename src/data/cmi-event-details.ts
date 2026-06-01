@@ -40,6 +40,8 @@ export const CMI_EVENT_POSTER_BY_ID: Partial<Record<string, string>> = {
     'https://sfpcpxlxslnulzlmjcby.supabase.co/storage/v1/object/public/cmi-event-posters/posters/cmi-tiandi-xuanhuang-baraka-2026-05-30.png',
   'cmi-waytoagi-codex-maker-lab-2026-05-31':
     '/cmi-home/event-posters/cmi-waytoagi-codex-maker-lab-2026-05-31.png',
+  'cmi-five-minute-music-kid-a-2026-06-02':
+    'https://sfpcpxlxslnulzlmjcby.supabase.co/storage/v1/object/public/cmi-event-posters/posters/cmi-map-card-fix-20260530/cmi-five-minute-music-kid-a-2026-06-02.png',
   'cmi-talk-fathers-day-speaker-call-2026-06-07':
     '/cmi-home/event-posters/cmi-talk-fathers-day-speaker-call-2026-06-07.png',
 };
@@ -420,6 +422,56 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
           '活动地点：清迈客栈',
           '活动形式：全国多城市联动 · 清迈线下动手 · 全国连线开场',
           '参与方式：免费参与，请尽量在 Luma 报名：https://luma.com/kl2aa0qz',
+        ],
+      },
+    ],
+  },
+  'cmi-five-minute-music-kid-a-2026-06-02': {
+    eventId: 'cmi-five-minute-music-kid-a-2026-06-02',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-five-minute-music-kid-a-2026-06-02']!,
+    postTitle: '“五分钟”音乐会｜一起听 Radiohead 的《Kid A》',
+    postBlocks: [
+      {
+        kind: 'paragraph',
+        text: '你有多久没有好好听音乐了？',
+      },
+      {
+        kind: 'paragraph',
+        text: '6 月 2 日周二晚 19:00，我们在清迈客栈做一场很小的“五分钟”音乐会。',
+      },
+      {
+        kind: 'paragraph',
+        text: '它不是只听五分钟，而是把平时被切碎的五分钟拿回来：不刷手机、不当背景音、不赶下一件事，大家围坐在一起，完整听完 Radiohead 的《Kid A》。',
+      },
+      {
+        kind: 'paragraph',
+        text: '《Kid A》不是一张特别容易进入的唱片。它冷、碎、陌生，也非常适合在一个安静的晚上被认真听完。我们会边听边聊：这张专辑为什么在 2000 年之后不断被提起，它的声音、结构和情绪为什么值得反复听。',
+      },
+      {
+        kind: 'heading',
+        text: '适合谁来',
+      },
+      {
+        kind: 'list',
+        items: [
+          '认真听过或一直想听 Radiohead 的朋友',
+          '想练习把注意力重新放回声音里的人',
+          '喜欢专辑共听、音乐聊天和小型现场感的人',
+          '想在清迈找一个不用用力社交的周二晚上',
+        ],
+      },
+      {
+        kind: 'heading',
+        text: '活动信息',
+      },
+      {
+        kind: 'list',
+        items: [
+          '活动时间：6 月 2 日（周二）19:00',
+          '活动地点：清迈客栈',
+          '收听专辑：Radiohead《Kid A》',
+          '场地费用：免费参与',
+          '参与方式：添加微信 skyrim0216 报名',
         ],
       },
     ],
