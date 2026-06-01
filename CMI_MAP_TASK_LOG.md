@@ -1044,3 +1044,14 @@
   - 已部署 v3 项目 `https://51325c28.cmi-map-v3.pages.dev` 和正式站 `https://c6419907.cmi-map.pages.dev`，Source 为 `bb97ec2`。
   - 新正式 Pages 地址 `https://c6419907.cmi-map.pages.dev/?screen=feed&verify=bb97ec2` 复查通过：16 张卡片、4 张帖子、12 张地点动态；旧 hero、旧生活板标题和顶部分类筛选均不存在，console 无 warn/error。
   - 正式域名 `https://cmimap.com` 的服务器响应已指向新 bundle `CmiMapV3Prototype-By4KNvHm.js` / `CmiMapV3Prototype-0MZGr6Lr.css`，且新 JS 包内包含合并动态流逻辑；同一浏览器若仍看到旧 hero，是旧 service worker 缓存，需要刷新后切换。
+
+### 2026-06-01 14:33:03 +07 Wrangler 固定为本地开发依赖
+
+- 背景：用户指出部署时不应每次用临时 CLI，仓库本地应有 `wrangler` 依赖。
+- 本轮实现：
+  - 将 `wrangler` 加入 `devDependencies`，当前锁定解析版本为 `4.95.0`。
+  - 更新 `pnpm-lock.yaml`，后续部署可直接使用 `pnpm exec wrangler ...`。
+- 验证结果：
+  - `pnpm exec wrangler --version` 输出 `4.95.0`。
+  - `pnpm exec wrangler pages deploy --help` 正常输出 Pages 部署参数说明。
+  - 本轮只暂存并提交 `package.json`、`pnpm-lock.yaml` 和本日志；工作区中既有的 marker / 定位相关未提交改动不纳入本轮。
