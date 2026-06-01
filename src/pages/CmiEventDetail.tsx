@@ -606,7 +606,7 @@ export default function CmiEventDetail() {
             />
           </section>
 
-          <section className="cmi-event-post-section border-b-[4px] border-[#050505] bg-[#f6f1e8] px-6 pb-10 pt-8">
+          <section className="cmi-event-post-section border-b-[4px] border-[#050505] bg-white px-6 pb-10 pt-8">
             <h1 className="cmi-event-post-title break-words text-[2rem] font-black leading-[1.08] text-[#121827]">
               {postTitle}
             </h1>

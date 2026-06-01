@@ -958,3 +958,15 @@
   - 本地浏览器验证 `http://localhost:5173/?screen=map&verify=add-button-purple`：添加圆形为 `64px`，背景 `rgb(139, 107, 191)`，加号为白色 `36px`，console 无 warn/error。
   - 已部署 v3 项目 `https://15a12eba.cmi-map-v3.pages.dev` 和正式站 `https://9b9c2ace.cmi-map.pages.dev`，Source 为 `8e63ece`。
   - 正式域名 `https://www.cmimap.com/?verify=add-button-purple-8e63ece` 强刷新后已确认：添加圆形为 `64px`，背景 `rgb(139, 107, 191)`，加号为白色 `36px`。
+
+### 2026-06-01 13:38:17 +07 活动详情推文改为白底无网格
+
+- 背景：用户在活动详情页指出推文正文区不要网格背景，颜色太黄，需要改成白色。
+- 本轮实现：
+  - 移除推文正文区的网格背景图。
+  - 正文区背景从暖纸色改为纯白，保留无衬线黑体排版。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - `pnpm exec biome lint src/pages/CmiEventDetail.tsx src/index.css` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地浏览器验证活动详情页：正文区背景为 `rgb(255, 255, 255)`，`background-image: none`，无横向溢出，console 无 warn/error。
