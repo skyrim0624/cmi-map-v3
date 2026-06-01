@@ -1882,9 +1882,9 @@ function EventsMode({
   return (
     <ComicPage title="活动" hideTitle onTitleClick={() => onNavigate('map')}>
       <section className="cmi-v3-hard-card cmi-v3-events-hero cmi-v3-dot-paper">
-        <ChapterHeader left="CMI Events" right="what is happening" />
-        <h1>最近可以去哪儿</h1>
-        <p>活动不是公告板，是社区共同记忆的入口。</p>
+        <ChapterHeader left="CMI Events" />
+        <h1>活动就来清迈客栈！</h1>
+        <p>社区空间提供给大家使用，可以来办活动！</p>
         <div className="cmi-v3-event-tabs">
           {eventTabs.map(tab => (
             <button
