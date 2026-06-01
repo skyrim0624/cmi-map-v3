@@ -1122,6 +1122,22 @@
   - 线上预览 `https://e81cd1ab.cmi-map.pages.dev/events/cmi-five-minute-music-kid-a-2026-06-02?verify=event-recaps-9e72ba4` 复查通过：基本信息、活动返图、返图按钮均存在，console 无 warn/error。
   - 正式域名 `https://cmimap.com/events/cmi-five-minute-music-kid-a-2026-06-02?verify=event-recaps-9e72ba4-fresh` 刷新 service worker 后复查通过：基本信息、活动返图、返图按钮均存在，console 无 warn/error。
 
+### 2026-06-01 21:24:52 +07 邮箱验证码找回密码
+
+- 背景：一批早期用户很久没有使用 CMI Map，忘记原密码；现在产品体验变好后想回来，需要基于注册邮箱找回账号。
+- 本轮实现：
+  - 登录页“忘记密码？”改为邮箱验证码找回流程：输入注册邮箱、发送 6 位找回验证码、填写验证码和新密码后完成更新。
+  - 继续兼容旧的重置链接回调：如果用户从邮件按钮回到 `/login?auth=reset-password`，仍可直接设置新密码。
+  - Supabase Auth recovery 模板改为展示 `{{ .Token }}` 验证码，同时保留“打开重设页面”按钮。
+  - 认证上下文新增 recovery OTP 校验，校验通过后再调用 Supabase `updateUser` 更新密码。
+- 验证结果：
+  - `node --experimental-strip-types --test src/features/auth/auth-flow.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/Login.tsx src/contexts/AuthContext.tsx src/features/auth/auth-flow.ts src/features/auth/auth-flow.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
+  - 本地浏览器验证 `http://127.0.0.1:5174/login?qa=password-reset-3`：使用本地模拟认证接口避免向真实邮箱发信；点击“忘记密码？”后可发送找回验证码，成功进入“邮箱验证码 / 新密码 / 再输入一次”表单，提交后回到首页；console 无 warn/error。
+
 ### 2026-06-01 21:12:26 +07 登录错误提示与 Google 入口隐藏
 
 - 背景：用户反馈输错密码后页面像刷新成功一样，没有明确告诉他密码错误；当前 Google 登录不可用，继续展示按钮会误导用户。

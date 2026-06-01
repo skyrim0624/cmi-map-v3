@@ -34,6 +34,13 @@ export interface PasswordResetRequestFormState {
   email: string;
 }
 
+export interface PasswordResetVerificationFormState {
+  email: string;
+  code: string;
+  password: string;
+  confirmPassword: string;
+}
+
 export interface PasswordUpdateFormState {
   password: string;
   confirmPassword: string;
@@ -133,6 +140,17 @@ export const validatePasswordUpdateForm = (state: PasswordUpdateFormState) => {
   if (state.password.length < MIN_PASSWORD_LENGTH) return `密码至少 ${MIN_PASSWORD_LENGTH} 位`;
   if (state.password !== state.confirmPassword) return '两次输入的密码不一致';
   return null;
+};
+
+export const validatePasswordResetVerificationForm = (
+  state: PasswordResetVerificationFormState
+) => {
+  if (!state.email.trim()) return '请输入邮箱';
+  if (normalizeEmailCode(state.code).length !== 6) return '请输入 6 位邮箱验证码';
+  return validatePasswordUpdateForm({
+    password: state.password,
+    confirmPassword: state.confirmPassword,
+  });
 };
 
 const sanitizeRedirectPath = (redirectPath: string) => {

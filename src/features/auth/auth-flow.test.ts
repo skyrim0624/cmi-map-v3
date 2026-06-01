@@ -7,6 +7,7 @@ import {
   normalizeEmailCode,
   validateEmailCodeSignInForm,
   validatePasswordResetRequestForm,
+  validatePasswordResetVerificationForm,
   validatePasswordSignInForm,
   validatePasswordUpdateForm,
   validateRegistrationForm,
@@ -151,6 +152,45 @@ test('email code sign in treats OTP as an optional login fallback', () => {
 test('password reset request only requires an email', () => {
   assert.equal(validatePasswordResetRequestForm({ email: '' }), '请输入邮箱');
   assert.equal(validatePasswordResetRequestForm({ email: 'andreas@example.com' }), null);
+});
+
+test('password reset verification requires email code and matching password', () => {
+  assert.equal(
+    validatePasswordResetVerificationForm({
+      email: '',
+      code: '123456',
+      password: 'secret123',
+      confirmPassword: 'secret123',
+    }),
+    '请输入邮箱'
+  );
+  assert.equal(
+    validatePasswordResetVerificationForm({
+      email: 'andreas@example.com',
+      code: '12345',
+      password: 'secret123',
+      confirmPassword: 'secret123',
+    }),
+    '请输入 6 位邮箱验证码'
+  );
+  assert.equal(
+    validatePasswordResetVerificationForm({
+      email: 'andreas@example.com',
+      code: '123456',
+      password: 'secret123',
+      confirmPassword: 'secret124',
+    }),
+    '两次输入的密码不一致'
+  );
+  assert.equal(
+    validatePasswordResetVerificationForm({
+      email: 'andreas@example.com',
+      code: '123456',
+      password: 'secret123',
+      confirmPassword: 'secret123',
+    }),
+    null
+  );
 });
 
 test('password update requires a six character matching password', () => {

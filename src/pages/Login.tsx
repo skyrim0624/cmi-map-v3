@@ -27,6 +27,7 @@ import {
   normalizeEmailCode,
   validateEmailCodeSignInForm,
   validatePasswordResetRequestForm,
+  validatePasswordResetVerificationForm,
   validatePasswordSignInForm,
   validatePasswordUpdateForm,
   validateRegistrationForm,
@@ -38,6 +39,7 @@ type LoginLocationState = {
 };
 
 type PasswordPanel = 'none' | 'forgot' | 'update';
+type PasswordResetStep = 'request-code' | 'verify-code';
 
 const getRedirectOrigin = () =>
   typeof window === 'undefined' ? 'https://cmimap.com' : window.location.origin;
@@ -52,6 +54,7 @@ export default function Login() {
     signInWithEmail,
     signUpWithEmail,
     sendPasswordResetEmail,
+    verifyPasswordResetCode,
     updatePassword,
   } = useAuth();
   const redirectPath = (location.state as LoginLocationState | null)?.from || '/';
@@ -73,6 +76,8 @@ export default function Login() {
   );
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordResetStep, setPasswordResetStep] = useState<PasswordResetStep>('request-code');
+  const [passwordResetEmail, setPasswordResetEmail] = useState('');
   const [lastPasswordResetSentAt, setLastPasswordResetSentAt] = useState(0);
   const [passwordSignInError, setPasswordSignInError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -81,6 +86,8 @@ export default function Login() {
   const isRegister = mode === 'register';
   const isVerifyingCode = authStep === 'verify-code';
   const isUpdatingPassword = passwordPanel === 'update';
+  const isPasswordResetCodeStep = passwordPanel === 'forgot' && passwordResetStep === 'verify-code';
+  const isPasswordRecoveryActive = isPasswordResetCallback || passwordPanel !== 'none';
   const isEmailCodeLogin = mode === 'login' && loginMethod === 'code';
   const redirectTo = useMemo(
     () => buildAuthRedirectTo(getRedirectOrigin(), redirectPath),
@@ -92,8 +99,8 @@ export default function Login() {
   );
 
   useEffect(() => {
-    if (user && !isPasswordResetCallback) navigate(redirectPath, { replace: true });
-  }, [isPasswordResetCallback, navigate, redirectPath, user]);
+    if (user && !isPasswordRecoveryActive) navigate(redirectPath, { replace: true });
+  }, [isPasswordRecoveryActive, navigate, redirectPath, user]);
 
   useEffect(() => {
     if (isPasswordResetCallback) setPasswordPanel('update');
@@ -113,11 +120,32 @@ export default function Login() {
     setPendingEmail('');
   };
 
+  const resetPasswordResetState = () => {
+    setPasswordResetStep('request-code');
+    setPasswordResetEmail('');
+    setEmailCode('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+  };
+
+  const openPasswordResetPanel = () => {
+    setLoginMethod('password');
+    setPasswordPanel('forgot');
+    setPasswordSignInError('');
+    resetPasswordResetState();
+  };
+
+  const closePasswordResetPanel = () => {
+    setPasswordPanel('none');
+    resetPasswordResetState();
+  };
+
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
     setLoginMethod('password');
     setPasswordPanel('none');
     setPasswordSignInError('');
+    resetPasswordResetState();
     resetCodeState();
   };
 
@@ -134,7 +162,7 @@ export default function Login() {
         : '登录 CMI Map';
 
   const description = isUpdatingPassword
-    ? '从找回密码邮件回来后，在这里输入新密码。'
+    ? '邮箱验证通过后，在这里输入新密码。'
     : isRegister
       ? isVerifyingCode
         ? `我们已经把 6 位验证码发到 ${pendingEmail || email.trim()}。`
@@ -143,7 +171,9 @@ export default function Login() {
         ? isVerifyingCode
           ? `我们已经把 6 位验证码发到 ${pendingEmail || email.trim()}。`
           : '不用密码时，可以临时用邮箱验证码登录。'
-        : '用邮箱和密码登录，也可以改用邮箱验证码。';
+        : isPasswordResetCodeStep
+          ? `我们已经把 6 位找回验证码发到 ${passwordResetEmail}。`
+          : '用邮箱和密码登录，也可以改用邮箱验证码。';
 
   const submitPasswordSignIn = async () => {
     setPasswordSignInError('');
@@ -350,35 +380,71 @@ export default function Login() {
   const handlePasswordResetRequest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const resetEmail = email.trim();
-    const validationError = validatePasswordResetRequestForm({ email: resetEmail });
+    const resetEmail = (passwordResetEmail || email).trim();
+    const validationError =
+      passwordResetStep === 'request-code'
+        ? validatePasswordResetRequestForm({ email: resetEmail })
+        : validatePasswordResetVerificationForm({
+            email: resetEmail,
+            code: emailCode,
+            password: newPassword,
+            confirmPassword: confirmNewPassword,
+          });
 
     if (validationError) {
       toast.error(validationError);
       return;
     }
 
-    const retrySeconds = getEmailCodeRetrySeconds(lastPasswordResetSentAt, Date.now());
-    if (retrySeconds > 0) {
-      toast.error(`找回邮件刚刚发过，${retrySeconds} 秒后再试`);
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const { error } = await sendPasswordResetEmail({
-        email: resetEmail,
-        redirectTo: passwordResetRedirectTo,
-      });
+      if (passwordResetStep === 'request-code') {
+        const retrySeconds = getEmailCodeRetrySeconds(lastPasswordResetSentAt, Date.now());
+        if (retrySeconds > 0) {
+          toast.error(`找回验证码刚刚发过，${retrySeconds} 秒后再试`);
+          return;
+        }
 
-      if (error) {
-        toast.error(`找回邮件发送失败: ${error.message}`);
+        const { error } = await sendPasswordResetEmail({
+          email: resetEmail,
+          redirectTo: passwordResetRedirectTo,
+        });
+
+        if (error) {
+          toast.error(`找回验证码发送失败: ${error.message}`);
+          return;
+        }
+
+        setPasswordResetEmail(resetEmail);
+        setEmailCode('');
+        setNewPassword('');
+        setConfirmNewPassword('');
+        setPasswordResetStep('verify-code');
+        setLastPasswordResetSentAt(Date.now());
+        toast.success('找回验证码已发送，请查看邮箱');
         return;
       }
 
-      setLastPasswordResetSentAt(Date.now());
-      toast.success('找回邮件已发送，请去邮箱打开链接');
+      const { error: verifyError } = await verifyPasswordResetCode({
+        email: resetEmail,
+        code: normalizeEmailCode(emailCode),
+      });
+
+      if (verifyError) {
+        toast.error(`验证码错误或已过期: ${verifyError.message}`);
+        return;
+      }
+
+      const { error: updateError } = await updatePassword(newPassword);
+      if (updateError) {
+        toast.error(`密码更新失败: ${updateError.message}`);
+        return;
+      }
+
+      toast.success('密码已更新');
+      closePasswordResetPanel();
+      navigate(redirectPath, { replace: true });
     } finally {
       setLoading(false);
     }
@@ -426,7 +492,7 @@ export default function Login() {
           placeholder="your@email.com"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          disabled={loading || isVerifyingCode}
+          disabled={loading || isVerifyingCode || isPasswordResetCodeStep}
           autoComplete="email"
           className="h-12 rounded-2xl pl-10 text-base font-semibold"
         />
@@ -703,7 +769,7 @@ export default function Login() {
                     <button
                       type="button"
                       className="text-[#12967e]"
-                      onClick={() => setPasswordPanel('forgot')}
+                      onClick={openPasswordResetPanel}
                       disabled={loading}
                     >
                       忘记密码？
@@ -715,6 +781,7 @@ export default function Login() {
                         setLoginMethod('code');
                         setPasswordPanel('none');
                         setPasswordSignInError('');
+                        resetPasswordResetState();
                         resetCodeState();
                       }}
                       disabled={loading}
@@ -731,6 +798,7 @@ export default function Login() {
                     onClick={() => {
                       setLoginMethod('password');
                       setPasswordSignInError('');
+                      resetPasswordResetState();
                       resetCodeState();
                     }}
                     disabled={loading}
@@ -757,22 +825,89 @@ export default function Login() {
                   className="mt-4 space-y-3 rounded-[1.2rem] border border-[#e5e5df] bg-[#fbfbf8] p-4"
                 >
                   <div className="text-sm font-semibold leading-relaxed text-[#777771]">
-                    输入上面的邮箱，我们会发送一封设置新密码的邮件。
+                    {passwordResetStep === 'request-code'
+                      ? '输入上面的注册邮箱，我们会发送 6 位找回验证码。'
+                      : `输入 ${passwordResetEmail} 收到的 6 位验证码，然后设置新密码。`}
                   </div>
 
-                    <Button
-                      type="submit"
-                      variant="secondary"
-                      className="h-11 w-full rounded-xl border-2 border-foreground text-sm font-black bg-secondary text-secondary-foreground shadow-[2px_2px_0_#000] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] transition-all touch-manipulation"
+                  {passwordResetStep === 'verify-code' && (
+                    <>
+                      {renderCodeField()}
+
+                      <div className="space-y-2">
+                        <Label htmlFor="resetNewPassword" className="text-sm font-black text-[#3f3f42]">
+                          新密码
+                        </Label>
+                        <div className="relative">
+                          <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#92928d]" />
+                          <Input
+                            id="resetNewPassword"
+                            type="password"
+                            placeholder="至少 6 位"
+                            value={newPassword}
+                            onChange={(event) => setNewPassword(event.target.value)}
+                            disabled={loading}
+                            autoComplete="new-password"
+                            className="h-12 rounded-2xl pl-10 text-base font-semibold"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="resetConfirmNewPassword" className="text-sm font-black text-[#3f3f42]">
+                          再输入一次
+                        </Label>
+                        <div className="relative">
+                          <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#92928d]" />
+                          <Input
+                            id="resetConfirmNewPassword"
+                            type="password"
+                            placeholder="确认新密码"
+                            value={confirmNewPassword}
+                            onChange={(event) => setConfirmNewPassword(event.target.value)}
+                            disabled={loading}
+                            autoComplete="new-password"
+                            className="h-12 rounded-2xl pl-10 text-base font-semibold"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  <Button
+                    type="submit"
+                    variant="secondary"
+                    className="h-11 w-full rounded-xl border-2 border-foreground text-sm font-black bg-secondary text-secondary-foreground shadow-[2px_2px_0_#000] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] transition-all touch-manipulation"
+                    disabled={loading}
+                  >
+                    {loading
+                      ? '处理中...'
+                      : passwordResetStep === 'request-code'
+                        ? '发送找回验证码'
+                        : '验证并更新密码'}
+                  </Button>
+
+                  {passwordResetStep === 'verify-code' && (
+                    <button
+                      type="button"
+                      className="w-full rounded-full py-1.5 text-sm font-black text-[#12967e]"
+                      onClick={() => {
+                        setPasswordResetStep('request-code');
+                        setPasswordResetEmail('');
+                        setEmailCode('');
+                        setNewPassword('');
+                        setConfirmNewPassword('');
+                      }}
                       disabled={loading}
                     >
-                      {loading ? '处理中...' : '发送找回邮件'}
-                    </Button>
+                      换一个邮箱
+                    </button>
+                  )}
 
                   <button
                     type="button"
                     className="w-full rounded-full py-1.5 text-sm font-black text-[#8a8a84]"
-                    onClick={() => setPasswordPanel('none')}
+                    onClick={closePasswordResetPanel}
                     disabled={loading}
                   >
                     收起

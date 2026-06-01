@@ -51,6 +51,10 @@ interface AuthContextType {
     email: string;
     redirectTo: string;
   }) => Promise<{ error: Error | null }>;
+  verifyPasswordResetCode: (input: {
+    email: string;
+    code: string;
+  }) => Promise<{ error: Error | null }>;
   updatePassword: (password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -274,6 +278,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const verifyPasswordResetCode: AuthContextType['verifyPasswordResetCode'] = async ({
+    email,
+    code,
+  }) => {
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: code.trim(),
+        type: 'recovery',
+      });
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  };
+
   const updatePassword: AuthContextType['updatePassword'] = async (password) => {
     try {
       const { error } = await supabase.auth.updateUser({ password });
@@ -304,6 +326,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithMagicLink,
         signUpWithEmail,
         sendPasswordResetEmail,
+        verifyPasswordResetCode,
         updatePassword,
         signOut,
         refreshProfile,
