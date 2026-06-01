@@ -597,7 +597,7 @@ export default function CmiEventDetail() {
         </header>
 
         <main className="pb-32">
-          <section className="overflow-hidden border-b-[4px] border-[#050505] bg-[#0d45a3]">
+          <section className="overflow-hidden bg-[#0d45a3]">
             <img
               src={posterUrl}
               alt={`${event.title}活动海报`}

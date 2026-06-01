@@ -920,3 +920,15 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地浏览器验证 `http://localhost:5174/v3?screen=feed`：刷新后第一条“今夜的双龙寺”仍显示 1 枚盖戳，动态页共 2 枚盖戳，console 无 warn/error。
   - 本地浏览器验证 `http://localhost:5174/v3`：展开地图底部动态后，第一条动态仍显示 1 枚盖戳，抽屉共 2 枚盖戳，console 无 warn/error。
+
+### 2026-06-01 13:20:28 +07 活动详情海报和正文之间去掉黑线
+
+- 背景：用户在 `/events/cmi-five-minute-music-kid-a-2026-06-02` 截图中指出海报蓝底和正文纸张之间的黑色横线需要去掉。
+- 本轮实现：
+  - 移除活动详情页海报区底部 `4px` 黑色边框。
+  - 保留正文内部纸张样式和其他信息分隔线，不扩大改动范围。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - `pnpm exec biome lint src/pages/CmiEventDetail.tsx` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地浏览器验证活动详情页：海报底部边框为 `0px`，蓝底与正文直接衔接，console 无 warn/error。
