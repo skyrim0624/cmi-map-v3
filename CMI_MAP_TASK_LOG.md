@@ -28,6 +28,23 @@
 
 ## 执行记录
 
+### 2026-06-01 23:12 +07 打卡相机画质和正方形取景优化
+
+- 用户反馈：网页打卡相机预览像“前面有一层雾”，不能缩放；产品侧希望拍照输出统一改成正方形。
+- 本轮实现：
+  - 打卡页相机取景框改为 1:1 正方形预览，去掉原先可能造成雾感的模糊/半透明取景容器，并轻微提升预览对比度和饱和度。
+  - 拍照输出统一走正方形中心裁切，JPEG 输出质量从 0.92 提到 0.96，上传前仍沿用地点图片的高质量压缩策略。
+  - 新增焦距滑杆：优先使用浏览器/设备支持的原生相机 zoom；不支持时回退为网页内数字裁切缩放。
+  - 抽出 `camera-capture` 纯函数，覆盖横向/竖向视频正方形裁切、数字缩放裁切和缩放范围归一。
+- 验证结果：
+  - `node --test --experimental-strip-types src/features/check-ins/camera-capture.test.ts` 通过。
+  - `node --test src/pages/MarkPlace.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts src/features/check-ins/camera-capture.ts src/features/check-ins/camera-capture.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
+  - 本地浏览器验证 `http://localhost:5173/mark`：未登录会按预期跳到 `/login`，页面无控制台错误；因没有登录态且未代用户授权相机，本轮未做真实摄像头实拍验证。
+
 ### 2026-06-01 22:59 +07 相册旧照地点关联重做
 
 - 用户反馈：从相册选旧照片后直接进入“手动选择地标”很怪，且该页没有搜索、拖地图时会抖、准星视觉过重。
