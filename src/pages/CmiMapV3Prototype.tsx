@@ -75,6 +75,7 @@ import {
 } from '@/features/cmi-events/event-list-registration-state';
 import {
   getAddTracePath,
+  getCmiBlackboardPath,
   getCmiEventCreatePath,
   getCmiEventPath,
   getMarkPlacePath,
@@ -1856,6 +1857,7 @@ function EventsMode({
   const { user, profile } = useAuth();
   const [activeEventTab, setActiveEventTab] = useState<EventTabId>('upcoming');
   const [sharingEventIds, setSharingEventIds] = useState<Record<string, boolean>>({});
+  const [shareSheetEvent, setShareSheetEvent] = useState<CmiEvent | null>(null);
   const [registeredEventIds, setRegisteredEventIds] = useState<Record<string, boolean>>({});
   const [registeringEventIds, setRegisteringEventIds] = useState<Record<string, boolean>>({});
   const [fullEventIds, setFullEventIds] = useState<Record<string, boolean>>({});
@@ -2020,11 +2022,11 @@ function EventsMode({
         onNavigate('map', { eventId: event.id });
       }}
       onRegister={() => handleQuickRegisterEvent(event)}
-      onShare={() => handleShareEvent(event)}
+      onShare={() => setShareSheetEvent(event)}
     />
   );
 
-  const handleShareEvent = async (event: CmiEvent) => {
+  const handleShareEventExternally = async (event: CmiEvent) => {
     setSharingEventIds(prev => ({ ...prev, [event.id]: true }));
 
     try {
@@ -2064,36 +2066,53 @@ function EventsMode({
   };
 
   return (
-    <ComicPage title="活动" hideTitle onTitleClick={() => onNavigate('map')}>
-      <section className="cmi-v3-hard-card cmi-v3-events-hero cmi-v3-dot-paper">
-        <ChapterHeader left="CMI Events" />
-        <h1>活动就来清迈客栈！</h1>
-        <p>社区空间提供给大家使用，可以来办活动！</p>
-        <div className="cmi-v3-event-tabs">
-          {eventTabs.map(tab => (
-            <button
-              key={tab.id}
-              type="button"
-              className={activeEventTab === tab.id ? 'is-active' : undefined}
-              aria-pressed={activeEventTab === tab.id}
-              onClick={() => setActiveEventTab(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </section>
+    <>
+      <ComicPage title="活动" hideTitle onTitleClick={() => onNavigate('map')}>
+        <section className="cmi-v3-hard-card cmi-v3-events-hero cmi-v3-dot-paper">
+          <ChapterHeader left="CMI Events" />
+          <h1>活动就来清迈客栈！</h1>
+          <p>社区空间提供给大家使用，可以来办活动！</p>
+          <div className="cmi-v3-event-tabs">
+            {eventTabs.map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                className={activeEventTab === tab.id ? 'is-active' : undefined}
+                aria-pressed={activeEventTab === tab.id}
+                onClick={() => setActiveEventTab(tab.id)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </section>
 
-      {isLoading && <p className="cmi-v3-inline-state">正在同步活动库</p>}
+        {isLoading && <p className="cmi-v3-inline-state">正在同步活动库</p>}
 
-      {visibleEvents.map(renderEventCard)}
+        {visibleEvents.map(renderEventCard)}
 
-      {!isLoading && (events.length === 0 || visibleEvents.length === 0) && (
-        <p className="cmi-v3-inline-state">
-          {events.length === 0 ? '暂时还没有新的清迈客栈活动。' : emptyEventMessage[activeEventTab]}
-        </p>
+        {!isLoading && (events.length === 0 || visibleEvents.length === 0) && (
+          <p className="cmi-v3-inline-state">
+            {events.length === 0 ? '暂时还没有新的清迈客栈活动。' : emptyEventMessage[activeEventTab]}
+          </p>
+        )}
+      </ComicPage>
+
+      {shareSheetEvent && (
+        <EventShareSheet
+          event={shareSheetEvent}
+          isSharing={Boolean(sharingEventIds[shareSheetEvent.id])}
+          onClose={() => setShareSheetEvent(null)}
+          onShareToBlackboard={() => {
+            setShareSheetEvent(null);
+            navigate(getCmiBlackboardPath({ compose: true, eventId: shareSheetEvent.id }));
+          }}
+          onShareOutside={() => {
+            void handleShareEventExternally(shareSheetEvent).finally(() => setShareSheetEvent(null));
+          }}
+        />
       )}
-    </ComicPage>
+    </>
   );
 }
 
@@ -2434,6 +2453,70 @@ function EventListCard({
         </div>
       </div>
     </article>
+  );
+}
+
+function EventShareSheet({
+  event,
+  isSharing,
+  onClose,
+  onShareToBlackboard,
+  onShareOutside,
+}: {
+  event: CmiEvent;
+  isSharing: boolean;
+  onClose: () => void;
+  onShareToBlackboard: () => void;
+  onShareOutside: () => void;
+}) {
+  return (
+    <div className="cmi-v3-event-share-sheet" role="presentation">
+      <button
+        type="button"
+        className="cmi-v3-event-share-backdrop"
+        aria-label="关闭活动分享"
+        onClick={onClose}
+      />
+      <section
+        className="cmi-v3-event-share-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`分享活动：${event.title}`}
+      >
+        <div className="cmi-v3-event-share-title">
+          <img src={getCmiEventCardImageUrl(event)} alt="" />
+          <div>
+            <strong>分享这个活动</strong>
+            <span>{event.title}</span>
+          </div>
+        </div>
+
+        <button type="button" className="cmi-v3-event-share-option is-primary" onClick={onShareToBlackboard}>
+          <MessageCircle size={20} strokeWidth={3} />
+          <span>
+            <strong>发到 CMI Map 论坛帖子</strong>
+            <em>自动引用活动，帖子左侧使用方形海报。</em>
+          </span>
+        </button>
+
+        <button
+          type="button"
+          className="cmi-v3-event-share-option"
+          disabled={isSharing}
+          onClick={onShareOutside}
+        >
+          <Share2 size={20} strokeWidth={3} />
+          <span>
+            <strong>{isSharing ? '正在生成分享图' : '分享到其他平台 / 保存图片'}</strong>
+            <em>{formatCmiEventTime(event)} · {event.venueName}</em>
+          </span>
+        </button>
+
+        <button type="button" className="cmi-v3-event-share-cancel" onClick={onClose}>
+          取消
+        </button>
+      </section>
+    </div>
   );
 }
 

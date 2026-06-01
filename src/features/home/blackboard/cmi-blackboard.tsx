@@ -23,8 +23,10 @@ import type { ChangeEvent, FormEvent, KeyboardEvent, MouseEvent, ReactNode } fro
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { LeafletMap } from '@/components/map/LeafletMap';
+import { getCmiEventCardImageUrl } from '@/components/intent/event-card-presentation';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { getCmiEventById } from '@/data/cmi-events';
 import { getAllRecommendations } from '@/db/api';
 import {
   createBlackboardComment,
@@ -499,8 +501,68 @@ function UserAchievementBadge({ title }: { title: string }) {
   );
 }
 
-function renderPostBody(post: BlackboardPost, options?: { onLinkClick?: (event: MouseEvent<HTMLAnchorElement>) => void }) {
+const getLinkedEventMention = (post: Pick<BlackboardPost, 'linkedEventTitle'>) =>
+  post.linkedEventTitle ? `@${post.linkedEventTitle}` : '';
+
+const getPostDisplayTextForRendering = (
+  post: BlackboardPost,
+  options?: { hideLeadingEventMention?: boolean }
+) => {
   const postText = getPostDisplayText(post);
+  const linkedEventMention = getLinkedEventMention(post);
+
+  if (!options?.hideLeadingEventMention || !linkedEventMention || !postText.startsWith(linkedEventMention)) {
+    return postText;
+  }
+
+  return postText.slice(linkedEventMention.length).trimStart();
+};
+
+const getLinkedEventImageUrl = (post: BlackboardPost) => {
+  if (!post.linkedEventId) return '';
+
+  const attachedPosterUrl = post.imageUrls[0]?.trim();
+  if (attachedPosterUrl) return attachedPosterUrl;
+
+  const linkedEvent = getCmiEventById(post.linkedEventId);
+  return linkedEvent ? getCmiEventCardImageUrl(linkedEvent) : '';
+};
+
+const getPostGalleryImageUrls = (post: BlackboardPost, linkedEventImageUrl: string) => {
+  if (!post.linkedEventId || !linkedEventImageUrl) return post.imageUrls;
+  return post.imageUrls[0]?.trim() === linkedEventImageUrl ? post.imageUrls.slice(1) : post.imageUrls;
+};
+
+function LinkedEventReference({
+  post,
+  onClick,
+}: {
+  post: BlackboardPost;
+  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+}) {
+  if (!post.linkedEventId || !post.linkedEventTitle) return null;
+
+  return (
+    <Link
+      to={getCmiEventPath(post.linkedEventId)}
+      onClick={onClick}
+      className="mb-2 inline-flex max-w-full items-center gap-1.5 rounded-full border border-[#ded4f1] bg-[#f7f3ff] px-2.5 py-1 text-[0.78rem] font-black leading-none text-[#6f559d] active:opacity-70"
+      aria-label={`打开活动：${post.linkedEventTitle}`}
+    >
+      <Megaphone className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />
+      <span className="min-w-0 truncate">引用活动：{post.linkedEventTitle}</span>
+    </Link>
+  );
+}
+
+function renderPostBody(
+  post: BlackboardPost,
+  options?: {
+    hideLeadingEventMention?: boolean;
+    onLinkClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+  }
+) {
+  const postText = getPostDisplayTextForRendering(post, options);
   if (!post.linkedEventId || !post.linkedEventTitle) return postText;
 
   const mention = `@${post.linkedEventTitle}`;
@@ -557,6 +619,191 @@ function BlackboardPostCard({
     event.preventDefault();
     openPost();
   };
+  const linkedEventImageUrl = getLinkedEventImageUrl(post);
+  const galleryImageUrls = getPostGalleryImageUrls(post, linkedEventImageUrl);
+  const linkedEventBody = getPostDisplayTextForRendering(post, { hideLeadingEventMention: true });
+
+  if (linkedEventImageUrl) {
+    return (
+      <article
+        className="cursor-pointer bg-white px-4 pb-5 pt-5 transition-colors active:bg-[#fafafa]"
+        role="button"
+        tabIndex={0}
+        aria-label={`打开帖子：${post.title}`}
+        onClick={openPost}
+        onKeyDown={handleCardKeyDown}
+      >
+        <div className="grid grid-cols-[6.4rem_minmax(0,1fr)] gap-3">
+          <Link
+            to={getCmiEventPath(post.linkedEventId!)}
+            onClick={stopCardOpen}
+            className="mt-0.5 block aspect-square overflow-hidden rounded-[1.15rem] border border-border bg-[#f7f3ed] active:opacity-80"
+            aria-label={`打开活动：${post.linkedEventTitle}`}
+          >
+            <img
+              src={linkedEventImageUrl}
+              alt={`${post.linkedEventTitle || '活动'}海报`}
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full object-cover"
+            />
+          </Link>
+
+          <div className="min-w-0">
+            <div className="flex items-start gap-2">
+              <Link
+                to={getPersonMapPath(post.authorId)}
+                onClick={stopCardOpen}
+                className="shrink-0 active:opacity-80"
+                aria-label={`查看${post.author}的清迈地图`}
+              >
+                <UserAvatar name={post.author} avatarUrl={post.authorAvatarUrl} className="h-9 w-9 text-[0.9rem]" />
+              </Link>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <Link
+                    to={getPersonMapPath(post.authorId)}
+                    onClick={stopCardOpen}
+                    className="min-w-0 truncate text-[1.02rem] font-black leading-tight text-[#6d839b] active:opacity-70"
+                  >
+                    {post.author}
+                  </Link>
+                  <UserActivityBadge title={post.authorActivityTitle} />
+                  <UserAchievementBadge title={post.authorAchievementTitle} />
+                </div>
+                <p className="mt-1 text-[0.86rem] font-semibold leading-none text-[#9b9b9b]">
+                  {post.createdLabel}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#9c9c9c] active:bg-[#f2f2f2]"
+                onClick={openPost}
+                aria-label="打开帖子详情"
+              >
+                <span className="text-[1.35rem] font-black leading-none">...</span>
+              </button>
+            </div>
+
+            <div className="mt-3">
+              <LinkedEventReference post={post} onClick={stopCardOpen} />
+              {linkedEventBody && (
+                <p className="line-clamp-3 whitespace-pre-wrap text-[1.08rem] font-medium leading-[1.5] text-[#4f4f4f]">
+                  {renderPostBody(post, { hideLeadingEventMention: true, onLinkClick: stopCardOpen })}
+                </p>
+              )}
+            </div>
+
+            {metaItems.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.86rem] font-semibold text-[#8c8c8c]">
+                {metaItems.map((item, index) => (
+                  <span key={item.id} className="inline-flex min-w-0 items-center gap-2">
+                    {index > 0 && <span className="text-[#c3c3c3]">·</span>}
+                    {item.to ? (
+                      <Link to={item.to} onClick={stopCardOpen} className="min-w-0 truncate active:opacity-70">
+                        {item.value}
+                      </Link>
+                    ) : (
+                      <span className="min-w-0 truncate">{item.value}</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {post.contactLabel && (
+              <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-[0.88rem] font-semibold leading-relaxed text-[#8c8c8c]">
+                {post.contactLabel}
+              </p>
+            )}
+
+            {galleryImageUrls.length > 0 && (
+              <div className="mt-3">
+                <PostImages imageUrls={galleryImageUrls} />
+              </div>
+            )}
+
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <span
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-1 rounded-[0.35rem] px-1.5 py-0.5 text-[0.72rem] font-black leading-none',
+                    CATEGORY_TONES[post.category]
+                  )}
+                >
+                  <CategoryIcon className="h-3 w-3" strokeWidth={2.4} />
+                  {BLACKBOARD_CATEGORY_LABELS[post.category]}
+                </span>
+                {post.isFeatured && (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-[0.35rem] bg-[#fff4c7] px-1.5 py-0.5 text-[0.72rem] font-black leading-none text-[#9a6a00]">
+                    <Star className="h-3 w-3 fill-current" strokeWidth={2.4} />
+                    精选
+                  </span>
+                )}
+              </div>
+
+              <div className="flex shrink-0 items-center justify-end gap-3 text-[#525252]">
+                <button
+                  type="button"
+                  className="inline-flex h-9 items-center gap-1 rounded-full px-1 text-[0.9rem] font-bold active:bg-[#f2f2f2]"
+                  onClick={openPost}
+                  aria-label="查看评论"
+                >
+                  <MessageCircle className="h-5 w-5" strokeWidth={2.1} />
+                  {post.comments.length > 0 && <span>{post.comments.length}</span>}
+                </button>
+
+                {canManagePost && (
+                  <>
+                    <button
+                      type="button"
+                      className="grid h-9 w-9 place-items-center rounded-full text-[#606060] active:bg-[#f2f2f2]"
+                      onClick={event => {
+                        event.stopPropagation();
+                        onEdit(post);
+                      }}
+                      aria-label="编辑帖子"
+                    >
+                      <Edit3 className="h-5 w-5" strokeWidth={2.1} />
+                    </button>
+                    <button
+                      type="button"
+                      className="grid h-9 w-9 place-items-center rounded-full text-destructive active:bg-destructive/10"
+                      onClick={event => {
+                        event.stopPropagation();
+                        onDelete(post);
+                      }}
+                      aria-label="删除帖子"
+                    >
+                      <Trash2 className="h-5 w-5" strokeWidth={2.1} />
+                    </button>
+                  </>
+                )}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    className={cn(
+                      'inline-flex h-9 items-center gap-1 rounded-full px-1 text-[0.9rem] font-bold active:bg-[#f2f2f2]',
+                      post.isFeatured ? 'text-[#a87900]' : 'text-[#606060]'
+                    )}
+                    onClick={event => {
+                      event.stopPropagation();
+                      onToggleFeatured(post);
+                    }}
+                    aria-label={post.isFeatured ? '取消精选' : '设为精选'}
+                  >
+                    <Star className={cn('h-5 w-5', post.isFeatured && 'fill-current')} strokeWidth={2.1} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article
@@ -610,6 +857,7 @@ function BlackboardPostCard({
       </div>
 
       <div className="mt-4">
+        <LinkedEventReference post={post} onClick={stopCardOpen} />
         <p className="whitespace-pre-wrap text-[1.16rem] font-medium leading-[1.58] text-[#4f4f4f]">
           {renderPostBody(post, { onLinkClick: stopCardOpen })}
         </p>
@@ -1431,6 +1679,9 @@ function PostDetailSheet({
   const CategoryIcon = CATEGORY_ICON_BY_ID[post.category];
   const canManagePost = Boolean(userId && post.authorId === userId);
   const detailPlacePath = post.linkedPlaceName ? getPlacePath(post.linkedPlaceName) : undefined;
+  const linkedEventImageUrl = getLinkedEventImageUrl(post);
+  const galleryImageUrls = getPostGalleryImageUrls(post, linkedEventImageUrl);
+  const detailBody = getPostDisplayTextForRendering(post, { hideLeadingEventMention: Boolean(post.linkedEventId) });
 
   const handleSubmitComment = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1514,13 +1765,20 @@ function PostDetailSheet({
               </div>
             </div>
 
-            <p className="mt-6 whitespace-pre-wrap text-[1.22rem] font-medium leading-[1.6] text-[#2d2d2d]">
-              {renderPostBody(post)}
-            </p>
-
-            <div className="mt-4">
-              <PostImages imageUrls={post.imageUrls} />
+            <div className="mt-6">
+              <LinkedEventReference post={post} />
+              {detailBody && (
+                <p className="whitespace-pre-wrap text-[1.22rem] font-medium leading-[1.6] text-[#2d2d2d]">
+                  {renderPostBody(post, { hideLeadingEventMention: Boolean(post.linkedEventId) })}
+                </p>
+              )}
             </div>
+
+            {galleryImageUrls.length > 0 && (
+              <div className="mt-4">
+                <PostImages imageUrls={galleryImageUrls} />
+              </div>
+            )}
 
             <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.95rem] font-semibold text-[#8c8c8c]">
               <span
@@ -1742,6 +2000,7 @@ export function CmiBlackboard({
     initialDraft?.locationLabel,
     initialDraft?.peopleLabel,
     initialDraft?.contactLabel,
+    initialDraft?.imageUrls,
     initialDraft?.linkedEventId,
     initialDraft?.linkedEventTitle,
     initialDraft?.linkedPlaceName,

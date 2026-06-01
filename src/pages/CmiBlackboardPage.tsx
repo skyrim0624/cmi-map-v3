@@ -1,7 +1,9 @@
 import { ArrowLeft } from 'lucide-react';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { formatCmiEventTime, getCmiEventById } from '@/data/cmi-events';
+import { getCmiEventCardImageUrl } from '@/components/intent/event-card-presentation';
+import { type CmiEvent, formatCmiEventTime, getCmiEventById } from '@/data/cmi-events';
+import { getPublishedCmiEvents } from '@/db/cmi-events';
 import { type BlackboardDraft, CmiBlackboard } from '@/features/home/blackboard/cmi-blackboard';
 
 const BLACKBOARD_TITLE_LIMIT = 48;
@@ -17,22 +19,50 @@ export default function CmiBlackboardPage() {
   const placeName = searchParams.get('place');
   const locationLabel = searchParams.get('location');
   const shouldOpenComposer = searchParams.get('compose') === '1';
+  const [publishedEvents, setPublishedEvents] = useState<CmiEvent[]>([]);
+  const localEvent = useMemo(() => getCmiEventById(eventId), [eventId]);
+  const linkedEvent = useMemo(() => {
+    if (!eventId) return null;
+    return publishedEvents.find(event => event.id === eventId) ?? localEvent;
+  }, [eventId, localEvent, publishedEvents]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!eventId || !shouldOpenComposer || localEvent) {
+      setPublishedEvents([]);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    getPublishedCmiEvents()
+      .then(events => {
+        if (isMounted) setPublishedEvents(events);
+      })
+      .catch(() => {
+        if (isMounted) setPublishedEvents([]);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [eventId, localEvent, shouldOpenComposer]);
+
   const eventDraft = useMemo<Partial<BlackboardDraft> | undefined>(() => {
-    const event = getCmiEventById(eventId);
-    if (!event) return undefined;
+    if (!linkedEvent) return undefined;
 
     return {
-      category: 'companion',
-      title: trimForBlackboard(`一起去：${event.title}`, BLACKBOARD_TITLE_LIMIT),
-      body: trimForBlackboard(`@${event.title} 想一起去这个活动，看看有没有同路的人。`, BLACKBOARD_BODY_LIMIT),
-      timeLabel: formatCmiEventTime(event),
-      locationLabel: `${event.venueName}${event.area ? ` · ${event.area}` : ''}`,
-      peopleLabel: '2-4',
-      linkedEventId: event.id,
-      linkedEventTitle: event.title,
-      linkedPlaceName: event.venueName,
+      category: 'share',
+      body: trimForBlackboard('想把这个活动转给大家，感兴趣的可以点引用进去看详情。', BLACKBOARD_BODY_LIMIT),
+      timeLabel: formatCmiEventTime(linkedEvent),
+      locationLabel: `${linkedEvent.venueName}${linkedEvent.area ? ` · ${linkedEvent.area}` : ''}`,
+      imageUrls: [getCmiEventCardImageUrl(linkedEvent)],
+      linkedEventId: linkedEvent.id,
+      linkedEventTitle: linkedEvent.title,
+      linkedPlaceName: linkedEvent.venueName,
     };
-  }, [eventId]);
+  }, [linkedEvent]);
   const placeDraft = useMemo<Partial<BlackboardDraft> | undefined>(() => {
     const normalizedPlaceName = placeName?.trim();
     if (!normalizedPlaceName) return undefined;
