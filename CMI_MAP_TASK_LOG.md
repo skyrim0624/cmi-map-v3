@@ -863,3 +863,16 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
   - 本地浏览器验证 `http://127.0.0.1:5173/v3`：地图抽屉和底部“活动”页均不再出现 Jing Jai / Tong Tung / Nong Ho，WaytoAGI、CMI Talk、清迈客栈活动仍展示；点击 WaytoAGI 活动卡可打开详情，console 无 warn/error。
+
+### 2026-06-01 12:55:57 +07 活动详情底部操作栏去掉紫色底板
+
+- 背景：用户在 `/events/cmi-five-minute-music-kid-a-2026-06-02` 评论指出底部“分享 / 报名 / 导航”栏的紫色背景不需要，只保留按钮。
+- 本轮实现：
+  - 活动详情页底部固定操作区移除紫色背景和顶部黑色边线。
+  - 外层透明承载层改为不拦截点击，三个操作按钮单独保留可点击状态。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
+  - 本地浏览器验证活动详情页：底栏背景为透明、顶部边线为 0，只剩三个按钮。
+  - 已部署正式站 `https://730b7ed9.cmi-map.pages.dev` 和 v3 项目 `https://8592f055.cmi-map-v3.pages.dev`。
