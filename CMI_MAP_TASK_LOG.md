@@ -1134,6 +1134,8 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm exec biome lint src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
+  - 已用干净 worktree 部署 v3 项目 `https://5268bee9.cmi-map-v3.pages.dev` 和正式站 `https://3dd36327.cmi-map.pages.dev`，Source 为 `da79d34`。
+  - 线上预览 `https://3dd36327.cmi-map.pages.dev/?verify=hide-expired-da79d34` 复查通过：“清迈客栈新动态”仅展示未结束活动，当前为 Radiohead 6/2 和父亲节嘉宾招募 6/7。
   - 本地预览 `http://127.0.0.1:4173/?verify=hide-ended-events-local` 复查通过：底部“清迈客栈新动态”只展示 6/2、6/7 未结束活动，5/30 夜行活动不再出现，console 无 warn/error。
 
 ### 2026-06-01 21:24:52 +07 邮箱验证码找回密码
