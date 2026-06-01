@@ -120,8 +120,8 @@ const eventTabs: Array<{ id: EventTabId; label: string }> = [
 
 const screenIds: ScreenId[] = ['map', 'feed', 'publish', 'events', 'eventDetail'];
 const primaryScreenPositions: Record<PrimaryScreenId, number> = {
-  feed: 0,
-  map: 1,
+  map: 0,
+  feed: 1,
   events: 2,
   publish: 3,
 };
@@ -2272,17 +2272,6 @@ function CmiV3BottomNav({
     <footer className="cmi-v3-map-bottom" aria-label="CMI Map 主导航">
       <button
         type="button"
-        className={activeScreen === 'feed' ? 'is-active' : undefined}
-        aria-current={activeScreen === 'feed' ? 'page' : undefined}
-        onClick={() => onNavigate('feed')}
-      >
-        <span className="cmi-v3-map-bottom-icon cmi-v3-map-bottom-icon--feed">
-          <img src={bottomNavIconUrls.feed} alt="" />
-        </span>
-        动态
-      </button>
-      <button
-        type="button"
         className={activeScreen === 'map' ? 'is-active' : undefined}
         aria-current={activeScreen === 'map' ? 'page' : undefined}
         onClick={() => onNavigate('map')}
@@ -2291,6 +2280,17 @@ function CmiV3BottomNav({
           <MapIcon size={23} strokeWidth={3} />
         </span>
         地图
+      </button>
+      <button
+        type="button"
+        className={activeScreen === 'feed' ? 'is-active' : undefined}
+        aria-current={activeScreen === 'feed' ? 'page' : undefined}
+        onClick={() => onNavigate('feed')}
+      >
+        <span className="cmi-v3-map-bottom-icon cmi-v3-map-bottom-icon--feed">
+          <img src={bottomNavIconUrls.feed} alt="" />
+        </span>
+        动态
       </button>
       <button
         type="button"
