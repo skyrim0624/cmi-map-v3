@@ -68,6 +68,7 @@ import {
   getAddTracePath,
   getCmiEventCreatePath,
   getCmiEventPath,
+  getMarkPlacePath,
   getPlacePath,
   getProfilePath,
 } from '@/lib/paths';
@@ -963,6 +964,15 @@ export default function CmiMapV3Prototype() {
     setSelectedEventId(null);
   }, []);
 
+  const handleBottomAdd = useCallback((screen: PrimaryScreenId) => {
+    if (screen === 'events') {
+      navigate(getCmiEventCreatePath());
+      return;
+    }
+
+    navigate(getMarkPlacePath());
+  }, [navigate]);
+
   const handleRecommendationCardClick = useCallback(async (
     event: ReactMouseEvent<HTMLElement>,
     recommendationId: string
@@ -1109,7 +1119,7 @@ export default function CmiMapV3Prototype() {
       {activePrimaryScreen && (
         <CmiV3BottomNav
           activeScreen={activePrimaryScreen}
-          onAdd={() => handleNavigate('publish')}
+          onAdd={() => handleBottomAdd(activePrimaryScreen)}
           onNavigate={handleNavigate}
         />
       )}
@@ -2268,6 +2278,8 @@ function CmiV3BottomNav({
   onAdd: () => void;
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
 }) {
+  const addAriaLabel = activeScreen === 'events' ? '发布活动' : '拍照发动态';
+
   return (
     <footer className="cmi-v3-map-bottom" aria-label="CMI Map 主导航">
       <button
@@ -2308,7 +2320,7 @@ function CmiV3BottomNav({
         className={`cmi-v3-map-bottom-add-button ${activeScreen === 'publish' ? 'is-active' : ''}`}
         onClick={onAdd}
         aria-current={activeScreen === 'publish' ? 'page' : undefined}
-        aria-label="添加动态"
+        aria-label={addAriaLabel}
       >
         <span className="cmi-v3-map-bottom-add-icon">
           <Plus size={24} strokeWidth={3.2} />

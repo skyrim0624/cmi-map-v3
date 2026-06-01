@@ -30,6 +30,8 @@ export const getPersonMapPath = (profileIdentity: string) =>
 
 export const getCmiHomePath = () => '/cmi-home';
 
+export const getMarkPlacePath = () => '/mark';
+
 export const getCmiEventPath = (eventId: string) =>
   `/events/${encodeURIComponent(eventId)}`;
 
