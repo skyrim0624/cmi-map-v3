@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildAuthRedirectTo,
+  getPasswordSignInErrorMessage,
   getEmailCodeRetrySeconds,
   normalizeEmailCode,
   validateEmailCodeSignInForm,
@@ -72,6 +73,17 @@ test('password sign in requires email and password', () => {
   assert.equal(validatePasswordSignInForm({ email: '', password: 'secret123' }), '请输入邮箱');
   assert.equal(validatePasswordSignInForm({ email: 'andreas@example.com', password: '' }), '请输入密码');
   assert.equal(validatePasswordSignInForm({ email: 'andreas@example.com', password: 'secret123' }), null);
+});
+
+test('password sign in errors are readable for users', () => {
+  assert.equal(
+    getPasswordSignInErrorMessage(new Error('Invalid login credentials')),
+    '邮箱或密码不正确，请检查后重新输入。'
+  );
+  assert.equal(
+    getPasswordSignInErrorMessage(new Error('Email not confirmed')),
+    '这个邮箱还没有完成验证，请先打开邮箱里的确认邮件。'
+  );
 });
 
 test('registration requires email nickname matching password and confirmation code', () => {

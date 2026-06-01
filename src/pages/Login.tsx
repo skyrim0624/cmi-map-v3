@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   ArrowLeft,
   CheckCircle2,
   KeyRound,
@@ -20,6 +21,7 @@ import {
   type AuthMode,
   type AuthStep,
   buildAuthRedirectTo,
+  getPasswordSignInErrorMessage,
   getEmailCodeRetrySeconds,
   type LoginMethod,
   normalizeEmailCode,
@@ -48,7 +50,6 @@ export default function Login() {
     sendEmailCode,
     verifyEmailCode,
     signInWithEmail,
-    signInWithGoogle,
     signUpWithEmail,
     sendPasswordResetEmail,
     updatePassword,
@@ -73,6 +74,7 @@ export default function Login() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [lastPasswordResetSentAt, setLastPasswordResetSentAt] = useState(0);
+  const [passwordSignInError, setPasswordSignInError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showStamp, setShowStamp] = useState(false);
 
@@ -115,6 +117,7 @@ export default function Login() {
     setMode(nextMode);
     setLoginMethod('password');
     setPasswordPanel('none');
+    setPasswordSignInError('');
     resetCodeState();
   };
 
@@ -143,6 +146,8 @@ export default function Login() {
         : '用邮箱和密码登录，也可以改用邮箱验证码。';
 
   const submitPasswordSignIn = async () => {
+    setPasswordSignInError('');
+
     const validationError = validatePasswordSignInForm({
       email,
       password,
@@ -158,7 +163,9 @@ export default function Login() {
     try {
       const { error } = await signInWithEmail(email.trim(), password);
       if (error) {
-        toast.error(`登录失败: ${error.message}`);
+        const message = getPasswordSignInErrorMessage(error);
+        setPasswordSignInError(message);
+        toast.error(message);
         return;
       }
 
@@ -338,22 +345,6 @@ export default function Login() {
     }
 
     await submitPasswordSignIn();
-  };
-
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-
-    try {
-      const { error } = await signInWithGoogle(redirectTo);
-      if (error) {
-        toast.error(`Google 登录失败: ${error.message}`);
-        return;
-      }
-
-      toast.success('正在前往 Google 登录');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handlePasswordResetRequest = async (event: FormEvent<HTMLFormElement>) => {
@@ -615,12 +606,27 @@ export default function Login() {
                         type="password"
                         placeholder="输入密码"
                         value={password}
-                        onChange={(event) => setPassword(event.target.value)}
+                        onChange={(event) => {
+                          setPassword(event.target.value);
+                          if (passwordSignInError) setPasswordSignInError('');
+                        }}
                         disabled={loading}
                         autoComplete="current-password"
+                        aria-invalid={Boolean(passwordSignInError)}
+                        aria-describedby={passwordSignInError ? 'passwordSignInError' : undefined}
                         className="h-12 rounded-2xl pl-10 text-base font-semibold"
                       />
                     </div>
+                    {passwordSignInError && (
+                      <div
+                        id="passwordSignInError"
+                        role="alert"
+                        className="flex gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold leading-relaxed text-red-700"
+                      >
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.5} />
+                        <span>{passwordSignInError}</span>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -708,6 +714,7 @@ export default function Login() {
                       onClick={() => {
                         setLoginMethod('code');
                         setPasswordPanel('none');
+                        setPasswordSignInError('');
                         resetCodeState();
                       }}
                       disabled={loading}
@@ -723,6 +730,7 @@ export default function Login() {
                     className="w-full rounded-full py-2 text-sm font-black text-[#12967e] active:bg-[#18b99c]/8"
                     onClick={() => {
                       setLoginMethod('password');
+                      setPasswordSignInError('');
                       resetCodeState();
                     }}
                     disabled={loading}
@@ -772,24 +780,6 @@ export default function Login() {
                 </form>
               )}
 
-              <div className="my-5 flex items-center gap-3 text-xs font-black text-[#aaa9a3]">
-                <span className="h-px flex-1 bg-[#ecece6]" />
-                <span>其他方式</span>
-                <span className="h-px flex-1 bg-[#ecece6]" />
-              </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-12 w-full rounded-xl border-2 border-foreground text-base font-black bg-white text-foreground shadow-[2px_2px_0_#000] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] transition-all touch-manipulation"
-                  onClick={handleGoogleSignIn}
-                  disabled={loading}
-                >
-                  <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-black text-[#4285f4] border border-[#ecece6] shadow-sm">
-                    G
-                  </span>
-                  用 Google 登录
-                </Button>
               </>
             )}
           </CardContent>

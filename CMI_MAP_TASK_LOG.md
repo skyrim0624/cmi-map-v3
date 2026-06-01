@@ -1118,3 +1118,17 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
   - 本地生产预览 `http://127.0.0.1:4173/events/cmi-five-minute-music-kid-a-2026-06-02?verify=event-recaps-local`：活动详情页在“基本信息”下方显示“活动返图”区块；未登录点击“返图”会进入登录页，登录后回到预选当前活动的打卡流程；console 无 warn/error。
+
+### 2026-06-01 21:12:26 +07 登录错误提示与 Google 入口隐藏
+
+- 背景：用户反馈输错密码后页面像刷新成功一样，没有明确告诉他密码错误；当前 Google 登录不可用，继续展示按钮会误导用户。
+- 本轮实现：
+  - 密码登录失败时把 Supabase 的英文错误翻成明确中文，并同时显示顶部提示和密码框下方常驻错误。
+  - 登录失败后留在 `/login`，不触发成功印章或跳转。
+  - 暂时移除登录页的 Google 登录按钮和“其他方式”分割线。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - `node --experimental-strip-types --test src/features/auth/auth-flow.test.ts` 通过。
+  - `pnpm exec biome lint src/pages/Login.tsx src/features/auth/auth-flow.ts src/features/auth/auth-flow.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地浏览器验证 `http://localhost:5173/login`：输入错误密码后仍停在 `/login`，显示“邮箱或密码不正确，请检查后重新输入。”；Google 登录按钮和“其他方式”分割线均不存在，console 无 warn/error。

@@ -73,6 +73,33 @@ export const validatePasswordSignInForm = (state: PasswordSignInFormState) => {
   return null;
 };
 
+export const getPasswordSignInErrorMessage = (error: unknown) => {
+  const rawMessage =
+    error instanceof Error
+      ? error.message
+      : error && typeof error === 'object' && 'message' in error
+        ? String((error as { message?: unknown }).message ?? '')
+        : String(error ?? '');
+  const normalizedMessage = rawMessage.toLocaleLowerCase();
+
+  if (
+    normalizedMessage.includes('invalid login credentials') ||
+    normalizedMessage.includes('invalid credentials')
+  ) {
+    return '邮箱或密码不正确，请检查后重新输入。';
+  }
+
+  if (normalizedMessage.includes('email not confirmed')) {
+    return '这个邮箱还没有完成验证，请先打开邮箱里的确认邮件。';
+  }
+
+  if (normalizedMessage.includes('too many requests') || normalizedMessage.includes('rate limit')) {
+    return '登录尝试太频繁，请稍等一会儿再试。';
+  }
+
+  return rawMessage ? `登录失败：${rawMessage}` : '登录失败，请稍后再试。';
+};
+
 export const validateRegistrationForm = (state: RegistrationFormState) => {
   if (!state.email.trim()) return '请输入邮箱';
 
