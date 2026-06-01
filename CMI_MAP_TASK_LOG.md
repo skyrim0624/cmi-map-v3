@@ -1135,3 +1135,18 @@
   - `pnpm exec biome lint src/pages/Login.tsx src/features/auth/auth-flow.ts src/features/auth/auth-flow.test.ts` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地浏览器验证 `http://localhost:5173/login`：输入错误密码后仍停在 `/login`，显示“邮箱或密码不正确，请检查后重新输入。”；Google 登录按钮和“其他方式”分割线均不存在，console 无 warn/error。
+
+### 2026-06-01 21:20:10 +07 地图活动底栏直达正式详情
+
+- 背景：用户希望从地图活动底栏点击后直接进入正式活动详情页，并且从详情页点返回时回到原来的地图活动底栏状态。
+- 本轮实现：
+  - 地图活动底栏主体增加正式活动详情链接，普通点击走应用内跳转，保留浏览器历史。
+  - 底栏的“打开活动页”入口同步走应用内跳转，Command / Ctrl 点击等原生打开新标签行为仍保留。
+  - 非链接、非按钮区域点击活动底栏时，也会进入正式 `/events/:eventId` 页面。
+- 验证结果：
+  - `node --experimental-strip-types --test src/pages/CmiMapV3Prototype.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/CmiMapV3Prototype.tsx src/pages/cmi-map-v3-prototype.css src/pages/CmiMapV3Prototype.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地浏览器验证 `http://localhost:5174/?event=cmi-five-minute-music-kid-a-2026-06-02&verify=sheet-link`：活动底栏存在 1 个正式详情链接；点击后进入 `/events/cmi-five-minute-music-kid-a-2026-06-02`；详情页“返回”按钮回到原地图 URL，活动底栏仍保留。
+  - 本地浏览器验证 `http://localhost:5174/?event=cmi-five-minute-music-kid-a-2026-06-02&verify=sheet-body-click`：点击底栏正文非按钮区域同样进入正式详情页，返回后仍回到原地图活动底栏。

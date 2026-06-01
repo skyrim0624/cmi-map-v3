@@ -565,6 +565,13 @@
   user-select: none;
 }
 
+.cmi-v3-selected-note-summary--link {
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
 .cmi-v3-selected-note.is-dragging .cmi-v3-selected-note-summary {
   cursor: grabbing;
 }

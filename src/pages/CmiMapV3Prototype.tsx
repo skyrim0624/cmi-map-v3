@@ -1468,13 +1468,16 @@ function MapMode({
         />
       ) : selectedEvent ? (
         <MapBottomSheet
+          detailHref={getCmiEventPath(selectedEvent.id)}
           itemId={`event:${selectedEvent.id}`}
           imageAlt={selectedEvent.title}
           imageUrl={getCmiEventCardImageUrl(selectedEvent)}
           meta={`${formatCmiEventTime(selectedEvent)} · ${selectedEvent.venueName}`}
+          onDetailOpen={() => onOpenPath(getCmiEventPath(selectedEvent.id))}
           primaryAction={{
             label: '打开活动页',
             href: getCmiEventPath(selectedEvent.id),
+            onClick: () => onOpenPath(getCmiEventPath(selectedEvent.id)),
           }}
           title={selectedEvent.title}
           onDismiss={onClearSelection}
@@ -1579,6 +1582,7 @@ function PlacePostSheet({
 
 function MapBottomSheet({
   children,
+  detailHref,
   imageAlt,
   imageUrl,
   itemId,
@@ -1586,9 +1590,11 @@ function MapBottomSheet({
   primaryAction,
   secondaryAction,
   title,
+  onDetailOpen,
   onDismiss,
 }: {
   children: ReactNode;
+  detailHref?: string;
   imageAlt: string;
   imageUrl: string;
   itemId: string;
@@ -1596,6 +1602,7 @@ function MapBottomSheet({
   primaryAction?: SheetAction;
   secondaryAction?: SheetAction;
   title: string;
+  onDetailOpen?: () => void;
   onDismiss?: () => void;
 }) {
   const { dragHandlers, dragOffset, isDragging, setSnap, snap } = useBottomSheetDrag(itemId);
@@ -1613,12 +1620,40 @@ function MapBottomSheet({
     event.preventDefault();
     setSnap(isExpanded ? 'collapsed' : 'expanded');
   };
+  const handleSheetClick = (event: ReactMouseEvent<HTMLElement>) => {
+    if (!detailHref) return;
+    if (event.defaultPrevented || (event.target instanceof Element && event.target.closest('a, button'))) return;
+
+    if (onDetailOpen) {
+      onDetailOpen();
+      return;
+    }
+
+    window.location.assign(detailHref);
+  };
+  const handleDetailLinkClick = (event: ReactMouseEvent<HTMLAnchorElement>) => {
+    if (!onDetailOpen) return;
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+    event.preventDefault();
+    onDetailOpen();
+  };
+  const summaryContent = (
+    <>
+      <img src={imageUrl} alt={imageAlt} />
+      <div>
+        <h2>{title}</h2>
+        <p>{meta}</p>
+      </div>
+    </>
+  );
 
   return (
     <article
       className={sheetClassName}
       data-sheet-state={snap}
       style={sheetStyle}
+      onClick={handleSheetClick}
     >
       {onDismiss && (
         <button type="button" className="cmi-v3-selected-note-close" onClick={onDismiss} aria-label="关闭详情">
@@ -1626,21 +1661,28 @@ function MapBottomSheet({
         </button>
       )}
       <div className="cmi-v3-selected-note-grabber" aria-hidden="true" />
-      <div
-        className="cmi-v3-selected-note-summary"
-        role="button"
-        tabIndex={0}
-        aria-expanded={isExpanded}
-        aria-label={title}
-        onKeyDown={handleSummaryKeyDown}
-        {...dragHandlers}
-      >
-        <img src={imageUrl} alt={imageAlt} />
-        <div>
-          <h2>{title}</h2>
-          <p>{meta}</p>
+      {detailHref ? (
+        <a
+          className="cmi-v3-selected-note-summary cmi-v3-selected-note-summary--link"
+          href={detailHref}
+          aria-label={`打开${title}活动详情`}
+          onClick={handleDetailLinkClick}
+        >
+          {summaryContent}
+        </a>
+      ) : (
+        <div
+          className="cmi-v3-selected-note-summary"
+          role="button"
+          tabIndex={0}
+          aria-expanded={isExpanded}
+          aria-label={title}
+          onKeyDown={handleSummaryKeyDown}
+          {...dragHandlers}
+        >
+          {summaryContent}
         </div>
-      </div>
+      )}
       <div className="cmi-v3-selected-note-body">
         {(primaryAction || secondaryAction) && (
           <div className="cmi-v3-selected-note-actions">
@@ -1656,7 +1698,15 @@ function MapBottomSheet({
 
 function SheetActionControl({ action }: { action: SheetAction }) {
   if (action.href) {
-    return <a href={action.href}>{action.label}</a>;
+    const handleActionLinkClick = (event: ReactMouseEvent<HTMLAnchorElement>) => {
+      if (!action.onClick) return;
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+      event.preventDefault();
+      action.onClick();
+    };
+
+    return <a href={action.href} onClick={handleActionLinkClick}>{action.label}</a>;
   }
 
   return <button type="button" onClick={action.onClick}>{action.label}</button>;
