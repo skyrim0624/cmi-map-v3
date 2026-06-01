@@ -997,17 +997,25 @@ export default function CmiMapV3Prototype() {
     [events]
   );
 
+  const upcomingCommunityEvents = useMemo(
+    () => {
+      const referenceDate = new Date();
+      return communityEvents.filter(event => !isCmiEventExpired(event, referenceDate));
+    },
+    [communityEvents]
+  );
+
   const visibleEvents = useMemo(
     () => {
       if (normalizedMapSearchQuery) {
-        return communityEvents
+        return upcomingCommunityEvents
           .filter(event => eventMatchesSearch(event, normalizedMapSearchQuery))
           .slice(0, 12);
       }
       if (activeFilter !== 'events') return [];
-      return communityEvents.slice(0, 12);
+      return upcomingCommunityEvents.slice(0, 12);
     },
-    [activeFilter, communityEvents, normalizedMapSearchQuery]
+    [activeFilter, normalizedMapSearchQuery, upcomingCommunityEvents]
   );
 
   const mapMarkers = useMemo(
@@ -1203,7 +1211,7 @@ export default function CmiMapV3Prototype() {
             searchQuery={mapSearchQuery}
             profileAvatarUrl={profileAvatarUrl}
             profileName={profileName}
-            listEvents={normalizedMapSearchQuery ? visibleEvents : communityEvents}
+            listEvents={normalizedMapSearchQuery ? visibleEvents : upcomingCommunityEvents}
             listRecommendations={filteredMapRecommendations}
             localWishlists={localWishlists}
             placedStickers={placedStickers}

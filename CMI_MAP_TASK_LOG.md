@@ -1122,6 +1122,19 @@
   - 线上预览 `https://e81cd1ab.cmi-map.pages.dev/events/cmi-five-minute-music-kid-a-2026-06-02?verify=event-recaps-9e72ba4` 复查通过：基本信息、活动返图、返图按钮均存在，console 无 warn/error。
   - 正式域名 `https://cmimap.com/events/cmi-five-minute-music-kid-a-2026-06-02?verify=event-recaps-9e72ba4-fresh` 刷新 service worker 后复查通过：基本信息、活动返图、返图按钮均存在，console 无 warn/error。
 
+### 2026-06-01 21:27:19 +07 地图新动态隐藏已结束活动
+
+- 背景：用户在 CMI Map 首页地图底部“清迈客栈新动态”横向活动卡片中看到已经结束的活动，要求这里不要展示已结束活动。
+- 本轮实现：
+  - V3 地图页新增 `upcomingCommunityEvents`，只保留未结束的清迈客栈活动。
+  - 地图活动搜索、活动 filter marker 和底部“清迈客栈新动态”横向活动卡片都改用未结束活动集合。
+  - 活动页本身的“已结束”分页保留，不影响历史活动归档。
+- 验证结果：
+  - `node --experimental-strip-types --test src/pages/CmiMapV3Prototype.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+
 ### 2026-06-01 21:24:52 +07 邮箱验证码找回密码
 
 - 背景：一批早期用户很久没有使用 CMI Map，忘记原密码；现在产品体验变好后想回来，需要基于注册邮箱找回账号。
