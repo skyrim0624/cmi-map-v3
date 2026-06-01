@@ -1114,6 +1114,9 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地浏览器验证 `http://127.0.0.1:5173/?screen=events&verify=event-title-copy`：390px 手机宽度下标题显示为一行“清迈客栈的活动！”，不再把末尾文字折到下一行；活动分页按钮可点击切换，console 无 warn/error。
+  - 已部署 v3 项目 `https://500171a3.cmi-map-v3.pages.dev` 和正式站 `https://e0f0a71f.cmi-map.pages.dev`，Source 为 `ed93327`。
+  - 线上预览 `https://e0f0a71f.cmi-map.pages.dev/?screen=events&verify=event-title-ed93327` 复查通过：390px 手机宽度下标题为一行“清迈客栈的活动！”，console 无 warn/error。
+  - 正式域名 `https://cmimap.com/?screen=events&verify=event-title-ed93327` 刷新旧 PWA 缓存后复查通过：标题已切到“清迈客栈的活动！”，console 无 warn/error。
 
 ### 2026-06-01 20:57:46 +07 活动返图 Tag 与详情页汇总
 
