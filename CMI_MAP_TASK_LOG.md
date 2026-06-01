@@ -37,6 +37,9 @@
   - 发布按钮改为底部固定操作栏：未选标签时显示“选标签”，选好后显示“发布动态 / 发布彩蛋 / 发布到客栈”，不再被活动卡或彩蛋图标区挤到屏幕外。
   - 底部操作栏同时显示当前标签、已关联活动或地点，减少发布前的不确定感。
 - 验证：`tsgo`、目标文件 `biome lint`、`MarkPlace.test.ts`、生产构建均通过。
+- 已提交并推送：`16ee29a Fix check-in publish action bar`。
+- 已部署 v3 项目 `https://e74a42a8.cmi-map-v3.pages.dev` 和正式站 `https://3a53f790.cmi-map.pages.dev`，Source 为 `16ee29a`。
+- 线上复查：`https://cmimap.com/mark?verify=publish-bar-16ee29a` 已进入打卡页；无照片文字推荐链路可走到发布前分类页，页面显示“清迈客栈 / 彩蛋”标签、关联活动卡和底部固定“发布彩蛋”按钮，console 无 warn/error。
 
 ### 2026-06-01 活动页发起活动入口定稿
 
