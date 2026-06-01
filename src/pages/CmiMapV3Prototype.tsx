@@ -71,7 +71,9 @@ import {
   getMarkPlacePath,
   getPlacePath,
   getProfilePath,
+  getPublicCmiEventUrl,
 } from '@/lib/paths';
+import { createCmiEventShareCard } from '@/lib/cmi-event-share-card';
 import {
   CMI_INN_PLACE_NAME,
   getCategoryConfig,
@@ -94,6 +96,15 @@ type EventTabId = 'ongoing' | 'upcoming' | 'ended' | 'joined';
 type SheetSnap = 'minimized' | 'collapsed' | 'expanded';
 type SheetDragSource = 'pointer' | 'mouse' | 'touch';
 type ProfileLookup = Record<string, PublicProfile>;
+type FileShareData = {
+  files?: File[];
+  title?: string;
+  text?: string;
+};
+type NavigatorWithFileShare = Navigator & {
+  canShare?: (data: FileShareData) => boolean;
+  share?: (data: FileShareData) => Promise<void>;
+};
 
 interface FilterItem {
   id: MapFilterId;
@@ -142,6 +153,17 @@ const bottomNavIconUrls = {
   feed: '/map-icons/cmi-nav-v3/nav-feed.png',
   events: '/map-icons/cmi-nav-v3/nav-events.png',
 } as const;
+
+const downloadCmiEventShareCard = (card: { blob: Blob; fileName: string }) => {
+  const downloadUrl = URL.createObjectURL(card.blob);
+  const anchor = document.createElement('a');
+  anchor.href = downloadUrl;
+  anchor.download = card.fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(downloadUrl);
+};
 
 interface ViewTransitionHandle {
   finished: Promise<void>;
@@ -1821,8 +1843,9 @@ function EventsMode({
   onOpenPath: (path: string) => void;
 }) {
   const [activeEventTab, setActiveEventTab] = useState<EventTabId>('upcoming');
+  const [sharingEventIds, setSharingEventIds] = useState<Record<string, boolean>>({});
+  const referenceDate = useMemo(() => new Date(), []);
   const eventGroups = useMemo(() => {
-    const referenceDate = new Date();
     const nextOngoingEvents: CmiEvent[] = [];
     const nextUpcomingEvents: CmiEvent[] = [];
     const nextEndedEvents: CmiEvent[] = [];
@@ -1847,7 +1870,7 @@ function EventsMode({
       endedEvents: nextEndedEvents.sort((left, right) => compareEndedEvents(left, right, referenceDate)),
       joined: [],
     };
-  }, [events]);
+  }, [events, referenceDate]);
   const visibleEvents =
     activeEventTab === 'ongoing'
       ? eventGroups.ongoing
@@ -1867,7 +1890,7 @@ function EventsMode({
     <EventListCard
       key={event.id}
       event={event}
-      onOpenDetail={() => onNavigate('eventDetail', { eventId: event.id })}
+      isSharing={Boolean(sharingEventIds[event.id])}
       onOpenRealPage={() => onOpenPath(getCmiEventPath(event.id))}
       onOpenMap={() => {
         if (!event.mapLocation) {
@@ -1876,8 +1899,48 @@ function EventsMode({
         }
         onNavigate('map', { eventId: event.id });
       }}
+      onShare={() => handleShareEvent(event)}
     />
   );
+
+  const handleShareEvent = async (event: CmiEvent) => {
+    setSharingEventIds(prev => ({ ...prev, [event.id]: true }));
+
+    try {
+      const eventPageUrl = getPublicCmiEventUrl(event.id);
+      const card = await createCmiEventShareCard({
+        event,
+        posterUrl: getCmiEventCardImageUrl(event),
+        referenceDate,
+        eventPageUrl,
+      });
+      const file = new File([card.blob], card.fileName, { type: 'image/png' });
+      const shareData: FileShareData = {
+        files: [file],
+        title: `CMI Map · ${event.title}`,
+        text: `${event.title}｜${formatCmiEventTime(event, referenceDate)}，${event.venueName}`,
+      };
+      const navigatorWithFileShare = navigator as NavigatorWithFileShare;
+
+      if (navigatorWithFileShare.share && (!navigatorWithFileShare.canShare || navigatorWithFileShare.canShare(shareData))) {
+        try {
+          await navigatorWithFileShare.share(shareData);
+          return;
+        } catch (error) {
+          if (error instanceof DOMException && error.name === 'AbortError') return;
+          console.error('Failed to share CMI event card:', error);
+        }
+      }
+
+      downloadCmiEventShareCard(card);
+      toast.success('当前浏览器不支持直接分享，已改为下载活动图片');
+    } catch (error) {
+      console.error('Failed to create CMI event share card:', error);
+      toast.error('活动卡片生成失败，请稍后再试');
+    } finally {
+      setSharingEventIds(prev => ({ ...prev, [event.id]: false }));
+    }
+  };
 
   return (
     <ComicPage title="活动" hideTitle onTitleClick={() => onNavigate('map')}>
@@ -2153,14 +2216,16 @@ function StickerDrawer({
 
 function EventListCard({
   event,
-  onOpenDetail,
+  isSharing,
   onOpenRealPage,
   onOpenMap,
+  onShare,
 }: {
   event: CmiEvent;
-  onOpenDetail: () => void;
+  isSharing: boolean;
   onOpenRealPage: () => void;
   onOpenMap: () => void;
+  onShare: () => void;
 }) {
   const registrationPreviewLabel = event.registrationLabel.includes('http')
     ? event.registrationLabel.split(/[；。;]/)[0]?.trim() || '查看详情报名'
@@ -2208,7 +2273,7 @@ function EventListCard({
         </div>
 
         <div className="cmi-v3-card-actions cmi-v3-event-card-actions">
-          <button type="button" onClick={onOpenDetail}>预览</button>
+          <button type="button" onClick={onShare} disabled={isSharing}>{isSharing ? '生成中' : '分享'}</button>
           <button type="button" onClick={onOpenRealPage}>报名</button>
           <button type="button" onClick={onOpenMap}>地图</button>
         </div>
