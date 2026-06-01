@@ -1,5 +1,6 @@
 import L from 'leaflet';
 import { useEffect, useRef } from 'react';
+import { MapPin } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { CHIANG_MAI_PROVINCE_BOUNDARY, CHIANG_MAI_PROVINCE_BOUNDS } from '@/data/chiang-mai-boundary';
 import { CHIANG_MAI_FEATURE_LINES } from '@/data/chiang-mai-map-features';
@@ -1036,13 +1037,13 @@ export const LeafletMap = ({
           className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[1000]"
           style={{ top: `${markTargetYRatio * 100}%` }}
         >
-          <div className="relative h-24 w-24">
-            <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-foreground/45 shadow-[0_0_0_1px_rgba(255,255,255,0.65)]" />
-            <div className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-foreground/45 shadow-[0_0_0_1px_rgba(255,255,255,0.65)]" />
-            <div className="absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-white bg-background/80 shadow-[0_8px_22px_rgba(0,0,0,0.22),inset_0_0_0_2px_rgba(249,115,22,0.28)]" />
-            <div
+          <div className="relative h-16 w-16">
+            <div className="absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-[92%] items-center justify-center rounded-2xl border border-foreground/10 bg-background/95 text-[#f97316] shadow-[0_10px_24px_rgba(0,0,0,0.2)] backdrop-blur">
+              <MapPin className="h-6 w-6" strokeWidth={3} />
+            </div>
+            <span
               aria-label="定位准星"
-              className="absolute left-1/2 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#f97316] shadow-[0_0_0_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.24)]"
+              className="absolute left-1/2 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#f97316] shadow-[0_0_0_4px_rgba(255,255,255,0.95),0_4px_10px_rgba(0,0,0,0.22)]"
             />
           </div>
         </div>

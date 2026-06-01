@@ -1,4 +1,4 @@
-import { ArrowLeft, Calendar, Check, Loader2, MapPin, Mic, MicOff, PencilLine, Shuffle } from 'lucide-react';
+import { ArrowLeft, Calendar, Check, Loader2, MapPin, Mic, MicOff, PencilLine, Search, Shuffle, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,8 +14,24 @@ import {
   type CmiEvent,
 } from '@/data/cmi-events';
 import { getCmiInputCategoryOptionById, getCmiInputCategoryOptions } from '@/data/cmi-taxonomy';
-import { createRecommendation, uploadImages } from '@/db/api';
+import { createRecommendation, getAllRecommendations, uploadImages } from '@/db/api';
 import { getPublishedCmiEvents } from '@/db/cmi-events';
+import {
+  buildEventPlaceCandidates,
+  createEventPlaceCandidateFromExternalPlace,
+  searchEventPlaceCandidates,
+  type EventPlaceCandidate,
+} from '@/features/cmi-events/event-place-binding';
+import {
+  DEFAULT_CAMERA_CAPTURE_QUALITY,
+  DEFAULT_CAMERA_OUTPUT_SIZE,
+  DEFAULT_CAMERA_ZOOM_RANGE,
+  getCameraZoomRange,
+  getSquareCaptureRect,
+  normalizeCameraZoom,
+} from '@/features/check-ins/camera-capture';
+import { searchExternalPlaceCandidates } from '@/features/places/external-place-search';
+import { useDebounce } from '@/hooks/use-debounce';
 import {
   CMI_EASTER_ICON_OPTIONS,
   DEFAULT_CMI_EASTER_ICON_ID,
@@ -28,6 +44,7 @@ import {
   CMI_INN_COORDINATES,
   CMI_INN_PLACE_NAME,
   getCategoryIconUrl,
+  isPublicMapRecommendation,
 } from '@/types/types';
 import { normalizeImageFile } from '@/utils/imageCompression';
 
@@ -60,13 +77,15 @@ type SpeechRecognitionErrorEventLike = {
 };
 type SpeechPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied' | 'checking';
 type CameraStatus = 'starting' | 'ready' | 'blocked' | 'unsupported' | 'error';
+type MediaTrackConstraintSetWithZoom = MediaTrackConstraintSet & { zoom?: number };
 
 const MARK_PLACE_VIDEO_CONSTRAINTS: MediaTrackConstraints = {
   facingMode: { ideal: 'environment' },
-  width: { ideal: 1920 },
-  height: { ideal: 1080 },
+  width: { ideal: 2560 },
+  height: { ideal: 1440 },
   frameRate: { ideal: 30, max: 30 },
 };
+const DEFAULT_MARK_PLACE_CENTER = { lat: 18.7883, lng: 98.9853 } as const;
 const MARK_PLACE_EVENT_PAST_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
 const MARK_PLACE_EVENT_FUTURE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -232,6 +251,9 @@ export default function MarkPlace() {
     Boolean(initialPlaceName) &&
     Number.isFinite(initialLatitude) &&
     Number.isFinite(initialLongitude);
+  const initialCenter = hasInitialPickedPlace
+    ? { lat: initialLatitude, lng: initialLongitude }
+    : DEFAULT_MARK_PLACE_CENTER;
   
   const [stage, setStage] = useState<Stage>(() => hasInitialPickedPlace ? 'map_fallback' : 'camera');
   const [photoURL, setPhotoURL] = useState<string | null>(null);
@@ -239,11 +261,8 @@ export default function MarkPlace() {
   const [locationName, setLocationName] = useState<string>(() =>
     hasInitialPickedPlace ? `已选：${initialPlaceName}` : ''
   );
-  const [center, setCenter] = useState(() => (
-    hasInitialPickedPlace
-      ? { lat: initialLatitude, lng: initialLongitude }
-      : { lat: 18.7883, lng: 98.9853 }
-  ));
+  const [center, setCenter] = useState(initialCenter);
+  const [mapDefaultCenter, setMapDefaultCenter] = useState(initialCenter);
   const [pickedPlaceName, setPickedPlaceName] = useState(initialPlaceName);
   const [description, setDescription] = useState<string>('');
   const [uploading, setUploading] = useState(false);
@@ -257,6 +276,8 @@ export default function MarkPlace() {
   const [scanned, setScanned] = useState(false);
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>('starting');
   const [cameraHint, setCameraHint] = useState('正在打开网页相机...');
+  const [cameraZoomRange, setCameraZoomRange] = useState(DEFAULT_CAMERA_ZOOM_RANGE);
+  const [cameraZoom, setCameraZoom] = useState(DEFAULT_CAMERA_ZOOM_RANGE.min);
 
   const [sourceType, setSourceType] = useState<'live' | 'exif' | null>(null);
 
@@ -270,11 +291,18 @@ export default function MarkPlace() {
     return initialEvent ? [initialEvent] : [];
   });
   const [isLoadingEventOptions, setIsLoadingEventOptions] = useState(false);
+  const [placeCandidates, setPlaceCandidates] = useState<EventPlaceCandidate[]>(() => buildEventPlaceCandidates([]));
+  const [isLoadingPlaceCandidates, setIsLoadingPlaceCandidates] = useState(false);
+  const [placeSearchQuery, setPlaceSearchQuery] = useState(initialPlaceName);
+  const [externalPlaceCandidates, setExternalPlaceCandidates] = useState<EventPlaceCandidate[]>([]);
+  const [isLoadingExternalPlaces, setIsLoadingExternalPlaces] = useState(false);
+  const [externalPlaceSearchError, setExternalPlaceSearchError] = useState<string | null>(null);
   const inputCategoryOptions = getCmiInputCategoryOptions();
   const selectedEasterIcon = getCmiEasterIconById(selectedEasterIconId);
   const selectedEvent = selectedEventId
     ? eventOptions.find(event => event.id === selectedEventId) ?? getCmiEventById(selectedEventId)
     : null;
+  const debouncedPlaceSearchQuery = useDebounce(placeSearchQuery, 480);
   const cameraDateLabel = `${new Date().getMonth() + 1} / ${new Date().getDate()}`;
   const filteredEasterIcons = useMemo(() => {
     const query = easterIconQuery.trim().toLocaleLowerCase();
@@ -286,6 +314,24 @@ export default function MarkPlace() {
       icon.label.toLocaleLowerCase().includes(query)
     );
   }, [easterIconQuery]);
+  const trimmedPlaceSearchQuery = placeSearchQuery.trim();
+  const searchedPlaceCandidates = useMemo(
+    () => searchEventPlaceCandidates(placeCandidates, placeSearchQuery, trimmedPlaceSearchQuery ? 5 : 3),
+    [placeCandidates, placeSearchQuery, trimmedPlaceSearchQuery]
+  );
+  const visibleInternalPlaceCandidates = trimmedPlaceSearchQuery
+    ? searchedPlaceCandidates
+    : placeCandidates.slice(0, 3);
+  const shouldSearchExternalPlaces =
+    debouncedPlaceSearchQuery.trim().length >= 2 &&
+    searchedPlaceCandidates.length === 0 &&
+    !isLoadingPlaceCandidates;
+  const visibleExternalPlaceCandidates = shouldSearchExternalPlaces ? externalPlaceCandidates : [];
+  const visiblePlaceCandidates = [
+    ...visibleInternalPlaceCandidates,
+    ...visibleExternalPlaceCandidates,
+  ];
+  const selectedPlaceLabel = pickedPlaceName;
 
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<InstanceType<SpeechRecognitionConstructor> | null>(null);
@@ -297,9 +343,11 @@ export default function MarkPlace() {
   const streamRef = useRef<MediaStream | null>(null);
   const isPhotoDoneStage = stage === 'done' && Boolean(photoURL);
   const isMapFallbackStage = stage === 'map_fallback';
-  const photoAreaHeight = isPhotoDoneStage ? 'calc(100dvh - 13.5rem)' : '55dvh';
+  const photoAreaHeight = isPhotoDoneStage ? 'min(100vw, calc(100dvh - 13.5rem))' : 'min(100vw, 55dvh)';
   const voiceButtonDisabled = !speechSupported || speechPermission === 'checking';
   const cameraButtonDisabled = cameraStatus !== 'ready';
+  const cameraDigitalZoom = cameraZoomRange.isHardwareSupported ? 1 : cameraZoom;
+  const cameraZoomLabel = `${cameraZoom.toFixed(cameraZoom % 1 === 0 ? 0 : 1)}x`;
 
   useEffect(() => {
     let isMounted = true;
@@ -331,6 +379,61 @@ export default function MarkPlace() {
     };
   }, [initialEventId]);
 
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingPlaceCandidates(true);
+
+    getAllRecommendations()
+      .then(recommendations => {
+        if (!isMounted) return;
+        setPlaceCandidates(buildEventPlaceCandidates(recommendations.filter(isPublicMapRecommendation)));
+      })
+      .catch(error => {
+        console.error('地点候选加载失败，使用基础候选:', error);
+        if (isMounted) setPlaceCandidates(buildEventPlaceCandidates([]));
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingPlaceCandidates(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!shouldSearchExternalPlaces) {
+      setExternalPlaceCandidates([]);
+      setIsLoadingExternalPlaces(false);
+      setExternalPlaceSearchError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsLoadingExternalPlaces(true);
+    setExternalPlaceSearchError(null);
+
+    searchExternalPlaceCandidates(debouncedPlaceSearchQuery, {
+      signal: controller.signal,
+      limit: 5,
+    })
+      .then(places => {
+        setExternalPlaceCandidates(places.map(createEventPlaceCandidateFromExternalPlace));
+      })
+      .catch(error => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setExternalPlaceCandidates([]);
+        setExternalPlaceSearchError('外部地点暂时搜不到，可以拖动地图手动定位。');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoadingExternalPlaces(false);
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [debouncedPlaceSearchQuery, shouldSearchExternalPlaces]);
+
   const stopCameraStream = () => {
     if (!streamRef.current) return;
     streamRef.current.getTracks().forEach(track => track.stop());
@@ -340,7 +443,38 @@ export default function MarkPlace() {
   const markCameraReady = () => {
     if (!streamRef.current || !videoRef.current || videoRef.current.videoWidth === 0) return;
     setCameraStatus('ready');
-    setCameraHint('网页相机已打开，直接按中间按钮拍下当前画面。');
+    setCameraHint('网页相机已打开，可以缩放后拍下正方形画面。');
+  };
+
+  const applyCameraTrackZoom = async (nextZoom: number) => {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track || !cameraZoomRange.isHardwareSupported || !track.applyConstraints) return false;
+
+    try {
+      await track.applyConstraints({
+        advanced: [{ zoom: nextZoom } as MediaTrackConstraintSetWithZoom],
+      });
+      return true;
+    } catch (error) {
+      console.warn('相机原生缩放不可用，改用网页裁切缩放:', error);
+      return false;
+    }
+  };
+
+  const switchToDigitalZoom = (nextZoom: number) => {
+    setCameraZoomRange(DEFAULT_CAMERA_ZOOM_RANGE);
+    setCameraZoom(normalizeCameraZoom(nextZoom, DEFAULT_CAMERA_ZOOM_RANGE));
+  };
+
+  const handleCameraZoomChange = (value: string) => {
+    const nextZoom = normalizeCameraZoom(Number(value), cameraZoomRange);
+    setCameraZoom(nextZoom);
+
+    if (!cameraZoomRange.isHardwareSupported) return;
+
+    void applyCameraTrackZoom(nextZoom).then((didApply) => {
+      if (!didApply) switchToDigitalZoom(nextZoom);
+    });
   };
 
   const updateInterimTranscript = (nextTranscript: string) => {
@@ -495,6 +629,23 @@ export default function MarkPlace() {
             return;
           }
           streamRef.current = mediaStream;
+          const videoTrack = mediaStream.getVideoTracks()[0];
+          const nextZoomRange = getCameraZoomRange(videoTrack?.getCapabilities?.());
+          const initialZoom = normalizeCameraZoom(1, nextZoomRange);
+          setCameraZoomRange(nextZoomRange);
+          setCameraZoom(initialZoom);
+
+          if (nextZoomRange.isHardwareSupported && videoTrack?.applyConstraints) {
+            try {
+              await videoTrack.applyConstraints({
+                advanced: [{ zoom: initialZoom } as MediaTrackConstraintSetWithZoom],
+              });
+            } catch (error) {
+              console.warn('相机原生缩放初始化失败，改用网页裁切缩放:', error);
+              switchToDigitalZoom(initialZoom);
+            }
+          }
+
           if (videoRef.current) {
             videoRef.current.srcObject = mediaStream;
             await videoRef.current.play().catch(() => {
@@ -527,16 +678,39 @@ export default function MarkPlace() {
   }, [stage]);
 
   const captureFromPreview = () => {
-    if (videoRef.current && canvasRef.current && streamRef.current && videoRef.current.videoWidth > 0) {
+    if (
+      videoRef.current &&
+      canvasRef.current &&
+      streamRef.current &&
+      videoRef.current.videoWidth > 0 &&
+      videoRef.current.videoHeight > 0
+    ) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      const crop = getSquareCaptureRect({
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+        zoom: cameraDigitalZoom,
+        maxOutputSize: DEFAULT_CAMERA_OUTPUT_SIZE,
+      });
+
+      canvas.width = crop.outputSize;
+      canvas.height = crop.outputSize;
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(
+          video,
+          crop.sx,
+          crop.sy,
+          crop.size,
+          crop.size,
+          0,
+          0,
+          crop.outputSize,
+          crop.outputSize
+        );
         canvas.toBlob((blob) => {
           if (blob) {
             const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
@@ -551,7 +725,7 @@ export default function MarkPlace() {
               setFlash(false);
             }, 300);
           }
-        }, 'image/jpeg', 0.92);
+        }, 'image/jpeg', DEFAULT_CAMERA_CAPTURE_QUALITY);
       } else {
         toast('取景器没有拍下来，稍后再试一次');
       }
@@ -578,10 +752,12 @@ export default function MarkPlace() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setCenter({
+          const nextCenter = {
             lat: position.coords.latitude,
             lng: position.coords.longitude
-          });
+          };
+          setCenter(nextCenter);
+          setMapDefaultCenter(nextCenter);
           setLocationName('实时坐标 (GPS)');
         },
         (error) => {
@@ -633,19 +809,46 @@ export default function MarkPlace() {
     speechStartingRef.current = false;
     setLocationName('手动选点');
     setPickedPlaceName('');
+    setPlaceSearchQuery('');
     setStage('map_fallback');
+  };
+
+  const applyPlaceCandidate = (candidate: EventPlaceCandidate) => {
+    const nextCenter = {
+      lat: candidate.latitude,
+      lng: candidate.longitude,
+    };
+
+    setPickedPlaceName(candidate.placeName);
+    setPlaceSearchQuery(candidate.placeName);
+    setLocationName(`已选：${candidate.placeName}`);
+    setCenter(nextCenter);
+    setMapDefaultCenter(nextCenter);
+
+    toast.success('已关联地点', {
+      description: candidate.placeName,
+    });
+  };
+
+  const handlePlaceSearchChange = (value: string) => {
+    setPlaceSearchQuery(value);
+    if (pickedPlaceName && pickedPlaceName !== value.trim()) {
+      setPickedPlaceName('');
+      setLocationName('手动选点');
+    }
   };
 
   // 2. 定位分析动画
   useEffect(() => {
     if (stage === 'analyzing') {
       const timer1 = setTimeout(() => setScanned(true), 1500);
+      // NOTE: 相册旧照不再先逼用户拖地图，先写体验，再关联地点或活动。
       const timer2 = setTimeout(() => {
-        setStage(sourceType === 'exif' ? 'map_fallback' : 'voice');
+        setStage('voice');
       }, 3000);
       return () => { clearTimeout(timer1); clearTimeout(timer2); };
     }
-  }, [stage, sourceType]);
+  }, [stage]);
 
   // 3. 语音对话控制
   const handleVoiceInput = async () => {
@@ -788,7 +991,11 @@ export default function MarkPlace() {
   };
 
   const handleMapConfirm = () => {
-    setStage('voice');
+    if (!pickedPlaceName.trim()) {
+      setLocationName(`地图选点 · ${center.lat.toFixed(5)}, ${center.lng.toFixed(5)}`);
+    }
+
+    setStage(description.trim() ? 'category' : 'voice');
   };
 
   if (authLoading || !user) {
@@ -819,7 +1026,11 @@ export default function MarkPlace() {
       {/* STAGE 1: 取景框 */}
       {stage === 'camera' && (
         <div className="w-full h-screen flex flex-col relative text-stone-700 bg-stone-900">
-          <div className="flex-1 relative overflow-hidden bg-black/10 border-[16px] sm:border-[24px] border-stone-100 rounded-[2.5rem] m-2 shadow-[inset_0_4px_12px_rgba(0,0,0,0.1)] backdrop-blur-[1px]">
+          <div className="flex flex-1 items-center justify-center px-2 pb-3 pt-[calc(env(safe-area-inset-top)+4.25rem)]">
+            <div
+              className="relative aspect-square overflow-hidden rounded-[2rem] border-[10px] border-stone-100 bg-black shadow-[0_16px_42px_rgba(0,0,0,0.28),inset_0_2px_10px_rgba(255,255,255,0.08)] sm:border-[14px] sm:rounded-[2.5rem]"
+              style={{ width: 'min(calc(100vw - 1rem), calc(100dvh - 15.75rem), 560px)' }}
+            >
             <video
               ref={videoRef}
               autoPlay
@@ -827,7 +1038,12 @@ export default function MarkPlace() {
               muted
               onLoadedMetadata={markCameraReady}
               onCanPlay={markCameraReady}
-              className="absolute inset-0 z-0 h-full w-full object-cover"
+              className="absolute inset-0 z-0 h-full w-full object-cover transition-transform duration-200 ease-out"
+              style={{
+                filter: 'contrast(1.04) saturate(1.06)',
+                transform: `scale(${cameraDigitalZoom})`,
+                transformOrigin: 'center center',
+              }}
             />
             <canvas ref={canvasRef} className="hidden" />
             {cameraStatus !== 'ready' && (
@@ -854,14 +1070,32 @@ export default function MarkPlace() {
               <span className="text-white/90 text-3xl drop-shadow-md" style={{ fontFamily: "'Nanum Pen Script', 'Caveat', cursive" }}>Smile! :)</span>
               <span className="text-white/90 text-3xl drop-shadow-md" style={{ fontFamily: "'Nanum Pen Script', 'Caveat', cursive" }}>{cameraDateLabel}</span>
             </div>
-            <div className="absolute top-1/3 left-0 right-0 h-[1px] border-t-2 border-dashed border-white/30 pointer-events-none" />
-            <div className="absolute top-2/3 left-0 right-0 h-[1px] border-t-2 border-dashed border-white/30 pointer-events-none" />
-            <div className="absolute left-1/3 top-0 bottom-0 w-[1px] border-l-2 border-dashed border-white/30 pointer-events-none" />
-            <div className="absolute left-2/3 top-0 bottom-0 w-[1px] border-l-2 border-dashed border-white/30 pointer-events-none" />
+              <div className="absolute top-1/3 left-0 right-0 h-[1px] border-t border-dashed border-white/20 pointer-events-none" />
+              <div className="absolute top-2/3 left-0 right-0 h-[1px] border-t border-dashed border-white/20 pointer-events-none" />
+              <div className="absolute left-1/3 top-0 bottom-0 w-[1px] border-l border-dashed border-white/20 pointer-events-none" />
+              <div className="absolute left-2/3 top-0 bottom-0 w-[1px] border-l border-dashed border-white/20 pointer-events-none" />
+            </div>
           </div>
 
-          <div className="h-48 sm:h-56 bg-white relative flex flex-col items-center justify-center shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.08)] pb-safe rounded-t-[40px] z-10">
+          <div className="h-56 sm:h-60 bg-white relative flex flex-col items-center justify-center shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.08)] pb-safe rounded-t-[40px] z-10">
             <div className="absolute top-5 w-32 h-1.5 bg-stone-200 rounded-full shadow-inner opacity-80" />
+            <div className="mt-8 w-full max-w-xs px-4">
+              <div className="mb-2 flex items-center justify-between text-xs font-black text-stone-500">
+                <span>焦距</span>
+                <span>{cameraZoomLabel}</span>
+              </div>
+              <input
+                type="range"
+                min={cameraZoomRange.min}
+                max={cameraZoomRange.max}
+                step={cameraZoomRange.step}
+                value={cameraZoom}
+                disabled={cameraStatus !== 'ready'}
+                onChange={(event) => handleCameraZoomChange(event.target.value)}
+                className="h-2 w-full cursor-pointer accent-[#f97316] disabled:cursor-wait disabled:opacity-50"
+                aria-label="调整焦距"
+              />
+            </div>
             <div className="flex items-center gap-6 mt-4 z-10 w-full justify-center px-8">
               <input type="file" accept="image/*" className="hidden" onChange={(e) => handleCapture(e, 'exif')} ref={uploadInputRef} />
               <button
@@ -1011,29 +1245,92 @@ export default function MarkPlace() {
             {stage === 'map_fallback' && (
                <div className="absolute inset-0 animate-in fade-in duration-300">
 	                 <LeafletMap
-                       key={pickedPlaceName || 'manual'}
+                       key={pickedPlaceName || `${mapDefaultCenter.lat}-${mapDefaultCenter.lng}`}
 	                   mode="mark"
 	                   defaultZoom={15}
-	                   defaultCenter={center}
+	                   defaultCenter={mapDefaultCenter}
 	                   markTargetYRatio={0.5}
 	                   onCenterChange={(lat, lng) => setCenter({lat, lng})}
 	                   className="h-full w-full border-none outline-none"
 	                 />
                  <div className="pointer-events-none absolute inset-x-0 top-0 z-[1001] h-40 bg-gradient-to-b from-background/95 via-background/70 to-transparent" />
-                 <div className="pointer-events-none absolute inset-x-4 top-[calc(env(safe-area-inset-top)+4.75rem)] z-[1002] rounded-3xl border border-foreground/10 bg-background/90 px-4 py-3 text-center shadow-lg backdrop-blur-md">
-	                   <p className="text-base font-black text-foreground">
-                         {pickedPlaceName ? pickedPlaceName : '手动选择地标'}
+                 <div className="absolute inset-x-4 top-[calc(env(safe-area-inset-top)+4.75rem)] z-[1002] rounded-3xl border border-foreground/10 bg-background/92 px-4 py-3 shadow-lg backdrop-blur-md">
+                   <div className="text-center">
+                       <p className="text-base font-black text-foreground">
+                         {selectedPlaceLabel || '搜索地点，或手动定点'}
                        </p>
-	                   <p className="mt-1 text-xs font-bold leading-relaxed text-muted-foreground">
-                         {pickedPlaceName
-                           ? '确认准星对准这个地点后，就可以写下你的真实体验。'
-                           : '拖动地图，让准星中心对准地点；也可以直接点地图移动准星。'}
+                       <p className="mt-1 text-xs font-bold leading-relaxed text-muted-foreground">
+                         {selectedPlaceLabel
+                           ? '这条动态会带上这个地点标签，也可以继续微调准星。'
+                           : '先搜清迈客栈、店名或区域；搜不到再拖地图兜底。'}
                        </p>
+                   </div>
+                   <label className="mt-3 flex h-11 items-center gap-2 rounded-2xl border border-border bg-background px-3 shadow-sm">
+                     <Search className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={3} />
+                     <input
+                       value={placeSearchQuery}
+                       onChange={(event) => handlePlaceSearchChange(event.target.value)}
+                       placeholder="搜清迈客栈 / 店名 / 区域"
+                       className="min-w-0 flex-1 bg-transparent text-sm font-bold text-foreground outline-none placeholder:text-muted-foreground/65"
+                       autoComplete="off"
+                     />
+                     {placeSearchQuery && (
+                       <button
+                         type="button"
+                         onClick={() => handlePlaceSearchChange('')}
+                         className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground active:scale-95"
+                         aria-label="清空地点搜索"
+                       >
+                         <X className="h-3.5 w-3.5" strokeWidth={3} />
+                       </button>
+                     )}
+                   </label>
+                   <div className="mt-2 max-h-44 overflow-y-auto pr-1">
+                     {visiblePlaceCandidates.length > 0 ? (
+                       <div className="space-y-2">
+                         {visiblePlaceCandidates.map(candidate => {
+                           const isSelectedCandidate = selectedPlaceLabel === candidate.placeName;
+
+                           return (
+                             <button
+                               key={`${candidate.bindingSource}:${candidate.placeName}:${candidate.latitude}:${candidate.longitude}`}
+                               type="button"
+                               onClick={() => applyPlaceCandidate(candidate)}
+                               className={`flex w-full items-center gap-2 rounded-2xl border px-3 py-2 text-left transition active:scale-[0.99] ${
+                                 isSelectedCandidate
+                                   ? 'border-primary bg-primary/10 ring-2 ring-primary/15'
+                                   : 'border-border bg-background/92'
+                               }`}
+                             >
+                               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                 <MapPin className="h-4 w-4" strokeWidth={3} />
+                               </span>
+                               <span className="min-w-0 flex-1">
+                                 <strong className="block truncate text-sm font-black text-foreground">
+                                   {candidate.placeName}
+                                 </strong>
+                                 <span className="mt-0.5 block truncate text-xs font-semibold text-muted-foreground">
+                                   {candidate.areaLabel}
+                                 </span>
+                               </span>
+                               {isSelectedCandidate && <Check className="h-4 w-4 shrink-0 text-primary" strokeWidth={3} />}
+                             </button>
+                           );
+                         })}
+                       </div>
+                     ) : (
+                       <p className="rounded-2xl bg-muted/70 px-3 py-2 text-xs font-bold leading-relaxed text-muted-foreground">
+                         {isLoadingPlaceCandidates || isLoadingExternalPlaces
+                           ? '正在找地点...'
+                           : externalPlaceSearchError || '没有搜到匹配地点，可以直接拖地图手动定位。'}
+                       </p>
+                     )}
+                   </div>
                  </div>
                  <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1001] h-40 bg-gradient-to-t from-background via-background/88 to-transparent" />
                  <div className="absolute inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-[1002]">
                    <button onClick={handleMapConfirm} className="flex h-14 w-full items-center justify-center rounded-3xl bg-foreground text-base font-black text-background shadow-[0_14px_34px_rgba(0,0,0,0.24)] active:scale-[0.98]">
-                     确认位置，去写体验
+                     {description.trim() ? '确认地点，继续发布' : '确认地点，去写体验'}
                    </button>
                  </div>
                </div>
@@ -1072,7 +1369,11 @@ export default function MarkPlace() {
                   </button>
                   
                   {description && !isListening && (
-                    <button onClick={() => setStage('category')} className="w-12 h-12 rounded-full bg-white text-primary flex items-center justify-center shadow-md animate-in slide-in-from-right-4 hover:scale-105 active:scale-95 transition-all">
+                    <button
+                      onClick={() => setStage(selectedPlaceLabel ? 'category' : 'map_fallback')}
+                      className="w-12 h-12 rounded-full bg-white text-primary flex items-center justify-center shadow-md animate-in slide-in-from-right-4 hover:scale-105 active:scale-95 transition-all"
+                      aria-label={selectedPlaceLabel ? '进入分类发布' : '先关联地点'}
+                    >
                       <Check className="w-6 h-6" strokeWidth={3} />
                     </button>
                   )}
@@ -1080,6 +1381,30 @@ export default function MarkPlace() {
                 <p className="max-w-sm text-center text-xs font-medium leading-relaxed text-stone-400">
                   {voiceHint}
                 </p>
+                <div className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white/90 px-3 py-3 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <MapPin className="h-4 w-4" strokeWidth={3} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-stone-800">
+                          {selectedPlaceLabel || '还没有关联地点'}
+                        </p>
+                        <p className="mt-0.5 text-xs font-semibold text-stone-400">
+                          {selectedPlaceLabel ? '这条动态会带地点标签' : '可以先写，下一步再搜地点'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setStage('map_fallback')}
+                      className="shrink-0 rounded-full bg-stone-100 px-3 py-2 text-xs font-black text-stone-700 active:scale-95"
+                    >
+                      {selectedPlaceLabel ? '更换' : '关联'}
+                    </button>
+                  </div>
+                </div>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
