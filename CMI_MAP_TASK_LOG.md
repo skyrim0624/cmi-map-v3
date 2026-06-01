@@ -956,3 +956,5 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
   - 本地浏览器验证 `http://localhost:5173/?screen=map&verify=add-button-purple`：添加圆形为 `64px`，背景 `rgb(139, 107, 191)`，加号为白色 `36px`，console 无 warn/error。
+  - 已部署 v3 项目 `https://15a12eba.cmi-map-v3.pages.dev` 和正式站 `https://9b9c2ace.cmi-map.pages.dev`，Source 为 `8e63ece`。
+  - 正式域名 `https://www.cmimap.com/?verify=add-button-purple-8e63ece` 强刷新后已确认：添加圆形为 `64px`，背景 `rgb(139, 107, 191)`，加号为白色 `36px`。
