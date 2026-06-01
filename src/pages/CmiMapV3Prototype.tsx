@@ -6,6 +6,7 @@ import {
   List,
   Map as MapIcon,
   MapPin,
+  Megaphone,
   Menu,
   MessageCircle,
   Navigation,
@@ -171,11 +172,6 @@ const USER_AVATAR_FALLBACK_COLORS = ['#f6c85f', '#f28c6b', '#70b7a7', '#6f9fd8',
 
 const foodCategories = new Set<Category>(['吃饭', '咖啡', '市集']);
 const playCategories = new Set<Category>(['户外', '景点', '购物', '运动', '酒吧', '身心']);
-
-const bottomNavIconUrls = {
-  feed: '/map-icons/cmi-nav-v3/nav-feed.png',
-  events: '/map-icons/cmi-nav-v3/nav-events.png',
-} as const;
 
 const downloadCmiEventShareCard = (card: { blob: Blob; fileName: string }) => {
   const downloadUrl = URL.createObjectURL(card.blob);
@@ -2677,7 +2673,7 @@ function CmiV3BottomNav({
         onClick={() => onNavigate('feed')}
       >
         <span className="cmi-v3-map-bottom-icon cmi-v3-map-bottom-icon--feed">
-          <img src={bottomNavIconUrls.feed} alt="" />
+          <Megaphone size={24} strokeWidth={3} />
         </span>
         动态
       </button>
@@ -2688,7 +2684,7 @@ function CmiV3BottomNav({
         onClick={() => onNavigate('events')}
       >
         <span className="cmi-v3-map-bottom-icon cmi-v3-map-bottom-icon--event">
-          <img src={bottomNavIconUrls.events} alt="" />
+          <Calendar size={24} strokeWidth={3} />
         </span>
         活动
       </button>
@@ -2700,7 +2696,7 @@ function CmiV3BottomNav({
         aria-label={addAriaLabel}
       >
         <span className="cmi-v3-map-bottom-add-icon">
-          <Plus size={24} strokeWidth={3.2} />
+          <Plus size={30} strokeWidth={3.1} />
         </span>
         添加
       </button>

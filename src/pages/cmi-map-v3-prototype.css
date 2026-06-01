@@ -1344,6 +1344,7 @@
   box-shadow: 0 -4px 20px rgba(22, 22, 22, 0.08);
   padding: 3px 10px calc(env(safe-area-inset-bottom) + 3px);
   backdrop-filter: blur(16px);
+  overflow: visible;
 }
 
 .cmi-v3-map-bottom button {
@@ -1384,13 +1385,10 @@
   border: 0;
   background: transparent;
   box-shadow: none;
+  color: currentColor;
 }
 
-.cmi-v3-map-bottom-icon img {
-  width: 34px;
-  height: 34px;
-  object-fit: contain;
-  opacity: 0.86;
+.cmi-v3-map-bottom-icon svg {
   filter: drop-shadow(0 2px 0 rgba(22, 22, 22, 0.06));
 }
 
@@ -1399,13 +1397,14 @@
 }
 
 .cmi-v3-map-bottom-add-button {
-  align-self: center;
+  align-self: start;
   color: var(--cmi-v3-ink);
+  transform: translateY(-12px);
 }
 
 .cmi-v3-map-bottom-add-icon {
-  width: 42px;
-  height: 42px;
+  width: 56px;
+  height: 56px;
   border: 2px solid rgba(22, 22, 22, 0.86);
   border-radius: 50%;
   background: #fff4d7;
@@ -2681,14 +2680,9 @@
     height: 32px;
   }
 
-  .cmi-v3-map-bottom-icon img {
-    width: 32px;
-    height: 32px;
-  }
-
   .cmi-v3-map-bottom-add-icon {
-    width: 40px;
-    height: 40px;
+    width: 52px;
+    height: 52px;
   }
 
   .cmi-v3-map-layer-control,
