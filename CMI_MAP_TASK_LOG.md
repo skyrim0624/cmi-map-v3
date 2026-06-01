@@ -1166,3 +1166,6 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地浏览器验证 `http://localhost:5174/?event=cmi-five-minute-music-kid-a-2026-06-02&verify=sheet-link`：活动底栏存在 1 个正式详情链接；点击后进入 `/events/cmi-five-minute-music-kid-a-2026-06-02`；详情页“返回”按钮回到原地图 URL，活动底栏仍保留。
   - 本地浏览器验证 `http://localhost:5174/?event=cmi-five-minute-music-kid-a-2026-06-02&verify=sheet-body-click`：点击底栏正文非按钮区域同样进入正式详情页，返回后仍回到原地图活动底栏。
+  - 已用干净 worktree 部署 v3 项目 `https://61041666.cmi-map-v3.pages.dev` 和正式站 `https://0f1a3309.cmi-map.pages.dev`，Source 为 `0c8bb00`。
+  - 线上预览 `https://0f1a3309.cmi-map.pages.dev/?event=cmi-five-minute-music-kid-a-2026-06-02&verify=sheet-link-0c8bb00` 复查通过：底栏点击进入正式详情页，详情页“返回”回到原地图活动底栏。
+  - 正式域名 `https://cmimap.com` 服务器响应已指向新入口 `index-C94AqMx_.js` 和新 V3 包 `CmiMapV3Prototype-DUdfP_ac.js`，线上包内已包含 `cmi-v3-selected-note-summary--link`；已访问过的浏览器若仍拿到旧 `index-DZ2-5eQZ.js`，属于旧 PWA Service Worker 缓存，需要刷新或重开页面后切到新包。
