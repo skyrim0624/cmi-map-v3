@@ -1602,6 +1602,11 @@
   font-weight: 950;
 }
 
+.cmi-v3-events-hero h1 {
+  font-weight: 1000;
+  text-shadow: 0.45px 0 0 currentColor;
+}
+
 .cmi-v3-events-hero p,
 .cmi-v3-publish-panel p {
   position: relative;
@@ -1611,6 +1616,12 @@
   font-size: 14px;
   font-weight: 950;
   line-height: 1.6;
+}
+
+.cmi-v3-events-hero p {
+  color: rgba(22, 22, 22, 0.88);
+  font-weight: 1000;
+  text-shadow: 0.25px 0 0 currentColor;
 }
 
 .cmi-v3-feed-card {
