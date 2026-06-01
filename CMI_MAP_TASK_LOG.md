@@ -28,6 +28,22 @@
 
 ## 执行记录
 
+### 2026-06-01 23:43 +07 打卡相机双指缩放与相机机身优化
+
+- 背景：用户反馈底部“焦距 1x”滑杆不像手机相机交互，缩放应在取景框里双指捏合；同时当前相机边框缺少精致相机的仪式感。
+- 本轮实现：
+  - 移除打卡相机底部焦距滑杆，改为在正方形取景框内处理双指捏合缩放；原生硬件 zoom 可用时继续走 `applyConstraints`，不可用时回退网页裁切缩放。
+  - 保持拍照输出正方形和高质量 JPG 参数，缩放后的画面仍按正方形中心裁切输出。
+  - 用 Image Gen 生成的相机机身方向作为视觉参考，将取景区域重做为奶白相机外壳、黑色内圈、橙色状态灯/快门、CMI MAP 微标识和更清晰的对焦框；未授权提示去掉毛玻璃雾感。
+- 验证结果：
+  - `node --test src/pages/MarkPlace.test.ts` 通过。
+  - `node --test --experimental-strip-types src/features/check-ins/camera-capture.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts src/features/check-ins/camera-capture.ts src/features/check-ins/camera-capture.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过；`pnpm lint` 通过。
+  - 已部署 v3 项目 `https://ed5840bf.cmi-map-v3.pages.dev` 和正式站 `https://670e15e3.cmi-map.pages.dev`，Source 为 `13a2ce9`。
+  - 正式域名服务器响应已指向新入口 `index-DYsM7hq7.js`；新 `MarkPlace-B2JVbwq4.js` 包内包含 `onTouchStart` / `touchAction: "none"` / `LIVE` / `SQ`，不再包含“焦距”滑杆文案。当前已打开过的浏览器标签如果仍拿旧相机包，属于旧 PWA Service Worker 缓存，需要刷新或重开页面后切到新包。
+
 ### 2026-06-01 活动页标题字重微调
 
 - 用户反馈：活动页顶部标题“清迈客栈的活动！”和副标题“社区空间提供给大家使用，可以来办活动！”需要更粗一点。
