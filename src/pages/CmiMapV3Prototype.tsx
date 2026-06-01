@@ -114,7 +114,7 @@ import {
 } from '@/types/types';
 import './cmi-map-v3-prototype.css';
 
-type ScreenId = 'map' | 'feed' | 'publish' | 'events' | 'eventDetail';
+type ScreenId = 'map' | 'feed' | 'publish' | 'events';
 type PrimaryScreenId = 'feed' | 'map' | 'events' | 'publish';
 type MapFilterId = 'all' | 'food' | 'play' | 'events' | 'easter';
 type FeedCardTone = 'paper' | 'yellow' | 'green' | 'pink';
@@ -163,6 +163,12 @@ interface EventMarker extends MapMarker {
   eventId: string;
 }
 
+interface SheetAction {
+  label: string;
+  href?: string;
+  onClick?: () => void;
+}
+
 const mapFilters: FilterItem[] = [
   { id: 'all', label: '动态' },
   { id: 'food', label: '好吃', iconUrl: '/map-icons/cmi-flat-v2/direct-eat.png' },
@@ -177,7 +183,7 @@ const eventTabs: Array<{ id: EventTabId; label: string }> = [
   { id: 'joined', label: '我参加的' },
 ];
 
-const screenIds: ScreenId[] = ['map', 'feed', 'publish', 'events', 'eventDetail'];
+const screenIds: ScreenId[] = ['map', 'feed', 'publish', 'events'];
 const primaryScreenPositions: Record<PrimaryScreenId, number> = {
   map: 0,
   feed: 1,
@@ -822,7 +828,7 @@ export default function CmiMapV3Prototype() {
       if (input?.eventId) {
         setSelectedEventId(input.eventId);
         if (screen === 'map') setSelectedMarker(null);
-      } else if (screen !== 'eventDetail') {
+      } else {
         setSelectedEventId(null);
       }
 
@@ -1267,13 +1273,6 @@ export default function CmiMapV3Prototype() {
             onOpenPath={navigate}
           />
         )}
-        {activeScreen === 'eventDetail' && selectedEvent && (
-          <EventDetailMode
-            event={selectedEvent}
-            onNavigate={handleNavigate}
-            onOpenPath={navigate}
-          />
-        )}
       </div>
       {activePrimaryScreen && (
         <CmiV3BottomNav
@@ -1474,12 +1473,8 @@ function MapMode({
           imageUrl={getCmiEventCardImageUrl(selectedEvent)}
           meta={`${formatCmiEventTime(selectedEvent)} · ${selectedEvent.venueName}`}
           primaryAction={{
-            label: '详情',
-            onClick: () => onNavigate('eventDetail', { eventId: selectedEvent.id }),
-          }}
-          secondaryAction={{
-            label: '报名',
-            onClick: () => onOpenPath(getCmiEventPath(selectedEvent.id)),
+            label: '打开活动页',
+            href: getCmiEventPath(selectedEvent.id),
           }}
           title={selectedEvent.title}
           onDismiss={onClearSelection}
@@ -1598,8 +1593,8 @@ function MapBottomSheet({
   imageUrl: string;
   itemId: string;
   meta: string;
-  primaryAction?: { label: string; onClick: () => void };
-  secondaryAction?: { label: string; onClick: () => void };
+  primaryAction?: SheetAction;
+  secondaryAction?: SheetAction;
   title: string;
   onDismiss?: () => void;
 }) {
@@ -1649,14 +1644,22 @@ function MapBottomSheet({
       <div className="cmi-v3-selected-note-body">
         {(primaryAction || secondaryAction) && (
           <div className="cmi-v3-selected-note-actions">
-            {primaryAction && <button type="button" onClick={primaryAction.onClick}>{primaryAction.label}</button>}
-            {secondaryAction && <button type="button" onClick={secondaryAction.onClick}>{secondaryAction.label}</button>}
+            {primaryAction && <SheetActionControl action={primaryAction} />}
+            {secondaryAction && <SheetActionControl action={secondaryAction} />}
           </div>
         )}
         {children}
       </div>
     </article>
   );
+}
+
+function SheetActionControl({ action }: { action: SheetAction }) {
+  if (action.href) {
+    return <a href={action.href}>{action.label}</a>;
+  }
+
+  return <button type="button" onClick={action.onClick}>{action.label}</button>;
 }
 
 function MapPulseSheet({
@@ -2315,54 +2318,6 @@ function EventsMode({
         />
       )}
     </>
-  );
-}
-
-function EventDetailMode({
-  event,
-  onNavigate,
-  onOpenPath,
-}: {
-  event: CmiEvent;
-  onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
-  onOpenPath: (path: string) => void;
-}) {
-  return (
-    <ComicPage title="活动详情" actionLabel="正式页" onTitleClick={() => onNavigate('events')} onActionClick={() => onOpenPath(getCmiEventPath(event.id))} footer={
-      <div className="cmi-v3-fixed-footer">
-        <button type="button" onClick={() => onNavigate('map', { eventId: event.id })}>在地图看</button>
-        <button type="button" className="is-primary" onClick={() => onOpenPath(getCmiEventPath(event.id))}>报名参加</button>
-      </div>
-    }>
-      <section className="cmi-v3-hard-card cmi-v3-feed-hero cmi-v3-dot-paper">
-        <ChapterHeader left="Chapter Event" right={event.venueName} />
-        <img className="cmi-v3-detail-poster" src={getCmiEventCardImageUrl(event)} alt={event.title} />
-        <h1>{event.title}</h1>
-        <p>{event.summary}</p>
-      </section>
-
-      <div className="cmi-v3-detail-meta">
-        <MetaRow icon={<Calendar size={20} strokeWidth={3} />} title={formatCmiEventTime(event)} body={event.priceLabel} />
-        <MetaRow icon={<MapPin size={20} strokeWidth={3} />} title={event.venueName} body={event.area} />
-        <MetaRow icon={<Users size={20} strokeWidth={3} />} title={event.registrationLabel} body={event.hostName} />
-      </div>
-
-      <article className="cmi-v3-feed-card cmi-v3-feed-card--paper">
-        <div className="cmi-v3-feed-head">
-          <span className="cmi-v3-avatar"><Camera size={18} strokeWidth={3} /></span>
-          <div>
-            <strong>活动动态</strong>
-            <span>返图会自动挂到这场活动下面</span>
-          </div>
-          <em>现场</em>
-        </div>
-        <div className="cmi-v3-card-actions">
-          <button type="button" onClick={() => onOpenPath(getMarkPlacePath({ eventId: event.id }))}>拍照返图</button>
-          <button type="button" onClick={() => onOpenPath(getCmiEventPath(event.id))}>打开正式页</button>
-          <button type="button" onClick={() => onOpenPath(getCmiEventCreatePath())}>发布活动</button>
-        </div>
-      </article>
-    </ComicPage>
   );
 }
 
@@ -3053,18 +3008,6 @@ function FormCard({ label, children }: { label: string; children: ReactNode }) {
     <div className="cmi-v3-form-card">
       <p>{label}</p>
       {children}
-    </div>
-  );
-}
-
-function MetaRow({ icon, title, body }: { icon: ReactNode; title: string; body: string }) {
-  return (
-    <div className="cmi-v3-meta-row">
-      <span>{icon}</span>
-      <div>
-        <strong>{title}</strong>
-        <em>{body}</em>
-      </div>
     </div>
   );
 }

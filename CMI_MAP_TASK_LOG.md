@@ -1085,3 +1085,17 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
   - 本地浏览器首次验证确认顶部中心区和“动态”标题已出现；随后 localhost 被 Browser 安全策略拦截，因此最终以 Cloudflare Pages 预览地址做线上复查。
+
+### 2026-06-01 20:48:25 +07 删除 V3 内部活动详情页
+
+- 背景：用户在手机截图中指出 V3 里的临时“活动详情 / 正式页”页面不需要保留。
+- 本轮实现：
+  - 从 V3 原型屏幕集合中移除 `eventDetail`，旧 `?screen=eventDetail` 不再渲染临时活动详情页。
+  - 删除 `EventDetailMode` 组件和对应的详情页专用样式。
+  - 地图活动底栏的入口改为“打开活动页”，直接指向正式 `/events/:eventId` 页面。
+  - 增加回归检查，防止内部活动详情屏再次被加回。
+- 验证结果：
+  - `node --experimental-strip-types --test src/pages/CmiMapV3Prototype.test.ts` 通过。
+  - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
+  - 本地浏览器验证 `http://localhost:5173/?screen=eventDetail&event=cmi-five-minute-music-kid-a-2026-06-02`：页面回到地图活动底栏，旧“活动详情”和“正式页”文案均不存在，入口 href 为 `/events/cmi-five-minute-music-kid-a-2026-06-02`，console 无 warn/error。
+  - 本地浏览器直开正式活动页 `/events/cmi-five-minute-music-kid-a-2026-06-02`：Radiohead 活动正文正常渲染，console 无 warn/error。
