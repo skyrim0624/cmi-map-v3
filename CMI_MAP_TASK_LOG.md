@@ -52,6 +52,9 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
   - 本地浏览器验证 `http://localhost:5173/mark`：未登录会按预期跳到 `/login`，页面无控制台错误；因没有登录态且未代用户授权相机，本轮未做真实摄像头实拍验证。
+  - 已提交并推送：`f22a2cc Fix check-in camera capture helpers`、`2c04584 Tame expected camera permission logging`。
+  - 已用干净 worktree 部署 v3 项目 `https://f88c7ee7.cmi-map-v3.pages.dev` 和正式站 `https://f3e5707c.cmi-map.pages.dev`，Source 为 `2c04584`。
+  - 线上复查：`https://f3e5707c.cmi-map.pages.dev/mark?verify=camera-square-2c04584-fresh` 未登录会跳到 `/login` 且当前部署无匹配 console warn/error；`https://cmimap.com` 服务端入口已引用新包 `MarkPlace-DDWl3pW6.js`，已访问过的浏览器如果仍由旧 Service Worker 控制，需要刷新后切到新包。
 
 ### 2026-06-01 22:59 +07 相册旧照地点关联重做
 
