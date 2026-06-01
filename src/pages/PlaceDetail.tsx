@@ -59,12 +59,6 @@ import {
   toggleRecommendationUpvote,
   toggleRecommendationWishlist,
 } from '@/features/interactions/interaction-service';
-import {
-  appendStickerPlacement,
-  createOptimisticStickerPlacement,
-  removeStickerPlacement,
-  replaceStickerPlacement,
-} from '@/features/interactions/recommendation-card-interactions';
 import { getCmiEasterIconUrl, getRecommendationEasterIconId, getRecommendationReasonText } from '@/lib/easter-icons';
 import { getAddTracePath, getCmiEventCreatePath, getPersonMapPath, getPlaceMapPath, getPlacePath } from '@/lib/paths';
 import { getStableProfileIdentity } from '@/features/profiles/profile-identity';
@@ -458,42 +452,40 @@ export default function PlaceDetail() {
       const stickerToPlace = availableStickers.find(s => s.id === activeStickerId);
       if (!stickerToPlace || !user) return;
 
-      const optimisticSticker = createOptimisticStickerPlacement({
-        id: `preview-${recId}-${Date.now()}`,
-        recommendationId: recId,
-        userId: user.id,
-        sticker: stickerToPlace,
-        xRatio: x_ratio,
-        yRatio: y_ratio,
+      const optimisticSticker: PlacedSticker = {
+        id: Math.random().toString(),
+        recommendation_id: recId,
+        user_id: user.id,
+        sticker_id: activeStickerId,
+        x_ratio,
+        y_ratio,
         rotation,
-        createdAt: new Date().toISOString(),
-      });
+        created_at: new Date().toISOString(),
+        sticker: stickerToPlace
+      };
 
       // 乐观更新 UI
-      setPlacedStickers(prev => appendStickerPlacement(prev, recId, optimisticSticker));
+      setPlacedStickers(prev => ({
+        ...prev,
+        [recId]: [...(prev[recId] || []), optimisticSticker]
+      }));
 
       // 重置交互状态
       setActiveStickerId(null);
       setActiveRecIdForSticker(null);
 
       // 发起请求
-      try {
-        const result = await placeRecommendationSticker({
-          recommendation_id: recId,
-          user_id: user.id,
-          sticker_id: activeStickerId,
-          x_ratio,
-          y_ratio,
-          rotation
-        });
+      const result = await placeRecommendationSticker({
+        recommendation_id: recId,
+        user_id: user.id,
+        sticker_id: activeStickerId,
+        x_ratio,
+        y_ratio,
+        rotation
+      });
 
-        if (!result) throw new Error('盖戳没有保存到数据库');
-
-        setPlacedStickers(prev => replaceStickerPlacement(prev, recId, optimisticSticker.id, result));
-      } catch (error) {
-        console.error('地点详情盖戳保存失败:', error);
-        setPlacedStickers(prev => removeStickerPlacement(prev, recId, optimisticSticker.id));
-        toast.error('盖戳没有保存成功，请稍后再试');
+      if (!result) {
+        toast.error('印章可能没有盖稳，请刷新重试');
       }
     }
   };

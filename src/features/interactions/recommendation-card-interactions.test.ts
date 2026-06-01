@@ -4,12 +4,8 @@ import {
   appendStickerPlacement,
   applyWishlistState,
   createOptimisticStickerPlacement,
-  getRecommendationStickerPlacements,
-  mergeStickerPlacementMaps,
-  removeStickerPlacement,
-  replaceStickerPlacement,
 } from './recommendation-card-interactions.ts';
-import type { PlacedSticker, Recommendation, Sticker } from '@/types/types.ts';
+import type { PlacedSticker, Sticker } from '@/types/types.ts';
 
 const stampSticker: Sticker = {
   id: 'stamp-cmi',
@@ -77,82 +73,5 @@ test('追加盖戳时不影响其他推荐已有盖戳', () => {
   assert.deepEqual(
     appendStickerPlacement({ recB: [existingPlacement] }, 'recA', nextPlacement),
     { recB: [existingPlacement], recA: [nextPlacement] }
-  );
-});
-
-test('从推荐数据回填已保存盖戳', () => {
-  const placement = createOptimisticStickerPlacement({
-    id: 'saved-1',
-    recommendationId: 'recA',
-    userId: 'user-1',
-    sticker: stampSticker,
-    xRatio: 20,
-    yRatio: 40,
-    rotation: 6,
-    createdAt: '2026-05-30T12:00:00.000Z',
-  });
-  const recommendations = [
-    {
-      id: 'recA',
-      placed_stickers: [placement],
-    },
-    {
-      id: 'recB',
-      placed_stickers: [],
-    },
-  ] as Recommendation[];
-
-  assert.deepEqual(getRecommendationStickerPlacements(recommendations), {
-    recA: [placement],
-    recB: [],
-  });
-});
-
-test('补拉盖戳时保留已有本地状态并按 id 去重', () => {
-  const optimisticPlacement = createOptimisticStickerPlacement({
-    id: 'preview-3',
-    recommendationId: 'recA',
-    userId: 'user-1',
-    sticker: stampSticker,
-    xRatio: 44,
-    yRatio: 32,
-    rotation: 2,
-    createdAt: '2026-05-30T12:00:00.000Z',
-  });
-  const savedPlacement = { ...optimisticPlacement, id: 'saved-3' };
-
-  assert.deepEqual(
-    mergeStickerPlacementMaps(
-      { recA: [optimisticPlacement], recB: [] },
-      { recA: [savedPlacement], recC: [savedPlacement] }
-    ),
-    {
-      recA: [optimisticPlacement, savedPlacement],
-      recB: [],
-      recC: [savedPlacement],
-    }
-  );
-});
-
-test('保存成功后替换临时盖戳，保存失败后移除临时盖戳', () => {
-  const optimisticPlacement = createOptimisticStickerPlacement({
-    id: 'preview-4',
-    recommendationId: 'recA',
-    userId: 'user-1',
-    sticker: stampSticker,
-    xRatio: 52,
-    yRatio: 48,
-    rotation: -4,
-    createdAt: '2026-05-30T12:00:00.000Z',
-  });
-  const savedPlacement = { ...optimisticPlacement, id: 'saved-4' };
-
-  assert.deepEqual(
-    replaceStickerPlacement({ recA: [optimisticPlacement] }, 'recA', 'preview-4', savedPlacement),
-    { recA: [savedPlacement] }
-  );
-  assert.deepEqual(
-    removeStickerPlacement({ recA: [optimisticPlacement] }, 'recA', 'preview-4'),
-    { recA: [] }
   );
 });

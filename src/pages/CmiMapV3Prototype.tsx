@@ -6,7 +6,6 @@ import {
   List,
   Map as MapIcon,
   MapPin,
-  Megaphone,
   Menu,
   MessageCircle,
   Navigation,
@@ -63,10 +62,6 @@ import {
   appendStickerPlacement,
   applyWishlistState,
   createOptimisticStickerPlacement,
-  getRecommendationStickerPlacements,
-  mergeStickerPlacementMaps,
-  removeStickerPlacement,
-  replaceStickerPlacement,
   type PlacedStickerMap,
   type WishlistStateMap,
 } from '@/features/interactions/recommendation-card-interactions';
@@ -176,6 +171,11 @@ const USER_AVATAR_FALLBACK_COLORS = ['#f6c85f', '#f28c6b', '#70b7a7', '#6f9fd8',
 
 const foodCategories = new Set<Category>(['吃饭', '咖啡', '市集']);
 const playCategories = new Set<Category>(['户外', '景点', '购物', '运动', '酒吧', '身心']);
+
+const bottomNavIconUrls = {
+  feed: '/map-icons/cmi-nav-v3/nav-feed.png',
+  events: '/map-icons/cmi-nav-v3/nav-events.png',
+} as const;
 
 const downloadCmiEventShareCard = (card: { blob: Blob; fileName: string }) => {
   const downloadUrl = URL.createObjectURL(card.blob);
@@ -800,7 +800,6 @@ export default function CmiMapV3Prototype() {
       .then(data => {
         const publicRecommendations = data.filter(isPublicMapRecommendation);
         setRecommendations(publicRecommendations);
-        setPlacedStickers(getRecommendationStickerPlacements(publicRecommendations));
         setSelectedMarker(current => {
           if (!current) return null;
           const stillExists = publicRecommendations.some(recommendation =>
@@ -934,39 +933,28 @@ export default function CmiMapV3Prototype() {
     [recommendations]
   );
 
-  const stickerSourceRecommendations = useMemo(
-    () => {
-      const recommendationsById = new Map<string, Recommendation>();
-      [...feedRecommendations, ...filteredMapRecommendations].forEach(recommendation => {
-        recommendationsById.set(recommendation.id, recommendation);
-      });
-      return Array.from(recommendationsById.values());
-    },
-    [feedRecommendations, filteredMapRecommendations]
-  );
-
   useEffect(() => {
     let isActive = true;
-    if (stickerSourceRecommendations.length === 0) {
+    if (feedRecommendations.length === 0) {
+      setPlacedStickers({});
       return () => {
         isActive = false;
       };
     }
 
-    loadRecommendationStickerPlacements(stickerSourceRecommendations)
+    loadRecommendationStickerPlacements(feedRecommendations)
       .then(nextPlacedStickers => {
-        if (isActive) {
-          setPlacedStickers(current => mergeStickerPlacementMaps(current, nextPlacedStickers));
-        }
+        if (isActive) setPlacedStickers(nextPlacedStickers);
       })
       .catch(error => {
         console.error('CMI Map 3.0 盖戳数据加载失败:', error);
+        if (isActive) setPlacedStickers({});
       });
 
     return () => {
       isActive = false;
     };
-  }, [stickerSourceRecommendations]);
+  }, [feedRecommendations]);
 
   useEffect(() => {
     if (!showStickerDrawer || availableStickers.length > 0) return;
@@ -1075,26 +1063,26 @@ export default function CmiMapV3Prototype() {
     setActiveStickerId(null);
     setActiveRecIdForSticker(null);
 
-    try {
-      const savedPlacement = await placeRecommendationSticker({
-        recommendation_id: recommendationId,
-        user_id: user.id,
-        sticker_id: selectedStickerId,
-        x_ratio: xRatio,
-        y_ratio: yRatio,
-        rotation,
-      });
+    const savedPlacement = await placeRecommendationSticker({
+      recommendation_id: recommendationId,
+      user_id: user.id,
+      sticker_id: selectedStickerId,
+      x_ratio: xRatio,
+      y_ratio: yRatio,
+      rotation,
+    });
 
-      if (!savedPlacement) throw new Error('盖戳没有保存到数据库');
-
-      setPlacedStickers(current =>
-        replaceStickerPlacement(current, recommendationId, optimisticPlacement.id, savedPlacement)
-      );
-    } catch (error) {
-      console.error('CMI Map 3.0 盖戳保存失败:', error);
-      setPlacedStickers(current => removeStickerPlacement(current, recommendationId, optimisticPlacement.id));
-      toast.error('盖戳没有保存成功，请稍后再试');
+    if (savedPlacement) {
+      setPlacedStickers(current => ({
+        ...current,
+        [recommendationId]: (current[recommendationId] ?? []).map(placement =>
+          placement.id === optimisticPlacement.id ? savedPlacement : placement
+        ),
+      }));
+      return;
     }
+
+    toast.error('印章可能没有盖稳，请刷新重试');
   }, [activeRecIdForSticker, activeStickerId, availableStickers, user]);
 
   const activePrimaryScreen = getPrimaryScreen(activeScreen);
@@ -2689,7 +2677,7 @@ function CmiV3BottomNav({
         onClick={() => onNavigate('feed')}
       >
         <span className="cmi-v3-map-bottom-icon cmi-v3-map-bottom-icon--feed">
-          <Megaphone size={24} strokeWidth={3} />
+          <img src={bottomNavIconUrls.feed} alt="" />
         </span>
         动态
       </button>
@@ -2700,7 +2688,7 @@ function CmiV3BottomNav({
         onClick={() => onNavigate('events')}
       >
         <span className="cmi-v3-map-bottom-icon cmi-v3-map-bottom-icon--event">
-          <Calendar size={24} strokeWidth={3} />
+          <img src={bottomNavIconUrls.events} alt="" />
         </span>
         活动
       </button>
@@ -2712,7 +2700,7 @@ function CmiV3BottomNav({
         aria-label={addAriaLabel}
       >
         <span className="cmi-v3-map-bottom-add-icon">
-          <Plus size={30} strokeWidth={3.1} />
+          <Plus size={24} strokeWidth={3.2} />
         </span>
         添加
       </button>
