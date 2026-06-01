@@ -29,8 +29,6 @@ const FONT_FAMILY = '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui
 const MAP_QR_URL = '/cmi-home/qr-cmi-map-root.png';
 const SLOGAN_ART_URL = '/cmi-home/cmi-map-slogan-handwritten.png?v=20260528-strong';
 const MAP_URL_LABEL = '扫码报名参加';
-const INTRO_FONT = `1000 54px ${FONT_FAMILY}`;
-const INTRO_LINE_HEIGHT = 68;
 const FACT_LABEL_FONT = `950 32px ${FONT_FAMILY}`;
 const FACT_VALUE_FONT = `1000 50px ${FONT_FAMILY}`;
 const FACT_VALUE_LINE_HEIGHT = 56;
@@ -234,32 +232,6 @@ const drawPoster = (
   context.stroke();
 };
 
-const drawIntroCard = (
-  context: CanvasRenderingContext2D,
-  lines: string[],
-  x: number,
-  y: number,
-  width: number,
-  height: number
-) => {
-  drawRoundRect(context, x, y, width, height, 34);
-  context.fillStyle = '#160f25';
-  context.fill();
-  context.lineWidth = 5;
-  context.strokeStyle = '#050505';
-  context.stroke();
-
-  context.shadowColor = 'rgba(0, 0, 0, 0.26)';
-  context.shadowOffsetY = 8;
-  context.shadowBlur = 0;
-  context.fillStyle = 'rgba(255, 255, 255, 0.94)';
-  context.font = INTRO_FONT;
-  lines.forEach((line, index) => {
-    context.fillText(line, x + 48, y + 88 + index * INTRO_LINE_HEIGHT);
-  });
-  context.shadowColor = 'transparent';
-};
-
 const drawFactRow = (
   context: CanvasRenderingContext2D,
   label: string,
@@ -267,16 +239,16 @@ const drawFactRow = (
   y: number,
   maxWidth: number
 ) => {
-  context.fillStyle = 'rgba(5, 5, 5, 0.5)';
+  context.fillStyle = 'rgba(255, 255, 255, 0.58)';
   context.font = FACT_LABEL_FONT;
   context.fillText(label, CONTENT_X + 38, y);
 
-  context.fillStyle = '#050505';
+  context.fillStyle = '#fff9ec';
   context.font = FACT_VALUE_FONT;
   drawWrappedText(context, value, CONTENT_X + 190, y, maxWidth, FACT_VALUE_LINE_HEIGHT, 1);
 };
 
-const drawFooter = (
+const drawInfoCard = (
   context: CanvasRenderingContext2D,
   event: CmiEvent,
   qrImage: HTMLImageElement,
@@ -285,15 +257,15 @@ const drawFooter = (
   referenceDate: Date
 ) => {
   drawRoundRect(context, CONTENT_X, y, CONTENT_WIDTH, height, 34);
-  context.fillStyle = 'rgba(255, 247, 223, 0.2)';
+  context.fillStyle = '#160f25';
   context.fill();
-  context.lineWidth = 3;
-  context.strokeStyle = 'rgba(0, 0, 0, 0.18)';
+  context.lineWidth = 5;
+  context.strokeStyle = '#050505';
   context.stroke();
 
   const dividerX = CONTENT_X + 704;
   context.save();
-  context.strokeStyle = 'rgba(0, 0, 0, 0.22)';
+  context.strokeStyle = 'rgba(255, 255, 255, 0.24)';
   context.lineWidth = 3;
   context.setLineDash([9, 12]);
   context.beginPath();
@@ -320,7 +292,7 @@ const drawFooter = (
   context.fill();
   context.drawImage(qrImage, qrX + 8, qrY + 8, QR_SIZE - 16, QR_SIZE - 16);
 
-  context.fillStyle = 'rgba(5, 5, 5, 0.72)';
+  context.fillStyle = 'rgba(255, 255, 255, 0.86)';
   context.font = `950 34px ${FONT_FAMILY}`;
   context.textAlign = 'center';
   context.fillText(MAP_URL_LABEL, qrX + QR_SIZE / 2, qrY + QR_SIZE + 48);
@@ -350,21 +322,11 @@ export const createCmiEventShareCard = async ({
     loadImage(SLOGAN_ART_URL),
   ]);
 
-  const measureCanvas = document.createElement('canvas');
-  const measureContext = measureCanvas.getContext('2d');
-  if (!measureContext) throw new Error('当前浏览器不支持生成活动卡片');
-
-  const introMaxWidth = CONTENT_WIDTH - 96;
-  measureContext.font = INTRO_FONT;
-  const introLines = wrapText(measureContext, event.summary || event.title, introMaxWidth, 4);
-
   const posterHeight = Math.round(POSTER_WIDTH * (posterImage.naturalHeight / posterImage.naturalWidth));
   const posterY = CARD_PADDING_TOP + HEADER_HEIGHT;
-  const introY = posterY + posterHeight + MODULE_GAP;
-  const introHeight = 118 + introLines.length * INTRO_LINE_HEIGHT;
-  const footerHeight = 352;
-  const footerY = introY + introHeight + MODULE_GAP;
-  const cardHeight = footerY + footerHeight + CARD_PADDING_BOTTOM;
+  const infoHeight = 352;
+  const infoY = posterY + posterHeight + MODULE_GAP;
+  const cardHeight = infoY + infoHeight + CARD_PADDING_BOTTOM;
 
   const canvas = document.createElement('canvas');
   canvas.width = CARD_WIDTH;
@@ -379,8 +341,7 @@ export const createCmiEventShareCard = async ({
   drawCardBackground(context, CARD_WIDTH, cardHeight);
   drawHeader(context, sloganImage);
   drawPoster(context, posterImage, CONTENT_X, posterY, POSTER_WIDTH, posterHeight);
-  drawIntroCard(context, introLines, CONTENT_X, introY, CONTENT_WIDTH, introHeight);
-  drawFooter(context, event, qrImage, footerY, footerHeight, referenceDate);
+  drawInfoCard(context, event, qrImage, infoY, infoHeight, referenceDate);
 
   const blob = await canvasToBlob(canvas);
 
