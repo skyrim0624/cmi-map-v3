@@ -12,7 +12,7 @@ import {
   Ticket,
   UsersRound,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -533,6 +533,25 @@ export default function CmiEventDetail() {
     }
   };
 
+  const handleBack = useCallback(() => {
+    const historyState = window.history.state as { idx?: number } | null;
+    const currentLocation = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+    if (typeof historyState?.idx === 'number' && historyState.idx > 0) {
+      navigate(-1);
+      window.setTimeout(() => {
+        const nextLocation = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        if (nextLocation === currentLocation) {
+          navigate('/', { replace: true });
+        }
+      }, 320);
+      return;
+    }
+
+    // NOTE: 相机扫码或外部 App 直开活动页时没有站内上一页，直接 -1 会看起来没反应。
+    navigate('/', { replace: true });
+  }, [navigate]);
+
   const handleOpenGoogleMaps = () => {
     window.open(
       `https://www.google.com/maps/dir/?api=1&destination=${navigationTarget.latitude},${navigationTarget.longitude}`,
@@ -578,7 +597,7 @@ export default function CmiEventDetail() {
             <Button
               variant="ghost"
               className="pointer-events-auto min-h-11 rounded-full border-[3px] border-[#050505] bg-white px-4 text-base font-black text-[#050505] shadow-[4px_5px_0_rgba(5,5,5,0.18)]"
-              onClick={() => navigate(-1)}
+              onClick={handleBack}
               aria-label="返回上一页"
             >
               <ArrowLeft className="h-4 w-4" />

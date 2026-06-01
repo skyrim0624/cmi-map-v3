@@ -992,3 +992,20 @@
   - 正式域名 `https://cmimap.com/sw.js` 已确认使用 `NetworkFirst` 和 `cmi-map-runtime-images-v2`；带版本号海报 URL 返回 200 PNG。
   - 新正式部署地址手机视口验证：海报 `currentSrc` 带 `?v=20260601-mobile-share`，图片尺寸正常，点击“分享”未出现卡片生成失败。
   - 注意：已被旧 service worker 控制的浏览器可能还会短时间读取旧页面包；刷新/重新打开后会切到新 service worker。
+
+### 2026-06-01 13:57:18 +07 活动详情返回按钮直开兜底
+
+- 背景：用户从手机相机 / 外部入口打开 `https://cmimap.com/events/cmi-five-minute-music-kid-a-2026-06-02` 后，点击左上角“返回”按钮没有反应。
+- 排查结论：
+  - 活动详情页原本直接调用 `navigate(-1)`。
+  - 外部 App 或相机直开时没有可靠站内上一页，部分 WebView / 新标签下 `navigate(-1)` 会停在当前活动页，看起来像按钮失效。
+- 本轮实现：
+  - 活动详情页返回按钮新增 `handleBack`：有站内历史时先返回上一页。
+  - 如果返回后 URL 仍停在当前页，自动兜底跳到 CMI Map 首页 `/`。
+  - 没有可用历史时直接 `replace` 到首页，避免用户卡在详情页。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/CmiEventDetail.tsx` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
+  - 本地生产预览 375px 手机视口直开活动页，点击左上“返回”后从 `/events/cmi-five-minute-music-kid-a-2026-06-02?verify=back-fallback-2` 跳到 `/`，按钮不再无反应。
