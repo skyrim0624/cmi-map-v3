@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  Camera,
   Check,
   Clock3,
   Copy,
@@ -7,6 +8,7 @@ import {
   type LucideIcon,
   MapPin,
   Navigation,
+  Plus,
   Send,
   Share2,
   Ticket,
@@ -38,10 +40,15 @@ import {
   getPublishedCmiEvents,
   registerForCmiEvent,
 } from '@/db/cmi-events';
+import { getAllRecommendations } from '@/db/api';
 import {
   type EventDetailRegistrationButtonTone,
   getEventDetailRegistrationButtonState,
 } from '@/features/cmi-events/event-detail-registration-state';
+import {
+  getEventRecapImages,
+  getEventRecapRecommendations,
+} from '@/features/cmi-events/event-recaps';
 import { isCapacityFullRegistrationError } from '@/features/cmi-events/event-list-registration-state';
 import { isCmiEventManager } from '@/features/cmi-events/event-management';
 import {
@@ -53,9 +60,12 @@ import { type CmiEventShareCardResult, createCmiEventShareCard } from '@/lib/cmi
 import {
   getCmiEventManagePath,
   getCmiHomePath,
+  getMarkPlacePath,
+  getPlacePath,
   getPublicCmiEventUrl,
 } from '@/lib/paths';
 import { cn } from '@/lib/utils';
+import type { Recommendation } from '@/types/types';
 
 type FileShareData = {
   files: File[];
@@ -211,6 +221,8 @@ export default function CmiEventDetail() {
   const [submittingRegistration, setSubmittingRegistration] = useState(false);
   const [registrationMarkedFull, setRegistrationMarkedFull] = useState(false);
   const [sharingEvent, setSharingEvent] = useState(false);
+  const [recapRecommendations, setRecapRecommendations] = useState<Recommendation[]>([]);
+  const [recapsLoading, setRecapsLoading] = useState(false);
 
   const detailContent = getCmiEventDetailContent(eventId);
   const posterUrl =
@@ -262,6 +274,10 @@ export default function CmiEventDetail() {
       isFull: registrationSummary.isFull || registrationMarkedFull,
     })
     : null;
+  const recapImages = useMemo(
+    () => getEventRecapImages(recapRecommendations),
+    [recapRecommendations]
+  );
 
   const registrationInfoValue = event?.registrationEnabled
     ? registrationSummary.capacity
@@ -397,6 +413,33 @@ export default function CmiEventDetail() {
       isMounted = false;
     };
   }, [eventId, user?.id]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!eventId) {
+      setRecapRecommendations([]);
+      return;
+    }
+
+    setRecapsLoading(true);
+    getAllRecommendations({ throwOnError: true })
+      .then(recommendations => {
+        if (!isMounted) return;
+        setRecapRecommendations(getEventRecapRecommendations(eventId, recommendations));
+      })
+      .catch(error => {
+        console.error('获取活动返图失败:', error);
+        if (isMounted) setRecapRecommendations([]);
+      })
+      .finally(() => {
+        if (isMounted) setRecapsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [eventId]);
 
   const refreshRegistrationSummary = async (targetEventId: string) => {
     const [nextPublicRegistrations, nextManagedRegistrations] = await Promise.all([
@@ -559,6 +602,19 @@ export default function CmiEventDetail() {
     );
   };
 
+  const handleOpenRecapComposer = () => {
+    if (!event) return;
+    const markPlacePath = getMarkPlacePath({ eventId: event.id });
+
+    if (!user?.id) {
+      toast('登录后才能发布活动返图', { description: '注册只需要一个邮箱。' });
+      navigate('/login', { state: { from: markPlacePath } });
+      return;
+    }
+
+    navigate(markPlacePath);
+  };
+
   if (loading && !event) {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-[#8b61ee] text-[#050505]">
@@ -664,6 +720,79 @@ export default function CmiEventDetail() {
                     </span>
                   ))}
                 </div>
+              </div>
+            )}
+          </section>
+
+          <section className="border-t-[4px] border-[#050505] bg-[#f7f1e7] px-5 py-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="mb-1 flex items-center gap-2">
+                  <Camera className="h-5 w-5 text-[#6b4ca8]" strokeWidth={2.5} />
+                  <h2 className="text-[1.35rem] font-black leading-tight text-[#050505]">活动返图</h2>
+                </div>
+                <p className="text-sm font-bold leading-relaxed text-[#4e5668]">
+                  打卡时关联这场活动，照片会自动汇总在这里。
+                </p>
+              </div>
+              <button
+                type="button"
+                className="shrink-0 rounded-full border-[3px] border-[#050505] bg-white px-3 py-2 text-xs font-black text-[#050505] shadow-[3px_4px_0_rgba(5,5,5,0.16)] transition active:scale-95"
+                onClick={handleOpenRecapComposer}
+              >
+                <Plus className="mr-1 inline h-3.5 w-3.5" />
+                返图
+              </button>
+            </div>
+
+            {recapsLoading ? (
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                {[0, 1, 2, 3].map(index => (
+                  <div key={index} className="aspect-[4/5] animate-pulse rounded-[1.2rem] bg-white/80" />
+                ))}
+              </div>
+            ) : recapImages.length > 0 ? (
+              <>
+                <p className="mt-4 text-xs font-black text-[#6b4ca8]">
+                  {recapImages.length} 张现场照片
+                </p>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  {recapImages.slice(0, 12).map(image => (
+                    <button
+                      key={image.id}
+                      type="button"
+                      className="group overflow-hidden rounded-[1.2rem] border-[3px] border-[#050505] bg-white text-left shadow-[4px_5px_0_rgba(5,5,5,0.14)] transition active:scale-[0.98]"
+                      onClick={() => navigate(getPlacePath(image.placeName))}
+                    >
+                      <img
+                        src={image.imageUrl}
+                        alt={`${image.userName} 的活动返图`}
+                        loading="lazy"
+                        decoding="async"
+                        className="aspect-[4/5] w-full object-cover"
+                      />
+                      <div className="space-y-1 px-3 py-2">
+                        <p className="truncate text-xs font-black text-[#050505]">{image.userName}</p>
+                        <p className="line-clamp-2 text-[11px] font-bold leading-snug text-[#4e5668]">
+                          {image.reason || image.placeName}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="mt-5 rounded-[1.25rem] border-[3px] border-dashed border-[#050505]/30 bg-white/80 p-5 text-center">
+                <p className="text-base font-black text-[#050505]">这场活动还没有返图</p>
+                <p className="mt-1 text-sm font-bold leading-relaxed text-[#4e5668]">
+                  活动中或结束后打卡，并选择这场活动 Tag，就会出现在这里。
+                </p>
+                <Button
+                  className="mt-4 min-h-11 rounded-full border-[3px] border-[#050505] bg-[#160f25] px-5 font-black text-white"
+                  onClick={handleOpenRecapComposer}
+                >
+                  发布第一张返图
+                </Button>
               </div>
             )}
           </section>

@@ -1102,3 +1102,19 @@
   - 已用干净 worktree 部署 v3 项目 `https://9c73c5a8.cmi-map-v3.pages.dev` 和正式站 `https://0874dea2.cmi-map.pages.dev`，Source 为 `3bfe1f6`。
   - 正式域名 `https://cmimap.com` 服务器响应已指向新 bundle `CmiMapV3Prototype-D2mimRUH.js` / `CmiMapV3Prototype-Z789aAjj.css`；线上 JS 包内 `eventDetail` 和 `EventDetailMode` 均为 0 次，保留 `打开活动页` 入口。
   - 同一台浏览器若仍看到旧“活动详情 / 正式页”页面，是旧 PWA 缓存或旧 Service Worker 尚未切换，需要刷新后拿到新包。
+
+### 2026-06-01 20:57:46 +07 活动返图 Tag 与详情页汇总
+
+- 背景：用户希望活动邀请帖之外，活动中或活动结束后的回顾/返图打卡也能关联活动；漏打活动 Tag 时可以回到自己发过的打卡补改；所有关联照片要汇总到活动详情页信息下方。
+- 本轮实现：
+  - 更新推荐编辑接口，当前登录用户可同时修改动态正文和活动 Tag；数据库暂缺活动字段时仍会回退到正文元数据兼容写入。
+  - 地点详情页自己的打卡编辑弹窗增加“活动 Tag”选择，可补打、改绑或清除活动关联。
+  - 活动详情页“基本信息”下方新增“活动返图”区块，自动收集所有关联当前活动且带照片的打卡，并保留跳转到对应地点动态的入口。
+  - 活动详情页增加“返图 / 发布第一张返图”入口，直达已预选当前活动的打卡页。
+- 验证结果：
+  - `node --experimental-strip-types --test src/features/cmi-events/event-recaps.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/db/api.ts src/features/cmi-events/event-recaps.ts src/features/cmi-events/event-recaps.test.ts src/pages/PlaceDetail.tsx src/pages/CmiEventDetail.tsx` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
+  - 本地生产预览 `http://127.0.0.1:4173/events/cmi-five-minute-music-kid-a-2026-06-02?verify=event-recaps-local`：活动详情页在“基本信息”下方显示“活动返图”区块；未登录点击“返图”会进入登录页，登录后回到预选当前活动的打卡流程；console 无 warn/error。

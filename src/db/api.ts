@@ -15,6 +15,10 @@ type ReadOptions = {
   throwOnError?: boolean;
 };
 type RecommendationInsertInput = Omit<Recommendation, 'id' | 'created_at'>;
+type RecommendationLinkedEventUpdate = {
+  linkedEventId?: string | null;
+  linkedEventTitle?: string | null;
+};
 type UnsupportedRecommendationFields = {
   easterIcon: boolean;
   linkedEvent: boolean;
@@ -104,6 +108,34 @@ const buildRecommendationInsertPayload = (
       payload.reason = encodeRecommendationEventMetadata(payload.reason ?? '', {
         id: payload.linked_event_id,
         title: payload.linked_event_title ?? payload.linked_event_id,
+      });
+    }
+
+    delete payload.linked_event_id;
+    delete payload.linked_event_title;
+  }
+
+  return payload;
+};
+
+const buildRecommendationUpdatePayload = (
+  input: { reason: string } & RecommendationLinkedEventUpdate,
+  unsupportedFields: UnsupportedRecommendationFields
+) => {
+  const payload: Partial<RecommendationInsertInput> = {
+    reason: input.reason,
+  };
+
+  if (input.linkedEventId !== undefined) {
+    payload.linked_event_id = input.linkedEventId;
+    payload.linked_event_title = input.linkedEventTitle ?? null;
+  }
+
+  if (unsupportedFields.linkedEvent) {
+    if (input.linkedEventId) {
+      payload.reason = encodeRecommendationEventMetadata(input.reason, {
+        id: input.linkedEventId,
+        title: input.linkedEventTitle ?? input.linkedEventId,
       });
     }
 
@@ -523,11 +555,15 @@ export const deleteRecommendation = async (id: string): Promise<boolean> => {
 };
 
 /**
- * 更新当前登录用户自己的推荐理由
+ * 更新当前登录用户自己的推荐内容
  */
-export const updateRecommendationReason = async (
-  id: string,
-  reason: string
+export interface UpdateRecommendationTraceInput extends RecommendationLinkedEventUpdate {
+  id: string;
+  reason: string;
+}
+
+export const updateRecommendationTrace = async (
+  input: UpdateRecommendationTraceInput
 ): Promise<Recommendation | null> => {
   const { data: authData, error: authError } = await supabase.auth.getUser();
   const userId = authData.user?.id;
@@ -537,21 +573,55 @@ export const updateRecommendationReason = async (
     return null;
   }
 
-  const { data, error } = await supabase
-    .from('recommendations')
-    .update({ reason })
-    .eq('id', id)
-    .eq('user_id', userId)
-    .select('*, upvotes(user_id), wishlists(user_id), placed_stickers(*, sticker:stickers(*))')
-    .maybeSingle();
+  let unsupportedFields: UnsupportedRecommendationFields = {
+    easterIcon: false,
+    linkedEvent: false,
+  };
 
-  if (error) {
-    console.error('更新推荐失败:', error);
-    return null;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const updatePayload = buildRecommendationUpdatePayload(input, unsupportedFields);
+    const { data, error } = await supabase
+      .from('recommendations')
+      .update(updatePayload)
+      .eq('id', input.id)
+      .eq('user_id', userId)
+      .select('*, upvotes(user_id), wishlists(user_id), placed_stickers(*, sticker:stickers(*))')
+      .maybeSingle();
+
+    if (!error) {
+      return data ? applyRecommendationCorrections(data) : null;
+    }
+
+    const nextUnsupportedFields = getUnsupportedRecommendationFields(error, updatePayload);
+    if (!nextUnsupportedFields.linkedEvent) {
+      console.error('更新推荐失败:', error);
+      return null;
+    }
+
+    const mergedUnsupportedFields = mergeUnsupportedRecommendationFields(
+      unsupportedFields,
+      nextUnsupportedFields
+    );
+
+    if (mergedUnsupportedFields.linkedEvent === unsupportedFields.linkedEvent) {
+      console.error('更新推荐失败:', error);
+      return null;
+    }
+
+    unsupportedFields = mergedUnsupportedFields;
   }
 
-  return data;
+  console.error('更新推荐失败: 推荐表缺少可选字段，兼容重试仍未成功');
+  return null;
 };
+
+/**
+ * 更新当前登录用户自己的推荐理由
+ */
+export const updateRecommendationReason = async (
+  id: string,
+  reason: string
+): Promise<Recommendation | null> => updateRecommendationTrace({ id, reason });
 
 /**
  * 获取推荐统计

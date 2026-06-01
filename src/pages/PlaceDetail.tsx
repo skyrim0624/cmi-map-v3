@@ -1,4 +1,4 @@
-import { ArrowLeft, Bookmark, CalendarPlus, Download, Heart, Loader2, MapPinned, PencilLine, Share2, Sticker as StickerIcon, Trash2 } from 'lucide-react';
+import { ArrowLeft, Bookmark, CalendarPlus, Download, Heart, Loader2, MapPinned, PencilLine, Share2, Sticker as StickerIcon, Ticket, Trash2 } from 'lucide-react';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -34,6 +34,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+  CMI_EVENTS,
+  formatCmiEventTime,
+  getCmiEventById,
+  getCmiEventSortTime,
+  isCmiInnEvent,
+  type CmiEvent,
+} from '@/data/cmi-events';
+import {
   getCmiDetailTagsForRecommendation,
   getCmiPlaceTypeTagsForRecommendation,
   getCmiRecommendationDisplayTag,
@@ -49,8 +57,9 @@ import {
   getProfilesByUserNames,
   getRecommendationsByPlace,
   type PublicProfile,
-  updateRecommendationReason,
+  updateRecommendationTrace,
 } from '@/db/api';
+import { getPublishedCmiEvents } from '@/db/cmi-events';
 import {
   createRecommendationInteractionState,
   loadAvailableStickers,
@@ -65,6 +74,7 @@ import {
   removeStickerPlacement,
   replaceStickerPlacement,
 } from '@/features/interactions/recommendation-card-interactions';
+import { getRecommendationLinkedEvent } from '@/lib/cmi-recommendation-events';
 import { getCmiEasterIconUrl, getRecommendationEasterIconId, getRecommendationReasonText } from '@/lib/easter-icons';
 import { getAddTracePath, getCmiEventCreatePath, getPersonMapPath, getPlaceMapPath, getPlacePath } from '@/lib/paths';
 import { getStableProfileIdentity } from '@/features/profiles/profile-identity';
@@ -128,6 +138,35 @@ const getPrimaryBadgeForRecommendation = (
 };
 
 const getProfileInitial = (displayName: string) => displayName.trim().charAt(0).toUpperCase() || '?';
+const EDIT_EVENT_OPTION_LIMIT = 16;
+
+const getEditableEventTagOptions = (
+  events: CmiEvent[],
+  referenceDate: Date = new Date()
+) => {
+  const referenceTime = referenceDate.getTime();
+
+  return [...events]
+    .filter(event => Boolean(event.id && event.title))
+    .sort((left, right) => {
+      const leftPriority = isCmiInnEvent(left) ? 0 : 1;
+      const rightPriority = isCmiInnEvent(right) ? 0 : 1;
+      if (leftPriority !== rightPriority) return leftPriority - rightPriority;
+
+      const leftTime = getCmiEventSortTime(left, referenceDate);
+      const rightTime = getCmiEventSortTime(right, referenceDate);
+      return Math.abs(leftTime - referenceTime) - Math.abs(rightTime - referenceTime);
+    })
+    .slice(0, EDIT_EVENT_OPTION_LIMIT);
+};
+
+const mergeEventIntoEditOptions = (
+  options: CmiEvent[],
+  linkedEvent: CmiEvent | null
+) => {
+  if (!linkedEvent || options.some(event => event.id === linkedEvent.id)) return options;
+  return [linkedEvent, ...options].slice(0, EDIT_EVENT_OPTION_LIMIT);
+};
 
 export default function PlaceDetail() {
   const { placeName } = useParams<{ placeName: string }>();
@@ -151,6 +190,9 @@ export default function PlaceDetail() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingRecommendation, setEditingRecommendation] = useState<Recommendation | null>(null);
   const [editReason, setEditReason] = useState('');
+  const [editLinkedEventId, setEditLinkedEventId] = useState('');
+  const [editEventOptions, setEditEventOptions] = useState<CmiEvent[]>([]);
+  const [isLoadingEditEventOptions, setIsLoadingEditEventOptions] = useState(false);
   const [editSubmitting, setEditSubmitting] = useState(false);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -168,6 +210,34 @@ export default function PlaceDetail() {
       loadRecommendations();
     }
   }, [placeName]);
+
+  useEffect(() => {
+    if (!editDialogOpen) return;
+
+    let isMounted = true;
+    const linkedEventId = editingRecommendation
+      ? getRecommendationLinkedEvent(editingRecommendation)?.id ?? null
+      : null;
+    const linkedEvent = linkedEventId ? getCmiEventById(linkedEventId) : null;
+
+    setIsLoadingEditEventOptions(true);
+    getPublishedCmiEvents()
+      .then(events => {
+        if (!isMounted) return;
+        setEditEventOptions(mergeEventIntoEditOptions(getEditableEventTagOptions(events), linkedEvent));
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setEditEventOptions(mergeEventIntoEditOptions(getEditableEventTagOptions(CMI_EVENTS), linkedEvent));
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingEditEventOptions(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [editDialogOpen, editingRecommendation]);
 
   const loadRecommendations = async () => {
     if (!placeName) return;
@@ -298,8 +368,10 @@ export default function PlaceDetail() {
   };
 
   const handleEditClick = (recommendation: Recommendation) => {
+    const linkedEvent = getRecommendationLinkedEvent(recommendation);
     setEditingRecommendation(recommendation);
     setEditReason(getRecommendationReasonText(recommendation));
+    setEditLinkedEventId(linkedEvent?.id ?? '');
     setEditDialogOpen(true);
   };
 
@@ -309,6 +381,9 @@ export default function PlaceDetail() {
     if (!open) {
       setEditingRecommendation(null);
       setEditReason('');
+      setEditLinkedEventId('');
+      setEditEventOptions([]);
+      setIsLoadingEditEventOptions(false);
     }
   };
 
@@ -321,17 +396,31 @@ export default function PlaceDetail() {
       return;
     }
 
-    if (nextReason === getRecommendationReasonText(editingRecommendation)) {
+    const currentLinkedEvent = getRecommendationLinkedEvent(editingRecommendation);
+    const selectedLinkedEvent = editLinkedEventId
+      ? editEventOptions.find(event => event.id === editLinkedEventId) ?? getCmiEventById(editLinkedEventId)
+      : null;
+    const nextLinkedEventId = editLinkedEventId ? selectedLinkedEvent?.id ?? editLinkedEventId : null;
+    const nextLinkedEventTitle = nextLinkedEventId
+      ? selectedLinkedEvent?.title ?? currentLinkedEvent?.title ?? nextLinkedEventId
+      : null;
+
+    if (
+      nextReason === getRecommendationReasonText(editingRecommendation) &&
+      nextLinkedEventId === (currentLinkedEvent?.id ?? null)
+    ) {
       handleEditDialogOpenChange(false);
       return;
     }
 
     setEditSubmitting(true);
     try {
-      const updatedRecommendation = await updateRecommendationReason(
-        editingRecommendation.id,
-        nextReason
-      );
+      const updatedRecommendation = await updateRecommendationTrace({
+        id: editingRecommendation.id,
+        reason: nextReason,
+        linkedEventId: nextLinkedEventId,
+        linkedEventTitle: nextLinkedEventTitle,
+      });
 
       if (!updatedRecommendation) {
         toast.error('没有改成功，可能不是你本人写的这一条');
@@ -345,6 +434,8 @@ export default function PlaceDetail() {
       setEditDialogOpen(false);
       setEditingRecommendation(null);
       setEditReason('');
+      setEditLinkedEventId('');
+      setEditEventOptions([]);
     } finally {
       setEditSubmitting(false);
     }
@@ -732,6 +823,15 @@ export default function PlaceDetail() {
       .map(tag => ({ id: `place-${tag.id}`, label: tag.label })),
     ...firstDetailTags.map(tag => ({ id: `detail-${tag.id}`, label: tag.label })),
   ];
+  const editingLinkedEvent = editingRecommendation
+    ? getRecommendationLinkedEvent(editingRecommendation)
+    : null;
+  const selectedEditEvent = editLinkedEventId
+    ? editEventOptions.find(event => event.id === editLinkedEventId) ?? getCmiEventById(editLinkedEventId)
+    : null;
+  const selectedEditEventTitle =
+    selectedEditEvent?.title ??
+    (editLinkedEventId === editingLinkedEvent?.id ? editingLinkedEvent.title : null);
   return (
     <div
       className="relative w-full min-h-screen bg-background"
@@ -1237,15 +1337,15 @@ export default function PlaceDetail() {
       </Dialog>
 
       <Dialog open={editDialogOpen} onOpenChange={handleEditDialogOpenChange}>
-        <DialogContent className="max-w-[430px] rounded-3xl border-2 border-foreground p-5">
+        <DialogContent className="max-h-[88dvh] max-w-[430px] overflow-y-auto rounded-3xl border-2 border-foreground p-5">
           <DialogHeader className="space-y-2 text-left">
             <DialogTitle className="text-2xl font-black">编辑这条推荐</DialogTitle>
             <DialogDescription className="font-semibold leading-relaxed">
-              只改你写过的这句话；地点、分类和照片先保持不变。
+              可以补改正文，也可以把这条打卡挂到参加过的活动下面。
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Textarea
               value={editReason}
               onChange={(event) => setEditReason(event.target.value)}
@@ -1255,6 +1355,68 @@ export default function PlaceDetail() {
             />
             <div className="flex justify-end text-xs font-bold text-muted-foreground">
               {editReason.trim().length}/180
+            </div>
+
+            <div className="rounded-2xl border border-border bg-muted/35 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Ticket className="h-4 w-4 shrink-0 text-primary" />
+                  <p className="truncate text-sm font-black text-foreground">活动 Tag</p>
+                </div>
+                {selectedEditEventTitle && (
+                  <span className="min-w-0 truncate rounded-full bg-primary/10 px-2.5 py-1 text-xs font-black text-primary">
+                    已关联
+                  </span>
+                )}
+              </div>
+
+              {isLoadingEditEventOptions && editEventOptions.length === 0 ? (
+                <div className="mt-3 flex items-center gap-2 text-sm font-bold text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  正在加载可关联活动
+                </div>
+              ) : (
+                <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <button
+                    type="button"
+                    className={`shrink-0 rounded-full border px-3 py-2 text-sm font-black transition ${
+                      !editLinkedEventId
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border bg-background text-muted-foreground'
+                    }`}
+                    onClick={() => setEditLinkedEventId('')}
+                  >
+                    不关联
+                  </button>
+                  {editEventOptions.map(event => {
+                    const isSelected = event.id === editLinkedEventId;
+
+                    return (
+                      <button
+                        key={event.id}
+                        type="button"
+                        className={`max-w-[15rem] shrink-0 rounded-full border px-3 py-2 text-left transition ${
+                          isSelected
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-border bg-background text-foreground'
+                        }`}
+                        onClick={() => setEditLinkedEventId(event.id)}
+                      >
+                        <span className="block truncate text-sm font-black">{event.title}</span>
+                        <span className={`block truncate text-[11px] font-bold ${isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                          {formatCmiEventTime(event)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <p className="mt-2 text-xs font-semibold leading-relaxed text-muted-foreground">
+                {selectedEditEventTitle
+                  ? `这条打卡会出现在「${selectedEditEventTitle}」活动详情页下方。`
+                  : '选一个活动后，这条打卡会进入该活动的返图汇总。'}
+              </p>
             </div>
           </div>
 
