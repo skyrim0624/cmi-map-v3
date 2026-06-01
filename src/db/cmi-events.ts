@@ -7,6 +7,7 @@ import {
   type CmiEventSourceType,
   type CmiEventType,
   type CmiEventVerificationStatus,
+  normalizeCmiEventRegistration,
 } from '@/data/cmi-events';
 import type { Category } from '@/types/types';
 import type { EventRegistrationForSummary, EventRegistrationStatus } from '@/features/cmi-events/event-rsvp-utils';
@@ -87,7 +88,7 @@ const toCmiEvent = (row: CmiEventRow): CmiEvent => {
       }
       : localEventMetadata?.mapLocation;
 
-  return {
+  return normalizeCmiEventRegistration({
     id: row.id,
     title: row.title,
     type: row.event_type as CmiEventType,
@@ -125,7 +126,7 @@ const toCmiEvent = (row: CmiEventRow): CmiEvent => {
     coverImageUrl: row.cover_image_url ?? undefined,
     detailBody: row.detail_body ?? undefined,
     createdBy: row.created_by ?? undefined,
-  };
+  });
 };
 
 interface CmiEventRegistrationRow {
@@ -317,14 +318,18 @@ export const getPublishedCmiEvents = async (): Promise<CmiEvent[]> => {
 
   if (error) {
     console.error('获取活动库失败，使用本地活动种子:', error);
-    return CMI_EVENTS;
+    return CMI_EVENTS.map(event => normalizeCmiEventRegistration(event));
   }
 
-  if (!Array.isArray(data) || data.length === 0) return CMI_EVENTS;
+  if (!Array.isArray(data) || data.length === 0) {
+    return CMI_EVENTS.map(event => normalizeCmiEventRegistration(event));
+  }
 
   const remoteEvents = (data as CmiEventRow[]).map(toCmiEvent);
   const remoteEventIds = new Set(remoteEvents.map(event => event.id));
-  const localOnlyEvents = CMI_EVENTS.filter(event => !remoteEventIds.has(event.id));
+  const localOnlyEvents = CMI_EVENTS
+    .filter(event => !remoteEventIds.has(event.id))
+    .map(event => normalizeCmiEventRegistration(event));
 
   return [...remoteEvents, ...localOnlyEvents];
 };

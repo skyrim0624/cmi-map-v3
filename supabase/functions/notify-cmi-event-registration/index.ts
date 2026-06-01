@@ -298,7 +298,7 @@ Deno.serve(async (req) => {
 
       <div style="border:3px solid #111;border-radius:18px;background:#f2e8ff;padding:16px;margin:18px 0;">
         <h3 style="margin:0 0 10px;font-size:20px;line-height:1.3;">导航和活动联系二维码</h3>
-        <p style="margin:0 0 12px;line-height:1.7;font-weight:700;">开车先扫 Google 地图导航到停车点；到场前可以加公众号、微信群、林可或子扬。</p>
+        <p style="margin:0 0 12px;line-height:1.7;font-weight:700;">开车先扫 Google 地图导航到停车点；到场前可以加公众号、微信群、林可或子扬。如果微信群二维码过期，直接加微信 ID：skyrim0216，备注活动名。</p>
         <table role="presentation" style="width:100%;border-collapse:collapse;">
           <tr>
             ${qrBlock(parkingMapQr, 'Google 地图导航', '停车点导航')}

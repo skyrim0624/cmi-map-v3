@@ -51,6 +51,17 @@ test('event card presentation keeps registration preview short', () => {
   assert.equal(getCmiEventRegistrationPreviewLabel(baseEvent), '无需报名，直接空降即可');
 });
 
+test('event card presentation unifies enabled events under CMI Map registration', () => {
+  assert.equal(
+    getCmiEventRegistrationPreviewLabel({
+      ...baseEvent,
+      registrationEnabled: true,
+      registrationLabel: '添加微信 skyrim0216 报名',
+    }),
+    'CMI Map 一键报名'
+  );
+});
+
 test('event card presentation keeps unique readable tags', () => {
   assert.deepEqual(getCmiEventVisibleTags(baseEvent), ['CMI', '财商', '理财', '数字游民']);
 });

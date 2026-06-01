@@ -51,6 +51,19 @@ test('详情页内部报名按钮在满员时禁用并显示已满', () => {
   });
 });
 
+test('详情页活动开始后不能继续报名', () => {
+  assert.deepEqual(getEventDetailRegistrationButtonState({
+    event: baseEvent,
+    referenceDate: new Date('2026-06-02T19:00:00+07:00'),
+  }), {
+    label: '已结束',
+    ariaLabel: '活动已经开始或结束',
+    tone: 'closed',
+    disabled: true,
+    action: 'none',
+  });
+});
+
 test('详情页外部报名活动仍显示可点击报名入口', () => {
   assert.deepEqual(getEventDetailRegistrationButtonState({
     event: {

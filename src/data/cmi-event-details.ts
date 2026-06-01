@@ -1,3 +1,5 @@
+import { CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE } from './cmi-events';
+
 export type CmiEventDetailBlock =
   | {
       kind: 'paragraph';
@@ -350,7 +352,7 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
           '活动时间：5 月 29 日（周五）19:00，空想食堂后',
           '活动地点：清迈客栈',
           '场地费用：免费参与，可随喜支持',
-          '参与方式：Luma 报名（https://luma.com/ahw83ofe），也可直接空降',
+          CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
         ],
       },
     ],
@@ -421,7 +423,7 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
           '活动时间：2026 年 5 月 31 日（周日）12:30-17:00（清迈时间）',
           '活动地点：清迈客栈',
           '活动形式：全国多城市联动 · 清迈线下动手 · 全国连线开场',
-          '参与方式：免费参与，请尽量在 Luma 报名：https://luma.com/kl2aa0qz',
+          CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
         ],
       },
     ],
@@ -571,7 +573,7 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
           '活动地点：清迈客栈',
           '招募对象：想分享真实故事的爸爸们',
           '费用说明：来源未单列收费项，本次按免费报名记录',
-          '参与方式：通过 CMI Map 一键报名；也可扫描海报二维码或填写腾讯问卷：https://wj.qq.com/s2/23583596/8e2a/',
+          CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
         ],
       },
     ],

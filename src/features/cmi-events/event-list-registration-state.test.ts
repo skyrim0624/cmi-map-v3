@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { CmiEvent } from '../../data/cmi-events.ts';
 import {
+  getEventRegistrationClosedReason,
   getEventListRegistrationButtonState,
+  isEventRegistrationPastCutoff,
   isCapacityFullRegistrationError,
 } from './event-list-registration-state.ts';
 
@@ -56,6 +58,32 @@ test('活动列表报名按钮在名额已满时显示灰色禁用态', () => {
     tone: 'closed',
     disabled: true,
   });
+});
+
+test('活动列表报名按钮在活动开始后显示已结束', () => {
+  assert.deepEqual(
+    getEventListRegistrationButtonState({
+      event: baseEvent,
+      referenceDate: new Date('2026-06-02T19:00:00+07:00'),
+    }),
+    {
+      label: '已结束',
+      ariaLabel: '活动已经开始或结束',
+      tone: 'closed',
+      disabled: true,
+    }
+  );
+});
+
+test('报名截止按活动开始时间判断', () => {
+  assert.equal(isEventRegistrationPastCutoff(baseEvent, new Date('2026-06-02T18:59:00+07:00')), false);
+  assert.equal(isEventRegistrationPastCutoff(baseEvent, new Date('2026-06-02T19:00:00+07:00')), true);
+  assert.equal(
+    getEventRegistrationClosedReason(baseEvent, {
+      referenceDate: new Date('2026-06-02T18:59:00+07:00'),
+    }),
+    null
+  );
 });
 
 test('服务端容量满员错误会被识别为已满', () => {

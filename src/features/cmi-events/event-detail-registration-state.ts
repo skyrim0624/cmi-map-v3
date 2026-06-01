@@ -1,4 +1,5 @@
 import type { CmiEvent } from '../../data/cmi-events.ts';
+import { isEventRegistrationPastCutoff } from './event-list-registration-state.ts';
 
 export type EventDetailRegistrationButtonTone =
   | 'active'
@@ -22,22 +23,14 @@ export const getEventDetailRegistrationButtonState = ({
   hasRegistered = false,
   isSubmitting = false,
   isFull = false,
+  referenceDate = new Date(),
 }: {
   event: CmiEvent;
   hasRegistered?: boolean;
   isSubmitting?: boolean;
   isFull?: boolean;
+  referenceDate?: Date;
 }): EventDetailRegistrationButtonState => {
-  if (!event.registrationEnabled) {
-    return {
-      label: '报名',
-      ariaLabel: '复制活动报名方式',
-      tone: 'external',
-      disabled: false,
-      action: 'external',
-    };
-  }
-
   if (isSubmitting) {
     return {
       label: '报名中',
@@ -55,6 +48,26 @@ export const getEventDetailRegistrationButtonState = ({
       tone: 'registered',
       disabled: true,
       action: 'none',
+    };
+  }
+
+  if (isEventRegistrationPastCutoff(event, referenceDate)) {
+    return {
+      label: '已结束',
+      ariaLabel: '活动已经开始或结束',
+      tone: 'closed',
+      disabled: true,
+      action: 'none',
+    };
+  }
+
+  if (!event.registrationEnabled) {
+    return {
+      label: '报名',
+      ariaLabel: '复制活动报名方式',
+      tone: 'external',
+      disabled: false,
+      action: 'external',
     };
   }
 

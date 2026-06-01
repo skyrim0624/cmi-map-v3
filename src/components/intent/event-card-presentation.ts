@@ -5,6 +5,7 @@ import {
 } from '../../data/cmi-event-details.ts';
 
 const FALLBACK_EVENT_CARD_IMAGE_URL = '/cmi-home/event-ai-courtyard.png';
+export const CMI_MAP_REGISTRATION_LABEL = 'CMI Map 一键报名';
 
 export const getCmiEventCardImageUrl = (event: CmiEvent) =>
   event.coverImageUrl?.trim() ||
@@ -13,7 +14,9 @@ export const getCmiEventCardImageUrl = (event: CmiEvent) =>
   FALLBACK_EVENT_CARD_IMAGE_URL;
 
 export const getCmiEventRegistrationPreviewLabel = (event: CmiEvent) =>
-  event.registrationLabel.split(/[；。;]/)[0]?.trim() || event.registrationLabel;
+  event.registrationEnabled
+    ? CMI_MAP_REGISTRATION_LABEL
+    : event.registrationLabel.split(/[；。;]/)[0]?.trim() || event.registrationLabel;
 
 export const getCmiEventVisibleTags = (event: CmiEvent) =>
   Array.from(new Map(event.tags.map(tag => [tag.trim(), tag.trim()])).values())

@@ -37,6 +37,11 @@ import {
 } from '@/db/cmi-events';
 import { CmiEventCard } from '@/components/intent/event-card';
 import { getCmiEventCardImageUrl } from '@/components/intent/event-card-presentation';
+import {
+  isCapacityFullRegistrationError,
+  isEventRegistrationPastCutoff,
+} from '@/features/cmi-events/event-list-registration-state';
+import { CMI_EVENT_REGISTRATION_SUCCESS_DESCRIPTION } from '@/features/cmi-events/event-rsvp-utils';
 import { createCmiEventShareCard } from '@/lib/cmi-event-share-card';
 import { getCmiIntentSecondaryFilters, matchesCmiIntentSecondaryFilter } from '@/data/cmi-scene-tags';
 import { getCmiInspirationCards } from '@/data/cmi-inspirations';
@@ -493,8 +498,18 @@ export default function ListView() {
       return;
     }
 
-    if (!event.registrationEnabled || event.registrationStatus !== 'open') {
+    if (!event.registrationEnabled) {
       toast.error('这个活动暂时不能一键报名');
+      return;
+    }
+
+    if (isEventRegistrationPastCutoff(event, referenceDate)) {
+      toast.error('这个活动已经开始或结束，不能继续报名');
+      return;
+    }
+
+    if (event.registrationStatus !== 'open') {
+      toast.error('这个活动名额已满或报名已关闭');
       return;
     }
 
@@ -513,15 +528,24 @@ export default function ListView() {
       setRegisteredEventIds(prev => ({ ...prev, [event.id]: true }));
 
       if (result.notificationError) {
-        toast.warning('报名成功，邮件通知稍后需要补发');
+        toast.warning('报名成功，邮件通知稍后需要补发', {
+          description: CMI_EVENT_REGISTRATION_SUCCESS_DESCRIPTION,
+        });
       } else {
-        toast.success('报名成功');
+        toast.success('报名成功', {
+          description: CMI_EVENT_REGISTRATION_SUCCESS_DESCRIPTION,
+        });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';
       if (message.toLowerCase().includes('duplicate')) {
         setRegisteredEventIds(prev => ({ ...prev, [event.id]: true }));
         toast('你已经报名这个活动了');
+        return;
+      }
+
+      if (isCapacityFullRegistrationError(message)) {
+        toast.error('这个活动名额已满');
         return;
       }
 

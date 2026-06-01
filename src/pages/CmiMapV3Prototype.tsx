@@ -33,7 +33,10 @@ import { flushSync } from 'react-dom';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LeafletMap } from '@/components/map/LeafletMap';
-import { getCmiEventCardImageUrl } from '@/components/intent/event-card-presentation';
+import {
+  getCmiEventCardImageUrl,
+  getCmiEventRegistrationPreviewLabel,
+} from '@/components/intent/event-card-presentation';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   CMI_EVENTS,
@@ -70,9 +73,11 @@ import {
 } from '@/features/interactions/interaction-service';
 import {
   getEventListRegistrationButtonState,
+  isEventRegistrationPastCutoff,
   isCapacityFullRegistrationError,
   type EventListRegistrationButtonState,
 } from '@/features/cmi-events/event-list-registration-state';
+import { CMI_EVENT_REGISTRATION_SUCCESS_DESCRIPTION } from '@/features/cmi-events/event-rsvp-utils';
 import { getRecommendationLinkedEvent } from '@/lib/cmi-recommendation-events';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
 import {
@@ -1992,13 +1997,18 @@ function EventsMode({
       return;
     }
 
-    if (fullEventIds[event.id] || event.registrationStatus === 'closed') {
-      toast.error('这个活动名额已满');
+    if (!event.registrationEnabled) {
+      toast.error('这个活动暂时不能一键报名', { description: event.registrationLabel });
       return;
     }
 
-    if (!event.registrationEnabled) {
-      toast.error('这个活动暂时不能一键报名', { description: event.registrationLabel });
+    if (isEventRegistrationPastCutoff(event, referenceDate)) {
+      toast.error('这个活动已经开始或结束，不能继续报名');
+      return;
+    }
+
+    if (fullEventIds[event.id] || event.registrationStatus === 'closed') {
+      toast.error('这个活动名额已满或报名已关闭');
       return;
     }
 
@@ -2017,9 +2027,13 @@ function EventsMode({
       setRegisteredEventIds(prev => ({ ...prev, [event.id]: true }));
 
       if (result.notificationError) {
-        toast.warning('报名成功，邮件通知稍后需要补发');
+        toast.warning('报名成功，邮件通知稍后需要补发', {
+          description: CMI_EVENT_REGISTRATION_SUCCESS_DESCRIPTION,
+        });
       } else {
-        toast.success('报名成功');
+        toast.success('报名成功', {
+          description: CMI_EVENT_REGISTRATION_SUCCESS_DESCRIPTION,
+        });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';
@@ -2053,6 +2067,7 @@ function EventsMode({
         hasRegistered: Boolean(registeredEventIds[event.id]),
         isRegistering: Boolean(registeringEventIds[event.id]),
         isMarkedFull: Boolean(fullEventIds[event.id]),
+        referenceDate,
       })}
       onOpenRealPage={() => onOpenPath(getCmiEventPath(event.id))}
       onOpenMap={() => {
@@ -2433,9 +2448,7 @@ function EventListCard({
   onRegister: () => void;
   onShare: () => void;
 }) {
-  const registrationPreviewLabel = event.registrationLabel.includes('http')
-    ? event.registrationLabel.split(/[；。;]/)[0]?.trim() || '查看详情报名'
-    : event.registrationLabel;
+  const registrationPreviewLabel = getCmiEventRegistrationPreviewLabel(event);
   const visibleTags = event.tags.slice(0, 4);
   const statusBadge = getEventStatusBadge(event);
   const handleActionClick = (clickEvent: ReactMouseEvent<HTMLButtonElement>, action: () => void) => {

@@ -124,6 +124,9 @@ export const CMI_EVENT_TIME_BUCKET_LABELS: Record<CmiEventTimeBucket, string> = 
 };
 
 export const CMI_EVENTS_LAST_MAINTAINED_AT = '2026-06-01T13:00:00+07:00';
+export const CMI_MAP_EVENT_REGISTRATION_LABEL = 'CMI Map 一键报名';
+export const CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE =
+  '参与方式：通过 CMI Map 一键报名；报名成功后，确认邮件会附上微信群、联系人二维码和到场指引。';
 
 export const CMI_EVENTS: CmiEvent[] = [
   {
@@ -412,7 +415,7 @@ export const CMI_EVENTS: CmiEvent[] = [
     area: 'CMI / 清迈客栈',
     mapLocation: { latitude: 18.7932, longitude: 98.9874, category: '清迈客栈' },
     priceLabel: '免费参与',
-    registrationLabel: '添加微信 skyrim0216 报名',
+    registrationLabel: CMI_MAP_EVENT_REGISTRATION_LABEL,
     sourceType: 'cmi',
     sourceLabel: 'CMI 活动宣传内容文件夹',
     hostName: 'CMI 社区',
@@ -424,9 +427,14 @@ export const CMI_EVENTS: CmiEvent[] = [
     lastCheckedAt: '2026-06-01T13:00:00+07:00',
     nextCheckBefore: '2026-06-02T12:00:00+07:00',
     reliabilityNote:
-      '信息来自 6.2 五分钟音乐会公众号推文、发布页与最终海报；时间、地点、费用和微信报名方式均明确。',
+      '信息来自 6.2 五分钟音乐会公众号推文、发布页与最终海报；时间、地点、费用和原始微信报名方式均明确。本轮统一改为 CMI Map 一键报名，报名成功后再通过邮件提供微信群或联系人信息。',
     tags: ['CMI', '音乐', 'Radiohead', '专辑共听', '免费', '清迈客栈'],
     summary: '在清迈客栈围坐完整聆听 Radiohead《Kid A》的小型音乐会，把注意力重新放回一张经典专辑。',
+    organizerName: 'CMI 社区',
+    organizerEmail: 'events@cmimap.com',
+    registrationEnabled: true,
+    registrationStatus: 'open',
+    attendeeVisibility: 'public',
     coverImageUrl: '/cmi-home/event-posters/cmi-five-minute-music-kid-a-2026-06-02.png',
   },
   {
@@ -438,7 +446,7 @@ export const CMI_EVENTS: CmiEvent[] = [
     venueName: '清迈客栈',
     area: 'CMI / 清迈客栈',
     priceLabel: '免费报名',
-    registrationLabel: 'CMI Map 一键报名；海报二维码为腾讯问卷',
+    registrationLabel: CMI_MAP_EVENT_REGISTRATION_LABEL,
     sourceType: 'cmi',
     sourceLabel: 'CMI 活动宣传内容文件夹',
     sourceUrl: 'https://mp.weixin.qq.com/s/W_3OLja85TkTw0E1eP1qgw',
@@ -451,7 +459,7 @@ export const CMI_EVENTS: CmiEvent[] = [
     lastCheckedAt: '2026-05-26T17:11:56+07:00',
     nextCheckBefore: '2026-06-07T12:00:00+07:00',
     reliabilityNote:
-      '信息来自 6 月 7 日 CMI Talk 父亲节特辑公众号推文 Markdown、离线 HTML 与同目录官方海报；时间、地点和报名方式明确。来源未单列收费项，本次按分享嘉宾招募记录为免费报名，并保留腾讯问卷链接供复核。',
+      '信息来自 6 月 7 日 CMI Talk 父亲节特辑公众号推文 Markdown、离线 HTML 与同目录官方海报；时间、地点和报名方式明确。来源未单列收费项，本次按分享嘉宾招募记录为免费报名；用户侧统一走 CMI Map 一键报名，原腾讯问卷作为运营复核线索保留。',
     tags: ['CMI', 'CMI Talk', '父亲节', '亲子', '嘉宾招募', '中文友好'],
     summary: '父亲节前的 CMI Talk 分享嘉宾招募，邀请在清迈生活的爸爸聊真实的陪伴、成长和家庭选择。',
     organizerName: 'CMI Talk',
@@ -1081,6 +1089,59 @@ export const CMI_EVENTS: CmiEvent[] = [
   },
 ];
 
+const getCmiEventStartTime = (event: CmiEvent) => {
+  if (!event.startAt) return null;
+  const startTime = new Date(event.startAt).getTime();
+  return Number.isFinite(startTime) ? startTime : null;
+};
+
+export const isCmiMapManagedEvent = (event: CmiEvent) =>
+  event.isCmiRelated ||
+  event.sourceType === 'cmi' ||
+  event.venueName.includes(CMI_INN_PLACE_NAME) ||
+  event.area.includes(CMI_INN_PLACE_NAME) ||
+  event.area.toUpperCase().includes('CMI');
+
+const REGISTRATION_DETAIL_LINE_PATTERN = /^(\s*(?:[-*]\s*)?)(?:参与方式|报名方式)\s*[:：]/;
+const EXTERNAL_REGISTRATION_COPY_PATTERN = /(Luma|luma\.com|添加微信|微信报名|微信群报名|腾讯问卷|问卷|扫码|二维码)/i;
+
+const normalizeCmiMapEventDetailBody = (detailBody: string | undefined) => {
+  if (!detailBody) return detailBody;
+
+  return detailBody
+    .split('\n')
+    .map(line => {
+      const registrationLineMatch = line.match(REGISTRATION_DETAIL_LINE_PATTERN);
+      const mentionsExternalRegistration =
+        EXTERNAL_REGISTRATION_COPY_PATTERN.test(line) && line.includes('报名');
+
+      if (!registrationLineMatch && !mentionsExternalRegistration) return line;
+
+      return `${registrationLineMatch?.[1] ?? ''}${CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE}`;
+    })
+    .join('\n');
+};
+
+export const normalizeCmiEventRegistration = <Event extends CmiEvent>(
+  event: Event,
+  referenceDate: Date = new Date()
+): Event => {
+  if (!isCmiMapManagedEvent(event)) return event;
+
+  const startTime = getCmiEventStartTime(event);
+  const hasStarted = typeof startTime === 'number' && startTime <= referenceDate.getTime();
+  const shouldPreserveClosedStatus = event.registrationEnabled && event.registrationStatus === 'closed';
+
+  return {
+    ...event,
+    registrationLabel: CMI_MAP_EVENT_REGISTRATION_LABEL,
+    registrationEnabled: true,
+    registrationStatus: hasStarted || shouldPreserveClosedStatus ? 'closed' : 'open',
+    attendeeVisibility: event.attendeeVisibility ?? 'count-only',
+    detailBody: normalizeCmiMapEventDetailBody(event.detailBody),
+  };
+};
+
 const CMI_EVENT_MARKER_ID_PREFIX = 'cmi-event:';
 
 export const getCmiEventMarkerId = (eventId: string) => `${CMI_EVENT_MARKER_ID_PREFIX}${eventId}`;
@@ -1090,8 +1151,10 @@ export const getCmiEventIdFromMarkerId = (markerId: string) =>
     ? markerId.slice(CMI_EVENT_MARKER_ID_PREFIX.length)
     : null;
 
-export const getCmiEventById = (eventId: string | null | undefined) =>
-  eventId ? CMI_EVENTS.find(event => event.id === eventId) ?? null : null;
+export const getCmiEventById = (eventId: string | null | undefined) => {
+  const event = eventId ? CMI_EVENTS.find(candidate => candidate.id === eventId) ?? null : null;
+  return event ? normalizeCmiEventRegistration(event) : null;
+};
 
 export const getCmiEventMapMarker = (event: CmiEvent): MapMarker | null => {
   if (!event.mapLocation) return null;
@@ -1200,11 +1263,7 @@ export const getCmiEventTimeBucketLabel = (
 export const getCmiEventTypeLabel = (type: CmiEventType) =>
   CMI_EVENT_TYPE_OPTIONS.find(option => option.id === type)?.label ?? type;
 
-export const isCmiInnEvent = (event: CmiEvent) =>
-  event.isCmiRelated ||
-  event.sourceType === 'cmi' ||
-  event.venueName.includes(CMI_INN_PLACE_NAME) ||
-  event.area.includes(CMI_INN_PLACE_NAME);
+export const isCmiInnEvent = (event: CmiEvent) => isCmiMapManagedEvent(event);
 
 export const formatCmiEventTime = (
   event: CmiEvent,

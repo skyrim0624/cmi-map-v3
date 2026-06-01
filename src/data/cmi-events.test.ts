@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { formatCmiEventShareCardTime, isCmiInnEvent, type CmiEvent } from './cmi-events.ts';
+import {
+  CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
+  formatCmiEventShareCardTime,
+  isCmiInnEvent,
+  normalizeCmiEventRegistration,
+  type CmiEvent,
+} from './cmi-events.ts';
 
 const baseEvent = {
   id: 'cmi-mindfulness-hour-2026-05-28',
@@ -73,5 +79,49 @@ test('清迈客栈活动筛选排除外部社区友推活动', () => {
       hostName: 'WaytoAGI × 清迈客栈',
     }),
     true
+  );
+});
+
+test('清迈客栈未来活动统一归一为 CMI Map 一键报名', () => {
+  const normalizedEvent = normalizeCmiEventRegistration({
+    ...baseEvent,
+    id: 'cmi-five-minute-music-kid-a-2026-06-02',
+    title: '“五分钟”音乐会',
+    startAt: '2026-06-02T19:00:00+07:00',
+    registrationLabel: '添加微信 skyrim0216 报名',
+    registrationEnabled: false,
+    registrationStatus: 'closed',
+  }, new Date('2026-06-01T12:00:00+07:00'));
+
+  assert.equal(normalizedEvent.registrationLabel, 'CMI Map 一键报名');
+  assert.equal(normalizedEvent.registrationEnabled, true);
+  assert.equal(normalizedEvent.registrationStatus, 'open');
+});
+
+test('清迈客栈活动开始后归一为已关闭报名', () => {
+  const normalizedEvent = normalizeCmiEventRegistration({
+    ...baseEvent,
+    startAt: '2026-06-02T19:00:00+07:00',
+    registrationEnabled: true,
+    registrationStatus: 'open',
+  }, new Date('2026-06-02T19:00:00+07:00'));
+
+  assert.equal(normalizedEvent.registrationStatus, 'closed');
+});
+
+test('清迈客栈活动详情正文里的外部报名方式也统一归一', () => {
+  const normalizedEvent = normalizeCmiEventRegistration({
+    ...baseEvent,
+    startAt: '2026-06-02T19:00:00+07:00',
+    detailBody: [
+      '活动信息',
+      '参与方式：请尽量在 Luma 报名：https://luma.com/example',
+      '到场后一起围坐交流。',
+    ].join('\n'),
+  }, new Date('2026-06-01T12:00:00+07:00'));
+
+  assert.equal(
+    normalizedEvent.detailBody,
+    ['活动信息', CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE, '到场后一起围坐交流。'].join('\n')
   );
 });
