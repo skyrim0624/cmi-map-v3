@@ -1399,26 +1399,26 @@
 .cmi-v3-map-bottom-add-button {
   align-self: start;
   color: var(--cmi-v3-ink);
-  transform: translateY(-12px);
+  transform: translateY(-24px);
 }
 
 .cmi-v3-map-bottom-add-icon {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   border: 2px solid rgba(22, 22, 22, 0.86);
   border-radius: 50%;
-  background: #fff4d7;
-  color: #ff6d4f;
-  box-shadow: 3px 4px 0 rgba(22, 22, 22, 0.22);
+  background: var(--cmi-v3-purple);
+  color: #fff;
+  box-shadow: 4px 6px 0 rgba(22, 22, 22, 0.24);
   display: grid;
   place-items: center;
 }
 
 .cmi-v3-map-bottom-add-button.is-active .cmi-v3-map-bottom-add-icon {
-  background: #fff0bd;
+  background: var(--cmi-v3-purple);
   box-shadow:
-    3px 4px 0 rgba(22, 22, 22, 0.22),
-    0 0 0 5px rgba(148, 221, 230, 0.34);
+    4px 6px 0 rgba(22, 22, 22, 0.24),
+    0 0 0 5px rgba(148, 221, 230, 0.38);
 }
 
 .cmi-v3-fixed-footer button {
@@ -2681,8 +2681,8 @@
   }
 
   .cmi-v3-map-bottom-add-icon {
-    width: 52px;
-    height: 52px;
+    width: 58px;
+    height: 58px;
   }
 
   .cmi-v3-map-layer-control,

@@ -944,3 +944,15 @@
   - `pnpm exec biome lint src/pages/CmiEventDetail.tsx src/index.css` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地浏览器验证活动详情页：正文区字体族为无衬线黑体栈，标题字重 `900`，正文 16px / 29.12px 行高，无横向溢出，console 无 warn/error。
+
+### 2026-06-01 13:31:19 +07 V3 添加按钮改为紫色大圆加号
+
+- 背景：用户在正式站复核 V3 底部导航后，希望“添加”按钮改成紫色圆形，中心加号为白色，并且比上一版更大。
+- 本轮实现：
+  - 添加按钮圆形从 56px 放大到 64px，小屏兜底从 52px 放大到 58px。
+  - 圆形背景改为 V3 主紫色，加号改为白色并放大到 36px。
+  - 添加按钮整体上移到 `-24px`，让大圆形突出底栏，同时保留“添加”文字可见。
+- 验证结果：
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
+  - 本地浏览器验证 `http://localhost:5173/?screen=map&verify=add-button-purple`：添加圆形为 `64px`，背景 `rgb(139, 107, 191)`，加号为白色 `36px`，console 无 warn/error。

@@ -2712,7 +2712,7 @@ function CmiV3BottomNav({
         aria-label={addAriaLabel}
       >
         <span className="cmi-v3-map-bottom-add-icon">
-          <Plus size={30} strokeWidth={3.1} />
+          <Plus size={36} strokeWidth={3.2} />
         </span>
         添加
       </button>
