@@ -1099,3 +1099,6 @@
   - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
   - 本地浏览器验证 `http://localhost:5173/?screen=eventDetail&event=cmi-five-minute-music-kid-a-2026-06-02`：页面回到地图活动底栏，旧“活动详情”和“正式页”文案均不存在，入口 href 为 `/events/cmi-five-minute-music-kid-a-2026-06-02`，console 无 warn/error。
   - 本地浏览器直开正式活动页 `/events/cmi-five-minute-music-kid-a-2026-06-02`：Radiohead 活动正文正常渲染，console 无 warn/error。
+  - 已用干净 worktree 部署 v3 项目 `https://9c73c5a8.cmi-map-v3.pages.dev` 和正式站 `https://0874dea2.cmi-map.pages.dev`，Source 为 `3bfe1f6`。
+  - 正式域名 `https://cmimap.com` 服务器响应已指向新 bundle `CmiMapV3Prototype-D2mimRUH.js` / `CmiMapV3Prototype-Z789aAjj.css`；线上 JS 包内 `eventDetail` 和 `EventDetailMode` 均为 0 次，保留 `打开活动页` 入口。
+  - 同一台浏览器若仍看到旧“活动详情 / 正式页”页面，是旧 PWA 缓存或旧 Service Worker 尚未切换，需要刷新后拿到新包。
