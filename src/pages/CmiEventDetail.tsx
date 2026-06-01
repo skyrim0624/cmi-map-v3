@@ -44,7 +44,11 @@ import {
 } from '@/features/cmi-events/event-detail-registration-state';
 import { isCapacityFullRegistrationError } from '@/features/cmi-events/event-list-registration-state';
 import { isCmiEventManager } from '@/features/cmi-events/event-management';
-import { getVisibleEventAttendees, summarizeEventRegistrations } from '@/features/cmi-events/event-rsvp-utils';
+import {
+  CMI_EVENT_REGISTRATION_SUCCESS_DESCRIPTION,
+  getVisibleEventAttendees,
+  summarizeEventRegistrations,
+} from '@/features/cmi-events/event-rsvp-utils';
 import { type CmiEventShareCardResult, createCmiEventShareCard } from '@/lib/cmi-event-share-card';
 import {
   getCmiEventManagePath,
@@ -99,21 +103,49 @@ const getExternalRegistrationClipboardValue = (registrationLabel: string) => {
   return wechatMatch?.[1] ?? registrationLabel.trim();
 };
 
+const EVENT_POST_HEADING_MARKERS = ['❓', '🌊', '📻', '⏱️', '💿'];
+
+const splitEventPostHeading = (text: string) => {
+  const marker = EVENT_POST_HEADING_MARKERS.find(candidate => text.startsWith(candidate));
+
+  if (!marker) {
+    return { marker: null, text };
+  }
+
+  return { marker, text: text.slice(marker.length).trim() };
+};
+
 const renderPostBlock = (block: CmiEventDetailBlock, index: number) => {
   if (block.kind === 'heading') {
+    const { marker, text } = splitEventPostHeading(block.text);
+
     return (
-      <h3 key={`${block.kind}-${index}`} className="pt-3 text-[1.22rem] font-black leading-tight text-[#050505]">
-        {block.text}
+      <h3
+        key={`${block.kind}-${index}`}
+        className={cn(
+          'cmi-event-post-heading flex items-start gap-2.5 text-[1.42rem] font-semibold leading-[1.28] text-[#17101f]',
+          index === 0 ? 'mt-0' : 'mt-9'
+        )}
+      >
+        {marker && (
+          <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#17101f] text-[1rem] leading-none text-[#f6efe4]">
+            {marker}
+          </span>
+        )}
+        <span>{text}</span>
       </h3>
     );
   }
 
   if (block.kind === 'list') {
     return (
-      <ul key={`${block.kind}-${index}`} className="space-y-2.5">
+      <ul
+        key={`${block.kind}-${index}`}
+        className="cmi-event-post-list my-1 space-y-2.5 border-l-[3px] border-[#c33a4b]/70 pl-4"
+      >
         {block.items.map(item => (
-          <li key={item} className="flex gap-2 text-[15px] font-bold leading-[1.75] text-[#2b2241]">
-            <span className="mt-[0.72rem] h-1.5 w-1.5 shrink-0 rounded-full bg-[#8b61ee]" />
+          <li key={item} className="flex gap-2 text-[16px] font-medium leading-[1.78] text-[#2f2736]">
+            <span className="mt-[0.78rem] h-1 w-1 shrink-0 rounded-full bg-[#c33a4b]" />
             <span>{item}</span>
           </li>
         ))}
@@ -122,7 +154,10 @@ const renderPostBlock = (block: CmiEventDetailBlock, index: number) => {
   }
 
   return (
-    <p key={`${block.kind}-${index}`} className="whitespace-pre-line text-[15px] font-bold leading-[1.85] text-[#2b2241]">
+    <p
+      key={`${block.kind}-${index}`}
+      className="cmi-event-post-paragraph whitespace-pre-line text-[17px] font-medium leading-[1.92] text-[#342d3a]"
+    >
       {block.text}
     </p>
   );
@@ -409,10 +444,12 @@ export default function CmiEventDetail() {
 
       if (result.notificationError) {
         toast.warning('报名成功，邮件通知稍后需要补发', {
-          description: result.notificationError.message,
+          description: `${CMI_EVENT_REGISTRATION_SUCCESS_DESCRIPTION} ${result.notificationError.message}`,
         });
       } else {
-        toast.success('报名成功');
+        toast.success('报名成功', {
+          description: CMI_EVENT_REGISTRATION_SUCCESS_DESCRIPTION,
+        });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';
@@ -567,16 +604,16 @@ export default function CmiEventDetail() {
             />
           </section>
 
-          <section className="border-b-[4px] border-[#050505] bg-[#fffaf0] px-5 py-6">
-            <h1 className="break-words text-[2rem] font-black leading-[1.08] text-[#050505]">
+          <section className="cmi-event-post-section border-b-[4px] border-[#050505] bg-[#f6efe4] px-6 pb-8 pt-7">
+            <h1 className="cmi-event-post-title break-words text-[1.9rem] font-semibold leading-[1.2] text-[#17101f]">
               {postTitle}
             </h1>
             {postSummary && (
-              <p className="mt-4 text-[16px] font-black leading-[1.75] text-[#050505]">
+              <p className="cmi-event-post-paragraph mt-5 text-[17px] font-medium leading-[1.9] text-[#342d3a]">
                 {postSummary}
               </p>
             )}
-            <div className="mt-5 space-y-3.5 border-t-[3px] border-dashed border-[#050505]/20 pt-5">
+            <div className="mt-6 space-y-4 border-t border-[#17101f]/14 pt-7">
               {postBlocks.map(renderPostBlock)}
             </div>
           </section>

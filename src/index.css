@@ -151,6 +151,31 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
+  .cmi-event-post-section {
+    background-image:
+      linear-gradient(90deg, rgba(23, 16, 31, 0.035) 1px, transparent 1px),
+      linear-gradient(rgba(23, 16, 31, 0.025) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .cmi-event-post-title,
+  .cmi-event-post-heading,
+  .cmi-event-post-paragraph,
+  .cmi-event-post-list {
+    font-family: "Iowan Old Style", "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "STSong", serif;
+    letter-spacing: 0;
+    text-rendering: optimizeLegibility;
+  }
+
+  .cmi-event-post-title {
+    text-wrap: balance;
+    font-variation-settings: normal;
+  }
+
+  .cmi-event-post-paragraph {
+    hanging-punctuation: allow-end;
+  }
+
   /* 引用样式 - 推荐理由 */
   .quote-text {
     position: relative;

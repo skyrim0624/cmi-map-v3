@@ -22,6 +22,9 @@ export interface VisibleEventAttendee {
   createdAt: string;
 }
 
+export const CMI_EVENT_REGISTRATION_SUCCESS_DESCRIPTION =
+  '报名已记录；确认邮件会附上微信群、联系人二维码和到场指引。';
+
 export const getGoingEventRegistrations = (
   registrations: EventRegistrationForSummary[]
 ) => registrations.filter(registration => registration.status === 'going');
