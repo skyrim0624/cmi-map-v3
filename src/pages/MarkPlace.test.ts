@@ -24,13 +24,19 @@ test('手动选点地图不会把拖动后的中心继续作为 Leaflet 默认�
   assert.match(source, /onCenterChange=\{\(lat, lng\) => setCenter\(\{lat, lng\}\)\}/);
 });
 
-test('网页相机拍照输出正方形并提供焦距控制', () => {
+test('网页相机拍照输出正方形并使用取景框双指缩放', () => {
   assert.match(source, /getSquareCaptureRect/);
   assert.match(source, /canvas\.width = crop\.outputSize/);
   assert.match(source, /canvas\.height = crop\.outputSize/);
   assert.match(source, /DEFAULT_CAMERA_CAPTURE_QUALITY/);
-  assert.match(source, /type="range"/);
-  assert.match(source, /handleCameraZoomChange/);
+  assert.match(source, /getTouchDistance/);
+  assert.match(source, /onTouchStart=\{handleCameraTouchStart\}/);
+  assert.match(source, /onTouchMove=\{handleCameraTouchMove\}/);
+  assert.match(source, /style=\{\{ touchAction: 'none' \}\}/);
+  assert.match(source, /setCameraZoomValue/);
+  assert.doesNotMatch(source, /type="range"/);
+  assert.doesNotMatch(source, /handleCameraZoomChange/);
+  assert.doesNotMatch(source, /aria-label="调整焦距"/);
 });
 
 test('发布前分类页固定显示特殊标签和发布按钮', () => {

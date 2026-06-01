@@ -1,5 +1,5 @@
-import { ArrowLeft, Calendar, Check, Loader2, MapPin, Mic, MicOff, PencilLine, Search, Shuffle, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, Calendar, Check, Image as ImageIcon, Loader2, MapPin, Mic, MicOff, PencilLine, Search, Shuffle, X } from 'lucide-react';
+import { type TouchEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { getCmiEventCardImageUrl } from '@/components/intent/event-card-presentation';
@@ -78,6 +78,11 @@ type SpeechRecognitionErrorEventLike = {
 type SpeechPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied' | 'checking';
 type CameraStatus = 'starting' | 'ready' | 'blocked' | 'unsupported' | 'error';
 type MediaTrackConstraintSetWithZoom = MediaTrackConstraintSet & { zoom?: number };
+type CameraPinchState = {
+  distance: number;
+  zoom: number;
+};
+type CameraTouchList = TouchEvent<HTMLDivElement>['touches'];
 
 const MARK_PLACE_VIDEO_CONSTRAINTS: MediaTrackConstraints = {
   facingMode: { ideal: 'environment' },
@@ -88,6 +93,18 @@ const MARK_PLACE_VIDEO_CONSTRAINTS: MediaTrackConstraints = {
 const DEFAULT_MARK_PLACE_CENTER = { lat: 18.7883, lng: 98.9853 } as const;
 const MARK_PLACE_EVENT_PAST_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
 const MARK_PLACE_EVENT_FUTURE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+const CAMERA_ZOOM_FEEDBACK_TIMEOUT_MS = 900;
+
+const getTouchDistance = (touches: CameraTouchList) => {
+  const firstTouch = touches.item(0);
+  const secondTouch = touches.item(1);
+  if (!firstTouch || !secondTouch) return 0;
+
+  return Math.hypot(
+    firstTouch.clientX - secondTouch.clientX,
+    firstTouch.clientY - secondTouch.clientY
+  );
+};
 
 const getMarkPlaceEventOptions = (
   events: CmiEvent[],
@@ -278,6 +295,7 @@ export default function MarkPlace() {
   const [cameraHint, setCameraHint] = useState('正在打开网页相机...');
   const [cameraZoomRange, setCameraZoomRange] = useState(DEFAULT_CAMERA_ZOOM_RANGE);
   const [cameraZoom, setCameraZoom] = useState(DEFAULT_CAMERA_ZOOM_RANGE.min);
+  const [isCameraZoomFeedbackVisible, setIsCameraZoomFeedbackVisible] = useState(false);
 
   const [sourceType, setSourceType] = useState<'live' | 'exif' | null>(null);
 
@@ -361,6 +379,8 @@ export default function MarkPlace() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const cameraPinchRef = useRef<CameraPinchState | null>(null);
+  const cameraZoomFeedbackTimeoutRef = useRef<number | null>(null);
   const isPhotoDoneStage = stage === 'done' && Boolean(photoURL);
   const isMapFallbackStage = stage === 'map_fallback';
   const photoAreaHeight = isPhotoDoneStage ? 'min(100vw, calc(100dvh - 13.5rem))' : 'min(100vw, 55dvh)';
@@ -486,15 +506,61 @@ export default function MarkPlace() {
     setCameraZoom(normalizeCameraZoom(nextZoom, DEFAULT_CAMERA_ZOOM_RANGE));
   };
 
-  const handleCameraZoomChange = (value: string) => {
-    const nextZoom = normalizeCameraZoom(Number(value), cameraZoomRange);
+  const showCameraZoomFeedback = () => {
+    setIsCameraZoomFeedbackVisible(true);
+    if (cameraZoomFeedbackTimeoutRef.current) {
+      window.clearTimeout(cameraZoomFeedbackTimeoutRef.current);
+    }
+    cameraZoomFeedbackTimeoutRef.current = window.setTimeout(() => {
+      setIsCameraZoomFeedbackVisible(false);
+      cameraZoomFeedbackTimeoutRef.current = null;
+    }, CAMERA_ZOOM_FEEDBACK_TIMEOUT_MS);
+  };
+
+  const setCameraZoomValue = (value: number) => {
+    const nextZoom = normalizeCameraZoom(value, cameraZoomRange);
     setCameraZoom(nextZoom);
+    showCameraZoomFeedback();
 
     if (!cameraZoomRange.isHardwareSupported) return;
 
     void applyCameraTrackZoom(nextZoom).then((didApply) => {
       if (!didApply) switchToDigitalZoom(nextZoom);
     });
+  };
+
+  const handleCameraTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    if (event.touches.length < 2) {
+      cameraPinchRef.current = null;
+      return;
+    }
+
+    const distance = getTouchDistance(event.touches);
+    if (distance <= 0) return;
+
+    event.preventDefault();
+    cameraPinchRef.current = {
+      distance,
+      zoom: cameraZoom,
+    };
+    showCameraZoomFeedback();
+  };
+
+  const handleCameraTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+    const pinchState = cameraPinchRef.current;
+    if (event.touches.length < 2 || !pinchState) return;
+
+    const distance = getTouchDistance(event.touches);
+    if (distance <= 0 || pinchState.distance <= 0) return;
+
+    event.preventDefault();
+    setCameraZoomValue(pinchState.zoom * (distance / pinchState.distance));
+  };
+
+  const handleCameraTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    if (event.touches.length < 2) {
+      cameraPinchRef.current = null;
+    }
   };
 
   const updateInterimTranscript = (nextTranscript: string) => {
@@ -505,6 +571,12 @@ export default function MarkPlace() {
   useEffect(() => () => {
     if (photoURL) URL.revokeObjectURL(photoURL);
   }, [photoURL]);
+
+  useEffect(() => () => {
+    if (cameraZoomFeedbackTimeoutRef.current) {
+      window.clearTimeout(cameraZoomFeedbackTimeoutRef.current);
+    }
+  }, []);
 
   // 初始化 Web Speech API。麦克风权限在用户点击按钮时再请求，避免页面加载时打扰用户。
   useEffect(() => {
@@ -1062,83 +1134,100 @@ export default function MarkPlace() {
 
       {/* STAGE 1: 取景框 */}
       {stage === 'camera' && (
-        <div className="w-full h-screen flex flex-col relative text-stone-700 bg-stone-900">
-          <div className="flex flex-1 items-center justify-center px-2 pb-3 pt-[calc(env(safe-area-inset-top)+4.25rem)]">
+        <div className="w-full h-screen flex flex-col relative text-stone-700 bg-[#191714]">
+          <div className="flex min-h-0 flex-1 items-center justify-center px-3 pb-3 pt-[calc(env(safe-area-inset-top)+4.5rem)]">
             <div
-              className="relative aspect-square overflow-hidden rounded-[2rem] border-[10px] border-stone-100 bg-black shadow-[0_16px_42px_rgba(0,0,0,0.28),inset_0_2px_10px_rgba(255,255,255,0.08)] sm:border-[14px] sm:rounded-[2.5rem]"
-              style={{ width: 'min(calc(100vw - 1rem), calc(100dvh - 15.75rem), 560px)' }}
+              className="relative"
+              style={{ width: 'min(calc(100vw - 1.25rem), calc(100dvh - 14.25rem), 560px)' }}
             >
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              onLoadedMetadata={markCameraReady}
-              onCanPlay={markCameraReady}
-              className="absolute inset-0 z-0 h-full w-full object-cover transition-transform duration-200 ease-out"
-              style={{
-                filter: 'contrast(1.04) saturate(1.06)',
-                transform: `scale(${cameraDigitalZoom})`,
-                transformOrigin: 'center center',
-              }}
-            />
-            <canvas ref={canvasRef} className="hidden" />
-            {cameraStatus !== 'ready' && (
-              <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-stone-950/75 px-8 text-center text-white backdrop-blur-sm">
-                {cameraStatus === 'starting' ? (
-                  <Loader2 className="mb-3 h-7 w-7 animate-spin text-white/90" />
-                ) : (
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/12">
-                    <PencilLine className="h-6 w-6 text-white/85" />
+              <div className="absolute -inset-x-2 -top-9 -bottom-3 rounded-[2.25rem] bg-gradient-to-br from-[#fffaf0] via-[#ece3d6] to-[#cfc2ae] shadow-[0_22px_55px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.95)]" />
+              <div className="absolute -top-6 left-5 z-10 flex items-center gap-2 rounded-full border border-black/10 bg-[#211f1b] px-3 py-1 text-[10px] font-black tracking-[0.24em] text-[#f6eee4] shadow-inner">
+                CMI MAP
+              </div>
+              <div className="absolute -top-6 right-5 z-10 flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#f97316] shadow-[0_0_12px_rgba(249,115,22,0.9)]" />
+                <span className="h-4 w-10 rounded-full border border-black/10 bg-[#2b2925] shadow-inner" />
+              </div>
+              <div
+                className="touch-none relative aspect-square overflow-hidden rounded-[1.9rem] border-[7px] border-[#171411] bg-black shadow-[0_16px_38px_rgba(0,0,0,0.35),inset_0_0_0_1px_rgba(255,255,255,0.16),inset_0_18px_28px_rgba(255,255,255,0.08)] ring-[5px] ring-[#f7efe5] sm:rounded-[2.2rem] sm:border-[8px] sm:ring-[6px]"
+                onTouchStart={handleCameraTouchStart}
+                onTouchMove={handleCameraTouchMove}
+                onTouchEnd={handleCameraTouchEnd}
+                onTouchCancel={handleCameraTouchEnd}
+                style={{ touchAction: 'none' }}
+              >
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  onLoadedMetadata={markCameraReady}
+                  onCanPlay={markCameraReady}
+                  className="absolute inset-0 z-0 h-full w-full object-cover transition-transform duration-150 ease-out"
+                  style={{
+                    filter: 'contrast(1.08) saturate(1.08) brightness(1.02)',
+                    transform: `scale(${cameraDigitalZoom})`,
+                    transformOrigin: 'center center',
+                  }}
+                />
+                <canvas ref={canvasRef} className="hidden" />
+                {cameraStatus !== 'ready' && (
+                  <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#101010]/90 px-8 text-center text-white">
+                    {cameraStatus === 'starting' ? (
+                      <Loader2 className="mb-3 h-7 w-7 animate-spin text-white/90" />
+                    ) : (
+                      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/10">
+                        <PencilLine className="h-6 w-6 text-white/85" />
+                      </div>
+                    )}
+                    <p className="max-w-xs text-sm font-bold leading-relaxed text-white/90">{cameraHint}</p>
                   </div>
                 )}
-                <p className="max-w-xs text-sm font-bold leading-relaxed text-white/90">{cameraHint}</p>
+                <div className="absolute top-5 left-5 right-5 flex items-start justify-between pointer-events-none">
+                  <span className="text-white/90 text-2xl drop-shadow-md" style={{ fontFamily: "'Nanum Pen Script', 'Caveat', cursive" }}>Smile! :)</span>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className="text-white/90 text-2xl drop-shadow-md" style={{ fontFamily: "'Nanum Pen Script', 'Caveat', cursive" }}>{cameraDateLabel}</span>
+                    <span
+                      className={`rounded-full border border-white/20 bg-black/40 px-2.5 py-1 text-xs font-black tabular-nums text-white shadow-[0_4px_12px_rgba(0,0,0,0.28)] transition-opacity duration-150 ${
+                        cameraStatus === 'ready' && (isCameraZoomFeedbackVisible || cameraZoom > cameraZoomRange.min)
+                          ? 'opacity-100'
+                          : 'opacity-0'
+                      }`}
+                    >
+                      {cameraZoomLabel}
+                    </span>
+                  </div>
+                </div>
+                <div className="absolute top-1/2 left-1/2 h-52 w-52 -translate-x-1/2 -translate-y-1/2 pointer-events-none sm:h-60 sm:w-60">
+                  <div className="absolute top-0 left-0 w-8 h-8 border-t-[3px] border-l-[3px] border-white/80 rounded-tl-lg shadow-[0_0_12px_rgba(255,255,255,0.2)]" />
+                  <div className="absolute top-0 right-0 w-8 h-8 border-t-[3px] border-r-[3px] border-white/80 rounded-tr-lg shadow-[0_0_12px_rgba(255,255,255,0.2)]" />
+                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-[3px] border-l-[3px] border-white/80 rounded-bl-lg shadow-[0_0_12px_rgba(255,255,255,0.2)]" />
+                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-[3px] border-r-[3px] border-white/80 rounded-br-lg shadow-[0_0_12px_rgba(255,255,255,0.2)]" />
+                  <div className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/65" />
+                </div>
+                <div className="absolute top-1/3 left-0 right-0 h-[1px] border-t border-dashed border-white/15 pointer-events-none" />
+                <div className="absolute top-2/3 left-0 right-0 h-[1px] border-t border-dashed border-white/15 pointer-events-none" />
+                <div className="absolute left-1/3 top-0 bottom-0 w-[1px] border-l border-dashed border-white/15 pointer-events-none" />
+                <div className="absolute left-2/3 top-0 bottom-0 w-[1px] border-l border-dashed border-white/15 pointer-events-none" />
               </div>
-            )}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 pointer-events-none">
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 border-[3px] border-primary/40 rounded-full border-dashed" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-primary/60 rounded-full" />
-              <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white/80 rounded-tl-xl" />
-              <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white/80 rounded-tr-xl" />
-              <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white/80 rounded-bl-xl" />
-              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white/80 rounded-br-xl" />
-            </div>
-            <div className="absolute top-6 left-6 right-6 flex justify-between pointer-events-none">
-              <span className="text-white/90 text-3xl drop-shadow-md" style={{ fontFamily: "'Nanum Pen Script', 'Caveat', cursive" }}>Smile! :)</span>
-              <span className="text-white/90 text-3xl drop-shadow-md" style={{ fontFamily: "'Nanum Pen Script', 'Caveat', cursive" }}>{cameraDateLabel}</span>
-            </div>
-              <div className="absolute top-1/3 left-0 right-0 h-[1px] border-t border-dashed border-white/20 pointer-events-none" />
-              <div className="absolute top-2/3 left-0 right-0 h-[1px] border-t border-dashed border-white/20 pointer-events-none" />
-              <div className="absolute left-1/3 top-0 bottom-0 w-[1px] border-l border-dashed border-white/20 pointer-events-none" />
-              <div className="absolute left-2/3 top-0 bottom-0 w-[1px] border-l border-dashed border-white/20 pointer-events-none" />
             </div>
           </div>
 
-          <div className="h-56 sm:h-60 bg-white relative flex flex-col items-center justify-center shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.08)] pb-safe rounded-t-[40px] z-10">
-            <div className="absolute top-5 w-32 h-1.5 bg-stone-200 rounded-full shadow-inner opacity-80" />
-            <div className="mt-8 w-full max-w-xs px-4">
-              <div className="mb-2 flex items-center justify-between text-xs font-black text-stone-500">
-                <span>焦距</span>
-                <span>{cameraZoomLabel}</span>
-              </div>
-              <input
-                type="range"
-                min={cameraZoomRange.min}
-                max={cameraZoomRange.max}
-                step={cameraZoomRange.step}
-                value={cameraZoom}
-                disabled={cameraStatus !== 'ready'}
-                onChange={(event) => handleCameraZoomChange(event.target.value)}
-                className="h-2 w-full cursor-pointer accent-[#f97316] disabled:cursor-wait disabled:opacity-50"
-                aria-label="调整焦距"
-              />
+          <div className="relative z-10 h-52 bg-gradient-to-b from-[#fffaf2] to-[#efe6d7] flex flex-col items-center justify-center shadow-[0_-18px_42px_-14px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.95)] pb-safe rounded-t-[2.35rem] border-t border-white/80 sm:h-56">
+            <div className="absolute top-5 w-28 h-1.5 bg-stone-300/80 rounded-full shadow-inner" />
+            <div className="absolute left-7 top-7 flex items-center gap-2 text-[10px] font-black tracking-[0.22em] text-stone-500">
+              <span className="h-2 w-2 rounded-full bg-[#f97316]" />
+              LIVE
             </div>
-            <div className="flex items-center gap-6 mt-4 z-10 w-full justify-center px-8">
+            <div className="absolute right-7 top-7 rounded-full border border-stone-300/70 bg-white/55 px-2.5 py-1 text-[10px] font-black tracking-[0.18em] text-stone-500 shadow-inner">
+              SQ
+            </div>
+            <div className="flex items-center gap-7 mt-7 z-10 w-full justify-center px-8">
               <input type="file" accept="image/*" className="hidden" onChange={(e) => handleCapture(e, 'exif')} ref={uploadInputRef} />
               <button
                 type="button"
                 onClick={startQuickTextFlow}
-                className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 shadow-inner hover:bg-stone-200 transition-colors active:scale-95"
+                className="w-14 h-14 rounded-full border border-white/80 bg-[#f7f1e8] flex items-center justify-center text-stone-600 shadow-[inset_0_2px_8px_rgba(255,255,255,0.85),0_6px_16px_rgba(0,0,0,0.08)] hover:bg-white transition-colors active:scale-95"
                 aria-label="快速文字推荐"
               >
                 <PencilLine className="w-5 h-5" />
@@ -1152,11 +1241,11 @@ export default function MarkPlace() {
                 }`}
                 aria-label={cameraButtonDisabled ? cameraHint : '拍下当前画面'}
               >
-                <div className="absolute inset-0 rounded-full border-4 border-stone-100 shadow-[0_8px_20px_rgba(0,0,0,0.06),inset_0_4px_8px_rgba(0,0,0,0.02)] transition-shadow bg-[#fdfdfc]"></div>
+                <div className="absolute inset-0 rounded-full border-[5px] border-[#f9f4eb] shadow-[0_10px_24px_rgba(0,0,0,0.12),inset_0_4px_8px_rgba(255,255,255,0.86)] transition-shadow bg-[#fdfdfc]"></div>
                 <div className={`w-[76%] h-[76%] rounded-full transition-all flex items-center justify-center ${
                   cameraButtonDisabled
                     ? 'bg-stone-200 shadow-inner'
-                    : 'bg-gradient-to-br from-[#ff8c42] to-[#e64a00] shadow-[inset_0_-4px_10px_rgba(0,0,0,0.1),0_4px_12px_rgba(255,94,0,0.4)] group-active:shadow-[inset_0_4px_10px_rgba(0,0,0,0.2),0_2px_4px_rgba(255,94,0,0.2)]'
+                    : 'bg-gradient-to-br from-[#ff9a57] via-[#f97316] to-[#c2410c] shadow-[inset_0_-5px_10px_rgba(0,0,0,0.16),0_5px_14px_rgba(249,115,22,0.38)] group-active:shadow-[inset_0_4px_10px_rgba(0,0,0,0.22),0_2px_4px_rgba(249,115,22,0.2)]'
                 }`}>
                   <div className="absolute top-4 left-6 w-5 h-5 bg-white/40 rounded-full blur-[2px]"></div>
                 </div>
@@ -1164,15 +1253,15 @@ export default function MarkPlace() {
               <button
                 type="button"
                 onClick={() => uploadInputRef.current?.click()}
-                className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 shadow-inner hover:bg-stone-200 transition-colors active:scale-95"
+                className="w-14 h-14 rounded-full border border-white/80 bg-[#f7f1e8] flex items-center justify-center text-stone-600 shadow-[inset_0_2px_8px_rgba(255,255,255,0.85),0_6px_16px_rgba(0,0,0,0.08)] hover:bg-white transition-colors active:scale-95"
                 aria-label="从相册选择照片"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                <ImageIcon className="w-5 h-5" />
               </button>
             </div>
             <button
               onClick={startQuickTextFlow}
-              className="mt-2 text-xs font-bold text-stone-500 underline underline-offset-4 active:scale-95"
+              className="mt-3 text-xs font-bold text-stone-600 underline underline-offset-4 active:scale-95"
             >
               不拍照，直接文字推荐
             </button>
