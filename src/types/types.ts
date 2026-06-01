@@ -44,6 +44,8 @@ export interface Recommendation {
   longitude: number;
   images: string[];
   easter_icon_id?: string | null;
+  linked_event_id?: string | null;
+  linked_event_title?: string | null;
   created_at: string;
   upvotes?: { user_id: string }[];
   wishlists?: { user_id: string }[];

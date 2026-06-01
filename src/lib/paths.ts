@@ -30,7 +30,13 @@ export const getPersonMapPath = (profileIdentity: string) =>
 
 export const getCmiHomePath = () => '/cmi-home';
 
-export const getMarkPlacePath = () => '/mark';
+export const getMarkPlacePath = (input?: { eventId?: string | null }) => {
+  const searchParams = new URLSearchParams();
+  if (input?.eventId) searchParams.set('event', input.eventId);
+
+  const query = searchParams.toString();
+  return query ? `/mark?${query}` : '/mark';
+};
 
 export const getCmiEventPath = (eventId: string) =>
   `/events/${encodeURIComponent(eventId)}`;

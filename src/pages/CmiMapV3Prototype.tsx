@@ -73,6 +73,8 @@ import {
   isCapacityFullRegistrationError,
   type EventListRegistrationButtonState,
 } from '@/features/cmi-events/event-list-registration-state';
+import { getRecommendationLinkedEvent } from '@/lib/cmi-recommendation-events';
+import { getRecommendationReasonText } from '@/lib/easter-icons';
 import {
   getAddTracePath,
   getCmiBlackboardPath,
@@ -120,6 +122,12 @@ interface FilterItem {
   id: MapFilterId;
   label: string;
   iconUrl?: string;
+}
+
+interface RecommendationEventBadge {
+  id: string;
+  title: string;
+  posterUrl?: string;
 }
 
 interface EventMarker extends MapMarker {
@@ -290,8 +298,24 @@ function formatTraceTime(value: string) {
 }
 
 function getRecommendationSummary(recommendation: Recommendation) {
-  const reason = recommendation.reason.trim();
+  const reason = getRecommendationReasonText(recommendation).trim();
   return reason || '这个地点还缺一句现场感，等社区成员补上。';
+}
+
+function getRecommendationEventBadge(
+  recommendation: Recommendation,
+  events: CmiEvent[]
+): RecommendationEventBadge | null {
+  const linkedEvent = getRecommendationLinkedEvent(recommendation);
+  if (!linkedEvent) return null;
+
+  const event = events.find(item => item.id === linkedEvent.id);
+
+  return {
+    id: linkedEvent.id,
+    title: event?.title ?? linkedEvent.title ?? '活动现场',
+    posterUrl: event ? getCmiEventCardImageUrl(event) : undefined,
+  };
 }
 
 function normalizeSearchText(value: string) {
@@ -316,7 +340,7 @@ function recommendationMatchesSearch(recommendation: Recommendation, query: stri
   const category = normalizeCategory(recommendation.category);
   return textMatchesSearch(query, [
     recommendation.place_name,
-    recommendation.reason,
+    getRecommendationReasonText(recommendation),
     recommendation.user_name,
     category,
     recommendation.input_category_id,
@@ -998,7 +1022,7 @@ export default function CmiMapV3Prototype() {
 
   const handleBottomAdd = useCallback((screen: PrimaryScreenId) => {
     if (screen === 'events') {
-      navigate(getCmiEventCreatePath());
+      navigate(getMarkPlacePath());
       return;
     }
 
@@ -1111,6 +1135,7 @@ export default function CmiMapV3Prototype() {
         )}
         {activeScreen === 'feed' && (
           <FeedMode
+            events={communityEvents}
             isLoading={isLoadingRecommendations}
             localWishlists={localWishlists}
             placedStickers={placedStickers}
@@ -1646,6 +1671,7 @@ function MapPulseSheet({
               const authorProfile = getRecommendationAuthorProfile(recommendation, profilesByAuthorKey);
               const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
               const authorAvatarUrl = authorProfile?.avatar_url?.trim() || getFallbackAvatarUrl(authorName);
+              const linkedEventBadge = getRecommendationEventBadge(recommendation, events);
 
               return (
                 <article
@@ -1664,6 +1690,7 @@ function MapPulseSheet({
                   <PlacedStickerLayer placements={placedStickers[recommendation.id]} variant="pulse" />
                   <img className="cmi-v3-map-pulse-trace-image" src={imageUrl} alt={recommendation.place_name} />
                   <div className="cmi-v3-map-pulse-trace-content">
+                    <EventPosterWatermark badge={linkedEventBadge} variant="pulse" />
                     <div className="cmi-v3-map-pulse-trace-head">
                       <span className="cmi-v3-map-pulse-trace-avatar">
                         <img src={authorAvatarUrl} alt="" />
@@ -1700,7 +1727,7 @@ function MapPulseSheet({
 
         {isExpanded && (
           <div className="cmi-v3-map-pulse-actions">
-            <button type="button" onClick={() => onOpenPath('/mark')}>留个彩蛋</button>
+            <button type="button" onClick={() => onOpenPath(getMarkPlacePath())}>活动返图</button>
             <button type="button" onClick={() => onOpenPath(getCmiEventCreatePath())}>发布活动</button>
           </div>
         )}
@@ -1726,6 +1753,7 @@ function EventSheetBody({ event }: { event: CmiEvent }) {
 }
 
 function FeedMode({
+  events,
   recommendations,
   isLoading,
   localWishlists,
@@ -1739,6 +1767,7 @@ function FeedMode({
   onStartStamp,
   onToggleWishlist,
 }: {
+  events: CmiEvent[];
   recommendations: Recommendation[];
   isLoading: boolean;
   localWishlists: WishlistStateMap;
@@ -1769,6 +1798,7 @@ function FeedMode({
           activeStickerId={activeStickerId}
           authorProfile={getRecommendationAuthorProfile(recommendation, profilesByAuthorKey)}
           isWishlisted={localWishlists[recommendation.id] ?? false}
+          linkedEventBadge={getRecommendationEventBadge(recommendation, events)}
           placedStickers={placedStickers[recommendation.id] ?? []}
           recommendation={recommendation}
           onComment={() => onOpenPath(getAddTracePath(recommendation.place_name))}
@@ -1803,9 +1833,9 @@ function PublishMode({
       <section className="cmi-v3-hard-card cmi-v3-publish-panel cmi-v3-dot-paper">
         <ChapterHeader left="New Moment" right="Use Existing Flow" />
         <h1>记录此刻</h1>
-        <p>先用现有 V2 的发布能力跑起来：新地点走标记地点，已有地点走补一句，活动走发布活动。</p>
+        <p>拍照发动态时可以选择关联活动；返图会自动带上活动海报标签。</p>
 
-        <button type="button" className="cmi-v3-photo-uploader" onClick={() => onOpenPath('/mark')}>
+        <button type="button" className="cmi-v3-photo-uploader" onClick={() => onOpenPath(getMarkPlacePath())}>
           <Camera size={36} strokeWidth={2.8} />
           <strong>发现了新地方</strong>
           <span>拍照 / 定位 / 写一句话</span>
@@ -1821,7 +1851,17 @@ function PublishMode({
           </div>
         </FormCard>
 
-        <FormCard label="活动">
+        <FormCard label="活动返图">
+          <div className="cmi-v3-place-row">
+            <div>
+              <strong>参加活动后发现场照</strong>
+              <span>拍照后选择对应活动，动态会带活动标签</span>
+            </div>
+            <button type="button" onClick={() => onOpenPath(getMarkPlacePath())}>返图</button>
+          </div>
+        </FormCard>
+
+        <FormCard label="活动发布">
           <div className="cmi-v3-place-row">
             <div>
               <strong>发起一场社区活动</strong>
@@ -1832,8 +1872,9 @@ function PublishMode({
         </FormCard>
 
         <div className="cmi-v3-publish-actions">
-          <button type="button" onClick={() => onOpenPath('/mark')}>标记新地点</button>
+          <button type="button" onClick={() => onOpenPath(getMarkPlacePath())}>标记新地点</button>
           <button type="button" onClick={() => onOpenPath(getAddTracePath(selectedPlaceName))}>给地点补一句</button>
+          <button type="button" onClick={() => onOpenPath(getMarkPlacePath())}>活动返图</button>
           <button type="button" onClick={() => onOpenPath(getCmiEventCreatePath())}>发布活动</button>
         </div>
       </section>
@@ -2150,16 +2191,34 @@ function EventDetailMode({
           <span className="cmi-v3-avatar"><Camera size={18} strokeWidth={3} /></span>
           <div>
             <strong>活动动态</strong>
-            <span>现在先进入正式活动详情页报名和查看信息</span>
+            <span>返图会自动挂到这场活动下面</span>
           </div>
-          <em>V2</em>
+          <em>现场</em>
         </div>
         <div className="cmi-v3-card-actions">
+          <button type="button" onClick={() => onOpenPath(getMarkPlacePath({ eventId: event.id }))}>拍照返图</button>
           <button type="button" onClick={() => onOpenPath(getCmiEventPath(event.id))}>打开正式页</button>
           <button type="button" onClick={() => onOpenPath(getCmiEventCreatePath())}>发布活动</button>
         </div>
       </article>
     </ComicPage>
+  );
+}
+
+function EventPosterWatermark({
+  badge,
+  variant,
+}: {
+  badge: RecommendationEventBadge | null;
+  variant: 'feed' | 'pulse';
+}) {
+  if (!badge) return null;
+
+  return (
+    <span className={`cmi-v3-event-watermark cmi-v3-event-watermark--${variant}`} aria-hidden="true">
+      {badge.posterUrl && <img src={badge.posterUrl} alt="" />}
+      <span>{badge.title}</span>
+    </span>
   );
 }
 
@@ -2169,6 +2228,7 @@ function RecommendationFeedCard({
   activeStickerId,
   authorProfile,
   isWishlisted,
+  linkedEventBadge,
   placedStickers,
   onComment,
   onPlaceStamp,
@@ -2181,6 +2241,7 @@ function RecommendationFeedCard({
   activeStickerId: string | null;
   authorProfile: PublicProfile | null;
   isWishlisted: boolean;
+  linkedEventBadge: RecommendationEventBadge | null;
   placedStickers: PlacedSticker[];
   onComment: () => void;
   onPlaceStamp: (event: ReactMouseEvent<HTMLElement>, recommendationId: string) => void;
@@ -2211,6 +2272,7 @@ function RecommendationFeedCard({
       <PlacedStickerLayer placements={placedStickers} variant="feed" />
       <img className="cmi-v3-feed-post-image" src={imageUrl} alt={recommendation.place_name} />
       <div className="cmi-v3-feed-post-content">
+        <EventPosterWatermark badge={linkedEventBadge} variant="feed" />
         <div className="cmi-v3-feed-head">
           <span className="cmi-v3-avatar cmi-v3-feed-user-avatar" aria-hidden="true">
             {authorAvatarUrl ? <img src={authorAvatarUrl} alt="" /> : getUserInitial(authorName)}
@@ -2580,7 +2642,7 @@ function CmiV3BottomNav({
   onAdd: () => void;
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
 }) {
-  const addAriaLabel = activeScreen === 'events' ? '发布活动' : '拍照发动态';
+  const addAriaLabel = activeScreen === 'events' ? '拍照返图' : '拍照发动态';
 
   return (
     <footer className="cmi-v3-map-bottom" aria-label="CMI Map 主导航">

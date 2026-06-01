@@ -1,11 +1,21 @@
-import { ArrowLeft, Check, Loader2, MapPin, Mic, MicOff, PencilLine, Shuffle } from 'lucide-react';
+import { ArrowLeft, Calendar, Check, Loader2, MapPin, Mic, MicOff, PencilLine, Shuffle } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { getCmiEventCardImageUrl } from '@/components/intent/event-card-presentation';
 import { LeafletMap } from '@/components/map/LeafletMap';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  CMI_EVENTS,
+  formatCmiEventTime,
+  getCmiEventById,
+  getCmiEventSortTime,
+  isCmiInnEvent,
+  type CmiEvent,
+} from '@/data/cmi-events';
 import { getCmiInputCategoryOptionById, getCmiInputCategoryOptions } from '@/data/cmi-taxonomy';
 import { createRecommendation, uploadImages } from '@/db/api';
+import { getPublishedCmiEvents } from '@/db/cmi-events';
 import {
   CMI_EASTER_ICON_OPTIONS,
   DEFAULT_CMI_EASTER_ICON_ID,
@@ -56,6 +66,43 @@ const MARK_PLACE_VIDEO_CONSTRAINTS: MediaTrackConstraints = {
   width: { ideal: 1920 },
   height: { ideal: 1080 },
   frameRate: { ideal: 30, max: 30 },
+};
+const MARK_PLACE_EVENT_PAST_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
+const MARK_PLACE_EVENT_FUTURE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+
+const getMarkPlaceEventOptions = (
+  events: CmiEvent[],
+  referenceDate: Date = new Date()
+) => {
+  const referenceTime = referenceDate.getTime();
+
+  return events
+    .filter(event => {
+      if (!isCmiInnEvent(event)) return false;
+
+      const eventTime = getCmiEventSortTime(event, referenceDate);
+      if (eventTime === Number.MAX_SAFE_INTEGER) return true;
+
+      return (
+        eventTime >= referenceTime - MARK_PLACE_EVENT_PAST_WINDOW_MS &&
+        eventTime <= referenceTime + MARK_PLACE_EVENT_FUTURE_WINDOW_MS
+      );
+    })
+    .sort((left, right) => {
+      const leftTime = getCmiEventSortTime(left, referenceDate);
+      const rightTime = getCmiEventSortTime(right, referenceDate);
+
+      return Math.abs(leftTime - referenceTime) - Math.abs(rightTime - referenceTime);
+    })
+    .slice(0, 8);
+};
+
+const mergeInitialEventIntoOptions = (
+  options: CmiEvent[],
+  initialEvent: CmiEvent | null
+) => {
+  if (!initialEvent || options.some(event => event.id === initialEvent.id)) return options;
+  return [initialEvent, ...options].slice(0, 8);
 };
 
 const appendTranscript = (currentText: string, nextText: string) => {
@@ -178,6 +225,7 @@ export default function MarkPlace() {
   const [searchParams] = useSearchParams();
   const { user, profile, loading: authLoading } = useAuth();
   const initialPlaceName = searchParams.get('place')?.trim() || '';
+  const initialEventId = searchParams.get('event')?.trim() || '';
   const initialLatitude = Number(searchParams.get('lat'));
   const initialLongitude = Number(searchParams.get('lng'));
   const hasInitialPickedPlace =
@@ -216,8 +264,17 @@ export default function MarkPlace() {
   const [selectedInputCategoryId, setSelectedInputCategoryId] = useState<string>('');
   const [selectedEasterIconId, setSelectedEasterIconId] = useState(DEFAULT_CMI_EASTER_ICON_ID);
   const [easterIconQuery, setEasterIconQuery] = useState('');
+  const [selectedEventId, setSelectedEventId] = useState(initialEventId);
+  const [eventOptions, setEventOptions] = useState<CmiEvent[]>(() => {
+    const initialEvent = getCmiEventById(initialEventId);
+    return initialEvent ? [initialEvent] : [];
+  });
+  const [isLoadingEventOptions, setIsLoadingEventOptions] = useState(false);
   const inputCategoryOptions = getCmiInputCategoryOptions();
   const selectedEasterIcon = getCmiEasterIconById(selectedEasterIconId);
+  const selectedEvent = selectedEventId
+    ? eventOptions.find(event => event.id === selectedEventId) ?? getCmiEventById(selectedEventId)
+    : null;
   const cameraDateLabel = `${new Date().getMonth() + 1} / ${new Date().getDate()}`;
   const filteredEasterIcons = useMemo(() => {
     const query = easterIconQuery.trim().toLocaleLowerCase();
@@ -243,6 +300,36 @@ export default function MarkPlace() {
   const photoAreaHeight = isPhotoDoneStage ? 'calc(100dvh - 13.5rem)' : '55dvh';
   const voiceButtonDisabled = !speechSupported || speechPermission === 'checking';
   const cameraButtonDisabled = cameraStatus !== 'ready';
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingEventOptions(true);
+
+    getPublishedCmiEvents()
+      .then((events) => {
+        if (!isMounted) return;
+
+        const initialEvent = initialEventId
+          ? events.find(event => event.id === initialEventId) ?? getCmiEventById(initialEventId)
+          : null;
+
+        setEventOptions(mergeInitialEventIntoOptions(getMarkPlaceEventOptions(events), initialEvent));
+      })
+      .catch((error) => {
+        console.error('活动列表加载失败，使用本地活动:', error);
+        if (!isMounted) return;
+
+        const initialEvent = getCmiEventById(initialEventId);
+        setEventOptions(mergeInitialEventIntoOptions(getMarkPlaceEventOptions(CMI_EVENTS), initialEvent));
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingEventOptions(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [initialEventId]);
 
   const stopCameraStream = () => {
     if (!streamRef.current) return;
@@ -656,6 +743,9 @@ export default function MarkPlace() {
       const selectedInputCategoryOption = getCmiInputCategoryOptionById(selectedInputCategoryId)
         ?? inputCategoryOptions.find(option => option.storedCategory === selectedCategory)
         ?? null;
+      const linkedEvent = selectedEventId
+        ? eventOptions.find(event => event.id === selectedEventId) ?? getCmiEventById(selectedEventId)
+        : null;
 
       const recommendationInput = {
         place_name: placeName,
@@ -669,6 +759,10 @@ export default function MarkPlace() {
         longitude: targetCoordinates.longitude,
         images: imageUrls,
         ...(selectedCategory === '彩蛋' ? { easter_icon_id: selectedEasterIconId } : {}),
+        ...(linkedEvent ? {
+          linked_event_id: linkedEvent.id,
+          linked_event_title: linkedEvent.title,
+        } : {}),
       };
 
       const recommendation = await createRecommendation(recommendationInput);
@@ -1029,6 +1123,75 @@ export default function MarkPlace() {
                     </button>
                   ))}
                 </div>
+                {(isLoadingEventOptions || eventOptions.length > 0 || selectedEvent) && (
+                  <div className="mt-2 w-full max-w-sm rounded-3xl border border-stone-200 bg-white/85 p-3 shadow-sm">
+                    <div className="mb-2 flex items-start justify-between gap-3 text-left">
+                      <div>
+                        <p className="text-sm font-black text-stone-800">关联活动（可不选）</p>
+                        <p className="mt-0.5 text-xs font-semibold leading-relaxed text-stone-500">
+                          返图、现场照可以挂到一场活动下面。
+                        </p>
+                      </div>
+                      <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={2.8} />
+                    </div>
+                    {isLoadingEventOptions && eventOptions.length === 0 ? (
+                      <div className="flex items-center gap-2 rounded-2xl bg-stone-50 px-3 py-2 text-xs font-bold text-stone-500">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                        正在加载近期活动
+                      </div>
+                    ) : (
+                      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+                        {eventOptions.map(event => {
+                          const isSelectedEvent = selectedEventId === event.id;
+
+                          return (
+                            <button
+                              key={event.id}
+                              type="button"
+                              onClick={() => setSelectedEventId(isSelectedEvent ? '' : event.id)}
+                              disabled={uploading}
+                              aria-pressed={isSelectedEvent}
+                              className={`grid min-w-[156px] max-w-[170px] grid-cols-[44px_minmax(0,1fr)] items-center gap-2 rounded-2xl border p-2 text-left transition-all active:scale-[0.98] disabled:opacity-50 ${
+                                isSelectedEvent
+                                  ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
+                                  : 'border-stone-200 bg-stone-50 hover:border-primary/40'
+                              }`}
+                            >
+                              <img
+                                src={getCmiEventCardImageUrl(event)}
+                                alt=""
+                                className="h-11 w-11 rounded-xl object-cover shadow-sm"
+                              />
+                              <span className="min-w-0">
+                                <span className="block truncate text-[10px] font-black text-primary/80">
+                                  {formatCmiEventTime(event)}
+                                </span>
+                                <strong className="mt-0.5 block line-clamp-2 text-xs font-black leading-tight text-stone-800">
+                                  {event.title}
+                                </strong>
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <div className="mt-2 flex items-center justify-between gap-2 text-xs font-bold text-stone-500">
+                      <span className="min-w-0 truncate">
+                        {selectedEvent ? `已关联：${selectedEvent.title}` : '不关联活动也可以直接发布。'}
+                      </span>
+                      {selectedEvent && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedEventId('')}
+                          disabled={uploading}
+                          className="shrink-0 rounded-full bg-stone-100 px-3 py-1 text-stone-600 active:scale-95 disabled:opacity-50"
+                        >
+                          不关联
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {selectedCat === '彩蛋' && (
                   <div className="mt-2 w-full max-w-sm rounded-3xl border border-primary/25 bg-primary/5 p-3 shadow-inner animate-in slide-in-from-top-2 fade-in">
                     <div className="mb-2 flex items-start justify-between gap-3 text-left">

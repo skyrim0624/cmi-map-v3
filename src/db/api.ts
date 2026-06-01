@@ -2,6 +2,7 @@ import type { Category, PlacedSticker, Profile, Recommendation, Sticker } from '
 import { getCategoryFilterValues } from '@/types/types';
 import { compressImage } from '@/utils/imageCompression';
 import { encodeEasterIconMetadata } from '@/lib/easter-icons';
+import { encodeRecommendationEventMetadata } from '@/lib/cmi-recommendation-events';
 import {
   applyRecommendationCorrections,
   applyRecommendationsCorrections,
@@ -12,6 +13,11 @@ import { supabase } from './supabase';
 
 type ReadOptions = {
   throwOnError?: boolean;
+};
+type RecommendationInsertInput = Omit<Recommendation, 'id' | 'created_at'>;
+type UnsupportedRecommendationFields = {
+  easterIcon: boolean;
+  linkedEvent: boolean;
 };
 
 export type PublicProfile = Pick<Profile, 'id' | 'handle' | 'user_name' | 'avatar_url'>;
@@ -41,6 +47,71 @@ const handlePublicProfileReadError = (message: string, error: unknown, options?:
   }
 
   handleReadError(message, error, options);
+};
+
+const hasOwnField = <T extends object>(target: T, field: PropertyKey) =>
+  Object.prototype.hasOwnProperty.call(target, field);
+
+const getErrorMessage = (error: unknown) => (
+  typeof error === 'object' && error !== null && 'message' in error
+    ? String((error as { message?: unknown }).message ?? '').toLocaleLowerCase()
+    : ''
+);
+
+const getUnsupportedRecommendationFields = (
+  error: unknown,
+  recommendation: Partial<RecommendationInsertInput>
+): UnsupportedRecommendationFields => {
+  const message = getErrorMessage(error);
+
+  return {
+    easterIcon:
+      hasOwnField(recommendation, 'easter_icon_id') &&
+      message.includes('easter_icon_id'),
+    linkedEvent:
+      (hasOwnField(recommendation, 'linked_event_id') || hasOwnField(recommendation, 'linked_event_title')) &&
+      (message.includes('linked_event_id') || message.includes('linked_event_title')),
+  };
+};
+
+const mergeUnsupportedRecommendationFields = (
+  current: UnsupportedRecommendationFields,
+  next: UnsupportedRecommendationFields
+): UnsupportedRecommendationFields => ({
+  easterIcon: current.easterIcon || next.easterIcon,
+  linkedEvent: current.linkedEvent || next.linkedEvent,
+});
+
+const hasUnsupportedRecommendationFields = (fields: UnsupportedRecommendationFields) =>
+  fields.easterIcon || fields.linkedEvent;
+
+const buildRecommendationInsertPayload = (
+  recommendation: RecommendationInsertInput,
+  unsupportedFields: UnsupportedRecommendationFields
+) => {
+  const payload: Partial<RecommendationInsertInput> = { ...recommendation };
+
+  if (unsupportedFields.easterIcon) {
+    if (payload.easter_icon_id) {
+      payload.reason = encodeEasterIconMetadata(payload.reason ?? '', payload.easter_icon_id);
+    }
+
+    delete payload.easter_icon_id;
+  }
+
+  if (unsupportedFields.linkedEvent) {
+    if (payload.linked_event_id) {
+      payload.reason = encodeRecommendationEventMetadata(payload.reason ?? '', {
+        id: payload.linked_event_id,
+        title: payload.linked_event_title ?? payload.linked_event_id,
+      });
+    }
+
+    delete payload.linked_event_id;
+    delete payload.linked_event_title;
+  }
+
+  return payload;
 };
 
 const activeStampIconUrls = [
@@ -389,48 +460,49 @@ export const uploadImages = async (files: File[]): Promise<string[]> => {
  * 创建推荐
  */
 export const createRecommendation = async (
-  recommendation: Omit<Recommendation, 'id' | 'created_at'>
+  recommendation: RecommendationInsertInput
 ): Promise<Recommendation | null> => {
-  const { data, error } = await supabase
-    .from('recommendations')
-    .insert([recommendation])
-    .select()
-    .maybeSingle();
+  let unsupportedFields: UnsupportedRecommendationFields = {
+    easterIcon: false,
+    linkedEvent: false,
+  };
 
-  if (error) {
-    const hasEasterIconField = Object.prototype.hasOwnProperty.call(recommendation, 'easter_icon_id');
-    const mayBeMissingEasterIconColumn =
-      hasEasterIconField &&
-      error.message.toLocaleLowerCase().includes('easter_icon_id');
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const insertPayload = buildRecommendationInsertPayload(recommendation, unsupportedFields);
+    const { data, error } = await supabase
+      .from('recommendations')
+      .insert([insertPayload])
+      .select()
+      .maybeSingle();
 
-    if (mayBeMissingEasterIconColumn) {
-      const fallbackRecommendation = {
-        ...recommendation,
-        reason: recommendation.easter_icon_id
-          ? encodeEasterIconMetadata(recommendation.reason ?? '', recommendation.easter_icon_id)
-          : recommendation.reason,
-      };
-      delete fallbackRecommendation.easter_icon_id;
-
-      const { data: fallbackData, error: fallbackError } = await supabase
-        .from('recommendations')
-        .insert([fallbackRecommendation])
-        .select()
-        .maybeSingle();
-
-      if (fallbackError) {
-        console.error('创建推荐失败:', fallbackError);
-        return null;
-      }
-
-      return fallbackData ? applyRecommendationCorrections(fallbackData) : null;
+    if (!error) {
+      return data ? applyRecommendationCorrections(data) : null;
     }
 
-    console.error('创建推荐失败:', error);
-    return null;
+    const nextUnsupportedFields = getUnsupportedRecommendationFields(error, insertPayload);
+    if (!hasUnsupportedRecommendationFields(nextUnsupportedFields)) {
+      console.error('创建推荐失败:', error);
+      return null;
+    }
+
+    const mergedUnsupportedFields = mergeUnsupportedRecommendationFields(
+      unsupportedFields,
+      nextUnsupportedFields
+    );
+
+    if (
+      mergedUnsupportedFields.easterIcon === unsupportedFields.easterIcon &&
+      mergedUnsupportedFields.linkedEvent === unsupportedFields.linkedEvent
+    ) {
+      console.error('创建推荐失败:', error);
+      return null;
+    }
+
+    unsupportedFields = mergedUnsupportedFields;
   }
 
-  return data ? applyRecommendationCorrections(data) : null;
+  console.error('创建推荐失败: 推荐表缺少可选字段，兼容重试仍未成功');
+  return null;
 };
 
 /**
