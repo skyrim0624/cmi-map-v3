@@ -1600,3 +1600,14 @@
   - `pnpm lint` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地浏览器预览 `http://localhost:5173/login`：点击“我是新人”后注册表单正常出现；昵称输入框可输入中文、英文数字和纯数字；console 无 warn/error。本轮未点击“发送注册验证码”，避免创建线上测试用户。
+
+### 2026-06-02 14:08:30 +07 注册显示名称检查修复部署
+
+- Source commit：`402f9fe`（`Fix registration display name check`）。
+- Cloudflare Pages：
+  - v3 预览项目：`https://ed1f51f5.cmi-map-v3.pages.dev`。
+  - 正式站 Pages 项目：`https://c1a56105.cmi-map.pages.dev`。
+- 线上复查：
+  - `https://cmimap.com/login?verify=402f9fe`、`https://c1a56105.cmi-map.pages.dev/login?verify=402f9fe` 和 `https://ed1f51f5.cmi-map-v3.pages.dev/login?verify=402f9fe` 均返回 200，入口均引用 `assets/index-BW-RzpYg.js`。
+  - 正式域名入口包内确认注册前昵称检查调用 `rpc("is_user_name_available", { target_user_name })`，不再直接读取 `profiles` 表做新人注册前检查。
+  - 应用内浏览器复查 `https://c1a56105.cmi-map.pages.dev/login?verify=402f9fe`：点击“我是新人”后注册表单正常出现；昵称输入框可输入中文、英文数字和纯数字；console 无 warn/error。本轮未点击“发送注册验证码”，避免创建线上测试用户。
