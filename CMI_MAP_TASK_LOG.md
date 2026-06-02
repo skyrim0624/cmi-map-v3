@@ -1611,3 +1611,22 @@
   - `https://cmimap.com/login?verify=402f9fe`、`https://c1a56105.cmi-map.pages.dev/login?verify=402f9fe` 和 `https://ed1f51f5.cmi-map-v3.pages.dev/login?verify=402f9fe` 均返回 200，入口均引用 `assets/index-BW-RzpYg.js`。
   - 正式域名入口包内确认注册前昵称检查调用 `rpc("is_user_name_available", { target_user_name })`，不再直接读取 `profiles` 表做新人注册前检查。
   - 应用内浏览器复查 `https://c1a56105.cmi-map.pages.dev/login?verify=402f9fe`：点击“我是新人”后注册表单正常出现；昵称输入框可输入中文、英文数字和纯数字；console 无 warn/error。本轮未点击“发送注册验证码”，避免创建线上测试用户。
+
+### 2026-06-02 14:40:54 +07 打卡完成反馈从红章改为鼓励徽章
+
+- 背景：用户反馈 `/mark` 完成页照片上的红色 `RECORDED` 大章不好看，观感像罚单；建议改成“大拇哥 / 功德 +1”或“掌声鼓励”这类正反馈。
+- 本轮判断：
+  - 问题不只是颜色，而是语义和遮挡：红色大章压在照片中心，容易把“记录完成”读成“被处罚 / 被审判”。
+  - 完成态更适合轻量、社区化的鼓励反馈，同时不要遮挡照片主体。
+- 本轮实现：
+  - `/mark` 照片完成态改为右下角小型“已记录 / 功德 +1 / 大拇哥收到了”鼓励徽章。
+  - 无照片的文字推荐完成态同步使用同一鼓励徽章。
+  - `/playground/mark` 原型同步移除红色 `RECORDED` 大章，避免后续预览误回旧方案。
+  - 新增 `checkin-badge-pop` 动画，强调轻量弹出，不再模拟盖章砸下去。
+  - `MarkPlace.test.ts` 增加防回归检查：源码必须包含鼓励徽章文案，不能再出现 `RECORDED` 和旧红色 `#da2222`。
+- 验证结果：
+  - `node --test src/pages/MarkPlace.test.ts` 通过。
+  - `pnpm exec tsc -p tsconfig.check.json --noEmit` 通过。
+  - `pnpm exec biome check src/pages/MarkPlace.tsx src/pages/PlaygroundMarkPlace.tsx src/index.css src/pages/MarkPlace.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 构建后的 `MarkPlace` / `PlaygroundMarkPlace` chunk 确认包含“功德 +1 / 大拇哥收到了”和新动画类；本地 `/playground/mark` 因路由登录保护重定向到 `/login`，未做真实打卡提交验证。

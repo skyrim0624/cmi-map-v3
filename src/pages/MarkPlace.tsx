@@ -1,4 +1,4 @@
-import { ArrowLeft, Calendar, Check, Image as ImageIcon, Loader2, MapPin, Mic, MicOff, PencilLine, Search, Shuffle, X } from 'lucide-react';
+import { ArrowLeft, Calendar, Check, Image as ImageIcon, Loader2, MapPin, Mic, MicOff, PencilLine, Search, Shuffle, ThumbsUp, X } from 'lucide-react';
 import { type TouchEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -7,21 +7,15 @@ import { LeafletMap } from '@/components/map/LeafletMap';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   CMI_EVENTS,
+  type CmiEvent,
   formatCmiEventTime,
   getCmiEventById,
   getCmiEventSortTime,
   isCmiInnEvent,
-  type CmiEvent,
 } from '@/data/cmi-events';
 import { getCmiInputCategoryOptionById, getCmiInputCategoryOptions } from '@/data/cmi-taxonomy';
 import { createRecommendation, getAllRecommendations, uploadImages } from '@/db/api';
 import { getPublishedCmiEvents } from '@/db/cmi-events';
-import {
-  buildEventPlaceCandidates,
-  createEventPlaceCandidateFromExternalPlace,
-  searchEventPlaceCandidates,
-  type EventPlaceCandidate,
-} from '@/features/cmi-events/event-place-binding';
 import {
   DEFAULT_CAMERA_CAPTURE_QUALITY,
   DEFAULT_CAMERA_OUTPUT_SIZE,
@@ -30,6 +24,12 @@ import {
   getSquareCaptureRect,
   normalizeCameraZoom,
 } from '@/features/check-ins/camera-capture';
+import {
+  buildEventPlaceCandidates,
+  createEventPlaceCandidateFromExternalPlace,
+  type EventPlaceCandidate,
+  searchEventPlaceCandidates,
+} from '@/features/cmi-events/event-place-binding';
 import { searchExternalPlaceCandidates } from '@/features/places/external-place-search';
 import { useDebounce } from '@/hooks/use-debounce';
 import {
@@ -255,6 +255,23 @@ const ScribbleSparks = ({ active }: { active: boolean }) => {
   });
   return <div className="absolute inset-0 pointer-events-none z-10">{sparks}</div>;
 };
+
+const MarkPlaceSuccessBadge = ({ className = '' }: { className?: string }) => (
+  <div
+    role="status"
+    aria-label="已记录，功德加一"
+    className={`pointer-events-none z-50 flex w-fit max-w-[calc(100vw-2rem)] items-center gap-3 rounded-[1.35rem] border border-white/80 bg-[#fff7dd]/95 px-3.5 py-2.5 text-[#2f3a1f] shadow-[0_16px_34px_rgba(69,88,36,0.22)] backdrop-blur-md animate-[checkin-badge-pop_0.55s_cubic-bezier(0.175,0.885,0.32,1.275)_forwards] ${className}`}
+  >
+    <span className="flex h-11 w-11 shrink-0 rotate-[-7deg] items-center justify-center rounded-full bg-[#f5c451] text-[#304118] shadow-inner ring-2 ring-white/80">
+      <ThumbsUp className="h-6 w-6" strokeWidth={3} />
+    </span>
+    <span className="min-w-0 text-left">
+      <span className="block text-[11px] font-black tracking-[0.14em] text-[#6f7435]">已记录</span>
+      <strong className="block text-lg font-black leading-none text-[#2f3a1f]">功德 +1</strong>
+      <span className="block text-[11px] font-bold text-[#7a6b38]">大拇哥收到了</span>
+    </span>
+  </div>
+);
 
 export default function MarkPlace() {
   const navigate = useNavigate();
@@ -1296,22 +1313,9 @@ export default function MarkPlace() {
                 </button>
               </div>
 
-              {/* 印章动画 */}
+              {/* NOTE: 用户反馈红色大章像罚单，完成反馈改成轻量鼓励徽章，减少对照片主体的遮挡。 */}
               {stage === 'done' && (
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[-8deg] pointer-events-none z-50 animate-[stamp_0.6s_cubic-bezier(0.175,0.885,0.32,1.275)_forwards]">
-                  <div className="relative flex items-center justify-center w-40 h-40 border-[3px] border-[#da2222] border-dashed rounded-full mix-blend-multiply opacity-[0.85] shadow-sm bg-[#da2222]/[0.02]">
-                    <div className="absolute inset-1.5 border-2 border-[#da2222] rounded-full opacity-70" />
-                    <div className="flex flex-col items-center justify-center transform -translate-y-0.5">
-                      <span className="text-[11px] font-bold tracking-[0.2em] text-[#da2222] opacity-90 mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>CMI MAP</span>
-                      <div className="border-y-[3px] border-[#da2222] py-2 px-1 bg-white/60 backdrop-blur-[1px] w-36 text-center transform rotate-[-4deg]">
-                        <span className="text-[1.65rem] leading-none font-black tracking-widest text-[#da2222] opacity-90" style={{ fontFamily: "'Times New Roman', serif" }}>RECORDED</span>
-                      </div>
-                      <span className="text-[10px] font-bold tracking-[0.15em] text-[#da2222] mt-1.5 opacity-80" style={{ fontFamily: "'Inter', sans-serif" }}>
-                        {new Date().toLocaleDateString('en-GB').replace(/\//g, '.')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <MarkPlaceSuccessBadge className="absolute bottom-16 right-4" />
               )}
             </div>
           </div>}
@@ -1326,13 +1330,7 @@ export default function MarkPlace() {
           }>
             {!photoURL && stage === 'done' && (
               <div className="flex flex-col items-center justify-center gap-4 text-center">
-                <div className="relative flex items-center justify-center w-36 h-36 border-[3px] border-[#da2222] border-dashed rounded-full mix-blend-multiply opacity-[0.85] bg-[#da2222]/[0.02] rotate-[-8deg]">
-                  <div className="absolute inset-1.5 border-2 border-[#da2222] rounded-full opacity-70" />
-                  <div className="flex flex-col items-center">
-                    <span className="text-[11px] font-bold tracking-[0.2em] text-[#da2222] opacity-90 mb-1">CMI MAP</span>
-                    <span className="text-2xl font-black tracking-widest text-[#da2222] opacity-90">RECORDED</span>
-                  </div>
-                </div>
+                <MarkPlaceSuccessBadge />
                 <p className="text-sm font-semibold text-stone-500">正在把你的清迈痕迹收进手账...</p>
               </div>
             )}

@@ -70,6 +70,15 @@ test('清迈客栈标签打卡后进入动态页而不是旧客栈页', () => {
   assert.doesNotMatch(source, /留言墙/);
 });
 
+test('发布完成反馈使用鼓励徽章而不是红色罚单感大章', () => {
+  assert.match(source, /ThumbsUp/);
+  assert.match(source, /功德 \+1/);
+  assert.match(source, /大拇哥收到了/);
+  assert.match(source, /checkin-badge-pop/);
+  assert.doesNotMatch(source, /RECORDED/);
+  assert.doesNotMatch(source, /#da2222/);
+});
+
 test('发布前分类页独立滚动并保留特殊标签和发布按钮', () => {
   assert.match(source, /const priorityCategoryIds = new Set\(\['cmi-inn', 'easter'\]\)/);
   assert.match(source, /const isPublishPreparationStage = stage === 'category' && Boolean\(photoURL\)/);

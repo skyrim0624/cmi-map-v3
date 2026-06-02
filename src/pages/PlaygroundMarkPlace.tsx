@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { Camera, MapPin, Mic, Check, ArrowLeft, Loader2, Navigation } from 'lucide-react';
+import { ArrowLeft, Camera, Check, Loader2, MapPin, Mic, Navigation, ThumbsUp } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LeafletMap } from '@/components/map/LeafletMap';
 
@@ -28,6 +28,23 @@ const ScribbleSparks = ({ active }: { active: boolean }) => {
   });
   return <div className="absolute inset-0 pointer-events-none z-10">{sparks}</div>;
 };
+
+const PlaygroundSuccessBadge = () => (
+  <div
+    role="status"
+    aria-label="已记录，功德加一"
+    className="absolute bottom-16 right-4 pointer-events-none z-50 flex w-fit max-w-[calc(100vw-2rem)] items-center gap-3 rounded-[1.35rem] border border-white/80 bg-[#fff7dd]/95 px-3.5 py-2.5 text-[#2f3a1f] shadow-[0_16px_34px_rgba(69,88,36,0.22)] backdrop-blur-md animate-[checkin-badge-pop_0.55s_cubic-bezier(0.175,0.885,0.32,1.275)_forwards]"
+  >
+    <span className="flex h-11 w-11 shrink-0 rotate-[-7deg] items-center justify-center rounded-full bg-[#f5c451] text-[#304118] shadow-inner ring-2 ring-white/80">
+      <ThumbsUp className="h-6 w-6" strokeWidth={3} />
+    </span>
+    <span className="min-w-0 text-left">
+      <span className="block text-[11px] font-black tracking-[0.14em] text-[#6f7435]">已记录</span>
+      <strong className="block text-lg font-black leading-none text-[#2f3a1f]">功德 +1</strong>
+      <span className="block text-[11px] font-bold text-[#7a6b38]">大拇哥收到了</span>
+    </span>
+  </div>
+);
 
 export default function PlaygroundMarkPlace() {
   const navigate = useNavigate();
@@ -295,30 +312,9 @@ export default function PlaygroundMarkPlace() {
               </div>
             )}
             
-            {/* Stage 4 完成印章飞入 (高定邮戳/入国章风格) */}
+            {/* NOTE: 与真实打卡页保持一致，完成态用鼓励徽章，不再用红色审判式大章。 */}
             {stage === 'done' && (
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[-8deg] pointer-events-none z-50 animate-[stamp_0.6s_cubic-bezier(0.175,0.885,0.32,1.275)_forwards]">
-                <div className="relative flex items-center justify-center w-40 h-40 border-[3px] border-[#da2222] border-dashed rounded-full mix-blend-multiply opacity-[0.85] shadow-sm bg-[#da2222]/[0.02]">
-                  
-                  {/* 内圈与复古边框 */}
-                  <div className="absolute inset-1.5 border-2 border-[#da2222] rounded-full opacity-70" />
-                  
-                  {/* 印记文案编排 */}
-                  <div className="flex flex-col items-center justify-center transform -translate-y-0.5">
-                    <span className="text-[11px] font-bold tracking-[0.2em] text-[#da2222] opacity-90 mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>
-                      CMI MAP
-                    </span>
-                    <div className="border-y-[3px] border-[#da2222] py-2 px-1 bg-white/60 backdrop-blur-[1px] w-36 text-center transform rotate-[-4deg]">
-                      <span className="text-[1.65rem] leading-none font-black tracking-widest text-[#da2222] opacity-90" style={{ fontFamily: "'Times New Roman', serif" }}>
-                        RECORDED
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-bold tracking-[0.15em] text-[#da2222] mt-1.5 opacity-80" style={{ fontFamily: "'Inter', sans-serif" }}>
-                      {new Date().toLocaleDateString('en-GB').replace(/\//g, '.')}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <PlaygroundSuccessBadge />
             )}
           </div>
 
