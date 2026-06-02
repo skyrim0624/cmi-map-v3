@@ -1314,5 +1314,9 @@
 - 验证结果：
   - `pnpm exec biome lint src/pages/CmiMapV3Prototype.tsx src/pages/cmi-map-v3-prototype.css` 通过。
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
   - 本地浏览器验证 `http://127.0.0.1:5173/?screen=events&verify=event-hero-layout`：390px 和 360px 手机视口下标题与按钮均无重叠；390px 标题稳定显示为两行，按钮仍位于黄色卡片右上角，console 无 warn/error。
   - 本地未登录状态点击“发起活动”后按既有保护逻辑进入 `/login`；点击“刚结束”分页后 `aria-pressed=true`，筛选交互正常。
+  - 已部署 v3 项目 `https://50b81ec5.cmi-map-v3.pages.dev` 和正式站 `https://3a5bf16a.cmi-map.pages.dev`，Source 为 `f6d7cdc`。
+  - 线上预览 `https://3a5bf16a.cmi-map.pages.dev/?screen=events&verify=event-hero-f6d7cdc` 复查通过：390px 手机宽度下标题固定两行，按钮仍在右上角，console 无 warn/error。
+  - 正式域名 `https://cmimap.com/?screen=events&verify=event-hero-f6d7cdc` 普通刷新后已切到新入口 `index-C3ofkg3p.js` 和新 V3 包 `CmiMapV3Prototype-DcJwzlzJ.js` / `CmiMapV3Prototype-D8x5s38f.css`；390px 手机宽度下标题与按钮无重叠。
