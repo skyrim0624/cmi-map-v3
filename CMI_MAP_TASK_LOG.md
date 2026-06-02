@@ -1631,6 +1631,17 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - 构建后的 `MarkPlace` / `PlaygroundMarkPlace` chunk 确认包含“功德 +1 / 大拇哥收到了”和新动画类；本地 `/playground/mark` 因路由登录保护重定向到 `/login`，未做真实打卡提交验证。
 
+### 2026-06-02 14:44:56 +07 打卡完成鼓励徽章部署
+
+- Source commit：`c62b285`（`Improve check-in completion badge`）。
+- Cloudflare Pages：
+  - v3 预览项目：`https://7d63f753.cmi-map-v3.pages.dev`。
+  - 正式站 Pages 项目：`https://77e31a54.cmi-map.pages.dev`。
+- 线上复查：
+  - `https://cmimap.com/mark?verify=c62b285`、`https://77e31a54.cmi-map.pages.dev/mark?verify=c62b285` 和 `https://7d63f753.cmi-map-v3.pages.dev/mark?verify=c62b285` 均返回新入口 `assets/index-DnQu_xXa.js` 和样式 `assets/index-B3T6Ios2.css`。
+  - 正式站 `MarkPlace-BkKmmGNg.js` 确认包含“功德 +1”、“大拇哥收到了”和 `checkin-badge-pop`。
+  - 正式站 `MarkPlace-BkKmmGNg.js` 对 `RECORDED` 和 `#da2222` 均无匹配，旧红色罚单感大章已从线上包移除。
+
 ### 2026-06-02 14:42:37 +07 清迈客栈活动导航坐标修复
 
 - 背景：用户反馈从活动详情页点击“导航”后，Google Maps 目的地跑到古城 TCDC / Chaivapoom Soi 2 附近；这些活动实际都在清迈客栈。
