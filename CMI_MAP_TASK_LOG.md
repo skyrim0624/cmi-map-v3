@@ -1405,3 +1405,14 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地浏览器验证 `http://127.0.0.1:5173/events/new?verify=description-merge-local-2`：页面只显示“活动说明”，不再出现“一句话简介 / 详细说明”；填写说明后输入值保持正常，console 无 warn/error。
+
+### 2026-06-02 09:47:12 +07 活动发布说明字段合并部署
+
+- Source commit：`60ffc26706cad0f10a6f4664e53a06b617ab1433`（`Merge event description fields`）。
+- 部署结果：
+  - v3 预览项目：`https://1477be3a.cmi-map-v3.pages.dev`。
+  - 正式站 Pages 项目：`https://cb7abb67.cmi-map.pages.dev`。
+- 线上复查：
+  - 干净工作树 `/tmp/cmi-map-v3-deploy-60ffc26` 安装依赖后重新运行测试、lint、类型检查和生产构建，均通过。
+  - 正式站 `https://cmimap.com/events/new?verify=description-merge-60ffc26` 在 390px 手机视口下只显示“活动说明”，不再显示“一句话简介 / 详细说明”，console 无 warn/error。
+  - 正式域名 HTML 仍返回旧入口 `/assets/index-BjZ9ohCX.js`，但该入口引用的 `CmiEventCreate-tTCwpwbH.js` 已包含合并后的“活动说明”表单；新部署预览地址返回入口 `/assets/index-D8N0kw0e.js`。
