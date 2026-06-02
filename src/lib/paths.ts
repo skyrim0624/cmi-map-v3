@@ -67,6 +67,8 @@ export const getCmiEventCreatePath = (input?: {
 export const getCmiEventManagePath = (eventId: string) =>
   `/events/${encodeURIComponent(eventId)}/manage`;
 
+export const getCmiEventsPath = () => '/?screen=events';
+
 export const getCmiFeedPath = (input?: {
   compose?: boolean;
   eventId?: string | null;
@@ -110,6 +112,8 @@ const getScenePathParams = (sceneId: string, input?: ScenePathInput) => {
 };
 
 export const getSceneListPath = (sceneId: string, input?: ScenePathInput) => {
+  if (sceneId === 'tomorrow-events') return getCmiEventsPath();
+
   const searchParams = getScenePathParams(sceneId, input);
   return `/list?${searchParams.toString()}`;
 };
@@ -122,4 +126,8 @@ export const getSceneMapPath = (sceneId: string, input?: ScenePathInput) => {
 };
 
 export const getSceneEntryPath = (scene: CmiScene) =>
-  scene.defaultView === 'map' ? getSceneMapPath(scene.id) : getSceneListPath(scene.id);
+  scene.id === 'tomorrow-events'
+    ? getCmiEventsPath()
+    : scene.defaultView === 'map'
+      ? getSceneMapPath(scene.id)
+      : getSceneListPath(scene.id);

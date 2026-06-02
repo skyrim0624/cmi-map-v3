@@ -30,7 +30,7 @@ import {
 } from '@/features/cmi-events/event-place-binding';
 import { searchExternalPlaceCandidates } from '@/features/places/external-place-search';
 import { useDebounce } from '@/hooks/use-debounce';
-import { getCmiEventManagePath, getCmiEventPath, getSceneListPath } from '@/lib/paths';
+import { getCmiEventManagePath, getCmiEventPath, getCmiEventsPath } from '@/lib/paths';
 import { isPublicMapRecommendation } from '@/types/types';
 
 const EVENT_TYPE_OPTIONS = CMI_EVENT_TYPE_OPTIONS.filter(
@@ -513,7 +513,7 @@ export default function CmiEventCreate() {
           <Button
             variant="ghost"
             className="min-h-11 rounded-full border border-[#2e2a23]/12 bg-white px-4 font-black"
-            onClick={() => navigate(getSceneListPath('tomorrow-events'))}
+            onClick={() => navigate(getCmiEventsPath())}
           >
             <ArrowLeft className="h-4 w-4" />
             活动

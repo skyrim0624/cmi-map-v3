@@ -47,7 +47,7 @@ import { CMI_EVENT_REGISTRATION_SUCCESS_DESCRIPTION } from '@/features/cmi-event
 import { getStableProfileIdentity } from '@/features/profiles/profile-identity';
 import { type CmiEventShareCardResult, createCmiEventShareCard } from '@/lib/cmi-event-share-card';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
-import { getAddTracePath, getCmiEventPath, getPersonMapPath, getPublicCmiEventUrl } from '@/lib/paths';
+import { getAddTracePath, getCmiEventPath, getCmiEventsPath, getPersonMapPath, getPublicCmiEventUrl } from '@/lib/paths';
 import { CMI_INN_LOGO_ICON_URL, CMI_INN_PLACE_NAME, type Recommendation } from '@/types/types';
 
 type FileShareData = {
@@ -1121,7 +1121,7 @@ export default function CmiHome() {
         <YardNoticeWall
           innEvents={innEvents}
           referenceDate={referenceDate}
-          onOpenAllEvents={() => navigate('/list?scene=tomorrow-events')}
+          onOpenAllEvents={() => navigate(getCmiEventsPath())}
           onOpenEvent={(eventId) => navigate(getCmiEventPath(eventId))}
           registeredEventIds={registeredEventIds}
           registeringEventIds={registeringEventIds}

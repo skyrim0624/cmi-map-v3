@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getCmiBlackboardPath, getCmiFeedPath, getMarkPlacePath, getPublicCmiEventUrl } from './paths.ts';
+import {
+  getCmiBlackboardPath,
+  getCmiEventsPath,
+  getCmiFeedPath,
+  getMarkPlacePath,
+  getPublicCmiEventUrl,
+  getSceneListPath,
+} from './paths.ts';
 
 test('活动分享链接指向生产站活动详情页', () => {
   assert.equal(
@@ -28,4 +35,9 @@ test('活动可以生成拍照返图入口', () => {
     getMarkPlacePath({ eventId: 'cmi-mindfulness-hour-2026-05-28' }),
     '/mark?event=cmi-mindfulness-hour-2026-05-28'
   );
+});
+
+test('旧活动列表入口改到 CMI Map 3.0 活动页', () => {
+  assert.equal(getCmiEventsPath(), '/?screen=events');
+  assert.equal(getSceneListPath('tomorrow-events'), '/?screen=events');
 });

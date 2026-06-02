@@ -28,6 +28,20 @@
 
 ## 执行记录
 
+### 2026-06-02 13:27 +07 删除旧活动列表返回界面
+
+- 背景：用户反馈从活动发起页点击返回会进入旧 `/list?scene=tomorrow-events` 黄色活动列表界面；该界面已不需要，避免继续和 CMI Map 3.0 活动 Tab 形成双入口。
+- 本轮实现：
+  - 活动发起页返回按钮改为进入 CMI Map 3.0 活动 Tab：`/?screen=events`。
+  - `getSceneListPath('tomorrow-events')` 和 `getSceneEntryPath(tomorrow-events)` 统一改到 CMI Map 3.0 活动 Tab，旧入口不再生成 `/list?scene=tomorrow-events`。
+  - `ListView` 对 `tomorrow-events` 做重定向，并删除旧活动列表专用的活动分类筛选、黄色外壳、快速报名、取消报名、活动分享卡生成和对应后端调用。
+  - 仍保留活动详情、活动发布、活动管理、V3 活动 Tab 的报名和分享能力。
+- 验证结果：
+  - `pnpm exec biome lint src/pages/ListView.tsx src/pages/CmiEventCreate.tsx src/pages/CmiHome.tsx src/lib/paths.ts src/lib/paths.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - `pnpm exec vite build --config vite.config.prod.ts` 通过。
+  - `node --test --experimental-strip-types src/lib/paths.test.ts` 通过。
+
 ### 2026-06-02 10:53 +07 报名成功邮件路线指引改为单张拼版图
 
 - 背景：用户反馈报名成功邮件里的清迈客栈路线指引照片不对，且逐张长图排列太长、不便保存和转发。
