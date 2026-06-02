@@ -10,3 +10,14 @@ test('地图新动态和活动 marker 不展示已结束活动', () => {
   assert.match(source, /return upcomingCommunityEvents\.slice\(0, 12\)/);
   assert.match(source, /listEvents=\{normalizedMapSearchQuery \? visibleEvents : upcomingCommunityEvents\}/);
 });
+
+test('地图动态 marker 只显示最近一周，历史动态仍可搜索打开', () => {
+  assert.match(source, /const MAP_MARKER_VISIBLE_DAYS = 7/);
+  assert.match(source, /function isRecentMapMarkerRecommendation/);
+  assert.match(source, /referenceDate\.getTime\(\) - createdAt <= MAP_MARKER_VISIBLE_WINDOW_MS/);
+  assert.match(source, /const mapMarkerRecommendations = useMemo/);
+  assert.match(source, /getUserShareMarkers\(mapMarkerRecommendations, profilesByAuthorKey\)/);
+  assert.match(source, /listRecommendations=\{filteredMapRecommendations\}/);
+  assert.match(source, /onRecommendationSelect=\{handleMapRecommendationSelect\}/);
+  assert.match(source, /if \(matchedMarker\) \{[\s\S]*onMarkerSelect\(matchedMarker\);[\s\S]*return;[\s\S]*\}[\s\S]*onRecommendationSelect\(recommendation\);/);
+});

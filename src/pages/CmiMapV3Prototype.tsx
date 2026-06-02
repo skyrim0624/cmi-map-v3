@@ -198,6 +198,8 @@ const SHEET_MINIMIZE_THRESHOLD = 96;
 const SHEET_DRAG_LIMIT = 160;
 const SHEET_TAP_SLOP = 8;
 const SHEET_FLING_VELOCITY = 0.42;
+const MAP_MARKER_VISIBLE_DAYS = 7;
+const MAP_MARKER_VISIBLE_WINDOW_MS = MAP_MARKER_VISIBLE_DAYS * 24 * 60 * 60 * 1000;
 const USER_AVATAR_FALLBACK_COLORS = ['#f6c85f', '#f28c6b', '#70b7a7', '#6f9fd8', '#b58ad9', '#ef9eb3'];
 
 const foodCategories = new Set<Category>(['吃饭', '咖啡', '市集']);
@@ -437,6 +439,14 @@ function isUserSharedRecommendation(recommendation: Recommendation) {
   return Boolean(recommendation.user_id) && !isCommunityCuratedRecommendation(recommendation);
 }
 
+// NOTE: 地图 marker 是近期现场感，不是永久地点档案；历史动态仍保留在搜索、信息流和个人页。
+function isRecentMapMarkerRecommendation(recommendation: Recommendation, referenceDate = new Date()) {
+  const createdAt = Date.parse(recommendation.created_at);
+  if (!Number.isFinite(createdAt)) return false;
+
+  return referenceDate.getTime() - createdAt <= MAP_MARKER_VISIBLE_WINDOW_MS;
+}
+
 function clampRatio(value: number) {
   return Math.min(100, Math.max(0, value));
 }
@@ -470,25 +480,27 @@ function getAuthorAvatarUrl(recommendation: Recommendation, profiles: ProfileLoo
   return profile?.avatar_url?.trim() || getFallbackAvatarUrl(authorName);
 }
 
-function getUserShareMarkers(recommendations: Recommendation[], profiles: ProfileLookup): MapMarker[] {
-  return recommendations.map(recommendation => {
-    const authorProfile = getRecommendationAuthorProfile(recommendation, profiles);
-    const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
+function getUserShareMarker(recommendation: Recommendation, profiles: ProfileLookup): MapMarker {
+  const authorProfile = getRecommendationAuthorProfile(recommendation, profiles);
+  const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
 
-    return {
-      id: `share:${recommendation.id}`,
-      place_name: recommendation.place_name,
-      category: recommendation.category,
-      latitude: recommendation.latitude,
-      longitude: recommendation.longitude,
-      recommendations: [recommendation],
-      visualOverride: {
-        label: authorName,
-        iconUrl: getAuthorAvatarUrl(recommendation, profiles),
-        isAvatar: true,
-      },
-    };
-  });
+  return {
+    id: `share:${recommendation.id}`,
+    place_name: recommendation.place_name,
+    category: recommendation.category,
+    latitude: recommendation.latitude,
+    longitude: recommendation.longitude,
+    recommendations: [recommendation],
+    visualOverride: {
+      label: authorName,
+      iconUrl: getAuthorAvatarUrl(recommendation, profiles),
+      isAvatar: true,
+    },
+  };
+}
+
+function getUserShareMarkers(recommendations: Recommendation[], profiles: ProfileLookup): MapMarker[] {
+  return recommendations.map(recommendation => getUserShareMarker(recommendation, profiles));
 }
 
 function getEventMarkers(events: CmiEvent[]): EventMarker[] {
@@ -988,6 +1000,16 @@ export default function CmiMapV3Prototype() {
     [activeFilter, normalizedMapSearchQuery, userSharedRecommendations]
   );
 
+  const mapMarkerRecommendations = useMemo(
+    () => {
+      const referenceDate = new Date();
+      return filteredMapRecommendations.filter(recommendation =>
+        isRecentMapMarkerRecommendation(recommendation, referenceDate)
+      );
+    },
+    [filteredMapRecommendations]
+  );
+
   const communityEvents = useMemo(
     () => {
       const referenceDate = new Date();
@@ -1021,10 +1043,10 @@ export default function CmiMapV3Prototype() {
 
   const mapMarkers = useMemo(
     () => [
-      ...getUserShareMarkers(filteredMapRecommendations, profilesByAuthorKey),
+      ...getUserShareMarkers(mapMarkerRecommendations, profilesByAuthorKey),
       ...getEventMarkers(visibleEvents),
     ],
-    [filteredMapRecommendations, profilesByAuthorKey, visibleEvents]
+    [mapMarkerRecommendations, profilesByAuthorKey, visibleEvents]
   );
 
   const feedRecommendations = useMemo(
@@ -1135,6 +1157,11 @@ export default function CmiMapV3Prototype() {
     setSelectedEventId(null);
   }, []);
 
+  const handleMapRecommendationSelect = useCallback((recommendation: Recommendation) => {
+    setSelectedMarker(getUserShareMarker(recommendation, profilesByAuthorKey));
+    setSelectedEventId(null);
+  }, [profilesByAuthorKey]);
+
   const handleBottomAdd = useCallback((screen: PrimaryScreenId) => {
     if (screen === 'events') {
       navigate(getMarkPlacePath());
@@ -1230,6 +1257,7 @@ export default function CmiMapV3Prototype() {
             onLocateUser={() => setLocationRequestKey(current => current + 1)}
             onOpenProfile={() => navigate(getProfilePath())}
             onSearchChange={handleMapSearchChange}
+            onRecommendationSelect={handleMapRecommendationSelect}
             onPlaceStamp={handleRecommendationCardClick}
             onStartStamp={handleStartStamp}
             onToggleWishlist={handleToggleWishlist}
@@ -1334,6 +1362,7 @@ function MapMode({
   onOpenPath,
   onOpenProfile,
   onSearchChange,
+  onRecommendationSelect,
   onPlaceStamp,
   onStartStamp,
   onToggleWishlist,
@@ -1364,6 +1393,7 @@ function MapMode({
   onOpenPath: (path: string) => void;
   onOpenProfile: () => void;
   onSearchChange: (query: string) => void;
+  onRecommendationSelect: (recommendation: Recommendation) => void;
   onPlaceStamp: (event: ReactMouseEvent<HTMLElement>, recommendationId: string) => void;
   onStartStamp: (recommendationId: string) => void;
   onToggleWishlist: (recommendation: Recommendation) => void;
@@ -1376,7 +1406,12 @@ function MapMode({
     const matchedMarker = markers.find(marker =>
       marker.recommendations.some(item => item.id === recommendation.id)
     );
-    if (matchedMarker) onMarkerSelect(matchedMarker);
+    if (matchedMarker) {
+      onMarkerSelect(matchedMarker);
+      return;
+    }
+
+    onRecommendationSelect(recommendation);
   };
 
   return (
