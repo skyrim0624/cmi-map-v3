@@ -372,6 +372,7 @@ export default function MarkPlace() {
   ];
 
   const uploadInputRef = useRef<HTMLInputElement>(null);
+  const routeRootRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<InstanceType<SpeechRecognitionConstructor> | null>(null);
   const speechStartingRef = useRef(false);
   const speechHadResultRef = useRef(false);
@@ -388,6 +389,25 @@ export default function MarkPlace() {
   const cameraButtonDisabled = cameraStatus !== 'ready';
   const cameraDigitalZoom = cameraZoomRange.isHardwareSupported ? 1 : cameraZoom;
   const cameraZoomLabel = `${cameraZoom.toFixed(cameraZoom % 1 === 0 ? 0 : 1)}x`;
+
+  useEffect(() => {
+    if (stage === 'camera') return;
+
+    const scrollContainer = routeRootRef.current?.closest('main');
+    if (!(scrollContainer instanceof HTMLElement)) return;
+
+    const previousOverflowY = scrollContainer.style.overflowY;
+    const previousOverscrollBehavior = scrollContainer.style.overscrollBehavior;
+
+    // NOTE: /mark 外层 main 默认可滚动。发布面板自己滚动时，iOS Safari 容易把滚动传给外层，导致底部发布按钮被顶走。
+    scrollContainer.style.overflowY = 'hidden';
+    scrollContainer.style.overscrollBehavior = 'none';
+
+    return () => {
+      scrollContainer.style.overflowY = previousOverflowY;
+      scrollContainer.style.overscrollBehavior = previousOverscrollBehavior;
+    };
+  }, [stage]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1116,7 +1136,7 @@ export default function MarkPlace() {
   }
 
   return (
-    <div className="relative min-h-screen bg-stone-100 flex flex-col items-center justify-start overflow-hidden font-sans">
+    <div ref={routeRootRef} className="relative flex h-[100dvh] min-h-0 w-full flex-col items-center justify-start overflow-hidden bg-stone-100 font-sans overscroll-none">
       
       {/* 顶部简易导航回退 */}
       <div className="w-full absolute top-0 z-50 p-6 flex justify-between items-center mix-blend-difference text-white">
@@ -1134,7 +1154,7 @@ export default function MarkPlace() {
 
       {/* STAGE 1: 取景框 */}
       {stage === 'camera' && (
-        <div className="w-full h-screen flex flex-col relative text-stone-700 bg-[#191714]">
+        <div className="relative flex h-[100dvh] w-full flex-col bg-[#191714] text-stone-700">
           <div className="flex min-h-0 flex-1 items-center justify-center px-3 pb-3 pt-[calc(env(safe-area-inset-top)+4.5rem)]">
             <div
               className="relative"
@@ -1271,7 +1291,7 @@ export default function MarkPlace() {
 
       {/* STAGE 2 - 5: Content Flow */}
       {stage !== 'camera' && (
-        <div className="w-full h-[100dvh] flex flex-col relative">
+        <div className="relative flex h-[100dvh] min-h-0 w-full flex-col overflow-hidden">
           
           {/* 上半部分：照片区域 */}
           {photoURL && !isMapFallbackStage && <div className="relative flex-shrink-0 transition-all duration-500" style={{ height: photoAreaHeight }}>
@@ -1331,7 +1351,9 @@ export default function MarkPlace() {
           <div className={
             isMapFallbackStage
               ? 'relative flex-1 overflow-hidden bg-stone-50'
-              : `flex-1 flex flex-col items-center px-6 pb-safe bg-stone-50 relative overflow-y-auto ${isPhotoDoneStage ? 'justify-start pt-4' : 'justify-center'}`
+              : stage === 'category'
+                ? 'min-h-0 flex-1 flex flex-col items-center bg-stone-50 px-6 pb-safe relative overflow-hidden overscroll-none'
+                : `min-h-0 flex-1 flex flex-col items-center px-6 pb-safe bg-stone-50 relative overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] ${isPhotoDoneStage ? 'justify-start pt-4' : 'justify-center'}`
           }>
             {!photoURL && stage === 'done' && (
               <div className="flex flex-col items-center justify-center gap-4 text-center">
@@ -1542,174 +1564,178 @@ export default function MarkPlace() {
             )}
 
             {stage === 'category' && (
-              <div className="w-full flex flex-col items-center gap-3 py-4 pb-[calc(env(safe-area-inset-bottom)+7.5rem)] animate-in slide-in-from-bottom-10 fade-in">
-                <div className="w-full max-w-sm rounded-3xl border border-stone-200 bg-white/90 p-3 shadow-sm">
-                  <div className="mb-2 flex items-start justify-between gap-3 text-left">
-                    <div>
-                      <p className="text-sm font-black text-stone-800">选择发布标签</p>
-                      <p className="mt-0.5 text-xs font-semibold leading-relaxed text-stone-500">
-                        清迈客栈、彩蛋和普通地点动态都在这里选。
-                      </p>
-                    </div>
-                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={2.8} />
-                  </div>
-                  <div className="flex flex-wrap gap-2.5">
-                    {publishCategoryOptions.map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => handleCategoryOptionSelect(option)}
-                        disabled={uploading}
-                        title={option.description}
-                        className={`flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-black shadow-sm transition-all disabled:opacity-50 ${
-                          selectedInputCategoryId === option.id
-                            ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20'
-                            : 'border-stone-200 bg-white text-stone-700 hover:border-primary/40 active:scale-95'
-                        }`}
-                      >
-                        {option.storedCategory === '彩蛋' ? (
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#ffe06f] p-0.5 shadow-[inset_0_0_0_2px_rgba(255,255,255,0.7),0_3px_8px_rgba(136,101,17,0.14)]">
-                            <img src={selectedEasterIcon.url} alt="" className="h-6 w-6 object-contain" />
-                          </span>
-                        ) : option.storedCategory === CMI_INN_CATEGORY ? (
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white p-0.5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08),0_3px_8px_rgba(0,0,0,0.12)]">
-                            <img src={option.iconUrl ?? getCategoryIconUrl(option.storedCategory)} alt="" className="h-full w-full object-contain" />
-                          </span>
-                        ) : (
-                          <img src={option.iconUrl ?? getCategoryIconUrl(option.storedCategory)} alt="" className="h-5 w-5 object-contain" />
-                        )}
-                        <span>{option.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {(isLoadingEventOptions || eventOptions.length > 0 || selectedEvent) && (
-                  <div className="mt-2 w-full max-w-sm rounded-3xl border border-stone-200 bg-white/85 p-3 shadow-sm">
-                    <div className="mb-2 flex items-start justify-between gap-3 text-left">
+              <div className="flex min-h-0 w-full flex-1 flex-col items-center animate-in slide-in-from-bottom-10 fade-in">
+                <div className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain pb-4 pt-4 [-webkit-overflow-scrolling:touch]">
+                  <div className="flex w-full flex-col items-center gap-3">
+                    <div className="w-full max-w-sm rounded-3xl border border-stone-200 bg-white/90 p-3 shadow-sm">
+                      <div className="mb-2 flex items-start justify-between gap-3 text-left">
                       <div>
-                        <p className="text-sm font-black text-stone-800">关联活动（可不选）</p>
+                        <p className="text-sm font-black text-stone-800">选择发布标签</p>
                         <p className="mt-0.5 text-xs font-semibold leading-relaxed text-stone-500">
-                          返图、现场照可以挂到一场活动下面。
+                          清迈客栈、彩蛋和普通地点动态都在这里选。
                         </p>
                       </div>
-                      <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={2.8} />
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={2.8} />
                     </div>
-                    {isLoadingEventOptions && eventOptions.length === 0 ? (
-                      <div className="flex items-center gap-2 rounded-2xl bg-stone-50 px-3 py-2 text-xs font-bold text-stone-500">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                        正在加载近期活动
+                    <div className="flex flex-wrap gap-2.5">
+                      {publishCategoryOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => handleCategoryOptionSelect(option)}
+                          disabled={uploading}
+                          title={option.description}
+                          className={`flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-black shadow-sm transition-all disabled:opacity-50 ${
+                            selectedInputCategoryId === option.id
+                              ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20'
+                              : 'border-stone-200 bg-white text-stone-700 hover:border-primary/40 active:scale-95'
+                          }`}
+                        >
+                          {option.storedCategory === '彩蛋' ? (
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#ffe06f] p-0.5 shadow-[inset_0_0_0_2px_rgba(255,255,255,0.7),0_3px_8px_rgba(136,101,17,0.14)]">
+                              <img src={selectedEasterIcon.url} alt="" className="h-6 w-6 object-contain" />
+                            </span>
+                          ) : option.storedCategory === CMI_INN_CATEGORY ? (
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white p-0.5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08),0_3px_8px_rgba(0,0,0,0.12)]">
+                              <img src={option.iconUrl ?? getCategoryIconUrl(option.storedCategory)} alt="" className="h-full w-full object-contain" />
+                            </span>
+                          ) : (
+                            <img src={option.iconUrl ?? getCategoryIconUrl(option.storedCategory)} alt="" className="h-5 w-5 object-contain" />
+                          )}
+                          <span>{option.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {(isLoadingEventOptions || eventOptions.length > 0 || selectedEvent) && (
+                    <div className="mt-2 w-full max-w-sm rounded-3xl border border-stone-200 bg-white/85 p-3 shadow-sm">
+                      <div className="mb-2 flex items-start justify-between gap-3 text-left">
+                        <div>
+                          <p className="text-sm font-black text-stone-800">关联活动（可不选）</p>
+                          <p className="mt-0.5 text-xs font-semibold leading-relaxed text-stone-500">
+                            返图、现场照可以挂到一场活动下面。
+                          </p>
+                        </div>
+                        <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={2.8} />
                       </div>
-                    ) : (
-                      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-                        {eventOptions.map(event => {
-                          const isSelectedEvent = selectedEventId === event.id;
+                      {isLoadingEventOptions && eventOptions.length === 0 ? (
+                        <div className="flex items-center gap-2 rounded-2xl bg-stone-50 px-3 py-2 text-xs font-bold text-stone-500">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                          正在加载近期活动
+                        </div>
+                      ) : (
+                        <div className="-mx-1 flex gap-2 overflow-x-auto overscroll-x-contain px-1 pb-1 [-webkit-overflow-scrolling:touch]">
+                          {eventOptions.map(event => {
+                            const isSelectedEvent = selectedEventId === event.id;
 
-                          return (
-                            <button
-                              key={event.id}
-                              type="button"
-                              onClick={() => setSelectedEventId(isSelectedEvent ? '' : event.id)}
-                              disabled={uploading}
-                              aria-pressed={isSelectedEvent}
-                              className={`grid min-w-[156px] max-w-[170px] grid-cols-[44px_minmax(0,1fr)] items-center gap-2 rounded-2xl border p-2 text-left transition-all active:scale-[0.98] disabled:opacity-50 ${
-                                isSelectedEvent
-                                  ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
-                                  : 'border-stone-200 bg-stone-50 hover:border-primary/40'
-                              }`}
-                            >
-                              <img
-                                src={getCmiEventCardImageUrl(event)}
-                                alt=""
-                                className="h-11 w-11 rounded-xl object-cover shadow-sm"
-                              />
-                              <span className="min-w-0">
-                                <span className="block truncate text-[10px] font-black text-primary/80">
-                                  {formatCmiEventTime(event)}
+                            return (
+                              <button
+                                key={event.id}
+                                type="button"
+                                onClick={() => setSelectedEventId(isSelectedEvent ? '' : event.id)}
+                                disabled={uploading}
+                                aria-pressed={isSelectedEvent}
+                                className={`grid min-w-[156px] max-w-[170px] grid-cols-[44px_minmax(0,1fr)] items-center gap-2 rounded-2xl border p-2 text-left transition-all active:scale-[0.98] disabled:opacity-50 ${
+                                  isSelectedEvent
+                                    ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
+                                    : 'border-stone-200 bg-stone-50 hover:border-primary/40'
+                                }`}
+                              >
+                                <img
+                                  src={getCmiEventCardImageUrl(event)}
+                                  alt=""
+                                  className="h-11 w-11 rounded-xl object-cover shadow-sm"
+                                />
+                                <span className="min-w-0">
+                                  <span className="block truncate text-[10px] font-black text-primary/80">
+                                    {formatCmiEventTime(event)}
+                                  </span>
+                                  <strong className="mt-0.5 block line-clamp-2 text-xs font-black leading-tight text-stone-800">
+                                    {event.title}
+                                  </strong>
                                 </span>
-                                <strong className="mt-0.5 block line-clamp-2 text-xs font-black leading-tight text-stone-800">
-                                  {event.title}
-                                </strong>
-                              </span>
-                            </button>
-                          );
-                        })}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <div className="mt-2 flex items-center justify-between gap-2 text-xs font-bold text-stone-500">
+                        <span className="min-w-0 truncate">
+                          {selectedEvent ? `已关联：${selectedEvent.title}` : '不关联活动也可以直接发布。'}
+                        </span>
+                        {selectedEvent && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedEventId('')}
+                            disabled={uploading}
+                            className="shrink-0 rounded-full bg-stone-100 px-3 py-1 text-stone-600 active:scale-95 disabled:opacity-50"
+                          >
+                            不关联
+                          </button>
+                        )}
                       </div>
-                    )}
-                    <div className="mt-2 flex items-center justify-between gap-2 text-xs font-bold text-stone-500">
-                      <span className="min-w-0 truncate">
-                        {selectedEvent ? `已关联：${selectedEvent.title}` : '不关联活动也可以直接发布。'}
-                      </span>
-                      {selectedEvent && (
+                    </div>
+                  )}
+                  {selectedCat === '彩蛋' && (
+                    <div className="mt-2 w-full max-w-sm rounded-3xl border border-primary/25 bg-primary/5 p-3 shadow-inner animate-in slide-in-from-top-2 fade-in">
+                      <div className="mb-2 flex items-start justify-between gap-3 text-left">
+                        <div>
+                          <p className="text-sm font-black text-foreground">选择一个彩蛋图标</p>
+                          <p className="mt-0.5 text-xs font-semibold text-muted-foreground">50 个都可以用，选一个最像这条记忆的。</p>
+                        </div>
                         <button
                           type="button"
-                          onClick={() => setSelectedEventId('')}
+                          onClick={() => {
+                            const nextIcon = CMI_EASTER_ICON_OPTIONS[Math.floor(Math.random() * CMI_EASTER_ICON_OPTIONS.length)];
+                            setSelectedEasterIconId(nextIcon.id);
+                          }}
                           disabled={uploading}
-                          className="shrink-0 rounded-full bg-stone-100 px-3 py-1 text-stone-600 active:scale-95 disabled:opacity-50"
+                          className="flex h-9 shrink-0 items-center gap-1 rounded-2xl border border-border bg-background px-3 text-xs font-black text-primary shadow-sm active:scale-95 disabled:opacity-50"
                         >
-                          不关联
+                          <Shuffle className="h-3.5 w-3.5" strokeWidth={2.8} />
+                          随机
                         </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-                {selectedCat === '彩蛋' && (
-                  <div className="mt-2 w-full max-w-sm rounded-3xl border border-primary/25 bg-primary/5 p-3 shadow-inner animate-in slide-in-from-top-2 fade-in">
-                    <div className="mb-2 flex items-start justify-between gap-3 text-left">
-                      <div>
-                        <p className="text-sm font-black text-foreground">选择一个彩蛋图标</p>
-                        <p className="mt-0.5 text-xs font-semibold text-muted-foreground">50 个都可以用，选一个最像这条记忆的。</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const nextIcon = CMI_EASTER_ICON_OPTIONS[Math.floor(Math.random() * CMI_EASTER_ICON_OPTIONS.length)];
-                          setSelectedEasterIconId(nextIcon.id);
-                        }}
+                      <input
+                        value={easterIconQuery}
+                        onChange={(event) => setEasterIconQuery(event.target.value)}
                         disabled={uploading}
-                        className="flex h-9 shrink-0 items-center gap-1 rounded-2xl border border-border bg-background px-3 text-xs font-black text-primary shadow-sm active:scale-95 disabled:opacity-50"
-                      >
-                        <Shuffle className="h-3.5 w-3.5" strokeWidth={2.8} />
-                        随机
-                      </button>
-                    </div>
-                    <input
-                      value={easterIconQuery}
-                      onChange={(event) => setEasterIconQuery(event.target.value)}
-                      disabled={uploading}
-                      placeholder="搜猫、花、雨伞、纸飞机"
-                      className="mb-2 h-10 w-full rounded-2xl border border-border bg-background px-3 text-sm font-semibold outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
-                    />
-                    <div className="max-h-52 overflow-y-auto pr-1">
-                      <div className="grid grid-cols-5 gap-2">
-                        {filteredEasterIcons.map((icon) => (
-                          <button
-                            key={icon.id}
-                            type="button"
-                            onClick={() => setSelectedEasterIconId(icon.id)}
-                            disabled={uploading}
-                            title={icon.label}
-                            aria-label={`选择彩蛋图标：${icon.label}`}
-                            className={`relative flex h-12 items-center justify-center rounded-2xl border transition-all active:scale-95 disabled:opacity-50 ${
-                              selectedEasterIconId === icon.id
-                                ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
-                                : 'border-transparent bg-background hover:border-border'
-                            }`}
-                          >
-                            <img src={icon.url} alt="" className="h-8 w-8 object-contain drop-shadow-sm" />
-                            {selectedEasterIconId === icon.id && (
-                              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary" />
-                            )}
-                          </button>
-                        ))}
+                        placeholder="搜猫、花、雨伞、纸飞机"
+                        className="mb-2 h-10 w-full rounded-2xl border border-border bg-background px-3 text-sm font-semibold outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
+                      />
+                      <div className="max-h-52 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
+                        <div className="grid grid-cols-5 gap-2">
+                          {filteredEasterIcons.map((icon) => (
+                            <button
+                              key={icon.id}
+                              type="button"
+                              onClick={() => setSelectedEasterIconId(icon.id)}
+                              disabled={uploading}
+                              title={icon.label}
+                              aria-label={`选择彩蛋图标：${icon.label}`}
+                              className={`relative flex h-12 items-center justify-center rounded-2xl border transition-all active:scale-95 disabled:opacity-50 ${
+                                selectedEasterIconId === icon.id
+                                  ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
+                                  : 'border-transparent bg-background hover:border-border'
+                              }`}
+                            >
+                              <img src={icon.url} alt="" className="h-8 w-8 object-contain drop-shadow-sm" />
+                              {selectedEasterIconId === icon.id && (
+                                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="mt-3 flex items-center gap-2 rounded-2xl bg-background px-3 py-2 text-xs font-bold text-muted-foreground">
+                        <img src={selectedEasterIcon.url} alt="" className="h-7 w-7 object-contain" />
+                        <span>已选：{selectedEasterIcon.label}。地图上会显示这个小图标。</span>
                       </div>
                     </div>
-                    <div className="mt-3 flex items-center gap-2 rounded-2xl bg-background px-3 py-2 text-xs font-bold text-muted-foreground">
-                      <img src={selectedEasterIcon.url} alt="" className="h-7 w-7 object-contain" />
-                      <span>已选：{selectedEasterIcon.label}。地图上会显示这个小图标。</span>
-                    </div>
+                  )}
                   </div>
-                )}
-                <div className="fixed inset-x-0 bottom-0 z-[1100] bg-gradient-to-t from-stone-50 via-stone-50/95 to-transparent px-6 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-5">
+                </div>
+                <div className="-mx-6 w-[calc(100%+3rem)] shrink-0 bg-gradient-to-t from-stone-50 via-stone-50/95 to-transparent px-6 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3">
                   <div className="mx-auto flex max-w-sm items-center gap-3 rounded-[1.75rem] border border-stone-200 bg-white/95 p-2 shadow-[0_-10px_32px_rgba(0,0,0,0.12)] backdrop-blur">
                     <div className="min-w-0 flex-1 px-2">
                       <p className="truncate text-sm font-black text-stone-800">

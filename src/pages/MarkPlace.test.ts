@@ -39,9 +39,12 @@ test('网页相机拍照输出正方形并使用取景框双指缩放', () => {
   assert.doesNotMatch(source, /aria-label="调整焦距"/);
 });
 
-test('发布前分类页固定显示特殊标签和发布按钮', () => {
+test('发布前分类页独立滚动并保留特殊标签和发布按钮', () => {
   assert.match(source, /const priorityCategoryIds = new Set\(\['cmi-inn', 'easter'\]\)/);
   assert.match(source, /清迈客栈、彩蛋和普通地点动态都在这里选。/);
-  assert.match(source, /fixed inset-x-0 bottom-0 z-\[1100\]/);
+  assert.match(source, /routeRootRef\.current\?\.closest\('main'\)/);
+  assert.match(source, /scrollContainer\.style\.overflowY = 'hidden'/);
+  assert.match(source, /overflow-y-auto overscroll-contain pb-4 pt-4 \[-webkit-overflow-scrolling:touch\]/);
+  assert.match(source, /shrink-0 bg-gradient-to-t from-stone-50/);
   assert.match(source, /selectedCat \? publishButtonLabel : '选标签'/);
 });
