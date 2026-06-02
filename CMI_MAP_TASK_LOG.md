@@ -1467,3 +1467,15 @@
   - `pnpm exec biome lint src/lib/map-marker-visual.ts src/lib/map-marker-visual.test.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/types/types.ts` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地预览 `http://127.0.0.1:4176/?verify=event-poster-marker-3` 点击“活动”筛选后，聚合活动 marker DOM 确认 `object-fit: cover`、`border-radius: 999px`、`overflow: hidden` 和 42px 海报内径；截图显示活动海报已铺满圆形。
+
+### 2026-06-02 10:01:12 +07 V3 地图活动 marker 海报封面裁切部署
+
+- Source commit：`27bd809`（`Cover crop event map markers`）。
+- Cloudflare Pages：
+  - v3 预览项目：`https://d68557f8.cmi-map-v3.pages.dev`。
+  - 正式站 Pages 项目：`https://b65e9697.cmi-map.pages.dev`。
+- 线上复查：
+  - `https://cmimap.com/?verify=27bd809`、`https://b65e9697.cmi-map.pages.dev/?verify=27bd809` 和 `https://d68557f8.cmi-map-v3.pages.dev/?verify=27bd809` 均返回新入口 `assets/index-88K_26LK.js`。
+  - 正式域名入口引用 `LeafletMap-CMo40TmL.js`、`map-marker-visual-CpBleamu.js` 和 `CmiMapV3Prototype-DqjivNan.js`。
+  - `map-marker-visual-CpBleamu.js` 包含活动海报 `cover` 裁切和聚合海报 42px 内径逻辑。
+  - 应用内浏览器复查 `https://b65e9697.cmi-map.pages.dev/?verify=event-poster-27bd809`：点击“活动”筛选后，活动聚合 marker DOM 确认 `object-fit: cover`、`border-radius: 999px`、`overflow: hidden` 和 42px 海报内径；页面无当前部署相关 console warn/error。
