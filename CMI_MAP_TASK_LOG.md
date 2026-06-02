@@ -1416,3 +1416,24 @@
   - 干净工作树 `/tmp/cmi-map-v3-deploy-60ffc26` 安装依赖后重新运行测试、lint、类型检查和生产构建，均通过。
   - 正式站 `https://cmimap.com/events/new?verify=description-merge-60ffc26` 在 390px 手机视口下只显示“活动说明”，不再显示“一句话简介 / 详细说明”，console 无 warn/error。
   - 正式域名 HTML 仍返回旧入口 `/assets/index-BjZ9ohCX.js`，但该入口引用的 `CmiEventCreate-tTCwpwbH.js` 已包含合并后的“活动说明”表单；新部署预览地址返回入口 `/assets/index-D8N0kw0e.js`。
+
+### 2026-06-02 09:38:18 +07 清迈客栈区域预约与活动审核流
+
+- 背景：用户希望发起清迈客栈活动时必须选择具体使用区域，并且同一时间段已被占用的区域不可选；普通用户发起活动需要先提交审核，管理员发起则直接发布。
+- 本轮实现：
+  - 活动表新增 `venue_space` 字段，区域枚举为地毯区、圆桌区、办公区、4 楼天台区、2 楼沙发区、院子凉棚区。
+  - 发布活动页识别到清迈客栈后显示区域选择；区域可用性按开始 / 结束时间查询，已占用区域禁用，提交时再次校验。
+  - 普通用户创建活动写入 `draft + needs-review`，审核通过前不公开；管理员创建活动写入 `published + verified`。
+  - 新增 `notify-cmi-event-application` Supabase Edge Function，普通用户提交待审活动后给管理员邮箱发送审核提醒。
+  - 活动管理页改为按活动 ID 读取可管理活动，支持打开待审草稿；管理员可在管理页一键“审核通过并发布”。
+  - 活动详情页地点文案会显示具体客栈区域。
+- 数据库 / 权限：
+  - 新增 migration `20260602093000_cmi_inn_venue_space_review_flow.sql`，包含 `venue_space` 字段、区域约束、预约查询函数 `get_cmi_inn_space_reservations`、普通用户草稿待审插入策略和 owner/admin 更新策略。
+- 验证结果：
+  - `node --test --experimental-strip-types src/features/cmi-events/event-management.test.ts src/features/cmi-events/event-description-merge.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/CmiEventCreate.tsx src/pages/CmiEventManage.tsx src/pages/CmiEventDetail.tsx src/db/cmi-events.ts src/features/cmi-events/event-management.ts src/features/cmi-events/event-management.test.ts src/data/cmi-events.ts` 通过。
+  - `deno check supabase/functions/notify-cmi-event-application/index.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - `git diff --check` 通过。
+  - 本地浏览器验证 `http://localhost:5173/events/new` 被登录保护重定向到 `/login`，页面正常渲染且 console 无 warn/error；为避免复制生产站真实登录令牌到本地，本轮未在浏览器里做真实发起 / 提交 / 邮件触发。

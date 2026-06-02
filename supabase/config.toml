@@ -41,3 +41,6 @@ content_path = "./supabase/templates/auth-recovery.html"
 
 [functions.cmi-admin-agent]
 verify_jwt = false
+
+[functions.notify-cmi-event-application]
+verify_jwt = true

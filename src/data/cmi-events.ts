@@ -32,6 +32,7 @@ export type CmiEventVerificationStatus =
   | 'ai-candidate'
   | 'rejected';
 
+export type CmiEventVisibilityStatus = 'draft' | 'published' | 'archived';
 export type CmiEventTimeBucket = 'today-afternoon' | 'tonight' | 'tomorrow' | 'this-week' | 'later' | 'stable';
 export type CmiEventRegistrationStatus = 'open' | 'closed';
 export type CmiEventAttendeeVisibility = 'public' | 'count-only';
@@ -71,6 +72,7 @@ export interface CmiEvent {
   isCmiRelated: boolean;
   isVerified: boolean;
   verificationStatus: CmiEventVerificationStatus;
+  visibilityStatus?: CmiEventVisibilityStatus;
   lastCheckedAt: string;
   nextCheckBefore?: string;
   reliabilityNote: string;
@@ -87,6 +89,7 @@ export interface CmiEvent {
   attendeeVisibility?: CmiEventAttendeeVisibility;
   coverImageUrl?: string;
   detailBody?: string;
+  venueSpace?: string;
   createdBy?: string;
 }
 

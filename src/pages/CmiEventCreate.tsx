@@ -7,9 +7,16 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { CMI_EVENT_TYPE_OPTIONS, type CmiEventAttendeeVisibility, type CmiEventType } from '@/data/cmi-events';
 import { getAllRecommendations } from '@/db/api';
-import { createCmiEvent, uploadCmiEventPoster } from '@/db/cmi-events';
+import { createCmiEvent, getCmiInnVenueSpaceReservations, uploadCmiEventPoster } from '@/db/cmi-events';
 import { buildCmiEventSummaryFromDescription } from '@/features/cmi-events/event-description';
-import { parseCmiEventManagerEmails } from '@/features/cmi-events/event-management';
+import {
+  CMI_INN_VENUE_SPACES,
+  getUnavailableCmiInnVenueSpaceIds,
+  isCmiInnVenue,
+  parseCmiEventManagerEmails,
+  type CmiInnVenueSpaceId,
+  type CmiInnVenueSpaceReservation,
+} from '@/features/cmi-events/event-management';
 import { EventPosterField } from '@/features/cmi-events/event-poster-field';
 import {
   buildEventPlaceCandidates,
@@ -23,7 +30,7 @@ import {
 } from '@/features/cmi-events/event-place-binding';
 import { searchExternalPlaceCandidates } from '@/features/places/external-place-search';
 import { useDebounce } from '@/hooks/use-debounce';
-import { getCmiEventPath, getSceneListPath } from '@/lib/paths';
+import { getCmiEventManagePath, getCmiEventPath, getSceneListPath } from '@/lib/paths';
 import { isPublicMapRecommendation } from '@/types/types';
 
 const EVENT_TYPE_OPTIONS = CMI_EVENT_TYPE_OPTIONS.filter(
@@ -141,6 +148,9 @@ export default function CmiEventCreate() {
   const [capacity, setCapacity] = useState('');
   const [attendeeVisibility, setAttendeeVisibility] = useState<CmiEventAttendeeVisibility>('public');
   const [descriptionText, setDescriptionText] = useState('');
+  const [venueSpace, setVenueSpace] = useState<CmiInnVenueSpaceId | null>(null);
+  const [venueSpaceReservations, setVenueSpaceReservations] = useState<CmiInnVenueSpaceReservation[]>([]);
+  const [venueSpaceReservationsLoading, setVenueSpaceReservationsLoading] = useState(false);
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreviewUrl, setPosterPreviewUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -195,6 +205,21 @@ export default function CmiEventCreate() {
     !placeCandidatesLoading &&
     searchPlaceCandidates.length === 0;
   const visibleExternalPlaceCandidates = shouldSearchExternalPlaces ? externalPlaceCandidates : [];
+  const currentStartAt = useMemo(() => toBangkokIso(startDate, startTime), [startDate, startTime]);
+  const currentEndAt = useMemo(
+    () => endTime ? toBangkokIso(endDate || startDate, endTime) : null,
+    [endDate, endTime, startDate]
+  );
+  const isCmiInnLocation = isCmiInnVenue({ venueName, area });
+  const unavailableVenueSpaceIds = useMemo(
+    () =>
+      getUnavailableCmiInnVenueSpaceIds({
+        startAt: currentStartAt,
+        endAt: currentEndAt,
+        events: venueSpaceReservations,
+      }),
+    [currentEndAt, currentStartAt, venueSpaceReservations]
+  );
 
   useEffect(() => {
     if (!organizerNameAutoFilled && !organizerName && profile?.user_name) {
@@ -268,6 +293,46 @@ export default function CmiEventCreate() {
       controller.abort();
     };
   }, [debouncedVenueName, shouldSearchExternalPlaces]);
+
+  useEffect(() => {
+    if (!isCmiInnLocation || !currentStartAt) {
+      setVenueSpaceReservations([]);
+      setVenueSpaceReservationsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    setVenueSpaceReservationsLoading(true);
+
+    getCmiInnVenueSpaceReservations({
+      startAt: currentStartAt,
+      endAt: currentEndAt,
+    })
+      .then(reservations => {
+        if (isMounted) setVenueSpaceReservations(reservations);
+      })
+      .catch(() => {
+        if (isMounted) setVenueSpaceReservations([]);
+      })
+      .finally(() => {
+        if (isMounted) setVenueSpaceReservationsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentEndAt, currentStartAt, isCmiInnLocation]);
+
+  useEffect(() => {
+    if (!isCmiInnLocation) {
+      setVenueSpace(null);
+      return;
+    }
+
+    if (venueSpace && unavailableVenueSpaceIds.includes(venueSpace)) {
+      setVenueSpace(null);
+    }
+  }, [isCmiInnLocation, unavailableVenueSpaceIds, venueSpace]);
 
   const applyPlaceCandidate = (candidate: EventPlaceCandidate) => {
     setSelectedPlace(candidate);
@@ -361,12 +426,27 @@ export default function CmiEventCreate() {
     event.preventDefault();
     if (!user) return;
 
-    const startAt = toBangkokIso(startDate, startTime);
-    const endAt = endTime ? toBangkokIso(endDate || startDate, endTime) : null;
+    const startAt = currentStartAt;
+    const endAt = currentEndAt;
 
     const trimmedDescription = descriptionText.trim();
     if (!title.trim() || !startAt || !venueName.trim() || !trimmedDescription || !organizerEmail.trim()) {
       toast.error('标题、时间、地点、活动说明和发起人邮箱必须填写');
+      return;
+    }
+
+    if (isCmiInnLocation && venueSpaceReservationsLoading) {
+      toast.error('正在确认清迈客栈区域档期，请稍等');
+      return;
+    }
+
+    if (isCmiInnLocation && !venueSpace) {
+      toast.error('请选择清迈客栈的活动区域');
+      return;
+    }
+
+    if (venueSpace && unavailableVenueSpaceIds.includes(venueSpace)) {
+      toast.error('这个区域在当前时间段已经被占用，请换一个区域或时间');
       return;
     }
 
@@ -378,7 +458,7 @@ export default function CmiEventCreate() {
         return;
       }
 
-      const createdEvent = await createCmiEvent({
+      const result = await createCmiEvent({
         title,
         type,
         startAt,
@@ -398,13 +478,25 @@ export default function CmiEventCreate() {
         attendeeVisibility,
         summary: buildCmiEventSummaryFromDescription(trimmedDescription),
         detailBody: trimmedDescription,
+        venueSpace: isCmiInnLocation ? venueSpace : null,
         coverImageUrl,
         tags: [],
         userId: user.id,
+        actorRole: profile?.role,
       });
 
-      toast.success('活动已发布');
-      navigate(getCmiEventPath(createdEvent.id), { replace: true });
+      if (result.event.visibilityStatus === 'published') {
+        toast.success('活动已发布');
+        navigate(getCmiEventPath(result.event.id), { replace: true });
+        return;
+      }
+
+      toast.success('活动已提交审核', {
+        description: result.reviewNotificationError
+          ? '申请已保存，但邮件提醒可能没有发出。'
+          : '审核通过后才会公开显示。',
+      });
+      navigate(getCmiEventManagePath(result.event.id), { replace: true });
     } catch (error) {
       toast.error('活动发布失败', {
         description: error instanceof Error ? error.message : '请稍后重试',
@@ -608,6 +700,47 @@ export default function CmiEventCreate() {
                   </p>
                 ) : null}
 
+                {isCmiInnLocation && (
+                  <div className="rounded-2xl border border-[#3f6e52]/18 bg-[#f5fbf6] p-3">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-black text-[#315a3f]">清迈客栈区域</span>
+                      {venueSpaceReservationsLoading && (
+                        <span className="flex items-center gap-1 text-[10px] font-black text-[#6d6a62]">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          查档期
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {CMI_INN_VENUE_SPACES.map(space => {
+                        const unavailable = unavailableVenueSpaceIds.includes(space.id);
+                        const selected = venueSpace === space.id;
+
+                        return (
+                          <button
+                            key={space.id}
+                            type="button"
+                            disabled={unavailable || venueSpaceReservationsLoading}
+                            onClick={() => setVenueSpace(space.id)}
+                            className={`min-h-12 rounded-xl border px-3 text-left text-sm font-black transition ${
+                              selected
+                                ? 'border-[#3f6e52] bg-[#e8f2e7] text-[#315a3f]'
+                                : unavailable
+                                  ? 'border-[#2e2a23]/8 bg-[#f5f0e8] text-[#9b9489]'
+                                  : 'border-[#2e2a23]/12 bg-white text-[#242424] active:scale-[0.99]'
+                            }`}
+                          >
+                            <span className="block">{space.label}</span>
+                            <span className="mt-0.5 block text-[10px] font-black opacity-70">
+                              {unavailable ? '已占用' : selected ? '已选择' : '可用'}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <input value={area} onChange={event => setArea(event.target.value)} className="min-h-12 w-full rounded-xl border border-[#2e2a23]/12 bg-white px-3 text-sm font-bold" placeholder="区域，例如 Nimman / 古城北门" />
               </div>
             </div>
@@ -699,7 +832,7 @@ export default function CmiEventCreate() {
               className="min-h-13 w-full rounded-full bg-[#3f6e52] text-base font-black text-white"
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              发布活动
+              {profile?.role === 'admin' ? '发布活动' : '提交审核'}
             </Button>
           </form>
         </section>

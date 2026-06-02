@@ -13,16 +13,22 @@ import {
 } from '@/data/cmi-events';
 import { getAllRecommendations } from '@/db/api';
 import {
-  getCmiEventManagerEmails,
+  approveCmiEvent,
+  getCmiEventForManagement,
   getManagedCmiEventRegistrations,
-  getPublishedCmiEvents,
   updateCmiEventDetails,
   updateCmiEventRegistrationStatus,
   uploadCmiEventPoster,
   type CmiEventRegistration,
 } from '@/db/cmi-events';
 import { buildCmiEventDescriptionDraft, buildCmiEventSummaryFromDescription } from '@/features/cmi-events/event-description';
-import { isCmiEventManager, parseCmiEventManagerEmails } from '@/features/cmi-events/event-management';
+import {
+  CMI_INN_VENUE_SPACES,
+  isCmiEventManager,
+  isCmiInnVenue,
+  parseCmiEventManagerEmails,
+  type CmiInnVenueSpaceId,
+} from '@/features/cmi-events/event-management';
 import { EventPosterField } from '@/features/cmi-events/event-poster-field';
 import {
   buildEventPlaceCandidates,
@@ -101,6 +107,7 @@ export default function CmiEventManage() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [approving, setApproving] = useState(false);
   const [savingDetails, setSavingDetails] = useState(false);
   const [type, setType] = useState<CmiEventType>('meetup');
   const [startDate, setStartDate] = useState(defaultDate);
@@ -118,6 +125,7 @@ export default function CmiEventManage() {
   const [capacity, setCapacity] = useState('');
   const [attendeeVisibility, setAttendeeVisibility] = useState<CmiEventAttendeeVisibility>('public');
   const [descriptionText, setDescriptionText] = useState('');
+  const [venueSpace, setVenueSpace] = useState<CmiInnVenueSpaceId | null>(null);
   const [coverImageUrl, setCoverImageUrl] = useState('');
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreviewUrl, setPosterPreviewUrl] = useState('');
@@ -161,6 +169,13 @@ export default function CmiEventManage() {
     !placeCandidatesLoading &&
     searchPlaceCandidates.length === 0;
   const visibleExternalPlaceCandidates = shouldSearchExternalPlaces ? externalPlaceCandidates : [];
+  const isAdmin = profile?.role === 'admin';
+  const isCmiInnLocation = isCmiInnVenue({ venueName, area });
+  const canApproveEvent = Boolean(
+    event &&
+    isAdmin &&
+    (event.visibilityStatus !== 'published' || event.verificationStatus === 'needs-review')
+  );
 
   const syncFormFromEvent = (nextEvent: CmiEvent) => {
     const startParts = getBangkokDateTimeParts(nextEvent.startAt, defaultDate, '19:00');
@@ -192,6 +207,7 @@ export default function CmiEventManage() {
     setCapacity(nextEvent.capacity ? String(nextEvent.capacity) : '');
     setAttendeeVisibility(nextEvent.attendeeVisibility ?? 'public');
     setDescriptionText(buildCmiEventDescriptionDraft(nextEvent.summary, nextEvent.detailBody));
+    setVenueSpace((nextEvent.venueSpace as CmiInnVenueSpaceId | undefined) ?? null);
     setCoverImageUrl(nextEvent.coverImageUrl ?? '');
     setPosterFile(null);
     setPosterPreviewUrl('');
@@ -205,14 +221,7 @@ export default function CmiEventManage() {
       setLoading(true);
       setErrorMessage(null);
       try {
-        const events = await getPublishedCmiEvents();
-        const matchedEvent = events.find(candidate => candidate.id === eventId) ?? null;
-        const managerEmails = matchedEvent && user?.id
-          ? await getCmiEventManagerEmails(eventId)
-          : [];
-        const eventWithManagers = matchedEvent
-          ? { ...matchedEvent, managerEmails }
-          : null;
+        const eventWithManagers = await getCmiEventForManagement(eventId);
         const isManager = isCmiEventManager(eventWithManagers, {
           userId: user?.id,
           email: user?.email,
@@ -302,6 +311,10 @@ export default function CmiEventManage() {
     };
   }, [debouncedVenueName, shouldSearchExternalPlaces]);
 
+  useEffect(() => {
+    if (!isCmiInnLocation) setVenueSpace(null);
+  }, [isCmiInnLocation]);
+
   const applyPlaceCandidate = (candidate: EventPlaceCandidate) => {
     setSelectedPlace(candidate);
     setVenueName(candidate.placeName);
@@ -383,6 +396,7 @@ export default function CmiEventManage() {
         attendeeVisibility,
         summary: buildCmiEventSummaryFromDescription(trimmedDescription),
         detailBody: trimmedDescription,
+        venueSpace: isCmiInnLocation ? venueSpace : null,
         updatedBy: user.id,
       });
 
@@ -395,6 +409,24 @@ export default function CmiEventManage() {
       });
     } finally {
       setSavingDetails(false);
+    }
+  };
+
+  const handleApproveEvent = async () => {
+    if (!event || !user || !canApproveEvent) return;
+
+    setApproving(true);
+    try {
+      const approvedEvent = await approveCmiEvent(event.id, user.id);
+      setEvent(approvedEvent);
+      syncFormFromEvent(approvedEvent);
+      toast.success('活动已审核通过并发布');
+    } catch (error) {
+      toast.error('审核发布失败', {
+        description: error instanceof Error ? error.message : '请稍后重试',
+      });
+    } finally {
+      setApproving(false);
     }
   };
 
@@ -499,6 +531,26 @@ export default function CmiEventManage() {
               <p className="text-[11px] font-black text-[#6d6a62]">报名</p>
             </div>
           </div>
+
+          {event.visibilityStatus !== 'published' && (
+            <div className="mt-4 rounded-2xl border border-[#d99513]/25 bg-[#fff3cf] p-3">
+              <p className="text-sm font-black text-[#8b5f32]">这个活动正在等待审核</p>
+              <p className="mt-1 text-xs font-bold leading-relaxed text-[#6d6a62]">
+                审核通过后才会出现在公开活动页和地图里。
+              </p>
+              {canApproveEvent && (
+                <Button
+                  type="button"
+                  disabled={approving}
+                  onClick={handleApproveEvent}
+                  className="mt-3 min-h-11 rounded-full bg-[#3f6e52] px-4 font-black text-white"
+                >
+                  {approving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  审核通过并发布
+                </Button>
+              )}
+            </div>
+          )}
         </section>
 
         <section className="mt-4 rounded-[1.4rem] border border-[#2e2a23]/10 bg-[#fff7df] p-4 shadow-[0_14px_34px_rgba(46,42,35,0.08)]">
@@ -664,6 +716,35 @@ export default function CmiEventManage() {
                     正在同步 CMI Map 地点候选
                   </p>
                 ) : null}
+
+                {isCmiInnLocation && (
+                  <div className="rounded-2xl border border-[#3f6e52]/18 bg-[#f5fbf6] p-3">
+                    <span className="mb-2 block text-[11px] font-black text-[#315a3f]">清迈客栈区域</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      {CMI_INN_VENUE_SPACES.map(space => {
+                        const selected = venueSpace === space.id;
+
+                        return (
+                          <button
+                            key={space.id}
+                            type="button"
+                            onClick={() => setVenueSpace(space.id)}
+                            className={`min-h-12 rounded-xl border px-3 text-left text-sm font-black transition ${
+                              selected
+                                ? 'border-[#3f6e52] bg-[#e8f2e7] text-[#315a3f]'
+                                : 'border-[#2e2a23]/12 bg-white text-[#242424] active:scale-[0.99]'
+                            }`}
+                          >
+                            <span className="block">{space.label}</span>
+                            <span className="mt-0.5 block text-[10px] font-black opacity-70">
+                              {selected ? '已选择' : '可选'}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 <input value={area} onChange={inputEvent => setArea(inputEvent.target.value)} className="min-h-12 w-full rounded-xl border border-[#2e2a23]/12 bg-white px-3 text-sm font-bold" placeholder="区域，例如 Nimman / 古城北门" />
               </div>

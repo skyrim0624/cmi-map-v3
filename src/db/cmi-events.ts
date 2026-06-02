@@ -7,13 +7,19 @@ import {
   type CmiEventSourceType,
   type CmiEventType,
   type CmiEventVerificationStatus,
+  type CmiEventVisibilityStatus,
   normalizeCmiEventRegistration,
 } from '@/data/cmi-events';
-import type { Category } from '@/types/types';
+import type { Category, UserRole } from '@/types/types';
 import type { EventRegistrationForSummary, EventRegistrationStatus } from '@/features/cmi-events/event-rsvp-utils';
 import {
+  buildCmiEventPublishState,
   buildEditableCmiEventPayload,
+  isCmiInnVenue,
   normalizeCmiEventManagerEmails,
+  normalizeCmiInnVenueSpaceId,
+  type CmiInnVenueSpaceId,
+  type CmiInnVenueSpaceReservation,
   type EditableCmiEventInput,
 } from '@/features/cmi-events/event-management';
 import { compressImage } from '@/utils/imageCompression';
@@ -44,6 +50,7 @@ interface CmiEventRow {
   is_cmi_related: boolean;
   is_verified: boolean;
   verification_status: string;
+  visibility_status?: string | null;
   last_checked_at: string | null;
   next_check_before: string | null;
   reliability_note: string;
@@ -59,6 +66,7 @@ interface CmiEventRow {
   attendee_visibility?: string | null;
   cover_image_url?: string | null;
   detail_body?: string | null;
+  venue_space?: string | null;
   created_by?: string | null;
 }
 
@@ -110,6 +118,7 @@ const toCmiEvent = (row: CmiEventRow): CmiEvent => {
     isCmiRelated: row.is_cmi_related,
     isVerified: row.is_verified,
     verificationStatus: row.verification_status as CmiEventVerificationStatus,
+    visibilityStatus: (row.visibility_status as CmiEventVisibilityStatus | null) ?? 'published',
     lastCheckedAt: row.last_checked_at ?? '',
     nextCheckBefore: row.next_check_before ?? undefined,
     reliabilityNote: row.reliability_note,
@@ -125,6 +134,7 @@ const toCmiEvent = (row: CmiEventRow): CmiEvent => {
     attendeeVisibility: (row.attendee_visibility as CmiEventAttendeeVisibility | null) ?? 'count-only',
     coverImageUrl: row.cover_image_url ?? undefined,
     detailBody: row.detail_body ?? undefined,
+    venueSpace: normalizeCmiInnVenueSpaceId(row.venue_space) ?? undefined,
     createdBy: row.created_by ?? undefined,
   });
 };
@@ -150,6 +160,19 @@ interface CmiEventPublicRegistrationRow {
   attendee_name: string | null;
   status: string;
   created_at: string;
+}
+
+interface CmiInnVenueSpaceReservationRow {
+  event_id?: string;
+  id?: string;
+  title?: string;
+  start_at: string | null;
+  end_at: string | null;
+  venue_name: string | null;
+  area: string | null;
+  venue_space: string | null;
+  verification_status: string | null;
+  visibility_status: string | null;
 }
 
 export interface CmiEventRegistration extends EventRegistrationForSummary {
@@ -181,10 +204,17 @@ export interface CreateCmiEventInput {
   attendeeVisibility: CmiEventAttendeeVisibility;
   summary: string;
   detailBody?: string;
+  venueSpace?: CmiInnVenueSpaceId | null;
   coverImageUrl?: string | null;
   tags: string[];
   userId: string;
+  actorRole?: UserRole | null;
   managerEmails?: string[];
+}
+
+export interface CreateCmiEventResult {
+  event: CmiEvent;
+  reviewNotificationError: Error | null;
 }
 
 export interface RegisterForCmiEventInput {
@@ -222,6 +252,19 @@ const toPublicRegistration = (row: CmiEventPublicRegistrationRow): CmiEventPubli
   attendeeEmail: '',
   status: row.status as EventRegistrationStatus,
   createdAt: row.created_at,
+});
+
+const toCmiInnVenueSpaceReservation = (
+  row: CmiInnVenueSpaceReservationRow
+): CmiInnVenueSpaceReservation => ({
+  id: row.event_id ?? row.id ?? '',
+  startAt: row.start_at,
+  endAt: row.end_at,
+  venueName: row.venue_name,
+  area: row.area,
+  venueSpace: row.venue_space,
+  verificationStatus: row.verification_status,
+  visibilityStatus: row.visibility_status,
 });
 
 const isMissingOptionalManagerTable = (error: { code?: string; message: string }) => {
@@ -334,13 +377,84 @@ export const getPublishedCmiEvents = async (): Promise<CmiEvent[]> => {
   return [...remoteEvents, ...localOnlyEvents];
 };
 
-export const createCmiEvent = async (input: CreateCmiEventInput): Promise<CmiEvent> => {
+export const getCmiEventForManagement = async (eventId: string): Promise<CmiEvent | null> => {
+  const { data, error } = await supabase
+    .from('cmi_events')
+    .select('*')
+    .eq('id', eventId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) return null;
+
+  const managerEmails = await getCmiEventManagerEmails(eventId);
+  return {
+    ...toCmiEvent(data as CmiEventRow),
+    managerEmails,
+  };
+};
+
+export const getCmiInnVenueSpaceReservations = async ({
+  startAt,
+  endAt,
+}: {
+  startAt: string;
+  endAt?: string | null;
+}): Promise<CmiInnVenueSpaceReservation[]> => {
+  const { data, error } = await supabase.rpc('get_cmi_inn_space_reservations', {
+    range_start: startAt,
+    range_end: endAt ?? null,
+  });
+
+  if (!error && Array.isArray(data)) {
+    return (data as CmiInnVenueSpaceReservationRow[]).map(toCmiInnVenueSpaceReservation);
+  }
+
+  if (error) {
+    console.warn('获取清迈客栈区域预约失败，尝试公开活动兜底:', error.message);
+  }
+
+  const fallbackEndAt = endAt ?? new Date(new Date(startAt).getTime() + 2 * 60 * 60 * 1000).toISOString();
+  const { data: fallbackData, error: fallbackError } = await supabase
+    .from('cmi_events')
+    .select('id,title,start_at,end_at,venue_name,area,venue_space,verification_status,visibility_status')
+    .not('venue_space', 'is', null)
+    .neq('visibility_status', 'archived')
+    .neq('verification_status', 'rejected')
+    .lt('start_at', fallbackEndAt)
+    .or(`end_at.is.null,end_at.gt.${startAt}`);
+
+  if (fallbackError) {
+    console.warn('公开活动区域预约兜底失败:', fallbackError.message);
+    return [];
+  }
+
+  return Array.isArray(fallbackData)
+    ? (fallbackData as CmiInnVenueSpaceReservationRow[]).map(toCmiInnVenueSpaceReservation)
+    : [];
+};
+
+const notifyCmiEventApplication = async (eventId: string): Promise<Error | null> => {
+  const { error } = await supabase.functions.invoke('notify-cmi-event-application', {
+    body: { eventId },
+  });
+
+  return error ? new Error(error.message) : null;
+};
+
+export const createCmiEvent = async (input: CreateCmiEventInput): Promise<CreateCmiEventResult> => {
   const eventId = createCmiEventId(input.title, input.startAt);
   const capacity =
     typeof input.capacity === 'number' && Number.isFinite(input.capacity) && input.capacity > 0
       ? Math.floor(input.capacity)
       : null;
   const tags = Array.from(new Set(input.tags.map(tag => tag.trim()).filter(Boolean))).slice(0, 8);
+  const publishState = buildCmiEventPublishState(input.actorRole);
+  const venueSpace = normalizeCmiInnVenueSpaceId(input.venueSpace);
+  const isCmiInnEvent = isCmiInnVenue(input);
 
   const { data, error } = await supabase
     .from('cmi_events')
@@ -357,15 +471,15 @@ export const createCmiEvent = async (input: CreateCmiEventInput): Promise<CmiEve
       price_label: input.priceLabel.trim() || '待确认',
       registration_label: input.registrationLabel.trim() || 'CMI Map 一键报名',
       source_type: 'community',
-      source_label: 'CMI Map 用户发布',
+      source_label: input.actorRole === 'admin' ? 'CMI Map 管理员发布' : 'CMI Map 用户提交',
       host_name: input.hostName.trim() || input.organizerName.trim(),
       language: '中文',
       suitable_for: [],
-      is_cmi_related: false,
-      is_verified: false,
-      verification_status: 'needs-review',
-      visibility_status: 'published',
-      reliability_note: '由用户直接发布，尚未经过 CMI 人工核实。',
+      is_cmi_related: isCmiInnEvent || input.type === 'cmi',
+      is_verified: publishState.isVerified,
+      verification_status: publishState.verificationStatus,
+      visibility_status: publishState.visibilityStatus,
+      reliability_note: publishState.reliabilityNote,
       tags,
       summary: input.summary.trim(),
       organizer_id: input.userId,
@@ -378,6 +492,7 @@ export const createCmiEvent = async (input: CreateCmiEventInput): Promise<CmiEve
       attendee_visibility: input.attendeeVisibility,
       cover_image_url: input.coverImageUrl?.trim() || null,
       detail_body: input.detailBody?.trim() ?? '',
+      venue_space: venueSpace,
       created_by: input.userId,
       updated_by: input.userId,
     }])
@@ -396,10 +511,16 @@ export const createCmiEvent = async (input: CreateCmiEventInput): Promise<CmiEve
   });
 
   const managerEmails = await getCmiEventManagerEmails(eventId);
+  const reviewNotificationError = publishState.shouldNotifyReview
+    ? await notifyCmiEventApplication(eventId)
+    : null;
 
   return {
-    ...toCmiEvent(data as CmiEventRow),
-    managerEmails,
+    event: {
+      ...toCmiEvent(data as CmiEventRow),
+      managerEmails,
+    },
+    reviewNotificationError,
   };
 };
 
@@ -466,6 +587,33 @@ export const updateCmiEventDetails = async (input: EditableCmiEventInput): Promi
   });
 
   const managerEmails = await getCmiEventManagerEmails(input.id);
+
+  return {
+    ...toCmiEvent(data as CmiEventRow),
+    managerEmails,
+  };
+};
+
+export const approveCmiEvent = async (eventId: string, userId: string): Promise<CmiEvent> => {
+  const { data, error } = await supabase
+    .from('cmi_events')
+    .update({
+      visibility_status: 'published',
+      verification_status: 'verified',
+      is_verified: true,
+      reliability_note: '由 CMI 管理员审核后发布。',
+      last_checked_at: new Date().toISOString(),
+      updated_by: userId,
+    })
+    .eq('id', eventId)
+    .select('*')
+    .maybeSingle();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? '活动审核通过失败');
+  }
+
+  const managerEmails = await getCmiEventManagerEmails(eventId);
 
   return {
     ...toCmiEvent(data as CmiEventRow),

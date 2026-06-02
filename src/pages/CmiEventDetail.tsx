@@ -50,7 +50,7 @@ import {
   getEventRecapRecommendations,
 } from '@/features/cmi-events/event-recaps';
 import { isCapacityFullRegistrationError } from '@/features/cmi-events/event-list-registration-state';
-import { isCmiEventManager } from '@/features/cmi-events/event-management';
+import { getCmiInnVenueSpaceLabel, isCmiEventManager } from '@/features/cmi-events/event-management';
 import {
   CMI_EVENT_REGISTRATION_SUCCESS_DESCRIPTION,
   getVisibleEventAttendees,
@@ -243,7 +243,9 @@ export default function CmiEventDetail() {
         text: event?.summary ?? '这场活动的完整推文还在整理中，先放上已经核实的时间、地点和参与方式。',
       },
     ]);
-  const locationLabel = event ? `${event.venueName}${event.area ? ` · ${event.area}` : ''}` : '';
+  const locationLabel = event
+    ? [event.venueName, getCmiInnVenueSpaceLabel(event.venueSpace), event.area].filter(Boolean).join(' · ')
+    : '';
   const canManageEvent =
     isCmiEventManager(event ? { ...event, managerEmails } : null, {
       userId: user?.id,
