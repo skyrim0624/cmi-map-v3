@@ -2653,16 +2653,23 @@
 .cmi-v3-events-hero-head {
   position: relative;
   z-index: 2;
-  display: flex;
-  min-height: 50px;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 2px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: start;
+  gap: 10px;
+  margin-bottom: 0;
 }
 
-.cmi-v3-events-hero-head > span {
-  flex: 1 1 auto;
+.cmi-v3-events-hero-copy {
+  min-width: 0;
+}
+
+.cmi-v3-events-hero-copy h1 span {
+  display: inline;
+}
+
+.cmi-v3-events-hero-kicker {
+  display: block;
   padding-top: 1px;
   font-size: 12px;
   font-weight: 950;
@@ -2987,9 +2994,40 @@
   padding-bottom: calc(env(safe-area-inset-bottom) + 96px);
 }
 
+@media (max-width: 440px) {
+  .cmi-v3-events-hero-head {
+    grid-template-columns: minmax(0, 1fr) 120px;
+    gap: 8px;
+  }
+
+  .cmi-v3-events-hero h1 {
+    margin-top: 10px;
+    font-size: 30px;
+    line-height: 1.02;
+  }
+
+  .cmi-v3-events-hero-copy h1 span {
+    display: block;
+  }
+
+  .cmi-v3-events-create-button {
+    width: 120px;
+    padding-inline: 9px;
+  }
+}
+
 @media (max-width: 370px) {
   .cmi-v3-comic-brand {
     font-size: 18px;
+  }
+
+  .cmi-v3-events-hero-head {
+    grid-template-columns: minmax(0, 1fr) 116px;
+  }
+
+  .cmi-v3-events-create-button {
+    width: 116px;
+    padding-inline: 7px;
   }
 
   .cmi-v3-feed-stream .cmi-v3-feed-post-card,
@@ -3008,6 +3046,10 @@
   .cmi-v3-events-hero h1,
   .cmi-v3-publish-panel h1 {
     font-size: 32px;
+  }
+
+  .cmi-v3-events-hero h1 {
+    font-size: 26px;
   }
 
   .cmi-v3-map-bottom {

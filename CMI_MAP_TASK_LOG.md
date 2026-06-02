@@ -1304,3 +1304,15 @@
 - 下一步：
   - 先确认主体和备案路径，再决定是否继续沿用 `cmimap.com` / `api.cmimap.com`，或改用更容易备案的国内云域名。
   - 工程侧随后再评估 Taro / 原生小程序 / uni-app 的实现成本，以及哪些现有 React 页面可以复用为业务模型而不是直接复用 UI。
+
+### 2026-06-02 08:39:14 +07 活动页发起活动按钮与标题避让
+
+- 背景：用户在手机截图中指出活动页黄色 hero 内“清迈客栈的活动！”标题和右上角“发起活动”按钮排版混乱；约束是发起活动按钮位置不变。
+- 本轮实现：
+  - 将活动页 hero 顶部改为左侧文案组 + 右侧按钮的网格结构，按钮仍保持右上角入口。
+  - 在手机宽度下把标题固定拆成“清迈客栈的 / 活动！”两行，并为右侧按钮预留稳定列宽，避免标题随机挤到按钮下方。
+- 验证结果：
+  - `pnpm exec biome lint src/pages/CmiMapV3Prototype.tsx src/pages/cmi-map-v3-prototype.css` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - 本地浏览器验证 `http://127.0.0.1:5173/?screen=events&verify=event-hero-layout`：390px 和 360px 手机视口下标题与按钮均无重叠；390px 标题稳定显示为两行，按钮仍位于黄色卡片右上角，console 无 warn/error。
+  - 本地未登录状态点击“发起活动”后按既有保护逻辑进入 `/login`；点击“刚结束”分页后 `aria-pressed=true`，筛选交互正常。
