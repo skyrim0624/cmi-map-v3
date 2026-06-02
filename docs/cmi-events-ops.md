@@ -81,21 +81,23 @@
 
 Time Out 的本周末专题可以作为及时线索源；如果只用 Time Out，`reliabilityNote` 必须写明“出发前仍建议复核场地方动态”。Citylife、主办方官网、场地方页面和 CMI 自有公告优先级更高。
 
-最新一次维护：2026-06-02 12:56 ICT，本轮扫描 `五月活动` 与 `六月活动`，用 CMI Map CLI 管理员通道发布 3 条新增活动：`cmi-ai-open-mic-vol-05-2026-06-05`、`cmi-kongxiang-canteen-hotpot-2026-06-05`、`cmi-my-octopus-teacher-screening-2026-06-06`。三条活动均使用同目录官方海报，CLI 已上传到 Supabase Storage；本地兜底同步补充详情页海报和首页卡片背景图。
+最新一次维护：2026-06-02 18:15 ICT，本轮扫描 `五月活动` 与 `六月活动`，新增处理 `/Users/andreas/CMI/活动宣传内容/六月活动/6.4 正念一小时`，活动 ID 为 `cmi-mindfulness-hour-singing-bowl-2026-06-04`。材料可确认活动标题、时间、地点、公益费用、活动内容和官方海报；原始材料未单列报名链接或二维码，本轮按 CMI Map 内置报名系统发布，并在 `reliabilityNote` / 审计迁移中记录。
 
-本轮不发布 `/Users/andreas/CMI/活动宣传内容/六月活动/6.6 旧物交换市集`：文件夹名指向 6.6，但海报写“周日下午两点到五点”；2026-06-06 是周六、2026-06-07 才是周日，活动日期需人工确认后再发布。
+本轮仍不发布 `/Users/andreas/CMI/活动宣传内容/六月活动/6.6 旧物交换市集`：文件夹名指向 6.6，但海报写“周日下午两点到五点”；2026-06-06 是周六、2026-06-07 才是周日，活动日期需人工确认后再发布。`六月第一周活动日历` 是周历物料，不作为单场活动发布。
 
 同步动作：
 
-- 远程活动库已通过 `pnpm cmi:event:publish -- --input ... --admin-publish` 新增 3 条 `published` 活动；未手写 SQL，也未直接修改远程数据库。
-- 本地兜底 `src/data/cmi-events.ts` 已同步更新维护时间、事件条目与 `coverImageUrl`；`src/data/cmi-event-details.ts` 已补充 6.5 / 6.6 详情页海报、首页卡片背景和正文映射。
+- `pnpm cmi:event:publish -- --input tmp/cmi-mindfulness-hour-singing-bowl-2026-06-04.json --admin-publish --dry-run` 与真实 `--admin-publish` 均已通过；远程 `public.cmi_events` 已写入 `published / verified / cmi` 正念活动。
+- 已新增并推送审计迁移 `supabase/migrations/20260602163904_sync_cmi_inn_events_and_publish_mindfulness_20260602.sql`，包含已结束 CMI / 清迈客栈活动归档、到期复核刷新和正念活动 upsert。
+- 已新增并推送修正迁移 `supabase/migrations/20260602181550_fix_mindfulness_storage_poster_url_20260602.sql`，把远程正念活动 `cover_image_url` 固定为已验证的 Supabase Storage 海报 URL，避免线上读取本地静态路径时拿到未部署资源。
+- 本地兜底 `src/data/cmi-events.ts` 已更新维护时间，新增 `cmi-mindfulness-hour-singing-bowl-2026-06-04`，并补齐上一轮已远程发布但本地兜底缺失的 `cmi-blood-on-the-clocktower-newbie-game-2026-06-04`。
+- `src/data/cmi-event-details.ts` 已补充 6.4 血染钟楼与 6.4 正念一小时的详情页海报、首页卡片背景和正文映射。
 - 已生成首页卡片背景图到 `public/cmi-home/event-card-backgrounds/`，尺寸为 1280x549；详情页海报已保存到 `public/cmi-home/event-posters/`。
-- 本轮没有执行已结束活动归档或 `next_check_before` 复核刷新：当前确认的发布路径是 CMI Map CLI，仓库尚无 CLI-only 的状态归档/复核命令。
 
-当前远程与本地可见的 future CMI / 清迈客栈活动：
-`cmi-five-minute-music-kid-a-2026-06-02`、`cmi-curiosity-old-city-temples-2026-06-03`、`cmi-ai-open-mic-vol-05-2026-06-05`、`cmi-kongxiang-canteen-hotpot-2026-06-05`、`cmi-my-octopus-teacher-screening-2026-06-06`、`cmi-talk-fathers-day-speaker-call-2026-06-07`。
+当前本地兜底可见的 future CMI / 清迈客栈活动：
+`cmi-five-minute-music-kid-a-2026-06-02`、`cmi-curiosity-old-city-temples-2026-06-03`、`cmi-blood-on-the-clocktower-newbie-game-2026-06-04`、`cmi-mindfulness-hour-singing-bowl-2026-06-04`、`cmi-ai-open-mic-vol-05-2026-06-05`、`cmi-kongxiang-canteen-hotpot-2026-06-05`、`cmi-my-octopus-teacher-screening-2026-06-06`、`cmi-talk-fathers-day-speaker-call-2026-06-07`。
 
-远程活动详情 URL 均返回 200，三张上传后的 Storage 海报均返回 200 且 `content-type` 为 `image/png`。类型检查、活动数据测试、生产构建和 `/cmi-home` 基础验证需在本轮代码落地后执行。
+远程验证：`cmi-mindfulness-hour-singing-bowl-2026-06-04` 已可通过公开 REST 查询到，`visibility_status='published'`、`verification_status='verified'`、`is_cmi_related=true`、`source_type='cmi'`、`venue_name='清迈客栈'`；Storage 海报 URL 返回 `200 image/jpeg`。
 
 ## 类型标签
 

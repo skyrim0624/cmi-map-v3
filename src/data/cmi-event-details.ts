@@ -46,6 +46,10 @@ export const CMI_EVENT_POSTER_BY_ID: Partial<Record<string, string>> = {
     '/cmi-home/event-posters/cmi-five-minute-music-kid-a-2026-06-02.png?v=20260601-mobile-share',
   'cmi-curiosity-old-city-temples-2026-06-03':
     '/cmi-home/event-posters/cmi-curiosity-old-city-temples-2026-06-03.jpg',
+  'cmi-blood-on-the-clocktower-newbie-game-2026-06-04':
+    '/cmi-home/event-posters/cmi-blood-on-the-clocktower-newbie-game-2026-06-04.png',
+  'cmi-mindfulness-hour-singing-bowl-2026-06-04':
+    '/cmi-home/event-posters/cmi-mindfulness-hour-singing-bowl-2026-06-04.jpg',
   'cmi-ai-open-mic-vol-05-2026-06-05':
     '/cmi-home/event-posters/cmi-ai-open-mic-vol-05-2026-06-05.png',
   'cmi-kongxiang-canteen-hotpot-2026-06-05':
@@ -76,6 +80,10 @@ export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = 
     '/cmi-home/event-card-backgrounds/cmi-five-minute-music-kid-a-2026-06-02.jpg',
   'cmi-curiosity-old-city-temples-2026-06-03':
     '/cmi-home/event-card-backgrounds/cmi-curiosity-old-city-temples-2026-06-03.jpg',
+  'cmi-blood-on-the-clocktower-newbie-game-2026-06-04':
+    '/cmi-home/event-card-backgrounds/cmi-blood-on-the-clocktower-newbie-game-2026-06-04.jpg',
+  'cmi-mindfulness-hour-singing-bowl-2026-06-04':
+    '/cmi-home/event-card-backgrounds/cmi-mindfulness-hour-singing-bowl-2026-06-04.jpg',
   'cmi-ai-open-mic-vol-05-2026-06-05':
     '/cmi-home/event-card-backgrounds/cmi-ai-open-mic-vol-05-2026-06-05.jpg',
   'cmi-kongxiang-canteen-hotpot-2026-06-05':
@@ -622,6 +630,79 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
       {
         kind: 'paragraph',
         text: '无论你是历史文化爱好者，还是刚来到清迈的新朋友，都欢迎来到现场，一起在古城与古寺之间，重新认识这座充满故事的城市。',
+      },
+    ],
+  },
+  'cmi-blood-on-the-clocktower-newbie-game-2026-06-04': {
+    eventId: 'cmi-blood-on-the-clocktower-newbie-game-2026-06-04',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-blood-on-the-clocktower-newbie-game-2026-06-04']!,
+    postTitle: '血染钟楼新手局：死亡不退场的社交推理',
+    postBlocks: [
+      {
+        kind: 'paragraph',
+        text: '如果你玩过狼人杀、剧本杀，或者只是喜欢观察人、听人说话、判断谁在隐藏信息，那《血染钟楼》会是一场很适合你的游戏。',
+      },
+      {
+        kind: 'paragraph',
+        text: '这一局是新手友好局。现场会有说书人带大家进入规则、分发身份、控制节奏，你不需要提前研究复杂角色。',
+      },
+      {
+        kind: 'heading',
+        text: '为什么适合社区活动',
+      },
+      {
+        kind: 'paragraph',
+        text: '它不是单纯坐下来玩一款桌游，更像是一场自然发生的破冰：你会听到别人如何表达，看到别人如何推理，也会在怀疑和解释里认识新朋友。',
+      },
+      {
+        kind: 'heading',
+        text: '活动信息',
+      },
+      {
+        kind: 'list',
+        items: [
+          '活动时间：6 月 4 日（周四）15:00-18:00',
+          '活动地点：清迈客栈',
+          '场地费用：免费参与',
+          '原始参与方式：无需报名，直接空降即可；名额有限，先到先得',
+          CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
+        ],
+      },
+    ],
+  },
+  'cmi-mindfulness-hour-singing-bowl-2026-06-04': {
+    eventId: 'cmi-mindfulness-hour-singing-bowl-2026-06-04',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-mindfulness-hour-singing-bowl-2026-06-04']!,
+    postTitle: '正念一小时｜颂钵公益：让心慢慢来',
+    postBlocks: [
+      {
+        kind: 'paragraph',
+        text: '本期正念一小时的主题是“让心慢慢来”。',
+      },
+      {
+        kind: 'paragraph',
+        text: '赴一场颂钵静修之约，绵长钵音层层震荡，拂去心头杂念，荡开内心疲惫，让心慢慢回到当下。',
+      },
+      {
+        kind: 'heading',
+        text: '活动内容',
+      },
+      {
+        kind: 'list',
+        items: ['静坐冥想', '智慧引领', '开放分享', '颂钵体验'],
+      },
+      {
+        kind: 'heading',
+        text: '活动信息',
+      },
+      {
+        kind: 'list',
+        items: [
+          '活动时间：6 月 4 日（周四）19:00-20:30（分享讨论 0.5h）',
+          '活动地点：清迈客栈',
+          '活动性质：纯公益活动',
+          CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
+        ],
       },
     ],
   },
