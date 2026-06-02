@@ -1584,3 +1584,19 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - 构建后的 `MarkPlace` chunk 确认不再包含本轮删除的静态提示文案。
   - 本地浏览器预览 `http://127.0.0.1:4187/mark` 会因登录保护重定向到 `/login`，页面正常渲染且 console 无 warn/error；未复制生产登录态做真实打卡提交。
+
+### 2026-06-02 14:02:27 +07 注册显示名称检查权限修复
+
+- 背景：新用户扫码后反馈注册不了，进一步反馈“显示名称不行，中英数字都不行”。
+- 根因：注册前的昵称可用性检查直接用匿名 Supabase 客户端读取 `profiles` 表；线上匿名角色对 `profiles` 表返回 `permission denied for table profiles`，所以任何显示名称都会被前端当作检查失败。
+- 本轮实现：
+  - 把昵称可用性检查抽到 `src/features/auth/user-name-availability.ts`。
+  - 注册和邮箱验证码创建用户流程改为调用已授权的 `is_user_name_available` RPC，不再直接读 `profiles` 表。
+  - 新增单元测试覆盖 RPC 调用、昵称已占用和 RPC 出错三种情况。
+- 验证结果：
+  - 线上匿名 Supabase API 复查：中文昵称、英文数字昵称、纯数字昵称都返回 `available: true` 且无权限错误。
+  - `npx tsx --test src/features/auth/user-name-availability.test.ts` 通过。
+  - `npx tsx --test src/features/auth/auth-flow.test.ts` 通过。
+  - `pnpm lint` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地浏览器预览 `http://localhost:5173/login`：点击“我是新人”后注册表单正常出现；昵称输入框可输入中文、英文数字和纯数字；console 无 warn/error。本轮未点击“发送注册验证码”，避免创建线上测试用户。

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { supabase } from '@/db/supabase';
 import { ensureProfile } from '@/db/api';
+import { checkUserNameAvailability, normalizeProfileUserName } from '@/features/auth/user-name-availability';
 import type { User } from '@supabase/supabase-js';
 import type { Profile } from '@/types/types';
 import { toast } from 'sonner';
@@ -64,8 +65,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const USER_NAME_TAKEN_ERROR_MESSAGE = '这个昵称已经被用过了，请换一个';
 
-const normalizeProfileUserName = (userName: string) => userName.normalize('NFKC').trim();
-
 const getFallbackName = (user: User) => {
   const metadataName = [
     user.user_metadata?.user_name,
@@ -74,24 +73,6 @@ const getFallbackName = (user: User) => {
   ].find((name) => typeof name === 'string' && name.trim());
 
   return typeof metadataName === 'string' ? metadataName.trim() : user.email?.split('@')[0];
-};
-
-const checkUserNameAvailability = async (userName: string) => {
-  const normalizedName = normalizeProfileUserName(userName);
-  if (!normalizedName) return { available: false, error: null };
-
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('user_name', normalizedName)
-    .limit(1);
-
-  if (error) {
-    console.error('检查昵称是否可用失败:', error);
-    return { available: false, error: new Error(error.message) };
-  }
-
-  return { available: !data?.length, error: null };
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -186,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (shouldCreateUser) {
         if (!normalizedUserName) throw new Error('请输入昵称');
 
-        const availability = await checkUserNameAvailability(normalizedUserName);
+        const availability = await checkUserNameAvailability(supabase, normalizedUserName);
         if (availability.error) throw new Error('暂时无法确认昵称是否可用，请稍后再试');
         if (!availability.available) throw new Error(USER_NAME_TAKEN_ERROR_MESSAGE);
       }
@@ -240,7 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const normalizedUserName = normalizeProfileUserName(userName ?? '');
       if (!normalizedUserName) throw new Error('请输入昵称');
 
-      const availability = await checkUserNameAvailability(normalizedUserName);
+      const availability = await checkUserNameAvailability(supabase, normalizedUserName);
       if (availability.error) throw new Error('暂时无法确认昵称是否可用，请稍后再试');
       if (!availability.available) throw new Error(USER_NAME_TAKEN_ERROR_MESSAGE);
 
