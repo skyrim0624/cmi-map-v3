@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs",
     "lint": "tsgo -p tsconfig.check.json; npx biome lint; .rules/check.sh;npx tailwindcss -i ./src/index.css -o /dev/null 2>&1 | grep -E '^(CssSyntaxError|Error):.*' || true;.rules/testBuild.sh",
-    "cmi:event:publish": "node scripts/cmi-event-publish.mjs"
+    "cmi:event:publish": "node scripts/cmi-event-publish.mjs",
+    "cmi:event:check": "node scripts/cmi-event-publish-check.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

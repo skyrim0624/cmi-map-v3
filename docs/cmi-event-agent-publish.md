@@ -17,13 +17,19 @@
 ## 命令
 
 ```bash
+pnpm cmi:event:check -- --input ./event.json --admin-publish --strict
 pnpm cmi:event:publish -- --input ./event.json
 pnpm cmi:event:publish -- --input ./event.json --publish
 pnpm cmi:event:publish -- --input ./event.json --admin-publish
 pnpm cmi:event:publish -- --input ./event.json --service-role-publish
+pnpm cmi:event:check -- --input ./event.json --admin-publish --verify-remote
 ```
 
 默认是 dry-run，只输出将要写入的数据。
+
+正式发布前先跑 `cmi:event:check`。它不写数据库，只快速检查结构化字段、发布 token、Supabase Edge Function 网络可达性、Supabase CLI 登录态提示、活动图片文件或图片 URL，以及 dry-run row。若这里已经报 `admin-function-network` 失败，就不要继续真实发布；这类失败通常是 DNS、代理、网络权限或 Supabase Functions 可达性问题，不是活动字段问题。
+
+正式发布后再跑一次 `cmi:event:check -- --input ./event.json --admin-publish --verify-remote`。它会从公开 REST 读取 `public.cmi_events`，并对远程 `cover_image_url` 做 HEAD 检查，确认返回 `image/*`，避免迁移或本地静态路径把 CLI 上传的 Storage 海报覆盖掉。
 
 加 `--publish` 会走公开 Agent 通道，上传海报并写入 `public.cmi_events`。它需要：
 
@@ -109,5 +115,14 @@ Agent 负责把非结构化素材整理成 JSON，并在 dry-run 结果里检查
 CLI 负责校验必填字段、上传海报、upsert 活动记录、输出活动页链接。
 
 如果 dry-run 中没有 `coverImagePath` 或 `coverImageUrl`，Agent 不应直接发布；应先补官方海报、来源封面或 Image Generator 生成海报。
+
+自动化发布顺序固定为：
+
+1. `pnpm cmi:event:check -- --input <event.json> --admin-publish --strict`
+2. `pnpm cmi:event:publish -- --input <event.json> --admin-publish`
+3. `pnpm cmi:event:check -- --input <event.json> --admin-publish --verify-remote`
+4. `SUPABASE_TELEMETRY_DISABLED=1 supabase db push --dry-run --linked --include-all`
+5. 确认 dry-run 只有本轮预期迁移后，执行真实 `supabase db push --linked --include-all --yes`
+6. 重新做远程行与 `cover_image_url` HEAD 验证；若迁移覆盖了 CLI 上传的 Storage URL，必须追加修正迁移，不改已推迁移历史。
 
 公开通道的 Agent 不能把用户活动伪装成 CMI 官方活动，也不能写入已核实状态。需要官方背书的活动，改走团队管理员 Agent 通道。

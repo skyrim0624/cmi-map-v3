@@ -318,7 +318,25 @@ const main = async () => {
   }, null, 2));
 };
 
+const formatFatalError = (error) => {
+  const message = error instanceof Error ? error.message : String(error);
+  const cause = error instanceof Error && error.cause && typeof error.cause === 'object'
+    ? error.cause
+    : null;
+  const causeCode = cause && 'code' in cause ? String(cause.code) : '';
+
+  if (/fetch failed|ENOTFOUND|EAI_AGAIN|ECONNRESET|ETIMEDOUT|UND_ERR_CONNECT_TIMEOUT/i.test(`${message} ${causeCode}`)) {
+    return [
+      message,
+      '诊断：发布请求没有稳定到达 Supabase Edge Function，优先检查 DNS、代理、网络权限和 Supabase Functions 可达性。',
+      '建议：先运行 pnpm cmi:event:check -- --input <event.json> --admin-publish --strict，再重试真实发布。',
+    ].join('\n');
+  }
+
+  return message;
+};
+
 main().catch(error => {
-  console.error(error instanceof Error ? error.message : error);
+  console.error(formatFatalError(error));
   process.exit(1);
 });
