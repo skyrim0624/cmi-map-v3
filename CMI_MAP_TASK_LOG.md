@@ -1277,3 +1277,14 @@
   - 已用干净 worktree 部署 v3 项目 `https://61041666.cmi-map-v3.pages.dev` 和正式站 `https://0f1a3309.cmi-map.pages.dev`，Source 为 `0c8bb00`。
   - 线上预览 `https://0f1a3309.cmi-map.pages.dev/?event=cmi-five-minute-music-kid-a-2026-06-02&verify=sheet-link-0c8bb00` 复查通过：底栏点击进入正式详情页，详情页“返回”回到原地图活动底栏。
   - 正式域名 `https://cmimap.com` 服务器响应已指向新入口 `index-C94AqMx_.js` 和新 V3 包 `CmiMapV3Prototype-DUdfP_ac.js`，线上包内已包含 `cmi-v3-selected-note-summary--link`；已访问过的浏览器若仍拿到旧 `index-DZ2-5eQZ.js`，属于旧 PWA Service Worker 缓存，需要刷新或重开页面后切到新包。
+
+### 2026-06-02 08:20:23 +07 小程序化方向确认
+
+- 背景：用户确认 CMI Map 仍要进入微信小程序形态，不能只停留在 PWA / 网页入口。
+- 本轮决策：
+  - 小程序化应先按“能不能上线”拆解，而不是只按“能不能开发”推进。
+  - 前置条件至少包括：小程序主体与管理员、微信侧小程序备案、可 ICP 备案的服务域名、HTTPS API 域名、地图 / 定位相关隐私接口声明、服务类目与内容审核边界。
+  - 当前更稳的技术路径仍是 `微信小程序 -> api.cmimap.com -> API/Worker -> Supabase`；小程序不应直接暴露 Supabase URL 或密钥，也不应把现有网页当作简单 web-view 外壳。
+- 下一步：
+  - 先确认主体和备案路径，再决定是否继续沿用 `cmimap.com` / `api.cmimap.com`，或改用更容易备案的国内云域名。
+  - 工程侧随后再评估 Taro / 原生小程序 / uni-app 的实现成本，以及哪些现有 React 页面可以复用为业务模型而不是直接复用 UI。
