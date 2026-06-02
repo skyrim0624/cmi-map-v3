@@ -45,6 +45,14 @@ test('打卡文字输入不再重复生成预览且操作按钮在输入框下�
   assert.doesNotMatch(source, /bg-\[#fff9e6\]/);
 
   const voiceStageSource = source.slice(source.indexOf("{stage === 'voice' && ("));
+  assert.doesNotMatch(voiceStageSource, /写一句你对这里的真实感觉/);
+  assert.doesNotMatch(voiceStageSource, /还想补充什么/);
+  assert.doesNotMatch(voiceStageSource, /还没有关联地点/);
+  assert.doesNotMatch(voiceStageSource, /可以先写，下一步再搜地点/);
+  assert.doesNotMatch(voiceStageSource, /selectedPlaceLabel \? '更换' : '关联'/);
+  assert.doesNotMatch(voiceStageSource, /\{voiceHint\}/);
+  assert.doesNotMatch(source, /voiceHint/);
+
   const textareaIndex = voiceStageSource.indexOf('<textarea');
   const voiceButtonIndex = voiceStageSource.indexOf('onClick={handleVoiceInput}');
   const confirmButtonIndex = voiceStageSource.indexOf('disabled={!description.trim() || isListening}');
@@ -64,10 +72,16 @@ test('清迈客栈标签打卡后进入动态页而不是旧客栈页', () => {
 
 test('发布前分类页独立滚动并保留特殊标签和发布按钮', () => {
   assert.match(source, /const priorityCategoryIds = new Set\(\['cmi-inn', 'easter'\]\)/);
+  assert.match(source, /const isPublishPreparationStage = stage === 'category' && Boolean\(photoURL\)/);
+  assert.match(source, /clamp\(10\.5rem, 28dvh, 13rem\)/);
   assert.match(source, /清迈客栈、彩蛋和普通地点动态都在这里选。/);
   assert.match(source, /routeRootRef\.current\?\.closest\('main'\)/);
   assert.match(source, /scrollContainer\.style\.overflowY = 'hidden'/);
   assert.match(source, /overflow-y-auto overscroll-contain pb-4 pt-4 \[-webkit-overflow-scrolling:touch\]/);
   assert.match(source, /shrink-0 bg-gradient-to-t from-stone-50/);
-  assert.match(source, /selectedCat \? publishButtonLabel : '选标签'/);
+  assert.match(source, /mx-auto flex h-14 w-full max-w-sm/);
+  assert.match(source, /uploading \? '正在发布\.\.\.' : selectedCat \? '发布' : '先选标签'/);
+  assert.doesNotMatch(source, /publishSummaryLabel/);
+  assert.doesNotMatch(source, /publishSummaryDetail/);
+  assert.doesNotMatch(source, /publishButtonLabel/);
 });

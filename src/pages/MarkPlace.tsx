@@ -288,7 +288,6 @@ export default function MarkPlace() {
   const [isListening, setIsListening] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
   const [speechPermission, setSpeechPermission] = useState<SpeechPermissionStatus>('unknown');
-  const [voiceHint, setVoiceHint] = useState('点一下麦克风开始说，说完会自动写入。');
   const [interimTranscript, setInterimTranscript] = useState('');
   const [scanned, setScanned] = useState(false);
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>('starting');
@@ -327,20 +326,6 @@ export default function MarkPlace() {
     const regularOptions = inputCategoryOptions.filter(option => !priorityCategoryIds.has(option.id));
     return [...priorityOptions, ...regularOptions];
   }, [inputCategoryOptions]);
-  const selectedPublishCategoryOption = selectedInputCategoryId
-    ? inputCategoryOptions.find(option => option.id === selectedInputCategoryId) ?? null
-    : null;
-  const publishButtonLabel = selectedCat === CMI_INN_CATEGORY
-    ? '发布到客栈'
-    : selectedCat === '彩蛋'
-      ? '发布彩蛋'
-      : '发布动态';
-  const publishSummaryLabel = selectedPublishCategoryOption?.label ?? selectedCat;
-  const publishSummaryDetail = selectedEvent
-    ? `已关联活动：${selectedEvent.title}`
-    : selectedPlaceLabel
-      ? `地点：${selectedPlaceLabel}`
-      : '活动可不关联，选好标签就能发布';
   const debouncedPlaceSearchQuery = useDebounce(placeSearchQuery, 480);
   const cameraDateLabel = `${new Date().getMonth() + 1} / ${new Date().getDate()}`;
   const filteredEasterIcons = useMemo(() => {
@@ -383,8 +368,13 @@ export default function MarkPlace() {
   const cameraPinchRef = useRef<CameraPinchState | null>(null);
   const cameraZoomFeedbackTimeoutRef = useRef<number | null>(null);
   const isPhotoDoneStage = stage === 'done' && Boolean(photoURL);
+  const isPublishPreparationStage = stage === 'category' && Boolean(photoURL);
   const isMapFallbackStage = stage === 'map_fallback';
-  const photoAreaHeight = isPhotoDoneStage ? 'min(100vw, calc(100dvh - 13.5rem))' : 'min(100vw, 55dvh)';
+  const photoAreaHeight = isPublishPreparationStage
+    ? 'clamp(10.5rem, 28dvh, 13rem)'
+    : isPhotoDoneStage
+      ? 'min(100vw, calc(100dvh - 13.5rem))'
+      : 'min(100vw, 55dvh)';
   const voiceButtonDisabled = !speechSupported || speechPermission === 'checking';
   const cameraButtonDisabled = cameraStatus !== 'ready';
   const cameraDigitalZoom = cameraZoomRange.isHardwareSupported ? 1 : cameraZoom;
@@ -618,7 +608,6 @@ export default function MarkPlace() {
         updateInterimTranscript('');
         setIsListening(true);
         setSpeechPermission('granted');
-        setVoiceHint('正在听，讲完会自动写到下面。');
       };
 
       recognition.onresult = (event) => {
@@ -628,7 +617,6 @@ export default function MarkPlace() {
         const results = event.results;
 
         if (!results) {
-          setVoiceHint('没有听清，可以直接打字。');
           return;
         }
 
@@ -648,13 +636,11 @@ export default function MarkPlace() {
           speechHadResultRef.current = true;
           setDescription(prev => appendTranscript(prev, finalText));
           updateInterimTranscript('');
-          setVoiceHint('已写入，可以继续补充或直接下一步。');
           return;
         }
 
         if (interimText) {
           updateInterimTranscript(interimText);
-          setVoiceHint('听到了，继续说，说完会自动写入。');
         }
       };
 
@@ -666,7 +652,6 @@ export default function MarkPlace() {
         }
         speechStartingRef.current = false;
         updateInterimTranscript('');
-        setVoiceHint(nextHint);
         toast(nextHint);
         setIsListening(false);
       };
@@ -677,19 +662,12 @@ export default function MarkPlace() {
           speechHadResultRef.current = true;
           setDescription(prev => appendTranscript(prev, pendingInterim));
           updateInterimTranscript('');
-          setVoiceHint('已写入，可以继续补充或直接下一步。');
           setIsListening(false);
           return;
         }
 
         speechStartingRef.current = false;
         setIsListening(false);
-        setVoiceHint(prev => {
-          if (prev === '正在听，讲完会自动写到下面。' || prev === '听到了，继续说，说完会自动写入。') {
-            return '没有听清，靠近一点再说一次，或直接打字。';
-          }
-          return prev;
-        });
       };
 
       setSpeechSupported(true);
@@ -697,13 +675,9 @@ export default function MarkPlace() {
       queryMicrophonePermission().then(permission => {
         if (!alive) return;
         setSpeechPermission(permission);
-        if (permission === 'denied') {
-          setVoiceHint(getVoiceErrorHint('not-allowed'));
-        }
       });
     } else {
       setSpeechSupported(false);
-      setVoiceHint('当前浏览器不支持语音识别，直接打字就行。');
     }
 
     return () => {
@@ -992,12 +966,10 @@ export default function MarkPlace() {
       if (isListening) {
         recognitionRef.current.stop();
         setIsListening(false);
-        setVoiceHint('已停止收音，可以直接编辑文字。');
         speechStartingRef.current = false;
       } else {
         speechStartingRef.current = true;
         setSpeechPermission('checking');
-        setVoiceHint('正在确认麦克风权限...');
         updateInterimTranscript('');
 
         const microphoneAccess = await requestMicrophoneForSpeech();
@@ -1006,19 +978,16 @@ export default function MarkPlace() {
         if (!microphoneAccess.ok) {
           speechStartingRef.current = false;
           setIsListening(false);
-          setVoiceHint(microphoneAccess.hint);
           toast(microphoneAccess.hint);
           return;
         }
 
-        setVoiceHint(microphoneAccess.hint);
         recognitionRef.current.start();
       }
     } catch (error) {
       console.error('语音识别启动失败:', error);
       speechStartingRef.current = false;
       setIsListening(false);
-      setVoiceHint('语音启动失败，直接打字更稳。');
       toast('语音启动失败，直接打字更稳');
     }
   };
@@ -1464,33 +1433,6 @@ export default function MarkPlace() {
 
             {stage === 'voice' && (
               <div className="w-full flex flex-col items-center gap-4 py-4 animate-in slide-in-from-bottom-10 fade-in duration-500">
-                <p className="text-stone-500 font-bold text-sm">
-                  {description ? '还想补充什么？' : '写一句你对这里的真实感觉'}
-                </p>
-                <div className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white/90 px-3 py-3 shadow-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        <MapPin className="h-4 w-4" strokeWidth={3} />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-black text-stone-800">
-                          {selectedPlaceLabel || '还没有关联地点'}
-                        </p>
-                        <p className="mt-0.5 text-xs font-semibold text-stone-400">
-                          {selectedPlaceLabel ? '这条动态会带地点标签' : '可以先写，下一步再搜地点'}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setStage('map_fallback')}
-                      className="shrink-0 rounded-full bg-stone-100 px-3 py-2 text-xs font-black text-stone-700 active:scale-95"
-                    >
-                      {selectedPlaceLabel ? '更换' : '关联'}
-                    </button>
-                  </div>
-                </div>
                 <div className="w-full max-w-sm">
                   <textarea
                     value={description}
@@ -1540,9 +1482,6 @@ export default function MarkPlace() {
                     <Check className="w-7 h-7" strokeWidth={3} />
                   </button>
                 </div>
-                <p className="max-w-sm text-center text-xs font-medium leading-relaxed text-stone-400">
-                  {voiceHint}
-                </p>
               </div>
             )}
 
@@ -1719,27 +1658,18 @@ export default function MarkPlace() {
                   </div>
                 </div>
                 <div className="-mx-6 w-[calc(100%+3rem)] shrink-0 bg-gradient-to-t from-stone-50 via-stone-50/95 to-transparent px-6 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3">
-                  <div className="mx-auto flex max-w-sm items-center gap-3 rounded-[1.75rem] border border-stone-200 bg-white/95 p-2 shadow-[0_-10px_32px_rgba(0,0,0,0.12)] backdrop-blur">
-                    <div className="min-w-0 flex-1 px-2">
-                      <p className="truncate text-sm font-black text-stone-800">
-                        {publishSummaryLabel || '先选一个标签'}
-                      </p>
-                      <p className="mt-0.5 truncate text-[11px] font-bold text-stone-400">
-                        {uploading ? '正在打包发布...' : publishSummaryDetail}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (selectedCat) void handleSubmitFinal(selectedCat);
-                      }}
-                      disabled={!selectedCat || uploading}
-                      className="flex h-12 min-w-[112px] items-center justify-center gap-2 rounded-3xl bg-primary px-4 text-sm font-black text-white shadow-lg shadow-primary/20 transition active:scale-95 disabled:bg-stone-300 disabled:shadow-none"
-                    >
-                      {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
-                      <span>{selectedCat ? publishButtonLabel : '选标签'}</span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedCat) void handleSubmitFinal(selectedCat);
+                    }}
+                    disabled={!selectedCat || uploading}
+                    aria-label={selectedCat ? '发布动态' : '先选择发布标签'}
+                    className="mx-auto flex h-14 w-full max-w-sm items-center justify-center gap-2 rounded-full bg-primary px-5 text-base font-black text-white shadow-lg shadow-primary/25 transition active:scale-95 disabled:bg-stone-300 disabled:shadow-none"
+                  >
+                    {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    <span>{uploading ? '正在发布...' : selectedCat ? '发布' : '先选标签'}</span>
+                  </button>
                 </div>
               </div>
             )}
