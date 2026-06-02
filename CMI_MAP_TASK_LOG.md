@@ -1659,3 +1659,17 @@
   - `pnpm lint` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地生产预览 `http://127.0.0.1:4173/events/cmi-five-minute-music-kid-a-2026-06-02` 活动详情正常渲染；内置浏览器不允许改写 `window.open` 截获外部地图 URL，导航坐标由新增单元测试和线上数据查询覆盖。
+
+### 2026-06-02 14:42:37 +07 清迈客栈活动导航坐标修复部署
+
+- Source commit：`3552f3d`（`Fix CMI Inn event navigation coordinates`）。
+- Supabase：
+  - 远端迁移 `20260602073543_fix_cmi_inn_event_coordinates` 已应用。
+  - 线上 `cmi_events` 复查：当前清迈客栈 / CMI 活动均为 `18.7932, 98.9874`，旧错误坐标 `18.7919513784612, 98.9946296215124` 数量为 0。
+- Cloudflare Pages：
+  - v3 预览项目：`https://d1d4df43.cmi-map-v3.pages.dev`。
+  - 正式站 Pages 项目：`https://3a54352f.cmi-map.pages.dev`。
+- 线上复查：
+  - `https://cmimap.com/events/cmi-five-minute-music-kid-a-2026-06-02?verify=3552f3d`、`https://3a54352f.cmi-map.pages.dev/events/cmi-five-minute-music-kid-a-2026-06-02?verify=3552f3d` 和 `https://d1d4df43.cmi-map-v3.pages.dev/events/cmi-five-minute-music-kid-a-2026-06-02?verify=3552f3d` 均返回 200，入口均引用 `assets/index-DXbwOuuc.js`。
+  - 正式域名入口引用 `CmiEventDetail-HztAMqFP.js`；线上相关数据包包含新清迈客栈坐标，未发现旧错误坐标残留。
+  - 应用内浏览器复查 `https://3a54352f.cmi-map.pages.dev/events/cmi-five-minute-music-kid-a-2026-06-02?verify=3552f3d`：活动详情正常渲染，底部“导航”按钮可见。
