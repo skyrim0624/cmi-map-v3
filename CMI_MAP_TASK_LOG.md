@@ -1352,3 +1352,6 @@
   - 本地浏览器验证 `http://127.0.0.1:5173/?screen=events&verify=button-balance-local`：390px 视口下标题 34px，两行高度 67px；按钮 104px x 38px；标题与按钮无重叠，console 无 warn/error。
   - 本地浏览器验证 360px 视口：标题 30px，两行高度 59px；按钮 96px x 36px；标题与按钮无重叠，console 无 warn/error。
   - 本地未登录状态点击“发起活动”仍进入 `/login`，入口行为正常。
+  - 已部署 v3 项目 `https://25ff9603.cmi-map-v3.pages.dev` 和正式站 `https://393b37a6.cmi-map.pages.dev`，Source 为 `3b96310`。
+  - 线上预览 `https://393b37a6.cmi-map.pages.dev/?screen=events&verify=button-balance-3b96310` 复查通过：390px 视口标题 34px、按钮 104px x 38px，无重叠，console 无 warn/error；360px 视口按钮 96px x 36px，无重叠。
+  - 正式域名 `https://cmimap.com/?screen=events&verify=button-balance-3b96310` 普通刷新后已切到新入口 `index-DwEIRZX7.js` 和新 V3 包 `CmiMapV3Prototype-C4StUDNc.js` / `CmiMapV3Prototype-DeoPRJUd.css`；390px 视口下按钮已降级为右上角辅助入口，标题重新成为主视觉。
