@@ -1437,3 +1437,19 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - `git diff --check` 通过。
   - 本地浏览器验证 `http://localhost:5173/events/new` 被登录保护重定向到 `/login`，页面正常渲染且 console 无 warn/error；为避免复制生产站真实登录令牌到本地，本轮未在浏览器里做真实发起 / 提交 / 邮件触发。
+
+### 2026-06-02 09:51:40 +07 清迈客栈区域预约与活动审核流部署
+
+- Source commit：`9c1f9bd8642ff1c66fb1791c40e80eb5c4c22f2d`（`Add CMI inn venue space review flow`）。
+- Supabase：
+  - `supabase db push --linked --dry-run` 只检测到本轮 migration `20260602093000_cmi_inn_venue_space_review_flow.sql`。
+  - `supabase db push --linked --yes` 已成功应用该 migration。
+  - Edge Function `notify-cmi-event-application` 已部署到项目 `sfpcpxlxslnulzlmjcby`。
+  - 远端 secrets 已存在 `RESEND_API_KEY`、`CMI_EVENT_ADMIN_EMAIL`、`CMI_EVENT_EMAIL_FROM`、`CMI_INN_DEFAULT_ORGANIZER_EMAIL` 和 `PUBLIC_SITE_URL`，邮件提醒具备发信配置。
+- Cloudflare Pages：
+  - v3 预览项目：`https://fe118e7b.cmi-map-v3.pages.dev`。
+  - 正式站 Pages 项目：`https://32ea999b.cmi-map.pages.dev`。
+- 线上复查：
+  - 正式站 `https://cmimap.com/events/new?verify=venue-space-9c1f9bd` 可打开活动发布表单，console 无 warn/error。
+  - 绑定“清迈客栈”后显示六个区域：地毯区、圆桌区、办公区、4 楼天台区、2 楼沙发区、院子凉棚区。
+  - 点击“地毯区”后 UI 显示“已选择”；本轮未提交真实活动，避免在线上生成测试活动和触发真实邮件。
