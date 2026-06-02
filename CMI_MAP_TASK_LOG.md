@@ -28,6 +28,19 @@
 
 ## 执行记录
 
+### 2026-06-02 13:49 +07 打卡发布前照片预览缩小
+
+- 背景：用户反馈相册照片进入“选择发布标签 / 关联活动”阶段后，照片仍占据过高首屏空间，导致 Tag 和活动关联只能在很小区域里上下拖动。
+- 本轮实现：
+  - `/mark` 发布准备阶段单独使用紧凑照片高度 `clamp(10.5rem, 28dvh, 13rem)`，只压缩已经确定照片后的预览，不影响拍照、分析和定位阶段的大图反馈。
+  - 增加源码断言，防止发布前分类页之后又回到大方图占满首屏。
+- 验证结果：
+  - `node --test src/pages/MarkPlace.test.ts` 通过。
+  - `pnpm exec biome lint src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
+  - 应用内浏览器用 393×852 移动视口打开本地 `http://127.0.0.1:5174/mark?verify=compact-photo-local`，页面被未登录保护重定向到 `/login`，因此本地浏览器未能直接进入截图里的发布准备阶段；目标布局以源码断言、构建和 lint 验证为准。
+
 ### 2026-06-02 13:44 +07 打卡发布按钮简化
 
 - 背景：用户反馈发布分类页底部操作条太复杂，只需要固定一个发布按钮；满足条件后直接发布。
@@ -1552,3 +1565,19 @@
   - `https://cmimap.com/?verify=032615e`、`https://9d6782ca.cmi-map.pages.dev/?verify=032615e` 和 `https://93e7c2fe.cmi-map-v3.pages.dev/?verify=032615e` 均返回新入口 `assets/index-B-Jb6Iug.js`。
   - 正式域名入口引用 `LeafletMap-Byi-qJsS.js`、`map-marker-visual-CMP2aR-V.js` 和 `CmiMapV3Prototype-CsroYJfP.js`。
   - 应用内浏览器复查 `https://9d6782ca.cmi-map.pages.dev/?verify=compact-markers-032615e`：动态同步完成后 app marker 数量 8，聚合 marker 62x54，单个 marker 52x52 / 56x56，页面无当前部署相关 console warn/error。
+
+### 2026-06-02 13:48:29 +07 打卡文字输入步骤极简化
+
+- 背景：用户在 `/mark` 打卡文字步骤圈出顶部提示文案和“还没有关联地点 / 关联”卡片，要求删掉，只保留文字框和下面两个按钮。
+- 本轮实现：
+  - 写体验阶段删除顶部提示、“关联地点”卡片和底部静态语音提示，只保留 textarea、语音按钮和确认按钮。
+  - 语音识别的异常提示继续通过 toast 处理，不再占用页面布局。
+  - 未关联地点时，确认按钮仍进入后续地点搜索 / 手动选点兜底，不改变发布流程。
+  - 发布前分类页底部继续收敛为单个固定发布按钮，不再显示额外摘要预览。
+- 验证结果：
+  - `node --test src/pages/MarkPlace.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 构建后的 `MarkPlace` chunk 确认不再包含本轮删除的静态提示文案。
+  - 本地浏览器预览 `http://127.0.0.1:4187/mark` 会因登录保护重定向到 `/login`，页面正常渲染且 console 无 warn/error；未复制生产登录态做真实打卡提交。
