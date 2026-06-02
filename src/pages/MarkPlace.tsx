@@ -1368,28 +1368,6 @@ export default function MarkPlace() {
               </div>
             )}
             
-            {/* 描述文字便签：只在语音输入阶段给用户即时反馈，分类页不重复展示已输入内容。 */}
-            {stage === 'voice' && (description || interimTranscript || isListening) && (
-              <div className={`w-full max-w-sm ${isPhotoDoneStage ? 'mt-3 mb-2' : 'mt-4 mb-2'}`}>
-                <div className="bg-[#fff9e6] p-3 text-stone-800 text-[15px] leading-relaxed shadow-sm border border-[#f0e6d2] rounded-lg"
-                     style={{ fontFamily: "'Varela Round', 'Nunito', 'PingFang SC', 'Microsoft YaHei', ui-rounded, sans-serif", fontWeight: 500, letterSpacing: "0.02em" }}>
-                  {description}
-                  {interimTranscript && (
-                    <span className="text-stone-400">
-                      {description ? ' ' : ''}
-                      {interimTranscript}
-                    </span>
-                  )}
-                  {isListening && <span className="inline-block w-2.5 h-5 bg-stone-400 animate-pulse ml-1 align-middle" />}
-                </div>
-                {isPhotoDoneStage && (
-                  <p className="mt-3 text-center text-xs font-bold tracking-[0.08em] text-stone-400">
-                    正在把这条清迈痕迹收进地图...
-                  </p>
-                )}
-              </div>
-            )}
-
             {stage === 'map_fallback' && (
                <div className="absolute inset-0 animate-in fade-in duration-300">
 	                 <LeafletMap
@@ -1485,10 +1463,48 @@ export default function MarkPlace() {
             )}
 
             {stage === 'voice' && (
-              <div className="w-full flex flex-col items-center gap-5 py-4 animate-in slide-in-from-bottom-10 fade-in duration-500">
+              <div className="w-full flex flex-col items-center gap-4 py-4 animate-in slide-in-from-bottom-10 fade-in duration-500">
                 <p className="text-stone-500 font-bold text-sm">
                   {description ? '还想补充什么？' : '写一句你对这里的真实感觉'}
                 </p>
+                <div className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white/90 px-3 py-3 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <MapPin className="h-4 w-4" strokeWidth={3} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-stone-800">
+                          {selectedPlaceLabel || '还没有关联地点'}
+                        </p>
+                        <p className="mt-0.5 text-xs font-semibold text-stone-400">
+                          {selectedPlaceLabel ? '这条动态会带地点标签' : '可以先写，下一步再搜地点'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setStage('map_fallback')}
+                      className="shrink-0 rounded-full bg-stone-100 px-3 py-2 text-xs font-black text-stone-700 active:scale-95"
+                    >
+                      {selectedPlaceLabel ? '更换' : '关联'}
+                    </button>
+                  </div>
+                </div>
+                <div className="w-full max-w-sm">
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="写下地点名和具体体验，比如：Fern Forest，树很多很安静，适合上午写东西"
+                    className="w-full min-h-28 resize-none rounded-2xl border border-stone-200 bg-white/90 px-4 py-3 text-[15px] leading-relaxed text-stone-800 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                    maxLength={240}
+                  />
+                  {interimTranscript && (
+                    <p className="mt-2 rounded-2xl bg-primary/5 px-3 py-2 text-xs font-bold leading-relaxed text-primary/75">
+                      正在听：{interimTranscript}
+                    </p>
+                  )}
+                </div>
                 <div className="flex gap-5 items-center">
                   <button
                     onClick={handleVoiceInput}
@@ -1515,51 +1531,18 @@ export default function MarkPlace() {
                       <Mic className="w-7 h-7" />
                     )}
                   </button>
-                  
-                  {description && !isListening && (
-                    <button
-                      onClick={() => setStage(selectedPlaceLabel ? 'category' : 'map_fallback')}
-                      className="w-12 h-12 rounded-full bg-white text-primary flex items-center justify-center shadow-md animate-in slide-in-from-right-4 hover:scale-105 active:scale-95 transition-all"
-                      aria-label={selectedPlaceLabel ? '进入分类发布' : '先关联地点'}
-                    >
-                      <Check className="w-6 h-6" strokeWidth={3} />
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setStage(selectedPlaceLabel ? 'category' : 'map_fallback')}
+                    disabled={!description.trim() || isListening}
+                    className="w-16 h-16 rounded-full bg-white text-primary flex items-center justify-center shadow-md transition-all hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-300 disabled:shadow-sm disabled:hover:scale-100"
+                    aria-label={selectedPlaceLabel ? '进入分类发布' : '先关联地点'}
+                  >
+                    <Check className="w-7 h-7" strokeWidth={3} />
+                  </button>
                 </div>
                 <p className="max-w-sm text-center text-xs font-medium leading-relaxed text-stone-400">
                   {voiceHint}
                 </p>
-                <div className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white/90 px-3 py-3 shadow-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        <MapPin className="h-4 w-4" strokeWidth={3} />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-black text-stone-800">
-                          {selectedPlaceLabel || '还没有关联地点'}
-                        </p>
-                        <p className="mt-0.5 text-xs font-semibold text-stone-400">
-                          {selectedPlaceLabel ? '这条动态会带地点标签' : '可以先写，下一步再搜地点'}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setStage('map_fallback')}
-                      className="shrink-0 rounded-full bg-stone-100 px-3 py-2 text-xs font-black text-stone-700 active:scale-95"
-                    >
-                      {selectedPlaceLabel ? '更换' : '关联'}
-                    </button>
-                  </div>
-                </div>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="写下地点名和具体体验，比如：Fern Forest，树很多很安静，适合上午写东西"
-                  className="w-full max-w-sm min-h-24 resize-none rounded-2xl border border-stone-200 bg-white/90 px-4 py-3 text-[15px] leading-relaxed text-stone-800 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
-                  maxLength={240}
-                />
               </div>
             )}
 
