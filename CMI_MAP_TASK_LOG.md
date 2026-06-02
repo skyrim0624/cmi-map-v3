@@ -1493,3 +1493,14 @@
   - `pnpm exec biome lint src/lib/map-marker-visual.ts src/lib/map-marker-visual.test.ts src/components/map/LeafletMap.tsx` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地预览 `http://127.0.0.1:4177/?verify=compact-markers` 复查：marker DOM 显示聚合 marker 62x54、单个头像 marker 52x52 / 56x56，截图确认地图视觉更轻。
+
+### 2026-06-02 10:13:10 +07 V3 地图 marker 整体缩小部署
+
+- Source commit：`032615e`（`Reduce map marker sizes`）。
+- Cloudflare Pages：
+  - v3 预览项目：`https://93e7c2fe.cmi-map-v3.pages.dev`。
+  - 正式站 Pages 项目：`https://9d6782ca.cmi-map.pages.dev`。
+- 线上复查：
+  - `https://cmimap.com/?verify=032615e`、`https://9d6782ca.cmi-map.pages.dev/?verify=032615e` 和 `https://93e7c2fe.cmi-map-v3.pages.dev/?verify=032615e` 均返回新入口 `assets/index-B-Jb6Iug.js`。
+  - 正式域名入口引用 `LeafletMap-Byi-qJsS.js`、`map-marker-visual-CMP2aR-V.js` 和 `CmiMapV3Prototype-CsroYJfP.js`。
+  - 应用内浏览器复查 `https://9d6782ca.cmi-map.pages.dev/?verify=compact-markers-032615e`：动态同步完成后 app marker 数量 8，聚合 marker 62x54，单个 marker 52x52 / 56x56，页面无当前部署相关 console warn/error。
