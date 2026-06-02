@@ -1320,3 +1320,18 @@
   - 已部署 v3 项目 `https://50b81ec5.cmi-map-v3.pages.dev` 和正式站 `https://3a5bf16a.cmi-map.pages.dev`，Source 为 `f6d7cdc`。
   - 线上预览 `https://3a5bf16a.cmi-map.pages.dev/?screen=events&verify=event-hero-f6d7cdc` 复查通过：390px 手机宽度下标题固定两行，按钮仍在右上角，console 无 warn/error。
   - 正式域名 `https://cmimap.com/?screen=events&verify=event-hero-f6d7cdc` 普通刷新后已切到新入口 `index-C3ofkg3p.js` 和新 V3 包 `CmiMapV3Prototype-DcJwzlzJ.js` / `CmiMapV3Prototype-D8x5s38f.css`；390px 手机宽度下标题与按钮无重叠。
+
+### 2026-06-02 08:53:22 +07 活动页发起按钮视觉降级
+
+- 背景：用户在手机截图中指出右上角“发起活动”按钮比标题还要猛，视觉上更像主标题；期望按钮小一点、标题大一点。
+- 本轮实现：
+  - 440px 以下把活动页标题从 30px 提到 34px，保持两行稳定排版。
+  - 440px 以下把“发起活动”按钮从 120px / 44px 降到 104px / 38px，并同步缩小图标、间距、阴影和漫画强调线。
+  - 370px 以下单独收敛为 96px / 36px 按钮和 30px 标题，避免极窄屏重新拥挤。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - CSS 语法检查 `npx tailwindcss -i ./src/index.css -o /dev/null ...` 无错误输出。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地浏览器验证 `http://127.0.0.1:5173/?screen=events&verify=button-balance-local`：390px 视口下标题 34px，两行高度 67px；按钮 104px x 38px；标题与按钮无重叠，console 无 warn/error。
+  - 本地浏览器验证 360px 视口：标题 30px，两行高度 59px；按钮 96px x 36px；标题与按钮无重叠，console 无 warn/error。
+  - 本地未登录状态点击“发起活动”仍进入 `/login`，入口行为正常。

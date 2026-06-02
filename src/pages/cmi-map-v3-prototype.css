@@ -2996,14 +2996,14 @@
 
 @media (max-width: 440px) {
   .cmi-v3-events-hero-head {
-    grid-template-columns: minmax(0, 1fr) 120px;
-    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) 104px;
+    gap: 10px;
   }
 
   .cmi-v3-events-hero h1 {
     margin-top: 10px;
-    font-size: 30px;
-    line-height: 1.02;
+    font-size: 34px;
+    line-height: 0.98;
   }
 
   .cmi-v3-events-hero-copy h1 span {
@@ -3011,8 +3011,34 @@
   }
 
   .cmi-v3-events-create-button {
-    width: 120px;
-    padding-inline: 9px;
+    width: 104px;
+    min-height: 38px;
+    gap: 4px;
+    padding-inline: 8px;
+    box-shadow: 2px 3px 0 rgba(22, 22, 22, 0.24);
+    font-size: 12px;
+    text-size-adjust: none;
+    -webkit-text-size-adjust: none;
+  }
+
+  .cmi-v3-events-create-button svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .cmi-v3-events-create-button::before {
+    top: -12px;
+    right: 12px;
+    width: 3px;
+    height: 13px;
+  }
+
+  .cmi-v3-events-create-button::after {
+    top: -8px;
+    right: -6px;
+    width: 3px;
+    height: 12px;
+    box-shadow: -8px 8px 0 var(--cmi-v3-ink);
   }
 }
 
@@ -3022,12 +3048,21 @@
   }
 
   .cmi-v3-events-hero-head {
-    grid-template-columns: minmax(0, 1fr) 116px;
+    grid-template-columns: minmax(0, 1fr) 96px;
+    gap: 8px;
   }
 
   .cmi-v3-events-create-button {
-    width: 116px;
-    padding-inline: 7px;
+    width: 96px;
+    min-height: 36px;
+    gap: 3px;
+    padding-inline: 6px;
+    font-size: 11px;
+  }
+
+  .cmi-v3-events-create-button svg {
+    width: 14px;
+    height: 14px;
   }
 
   .cmi-v3-feed-stream .cmi-v3-feed-post-card,
@@ -3049,7 +3084,7 @@
   }
 
   .cmi-v3-events-hero h1 {
-    font-size: 26px;
+    font-size: 30px;
   }
 
   .cmi-v3-map-bottom {
