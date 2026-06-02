@@ -55,6 +55,9 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - 应用内浏览器移动视口复查 `/mark?verify=simple-publish-button-flow`：走“直接文字推荐 -> 选择清迈客栈 -> 写体验 -> 进入分类发布 -> 选择清迈客栈标签”，选标签前底部只有灰色“先选标签”按钮，选中后变成紫色“发布”按钮；未点击最终发布，避免生成测试动态。
   - 控制台只有本地相机权限被拒绝的 warning，不是本轮按钮改动导致。
+  - 已部署 v3 项目 `https://16737d34.cmi-map-v3.pages.dev` 和正式站 `https://4eb9d120.cmi-map.pages.dev`，Source 为 `8bd73c2`。
+  - 正式域名 `https://cmimap.com/mark?verify=simple-publish-button-8bd73c2` 返回 200；线上 `MarkPlace-W4S-F6c7.js` 包内包含“先选标签”和“正在发布...”，不再包含“发布到客栈”“发布彩蛋”“先选一个标签”或 `publishButtonLabel`。
+  - 应用内浏览器复查 `https://4eb9d120.cmi-map.pages.dev/mark?verify=simple-publish-button-clean-8bd73c2`：未登录状态按预期跳到登录页，页面非空且无框架错误；同一浏览器日志里残留的 warning 均来自此前本地 `127.0.0.1` 相机权限拒绝，不是线上页面错误。
 
 ### 2026-06-02 13:27 +07 删除旧活动列表返回界面
 
