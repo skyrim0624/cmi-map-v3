@@ -28,6 +28,25 @@
 
 ## 执行记录
 
+### 2026-06-02 09:09 +07 清迈客栈打卡归入动态页
+
+- 背景：用户反馈选择“清迈客栈”标签打卡发布后会跳入旧 `/cmi-home` 清迈客栈独立页；该页面当前用不到，应先下线，清迈客栈 Tag 的打卡动态统一进入动态页，并继续能在地图上看到。
+- 本轮实现：
+  - `/mark` 选择清迈客栈 Tag 发布成功后改为跳转动态页 `/?screen=feed`，成功提示改成“这张客栈现场已经放到动态里了”。
+  - `/cmi-home` 不再渲染旧清迈客栈独立页，改为重定向到动态页；旧 `CmiHome` 组件与素材保留，方便以后需要时复用。
+  - 清迈客栈 Tag 不再被公开地图推荐过滤排除，仍识别为清迈客栈标签，同时属于动态页和地图 marker 候选。
+  - 旧首页清迈客栈入口、活动异常 fallback、发布分类说明同步改为动态页语义，避免继续把用户带回旧客栈页。
+- 验证结果：
+  - `node --test src/pages/MarkPlace.test.ts src/routes.test.ts` 通过。
+  - `node --test --experimental-strip-types src/types/types.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts src/routes.tsx src/routes.test.ts src/types/types.ts src/types/types.test.ts src/pages/CmiEventDetail.tsx src/features/home/sections/cmi-inn-section.ts src/data/cmi-taxonomy.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过；`pnpm lint` 通过，其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
+  - 本地预览清理旧 PWA 缓存后访问 `/cmi-home` 会跳到 `/?screen=feed`，页面不再出现 `CMI Inn as Living Room` 和 `去客栈逛逛`，动态流中可见“清迈客栈”打卡。
+  - 已用干净 worktree 从代码提交 `e264ec1` 构建部署，避免混入当前工作区里无关的活动管理草稿改动。
+  - 已部署 v3 项目 `https://f059c3f0.cmi-map-v3.pages.dev` 和正式站 `https://cb83c450.cmi-map.pages.dev`，Source 为 `e264ec1`。
+  - 正式域名 `https://cmimap.com` 服务器入口已引用新包 `index-Mv1ZAFbp.js` 与 `MarkPlace-Bjl9lciY.js`；包内确认 `/cmi-home` 路由仍存在但只重定向动态页，不再包含旧 `CmiHome` lazy 路由、旧客栈页 hero 文案或“留言墙”提示。应用内浏览器若仍看到旧客栈页，是旧 PWA Service Worker 缓存，需要刷新或重开页面。
+
 ### 2026-06-02 08:55 +07 打卡文字输入区去掉重复预览
 
 - 背景：用户反馈打卡文字已经在下方输入框写完后，上方又生成一张写好内容的便签预览，信息重复；语音按钮和确认按钮也应放在输入框下面。
