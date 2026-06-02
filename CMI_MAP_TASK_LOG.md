@@ -42,6 +42,10 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - `git diff --check` 通过。
   - `deno fmt --check supabase/functions/notify-cmi-event-registration/index.ts` 未采用为通过标准：该函数目录沿用项目现有单引号风格，Deno fmt 会重排整份文件并产生大范围格式化噪音。
+  - 已提交并推送：`aec7671 Update CMI inn route guide email image`。
+  - 已部署 v3 项目 `https://4e27e02f.cmi-map-v3.pages.dev` 和正式站 `https://a521d7ba.cmi-map.pages.dev`。
+  - Edge Function `notify-cmi-event-registration` 已部署到 Supabase 项目 `sfpcpxlxslnulzlmjcby`。
+  - 正式域名 `https://cmimap.com/cmi-home/cmi-inn-route-guide-grid.jpg` 返回 200，`content-type: image/jpeg`，`content-length: 863044`。
 
 ### 2026-06-02 09:40 +07 地图动态 marker 只保留最近一周
 
