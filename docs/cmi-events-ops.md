@@ -81,19 +81,21 @@
 
 Time Out 的本周末专题可以作为及时线索源；如果只用 Time Out，`reliabilityNote` 必须写明“出发前仍建议复核场地方动态”。Citylife、主办方官网、场地方页面和 CMI 自有公告优先级更高。
 
-最新一次维护：2026-06-01 22:00 ICT，本轮扫描 `五月活动` 与 `六月活动` 发现新增候选：`/Users/andreas/CMI/活动宣传内容/六月活动/6.3 好奇社活动：古城与古寺——清迈古城与佛寺文化`，核实后发布为 `cmi-curiosity-old-city-temples-2026-06-03`（发布中使用官方海报）。同时补齐 `cmi-five-minute-music-kid-a-2026-06-02` 的首页卡片背景图。
+最新一次维护：2026-06-02 12:56 ICT，本轮扫描 `五月活动` 与 `六月活动`，用 CMI Map CLI 管理员通道发布 3 条新增活动：`cmi-ai-open-mic-vol-05-2026-06-05`、`cmi-kongxiang-canteen-hotpot-2026-06-05`、`cmi-my-octopus-teacher-screening-2026-06-06`。三条活动均使用同目录官方海报，CLI 已上传到 Supabase Storage；本地兜底同步补充详情页海报和首页卡片背景图。
+
+本轮不发布 `/Users/andreas/CMI/活动宣传内容/六月活动/6.6 旧物交换市集`：文件夹名指向 6.6，但海报写“周日下午两点到五点”；2026-06-06 是周六、2026-06-07 才是周日，活动日期需人工确认后再发布。
 
 同步动作：
 
-- 远程 `public.cmi_events` 已新增/更新：新增 `published` 活动 `cmi-curiosity-old-city-temples-2026-06-03`，并保留 `source_label = CMI 活动宣传内容文件夹`。
-- 已归档已结束活动：14 条；到 `next_check_before` 需复核活动：0 条；仍可参加活动暂无需要刷新复核时间的条目。
-- 本地兜底 `src/data/cmi-events.ts` 已同步更新维护时间、事件条目与 `coverImageUrl`；`src/data/cmi-event-details.ts` 已补充 6.3 详情页、首页卡片背景映射，并补齐 6.2 音乐会首页卡片背景映射。
-- 已补充可审计 SQL：`supabase/migrations/20260601220029_sync_cmi_inn_events_and_publish_curiosity.sql`（同步包含状态归档/复核刷新与新增事件 upsert）。
+- 远程活动库已通过 `pnpm cmi:event:publish -- --input ... --admin-publish` 新增 3 条 `published` 活动；未手写 SQL，也未直接修改远程数据库。
+- 本地兜底 `src/data/cmi-events.ts` 已同步更新维护时间、事件条目与 `coverImageUrl`；`src/data/cmi-event-details.ts` 已补充 6.5 / 6.6 详情页海报、首页卡片背景和正文映射。
+- 已生成首页卡片背景图到 `public/cmi-home/event-card-backgrounds/`，尺寸为 1280x549；详情页海报已保存到 `public/cmi-home/event-posters/`。
+- 本轮没有执行已结束活动归档或 `next_check_before` 复核刷新：当前确认的发布路径是 CMI Map CLI，仓库尚无 CLI-only 的状态归档/复核命令。
 
 当前远程与本地可见的 future CMI / 清迈客栈活动：
-`cmi-five-minute-music-kid-a-2026-06-02`、`cmi-curiosity-old-city-temples-2026-06-03`、`cmi-talk-fathers-day-speaker-call-2026-06-07`。
+`cmi-five-minute-music-kid-a-2026-06-02`、`cmi-curiosity-old-city-temples-2026-06-03`、`cmi-ai-open-mic-vol-05-2026-06-05`、`cmi-kongxiang-canteen-hotpot-2026-06-05`、`cmi-my-octopus-teacher-screening-2026-06-06`、`cmi-talk-fathers-day-speaker-call-2026-06-07`。
 
-类型检查和生产构建在本轮均已通过；`/cmi-home` 基础验证通过构建产物检查、远程活动条目核对和本地预览静态资源检查。
+远程活动详情 URL 均返回 200，三张上传后的 Storage 海报均返回 200 且 `content-type` 为 `image/png`。类型检查、活动数据测试、生产构建和 `/cmi-home` 基础验证需在本轮代码落地后执行。
 
 ## 类型标签
 

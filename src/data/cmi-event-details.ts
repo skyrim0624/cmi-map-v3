@@ -46,6 +46,12 @@ export const CMI_EVENT_POSTER_BY_ID: Partial<Record<string, string>> = {
     '/cmi-home/event-posters/cmi-five-minute-music-kid-a-2026-06-02.png?v=20260601-mobile-share',
   'cmi-curiosity-old-city-temples-2026-06-03':
     '/cmi-home/event-posters/cmi-curiosity-old-city-temples-2026-06-03.jpg',
+  'cmi-ai-open-mic-vol-05-2026-06-05':
+    '/cmi-home/event-posters/cmi-ai-open-mic-vol-05-2026-06-05.png',
+  'cmi-kongxiang-canteen-hotpot-2026-06-05':
+    '/cmi-home/event-posters/cmi-kongxiang-canteen-hotpot-2026-06-05.png',
+  'cmi-my-octopus-teacher-screening-2026-06-06':
+    '/cmi-home/event-posters/cmi-my-octopus-teacher-screening-2026-06-06.png',
   'cmi-talk-fathers-day-speaker-call-2026-06-07':
     '/cmi-home/event-posters/cmi-talk-fathers-day-speaker-call-2026-06-07.png',
 };
@@ -70,6 +76,12 @@ export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = 
     '/cmi-home/event-card-backgrounds/cmi-five-minute-music-kid-a-2026-06-02.jpg',
   'cmi-curiosity-old-city-temples-2026-06-03':
     '/cmi-home/event-card-backgrounds/cmi-curiosity-old-city-temples-2026-06-03.jpg',
+  'cmi-ai-open-mic-vol-05-2026-06-05':
+    '/cmi-home/event-card-backgrounds/cmi-ai-open-mic-vol-05-2026-06-05.jpg',
+  'cmi-kongxiang-canteen-hotpot-2026-06-05':
+    '/cmi-home/event-card-backgrounds/cmi-kongxiang-canteen-hotpot-2026-06-05.jpg',
+  'cmi-my-octopus-teacher-screening-2026-06-06':
+    '/cmi-home/event-card-backgrounds/cmi-my-octopus-teacher-screening-2026-06-06.jpg',
   'cmi-talk-fathers-day-speaker-call-2026-06-07':
     '/cmi-home/event-card-backgrounds/cmi-talk-fathers-day-speaker-call-2026-06-07.jpg',
 };
@@ -610,6 +622,110 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
       {
         kind: 'paragraph',
         text: '无论你是历史文化爱好者，还是刚来到清迈的新朋友，都欢迎来到现场，一起在古城与古寺之间，重新认识这座充满故事的城市。',
+      },
+    ],
+  },
+  'cmi-ai-open-mic-vol-05-2026-06-05': {
+    eventId: 'cmi-ai-open-mic-vol-05-2026-06-05',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-ai-open-mic-vol-05-2026-06-05']!,
+    postTitle: 'AI 开放麦05｜大家一起聊聊天！',
+    postBlocks: [
+      {
+        kind: 'paragraph',
+        text: 'AI 工具每天都在变化，真正有价值的经验，往往来自具体使用现场。',
+      },
+      {
+        kind: 'paragraph',
+        text: '这期 AI 开放麦，我们继续围绕过去一周的 AI 使用展开交流：你可以分享最近用到的工具、看到的有趣案例、自己正在做的项目，也可以带着问题来现场讨论。',
+      },
+      {
+        kind: 'paragraph',
+        text: '不用准备完整演讲，有一个观察、一个尝试、一个踩坑，或者一个正在推进中的想法，都可以拿出来聊。',
+      },
+      {
+        kind: 'heading',
+        text: '活动信息',
+      },
+      {
+        kind: 'list',
+        items: [
+          '活动时间：6 月 5 日（周五）19:00',
+          '活动地点：清迈客栈',
+          '场地费用：免费参与',
+          CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
+        ],
+      },
+    ],
+  },
+  'cmi-kongxiang-canteen-hotpot-2026-06-05': {
+    eventId: 'cmi-kongxiang-canteen-hotpot-2026-06-05',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-kongxiang-canteen-hotpot-2026-06-05']!,
+    postTitle: '6 月第一周，空想食堂开火锅局',
+    postBlocks: [
+      {
+        kind: 'paragraph',
+        text: '6 月第一周，我们来点不一样的。这周空想食堂不只有基本盘饺子，还有火锅。',
+      },
+      {
+        kind: 'paragraph',
+        text: '火锅适合很多人一起吃，也适合把不同的食材放到同一口锅里：蔬菜、豆腐、蘑菇、肉片、丸子、蘸料，都可以成为这一锅的一部分。',
+      },
+      {
+        kind: 'paragraph',
+        text: '这次的参与方式也很简单：每个人带一道适合火锅的食材来，大家一起煮、一起吃、一起聊。',
+      },
+      {
+        kind: 'heading',
+        text: '活动信息',
+      },
+      {
+        kind: 'list',
+        items: [
+          '活动时间：6 月 5 日（周五）19:00',
+          '活动地点：清迈客栈',
+          '场地费用：免费参与；请每个人带一道适合火锅的食材来和大家分享',
+          CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
+        ],
+      },
+    ],
+  },
+  'cmi-my-octopus-teacher-screening-2026-06-06': {
+    eventId: 'cmi-my-octopus-teacher-screening-2026-06-06',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-my-octopus-teacher-screening-2026-06-06']!,
+    postTitle: '《我的章鱼老师》观影：你有多久，没有真正观察过另一个生命？',
+    postBlocks: [
+      {
+        kind: 'paragraph',
+        text: '你有多久，没有真正观察过另一个生命？',
+      },
+      {
+        kind: 'paragraph',
+        text: '《我的章鱼老师》记录了一段真实而不可思议的友谊：一位摄影师在海底与一只章鱼相伴一年。在追随它的过程中，他重新发现了自然的智慧，也慢慢找回了生命的热情。',
+      },
+      {
+        kind: 'paragraph',
+        text: '这周六晚，Magic Lab 将在 CMI 放映《我的章鱼老师》。这是一部很适合一起安静看完、再慢慢聊聊的电影。',
+      },
+      {
+        kind: 'heading',
+        text: '适合谁来',
+      },
+      {
+        kind: 'list',
+        items: ['喜欢纪录片、自然、海洋的人', '想在周六晚上安静看一部好电影的人', '对人与自然、观察、陪伴这些主题有兴趣的人'],
+      },
+      {
+        kind: 'heading',
+        text: '活动信息',
+      },
+      {
+        kind: 'list',
+        items: [
+          '活动时间：6 月 6 日（周六）19:00',
+          '活动地点：CMI',
+          '场地费用：免费参与',
+          CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
+        ],
       },
     ],
   },
