@@ -28,6 +28,21 @@
 
 ## 执行记录
 
+### 2026-06-02 10:53 +07 报名成功邮件路线指引改为单张拼版图
+
+- 背景：用户反馈报名成功邮件里的清迈客栈路线指引照片不对，且逐张长图排列太长、不便保存和转发。
+- 本轮实现：
+  - 使用 `/Users/andreas/Downloads/清迈客栈路线图` 中的 5 张新照片生成 9:16 单张路线指引图。
+  - 版式为上方两张、中间两张、底部一张抵达图；保留所有红色路线箭头和抵达图文字，输出到 `public/cmi-home/cmi-inn-route-guide-grid.jpg`。
+  - 报名成功邮件不再逐张插入入口、门口、院子照片，改为只插入这张五步路线指引图，减少邮件长度并方便用户保存分享。
+- 验证结果：
+  - 已视觉检查合成图，确认五张照片顺序和内容完整。
+  - `deno check supabase/functions/notify-cmi-event-registration/index.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - `git diff --check` 通过。
+  - `deno fmt --check supabase/functions/notify-cmi-event-registration/index.ts` 未采用为通过标准：该函数目录沿用项目现有单引号风格，Deno fmt 会重排整份文件并产生大范围格式化噪音。
+
 ### 2026-06-02 09:40 +07 地图动态 marker 只保留最近一周
 
 - 背景：用户在 V3 地图页反馈，地图上的动态标识不应该一直积累、永久留在地图上；超过一周的动态仍应能搜索到，也能在个人主页看到，只是不再作为地图 marker 显示。

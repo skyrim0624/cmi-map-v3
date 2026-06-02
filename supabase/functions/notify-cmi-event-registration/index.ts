@@ -252,9 +252,7 @@ Deno.serve(async (req) => {
     `),
   });
 
-  const entranceImage = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/checkin-entrance.jpg');
-  const doorwayImage = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/checkin-doorway.jpg');
-  const yardImage = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/yard-front.jpg');
+  const routeGuideImage = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/cmi-inn-route-guide-grid.jpg');
   const parkingGuideCardImage = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/cmi-inn-parking-guide-card.png');
   const parkingMapQr = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/qr-blue-coffee-parking-map.png');
   const officialQr = absoluteAssetUrl(normalizedSiteUrl, '/cmi-home/qr-cmi-official.jpg');
@@ -276,13 +274,11 @@ Deno.serve(async (req) => {
       <div style="border:3px solid #111;border-radius:18px;background:#160f25;color:#fff;padding:16px;margin:18px 0;">
         <h3 style="margin:0 0 10px;font-size:20px;line-height:1.3;color:#fff;">清迈客栈路线指引</h3>
         <p style="margin:0;line-height:1.8;font-weight:700;color:#fff;">
-          清迈客栈在巷子里，导航快到的时候请放慢一点，看门口和院子的标识。第一次来的人比较容易在巷口错过，建议直接打车或骑摩托到附近，再按下面照片找入口。
+          清迈客栈在巷子里，导航快到的时候请放慢一点，看门口和院子的标识。第一次来的人比较容易在巷口错过，建议直接打车或骑摩托到附近，再按下面这张路线图找入口。
         </p>
       </div>
 
-      ${imageBlock(entranceImage, '清迈客栈巷口和入口参考')}
-      ${imageBlock(doorwayImage, '清迈客栈门口参考')}
-      ${imageBlock(yardImage, '清迈客栈院子参考')}
+      ${imageBlock(routeGuideImage, '清迈客栈五步路线指引图')}
 
       <div style="border:3px solid #111;border-radius:18px;background:#fff;padding:16px;margin:18px 0;">
         <h3 style="margin:0 0 10px;font-size:20px;line-height:1.3;">停车提醒</h3>
