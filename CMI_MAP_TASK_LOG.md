@@ -40,6 +40,9 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
   - 本地浏览器移动视口 `http://127.0.0.1:5173/mark?...` 被登录保护重定向到 `/login`，无法在未登录本地会话里直接操作目标发布流；已确认页面身份、非空渲染和 console 无 warn/error，目标发布流以源码断言和构建验证为准。
+  - 已部署 v3 项目 `https://7c9f013f.cmi-map-v3.pages.dev` 和正式站 `https://c4834d4b.cmi-map.pages.dev`，Source 为 `ed54a8c`。
+  - 正式域名 `https://cmimap.com/mark?verify=ed54a8c` 服务端返回 200，入口引用新包 `MarkPlace-B6_XiAqY.js`；新包内包含 `closest("main")`、`overflowY="hidden"`、`overscrollBehavior="none"`、分类内容区 `overscroll-contain` 和底部 `shrink-0` 发布条。
+  - 应用内浏览器复查正式域名时仍被旧 service worker 控制，加载 8 小时前的旧 `MarkPlace-B2JVbwq4.js`；服务器与新部署包均已更新，已访问过的移动浏览器若仍看到旧行为，需要刷新或重开页面切到新包。
 
 ### 2026-06-01 23:43 +07 打卡相机双指缩放与相机机身优化
 
