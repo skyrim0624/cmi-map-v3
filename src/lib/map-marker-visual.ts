@@ -253,14 +253,14 @@ export const getMapMarkerVisual = (
 export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolean) => {
   const label = escapeHtml(visual.label);
   const iconUrl = escapeHtml(visual.iconUrl);
-  const iconSize = visual.isAvatar ? (isHotspot ? 52 : 48) : (isHotspot ? 54 : 50);
+  const iconSize = visual.isAvatar ? (isHotspot ? 46 : 42) : (isHotspot ? 48 : 44);
   const shouldCoverImage = Boolean(visual.isAvatar || visual.isPoster);
   const imageSize = visual.isPoster
     ? iconSize - 6
     : visual.isAvatar
-      ? (isHotspot ? 38 : 35)
-      : (isHotspot ? 40 : 37);
-  const tailTop = iconSize - 10;
+      ? (isHotspot ? 34 : 31)
+      : (isHotspot ? 35 : 32);
+  const tailTop = iconSize - 8;
   const imageFit = shouldCoverImage ? 'cover' : 'contain';
   const imageRadius = shouldCoverImage ? '999px' : '0';
   const imageFilter = shouldCoverImage ? 'none' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))';
@@ -310,8 +310,8 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
       position:absolute;
       left:50%;
       top:${tailTop}px;
-      width:12px;
-      height:12px;
+      width:10px;
+      height:10px;
       transform:translateX(-50%) rotate(45deg);
       background:#ffffff;
       border-right:1.5px solid rgba(70,61,52,0.12);
@@ -324,15 +324,15 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
 export const renderEasterEggMarkerHtml = (visual: MapMarkerVisual) => {
   const label = escapeHtml(visual.label);
   const iconUrl = escapeHtml(visual.iconUrl);
-  const iconSize = visual.iconUrl.includes('easter-star') ? 34 : 30;
+  const iconSize = visual.iconUrl.includes('easter-star') ? 29 : 26;
 
   return `
     <div title="${label}" aria-label="${label}" style="
       position:absolute;
       left:50%;
       top:50%;
-      width:44px;
-      height:44px;
+      width:38px;
+      height:38px;
       transform:translate(-50%, -50%);
       display:flex;
       align-items:center;
@@ -356,12 +356,12 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
     const miniIcons = displayedVisuals.map((visual, index) => {
       const iconUrl = escapeHtml(visual.iconUrl);
       const offsets = [
-        { left: 8, top: 10, rotate: -8 },
-        { left: 24, top: 7, rotate: 10 },
-        { left: 18, top: 21, rotate: -3 },
+        { left: 7, top: 9, rotate: -8 },
+        { left: 20, top: 6, rotate: 10 },
+        { left: 16, top: 18, rotate: -3 },
       ];
       const offset = offsets[index];
-      const iconSize = visual.iconUrl.includes('easter-star') ? 24 : 22;
+      const iconSize = visual.iconUrl.includes('easter-star') ? 21 : 19;
 
       return `
         <img src="${iconUrl}" alt="" loading="lazy" style="
@@ -379,7 +379,7 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
     }).join('');
 
     return `
-      <div style="position:relative; width:52px; height:44px;">
+      <div style="position:relative; width:44px; height:38px;">
         ${miniIcons}
         ${count > 1 ? `
           <div style="
@@ -387,16 +387,16 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
             right:1px;
             bottom:3px;
             z-index:10;
-            min-width:18px;
-            height:18px;
+            min-width:16px;
+            height:16px;
             padding:0 4px;
             border-radius:999px;
             background:#fff8eb;
             color:#342f2a;
             font-family:'Inter','PingFang SC','Noto Sans SC',sans-serif;
             font-weight:950;
-            font-size:11px;
-            line-height:18px;
+            font-size:10px;
+            line-height:16px;
             text-align:center;
             box-shadow:0 2px 5px rgba(0,0,0,0.14);
           ">+${count}</div>
@@ -416,16 +416,16 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
     const shouldCoverImage = Boolean(visual.isAvatar || visual.isPoster);
     const imageFit = shouldCoverImage ? 'cover' : 'contain';
     const imageRadius = shouldCoverImage ? '999px' : '0';
-    const imageSize = visual.isPoster ? 42 : 36;
+    const imageSize = visual.isPoster ? 36 : 30;
     const imageFilter = shouldCoverImage ? 'none' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))';
 
     return `
     <div aria-hidden="true" style="
       position:absolute;
-      top:8px;
-      left:8px;
-      width:48px;
-      height:48px;
+      top:7px;
+      left:7px;
+      width:40px;
+      height:40px;
       transform:${transforms[index]};
       z-index:${index + 1};
       background:#ffffff;
@@ -453,21 +453,21 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
   const remaining = count - displayedVisuals.length;
 
   return `
-    <div style="position:relative; width:72px; height:62px;">
+    <div style="position:relative; width:62px; height:54px;">
       ${miniIcons}
       ${remaining > 0 ? `
         <div style="
           position:absolute;
-          bottom:7px;
-          right:-1px;
+          bottom:6px;
+          right:0;
           z-index:10;
-          min-width:27px;
-          height:20px;
+          min-width:23px;
+          height:18px;
           background:#fff8eb;
           color:#342f2a;
           font-family:'Inter','PingFang SC','Noto Sans SC',sans-serif;
           font-weight:950;
-          font-size:12px;
+          font-size:11px;
           line-height:1;
           padding:0 7px 1px;
           display:flex;
@@ -483,9 +483,9 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
       <div style="
         position:absolute;
         left:50%;
-        top:53px;
-        width:10px;
-        height:10px;
+        top:46px;
+        width:9px;
+        height:9px;
         transform:translateX(-50%) rotate(45deg);
         background:#ffffff;
         border-right:1.5px solid rgba(47,43,38,0.12);

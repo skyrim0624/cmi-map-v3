@@ -858,8 +858,8 @@ export const LeafletMap = ({
         return L.divIcon({
           html: renderClusterIconHtml(visuals, count),
           className: 'scrapbook-cluster-icon bg-transparent border-none',
-          iconSize: isEasterEggCluster ? [52, 44] : [72, 62],
-          iconAnchor: isEasterEggCluster ? [26, 22] : [36, 58]
+          iconSize: isEasterEggCluster ? [44, 38] : [62, 54],
+          iconAnchor: isEasterEggCluster ? [22, 19] : [31, 50]
         });
       }
     });
@@ -890,8 +890,8 @@ export const LeafletMap = ({
               ${renderEasterEggMarkerHtml(markerVisual)}
             </div>
           `,
-          iconSize: [44, 44],
-          iconAnchor: [22, 22]
+          iconSize: [38, 38],
+          iconAnchor: [19, 19]
         });
 
         const marker = L.marker([markerData.latitude, markerData.longitude], { icon });
@@ -953,11 +953,11 @@ export const LeafletMap = ({
       `).join('');
 
       const isHotspot = totalUpvotes > 0;
-      const rootWidth = markerVisual.isAvatar ? (isHotspot ? 64 : 60) : (isHotspot ? 66 : 62);
-      const rootHeight = markerVisual.isAvatar ? (isHotspot ? 64 : 60) : (isHotspot ? 66 : 62);
+      const rootWidth = markerVisual.isAvatar ? (isHotspot ? 56 : 52) : (isHotspot ? 58 : 54);
+      const rootHeight = markerVisual.isAvatar ? (isHotspot ? 56 : 52) : (isHotspot ? 58 : 54);
       const iconAnchor = markerVisual.isAvatar
-        ? (isHotspot ? [32, 58] as [number, number] : [30, 54] as [number, number])
-        : (isHotspot ? [33, 60] as [number, number] : [31, 56] as [number, number]);
+        ? (isHotspot ? [28, 51] as [number, number] : [26, 47] as [number, number])
+        : (isHotspot ? [29, 53] as [number, number] : [27, 49] as [number, number]);
       
       const icon = L.divIcon({
         className: 'custom-marker-icon bg-transparent border-none',

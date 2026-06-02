@@ -1479,3 +1479,17 @@
   - 正式域名入口引用 `LeafletMap-CMo40TmL.js`、`map-marker-visual-CpBleamu.js` 和 `CmiMapV3Prototype-DqjivNan.js`。
   - `map-marker-visual-CpBleamu.js` 包含活动海报 `cover` 裁切和聚合海报 42px 内径逻辑。
   - 应用内浏览器复查 `https://b65e9697.cmi-map.pages.dev/?verify=event-poster-27bd809`：点击“活动”筛选后，活动聚合 marker DOM 确认 `object-fit: cover`、`border-radius: 999px`、`overflow: hidden` 和 42px 海报内径；页面无当前部署相关 console warn/error。
+
+### 2026-06-02 10:09:25 +07 V3 地图 marker 整体缩小
+
+- 背景：用户在正式地图页反馈地图上的 marker 仍偏大，希望“再小点，再小点”。
+- 本轮实现：
+  - 单个用户头像 / 活动 / 普通地点 marker 从约 60px 级别收小到 52-58px 级别。
+  - 聚合 marker 从 72x62 收小到 62x54，内部小圆从 48px 收小到 40px。
+  - 彩蛋 marker 也同步收小；右侧图层按钮、定位按钮和底部导航不变。
+- 验证结果：
+  - `node --test src/lib/map-marker-visual.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/CmiMapV3Prototype.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/lib/map-marker-visual.ts src/lib/map-marker-visual.test.ts src/components/map/LeafletMap.tsx` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地预览 `http://127.0.0.1:4177/?verify=compact-markers` 复查：marker DOM 显示聚合 marker 62x54、单个头像 marker 52x52 / 56x56，截图确认地图视觉更轻。
