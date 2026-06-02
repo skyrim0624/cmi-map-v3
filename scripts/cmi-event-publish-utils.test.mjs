@@ -42,6 +42,8 @@ test('normalizeCmiEventInput 为清迈客栈活动补默认地点和一键报名
   assert.equal(result.event.id, createCmiEventCliId('周五晚 AI 分享', '2026-05-29T19:00:00+07:00'));
   assert.equal(result.event.venueName, '清迈客栈');
   assert.equal(result.event.area, 'CMI / 清迈客栈');
+  assert.equal(result.event.latitude, 18.7932);
+  assert.equal(result.event.longitude, 98.9874);
   assert.equal(result.event.registrationLabel, 'CMI Map 一键报名');
   assert.equal(result.event.organizerName, 'host@example.com');
   assert.equal(result.event.organizerEmail, 'host@example.com');

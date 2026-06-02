@@ -1630,3 +1630,21 @@
   - `pnpm exec biome check src/pages/MarkPlace.tsx src/pages/PlaygroundMarkPlace.tsx src/index.css src/pages/MarkPlace.test.ts` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 构建后的 `MarkPlace` / `PlaygroundMarkPlace` chunk 确认包含“功德 +1 / 大拇哥收到了”和新动画类；本地 `/playground/mark` 因路由登录保护重定向到 `/login`，未做真实打卡提交验证。
+
+### 2026-06-02 14:42:37 +07 清迈客栈活动导航坐标修复
+
+- 背景：用户反馈从活动详情页点击“导航”后，Google Maps 目的地跑到古城 TCDC / Chaivapoom Soi 2 附近；这些活动实际都在清迈客栈。
+- 根因：
+  - 详情页导航优先使用活动记录里的 `mapLocation`。
+  - 线上部分清迈客栈活动和 Agent 发布默认模板仍带旧错误坐标 `18.7919513784612, 98.9946296215124`。
+- 本轮实现：
+  - 新增 `getCmiEventNavigationTarget`：清迈客栈 / CMI 活动的详情页导航统一指向清迈客栈 `18.7932, 98.9874`，即使活动记录里带了旧错误 `mapLocation` 也不会误导用户。
+  - 修正 CMI 活动发布脚本和发布文档里的清迈客栈默认坐标，避免后续自动发布继续写入旧坐标。
+  - 新增 Supabase 迁移 `20260602073543_fix_cmi_inn_event_coordinates.sql`，只修正带清迈客栈 / CMI 标识且仍为旧错误坐标的历史活动。
+- 验证结果：
+  - Supabase 远端迁移已应用；线上清迈客栈 / CMI 活动坐标复查均为 `18.7932, 98.9874`，旧错误坐标数量为 0。
+  - `npx tsx --test src/features/cmi-events/event-navigation.test.ts` 通过。
+  - `node --test scripts/cmi-event-publish-utils.test.mjs` 通过。
+  - `pnpm lint` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地生产预览 `http://127.0.0.1:4173/events/cmi-five-minute-music-kid-a-2026-06-02` 活动详情正常渲染；内置浏览器不允许改写 `window.open` 截获外部地图 URL，导航坐标由新增单元测试和线上数据查询覆盖。

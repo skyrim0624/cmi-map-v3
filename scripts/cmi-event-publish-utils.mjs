@@ -18,8 +18,8 @@ const VALID_ATTENDEE_VISIBILITIES = new Set(['public', 'count-only']);
 export const CMI_INN_DEFAULTS = {
   venueName: '清迈客栈',
   area: 'CMI / 清迈客栈',
-  latitude: 18.7919513784612,
-  longitude: 98.9946296215124,
+  latitude: 18.7932,
+  longitude: 98.9874,
   organizerName: 'CMI 社区',
   hostName: 'CMI 社区',
   priceLabel: '免费参与',

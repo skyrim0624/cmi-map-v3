@@ -20,7 +20,6 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  CMI_INN_EVENT_LOCATION,
   type CmiEventDetailBlock,
   getCmiEventDetailContent,
   getCmiEventPosterUrl,
@@ -49,6 +48,7 @@ import {
   getEventRecapImages,
   getEventRecapRecommendations,
 } from '@/features/cmi-events/event-recaps';
+import { getCmiEventNavigationTarget } from '@/features/cmi-events/event-navigation';
 import { isCapacityFullRegistrationError } from '@/features/cmi-events/event-list-registration-state';
 import { getCmiInnVenueSpaceLabel, isCmiEventManager } from '@/features/cmi-events/event-management';
 import {
@@ -289,18 +289,7 @@ export default function CmiEventDetail() {
         : event.registrationLabel
     : event?.registrationLabel ?? '报名方式待确认';
 
-  const navigationTarget = useMemo(() => {
-    if (event?.mapLocation) {
-      return {
-        name: event.venueName,
-        clipboardName: event.venueName,
-        latitude: event.mapLocation.latitude,
-        longitude: event.mapLocation.longitude,
-      };
-    }
-
-    return CMI_INN_EVENT_LOCATION;
-  }, [event]);
+  const navigationTarget = useMemo(() => getCmiEventNavigationTarget(event), [event]);
 
   useEffect(() => {
     let isMounted = true;

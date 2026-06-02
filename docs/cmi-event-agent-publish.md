@@ -86,8 +86,8 @@ PUBLIC_SITE_URL=https://cmimap.com
 
 - `venueName`: `清迈客栈`
 - `area`: `CMI / 清迈客栈`
-- `latitude`: `18.7919513784612`
-- `longitude`: `98.9946296215124`
+- `latitude`: `18.7932`
+- `longitude`: `98.9874`
 - `registrationLabel`: `CMI Map 一键报名`
 
 ## 图片 / 海报规则
