@@ -28,6 +28,23 @@
 
 ## 执行记录
 
+### 2026-06-02 09:40 +07 地图动态 marker 只保留最近一周
+
+- 背景：用户在 V3 地图页反馈，地图上的动态标识不应该一直积累、永久留在地图上；超过一周的动态仍应能搜索到，也能在个人主页看到，只是不再作为地图 marker 显示。
+- 本轮实现：
+  - 默认地图上的用户动态 marker 增加 7 天可见窗口，只取 `created_at` 距当前时间不超过一周的真实用户分享。
+  - 搜索结果和动态数据本身仍使用完整公开动态集合，超过一周的动态不会被删除，也不会从搜索、信息流或个人主页消失。
+  - 搜索点到一条超过一周的历史动态时，仍可打开动态详情；但不会把这条历史动态重新塞回 `LeafletMap` marker 列表。
+- 验证结果：
+  - `node --test src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/CmiMapV3Prototype.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/CmiMapV3Prototype.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过；`pnpm lint` 通过，其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
+  - 已用干净 worktree 从代码提交 `31ea2a1` 构建部署，避免混入当前工作区里的活动表单草稿。
+  - 已部署 v3 项目 `https://07f33776.cmi-map-v3.pages.dev` 和正式站 `https://1beafb30.cmi-map.pages.dev`，Source 为 `31ea2a1`。
+  - 正式域名 `https://cmimap.com` 服务器入口已引用新包 `index-BjZ9ohCX.js` 与 `CmiMapV3Prototype-Dxz89hnZ.js`；包内确认存在 7 天 marker 窗口与搜索结果兜底打开逻辑。
+  - 应用内浏览器复查 `https://1beafb30.cmi-map.pages.dev/?verify=31ea2a1-browser2`：地图首屏非空、无框架错误；搜索“清迈客栈”会展开搜索结果并显示动态卡片。控制台只有此前旧相机页留下的权限 warning，不是当前新部署页错误。
+
 ### 2026-06-02 09:09 +07 清迈客栈打卡归入动态页
 
 - 背景：用户反馈选择“清迈客栈”标签打卡发布后会跳入旧 `/cmi-home` 清迈客栈独立页；该页面当前用不到，应先下线，清迈客栈 Tag 的打卡动态统一进入动态页，并继续能在地图上看到。
