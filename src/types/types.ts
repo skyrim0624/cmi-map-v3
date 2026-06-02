@@ -210,7 +210,7 @@ export const isEasterEggRecommendation = (
 
 export const isPublicMapRecommendation = (
   recommendation: Pick<Recommendation, 'category'>
-) => !isCmiInnCheckInRecommendation(recommendation);
+) => Boolean(normalizeCategory(recommendation.category));
 
 export const categoryMatchesFilter = (category: Category | string, filter: Category | string): boolean => (
   normalizeCategory(category) === normalizeCategory(filter)

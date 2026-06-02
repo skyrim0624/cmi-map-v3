@@ -305,7 +305,7 @@ export const CMI_INPUT_CATEGORY_OPTIONS: CmiInputCategoryOption[] = [
   {
     id: 'cmi-inn',
     label: CMI_INN_PLACE_NAME,
-    description: '客栈活动现场的照片和一句话，会进入清迈客栈主页留言。',
+    description: '客栈活动现场的照片和一句话，会进入动态页，也会在地图上看到。',
     storedCategory: CMI_INN_CATEGORY,
     iconUrl: CMI_INN_LOGO_ICON_URL,
     targetPlaceName: CMI_INN_PLACE_NAME,

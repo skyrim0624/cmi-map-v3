@@ -7,7 +7,6 @@ const SceneHome = lazy(() => import('./pages/SceneHome'));
 const ListView = lazy(() => import('./pages/ListView'));
 const PlaceDetail = lazy(() => import('./pages/PlaceDetail'));
 const AddTrace = lazy(() => import('./pages/AddTrace'));
-const CmiHome = lazy(() => import('./pages/CmiHome'));
 const CmiEventDetail = lazy(() => import('./pages/CmiEventDetail'));
 const CmiEventCreate = lazy(() => import('./pages/CmiEventCreate'));
 const CmiEventManage = lazy(() => import('./pages/CmiEventManage'));
@@ -81,7 +80,7 @@ export const routes: RouteConfig[] = [
   {
     name: '清迈客栈',
     path: '/cmi-home',
-    element: <CmiHome />,
+    element: <Navigate to={getCmiFeedPath()} replace />,
     public: true,
   },
   {

@@ -59,7 +59,7 @@ import {
 import { type CmiEventShareCardResult, createCmiEventShareCard } from '@/lib/cmi-event-share-card';
 import {
   getCmiEventManagePath,
-  getCmiHomePath,
+  getCmiFeedPath,
   getMarkPlacePath,
   getPlacePath,
   getPublicCmiEventUrl,
@@ -636,9 +636,9 @@ export default function CmiEventDetail() {
           </p>
           <Button
             className="mt-5 min-h-12 rounded-full border-[3px] border-[#050505] bg-[#160f25] px-5 font-black text-white"
-            onClick={() => navigate(getCmiHomePath())}
+            onClick={() => navigate(getCmiFeedPath())}
           >
-            回到清迈客栈
+            回到动态
           </Button>
         </div>
       </div>

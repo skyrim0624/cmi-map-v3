@@ -37,7 +37,7 @@ import {
   DEFAULT_CMI_EASTER_ICON_ID,
   getCmiEasterIconById,
 } from '@/lib/easter-icons';
-import { getCmiHomePath, getPlacePath } from '@/lib/paths';
+import { getCmiFeedPath, getPlacePath } from '@/lib/paths';
 import type { Category } from '@/types/types';
 import {
   CMI_INN_CATEGORY,
@@ -1101,8 +1101,8 @@ export default function MarkPlace() {
 
       if (recommendation) {
         setTimeout(() => {
-          toast.success(isCmiInnCheckIn ? '这张客栈现场已经放到留言墙了' : '你的这一笔清迈痕迹已经留下了 🎉');
-          navigate(isCmiInnCheckIn ? getCmiHomePath() : getPlacePath(recommendation.place_name), {
+          toast.success(isCmiInnCheckIn ? '这张客栈现场已经放到动态里了' : '你的这一笔清迈痕迹已经留下了 🎉');
+          navigate(isCmiInnCheckIn ? getCmiFeedPath() : getPlacePath(recommendation.place_name), {
             replace: true,
             state: { newTraceId: recommendation.id },
           });

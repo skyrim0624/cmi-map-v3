@@ -1,4 +1,4 @@
-import { getCmiHomePath } from '@/lib/paths';
+import { getCmiFeedPath } from '@/lib/paths';
 import type { CmiHomeSection } from './types';
 
 export const cmiInnSection: CmiHomeSection = {
@@ -8,8 +8,8 @@ export const cmiInnSection: CmiHomeSection = {
   sceneIds: ['community'],
   feature: {
     title: '清迈客栈',
-    description: '活动、打卡墙、社区入口和订房渠道会在这里汇总。',
-    path: getCmiHomePath(),
-    highlights: ['未来活动', '活动回顾', '打卡墙', '订房入口'],
+    description: '客栈现场打卡统一回到动态页，地图上也能看到。',
+    path: getCmiFeedPath(),
+    highlights: ['客栈动态', '地图可见', '活动返图', '社区入口'],
   },
 };
