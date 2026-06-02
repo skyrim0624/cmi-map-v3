@@ -21,6 +21,7 @@ import {
   uploadCmiEventPoster,
   type CmiEventRegistration,
 } from '@/db/cmi-events';
+import { buildCmiEventDescriptionDraft, buildCmiEventSummaryFromDescription } from '@/features/cmi-events/event-description';
 import { isCmiEventManager, parseCmiEventManagerEmails } from '@/features/cmi-events/event-management';
 import { EventPosterField } from '@/features/cmi-events/event-poster-field';
 import {
@@ -116,8 +117,7 @@ export default function CmiEventManage() {
   const [managerEmailsText, setManagerEmailsText] = useState('');
   const [capacity, setCapacity] = useState('');
   const [attendeeVisibility, setAttendeeVisibility] = useState<CmiEventAttendeeVisibility>('public');
-  const [summaryText, setSummaryText] = useState('');
-  const [detailBody, setDetailBody] = useState('');
+  const [descriptionText, setDescriptionText] = useState('');
   const [coverImageUrl, setCoverImageUrl] = useState('');
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreviewUrl, setPosterPreviewUrl] = useState('');
@@ -148,9 +148,9 @@ export default function CmiEventManage() {
         ? []
         : inferEventPlaceCandidatesFromText(
           placeCandidates,
-          [venueName, area, summaryText, detailBody].filter(Boolean).join(' ')
+          [venueName, area, descriptionText].filter(Boolean).join(' ')
         ),
-    [area, detailBody, placeCandidates, selectedPlace, summaryText, venueName]
+    [area, descriptionText, placeCandidates, selectedPlace, venueName]
   );
   const hasVenueQuery = Boolean(venueName.trim());
   const visibleInternalPlaceCandidates = hasVenueQuery ? searchPlaceCandidates : naturalPlaceCandidates;
@@ -191,8 +191,7 @@ export default function CmiEventManage() {
     setManagerEmailsText((nextEvent.managerEmails ?? []).join('\n'));
     setCapacity(nextEvent.capacity ? String(nextEvent.capacity) : '');
     setAttendeeVisibility(nextEvent.attendeeVisibility ?? 'public');
-    setSummaryText(nextEvent.summary);
-    setDetailBody(nextEvent.detailBody ?? '');
+    setDescriptionText(buildCmiEventDescriptionDraft(nextEvent.summary, nextEvent.detailBody));
     setCoverImageUrl(nextEvent.coverImageUrl ?? '');
     setPosterFile(null);
     setPosterPreviewUrl('');
@@ -352,8 +351,9 @@ export default function CmiEventManage() {
     const startAt = toBangkokIso(startDate, startTime);
     const endAt = endTime ? toBangkokIso(endDate || startDate, endTime) : null;
 
-    if (!startAt || !venueName.trim() || !summaryText.trim() || !organizerEmail.trim()) {
-      toast.error('时间、地点、简介和发起人邮箱必须填写');
+    const trimmedDescription = descriptionText.trim();
+    if (!startAt || !venueName.trim() || !trimmedDescription || !organizerEmail.trim()) {
+      toast.error('时间、地点、活动说明和发起人邮箱必须填写');
       return;
     }
 
@@ -381,8 +381,8 @@ export default function CmiEventManage() {
         coverImageUrl: uploadedPosterUrl ?? coverImageUrl,
         capacity: parseOptionalNumber(capacity),
         attendeeVisibility,
-        summary: summaryText,
-        detailBody,
+        summary: buildCmiEventSummaryFromDescription(trimmedDescription),
+        detailBody: trimmedDescription,
         updatedBy: user.id,
       });
 
@@ -670,13 +670,8 @@ export default function CmiEventManage() {
             </div>
 
             <label className="block space-y-1.5">
-              <span className="text-xs font-black text-[#6d6a62]">一句话简介</span>
-              <textarea value={summaryText} onChange={inputEvent => setSummaryText(inputEvent.target.value)} maxLength={220} className="min-h-24 w-full rounded-2xl border border-[#2e2a23]/12 bg-white px-4 py-3 text-sm font-bold leading-relaxed outline-none focus:border-[#3f6e52]" placeholder="谁适合来、会发生什么、为什么值得去" />
-            </label>
-
-            <label className="block space-y-1.5">
-              <span className="text-xs font-black text-[#6d6a62]">详细说明</span>
-              <textarea value={detailBody} onChange={inputEvent => setDetailBody(inputEvent.target.value)} className="min-h-28 w-full rounded-2xl border border-[#2e2a23]/12 bg-white px-4 py-3 text-sm font-bold leading-relaxed outline-none focus:border-[#3f6e52]" placeholder="补充流程、集合方式、注意事项" />
+              <span className="text-xs font-black text-[#6d6a62]">活动说明</span>
+              <textarea value={descriptionText} onChange={inputEvent => setDescriptionText(inputEvent.target.value)} className="min-h-44 w-full rounded-2xl border border-[#2e2a23]/12 bg-white px-4 py-3 text-sm font-bold leading-relaxed outline-none focus:border-[#3f6e52]" placeholder="谁适合来、会发生什么、为什么值得去；流程、集合方式、注意事项也写在这里" />
             </label>
 
             <div className="rounded-2xl border border-[#2e2a23]/8 bg-white/72 p-3">

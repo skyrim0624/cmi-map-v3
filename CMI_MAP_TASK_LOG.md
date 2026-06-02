@@ -1374,3 +1374,17 @@
   - 已部署 v3 项目 `https://25ff9603.cmi-map-v3.pages.dev` 和正式站 `https://393b37a6.cmi-map.pages.dev`，Source 为 `3b96310`。
   - 线上预览 `https://393b37a6.cmi-map.pages.dev/?screen=events&verify=button-balance-3b96310` 复查通过：390px 视口标题 34px、按钮 104px x 38px，无重叠，console 无 warn/error；360px 视口按钮 96px x 36px，无重叠。
   - 正式域名 `https://cmimap.com/?screen=events&verify=button-balance-3b96310` 普通刷新后已切到新入口 `index-DwEIRZX7.js` 和新 V3 包 `CmiMapV3Prototype-C4StUDNc.js` / `CmiMapV3Prototype-DeoPRJUd.css`；390px 视口下按钮已降级为右上角辅助入口，标题重新成为主视觉。
+
+### 2026-06-02 09:25:58 +07 活动发布说明字段合并
+
+- 背景：用户在手机截图中指出发布活动表单里的“一句话简介”和“详细说明”重复，要求合并。
+- 本轮实现：
+  - 发布活动页和活动管理页都只保留一个“活动说明”大输入框。
+  - 提交时用活动说明全文写入 `detailBody`，并从第一行自动生成最多 220 字的 `summary`，保证活动卡片仍有简介。
+  - 编辑旧活动时将旧简介和旧详细说明合并回填到同一个输入框，避免保存时丢掉旧内容。
+- 验证结果：
+  - `node --experimental-strip-types --test src/features/cmi-events/event-description-merge.test.ts` 通过。
+  - `pnpm exec biome lint src/pages/CmiEventCreate.tsx src/pages/CmiEventManage.tsx src/features/cmi-events/event-description.ts src/features/cmi-events/event-description-merge.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地浏览器验证 `http://127.0.0.1:5173/events/new?verify=description-merge-local-2`：页面只显示“活动说明”，不再出现“一句话简介 / 详细说明”；填写说明后输入值保持正常，console 无 warn/error。

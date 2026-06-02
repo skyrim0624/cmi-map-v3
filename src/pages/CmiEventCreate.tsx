@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { CMI_EVENT_TYPE_OPTIONS, type CmiEventAttendeeVisibility, type CmiEventType } from '@/data/cmi-events';
 import { getAllRecommendations } from '@/db/api';
 import { createCmiEvent, uploadCmiEventPoster } from '@/db/cmi-events';
+import { buildCmiEventSummaryFromDescription } from '@/features/cmi-events/event-description';
 import { parseCmiEventManagerEmails } from '@/features/cmi-events/event-management';
 import { EventPosterField } from '@/features/cmi-events/event-poster-field';
 import {
@@ -139,8 +140,7 @@ export default function CmiEventCreate() {
   const [organizerEmailAutoFilled, setOrganizerEmailAutoFilled] = useState(Boolean(user?.email));
   const [capacity, setCapacity] = useState('');
   const [attendeeVisibility, setAttendeeVisibility] = useState<CmiEventAttendeeVisibility>('public');
-  const [summary, setSummary] = useState('');
-  const [detailBody, setDetailBody] = useState('');
+  const [descriptionText, setDescriptionText] = useState('');
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreviewUrl, setPosterPreviewUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -173,9 +173,9 @@ export default function CmiEventCreate() {
         ? []
         : inferEventPlaceCandidatesFromText(
           placeCandidates,
-          [title, summary, detailBody].filter(Boolean).join(' ')
+          [title, descriptionText].filter(Boolean).join(' ')
         ),
-    [detailBody, placeCandidates, selectedPlace, summary, title]
+    [descriptionText, placeCandidates, selectedPlace, title]
   );
 
   const searchPlaceCandidates = useMemo(
@@ -364,8 +364,9 @@ export default function CmiEventCreate() {
     const startAt = toBangkokIso(startDate, startTime);
     const endAt = endTime ? toBangkokIso(endDate || startDate, endTime) : null;
 
-    if (!title.trim() || !startAt || !venueName.trim() || !summary.trim() || !organizerEmail.trim()) {
-      toast.error('标题、时间、地点、简介和发起人邮箱必须填写');
+    const trimmedDescription = descriptionText.trim();
+    if (!title.trim() || !startAt || !venueName.trim() || !trimmedDescription || !organizerEmail.trim()) {
+      toast.error('标题、时间、地点、活动说明和发起人邮箱必须填写');
       return;
     }
 
@@ -395,8 +396,8 @@ export default function CmiEventCreate() {
         contactEmail: null,
         capacity: parseOptionalNumber(capacity),
         attendeeVisibility,
-        summary,
-        detailBody,
+        summary: buildCmiEventSummaryFromDescription(trimmedDescription),
+        detailBody: trimmedDescription,
         coverImageUrl,
         tags: [],
         userId: user.id,
@@ -621,13 +622,8 @@ export default function CmiEventCreate() {
             )}
 
             <label className="block space-y-1.5">
-              <span className="text-xs font-black text-[#6d6a62]">一句话简介</span>
-              <textarea value={summary} onChange={event => setSummary(event.target.value)} maxLength={220} className="min-h-24 w-full rounded-2xl border border-[#2e2a23]/12 bg-white px-4 py-3 text-sm font-bold leading-relaxed outline-none focus:border-[#3f6e52]" placeholder="谁适合来、会发生什么、为什么值得去" />
-            </label>
-
-            <label className="block space-y-1.5">
-              <span className="text-xs font-black text-[#6d6a62]">详细说明</span>
-              <textarea value={detailBody} onChange={event => setDetailBody(event.target.value)} className="min-h-28 w-full rounded-2xl border border-[#2e2a23]/12 bg-white px-4 py-3 text-sm font-bold leading-relaxed outline-none focus:border-[#3f6e52]" placeholder="补充流程、集合方式、注意事项" />
+              <span className="text-xs font-black text-[#6d6a62]">活动说明</span>
+              <textarea value={descriptionText} onChange={event => setDescriptionText(event.target.value)} className="min-h-44 w-full rounded-2xl border border-[#2e2a23]/12 bg-white px-4 py-3 text-sm font-bold leading-relaxed outline-none focus:border-[#3f6e52]" placeholder="谁适合来、会发生什么、为什么值得去；流程、集合方式、注意事项也写在这里" />
             </label>
 
             <div className="rounded-2xl border border-[#2e2a23]/8 bg-white/72 p-3">
