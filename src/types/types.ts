@@ -64,6 +64,7 @@ export interface MapMarker {
     label: string;
     iconUrl: string;
     isAvatar?: boolean;
+    isPoster?: boolean;
   };
 }
 

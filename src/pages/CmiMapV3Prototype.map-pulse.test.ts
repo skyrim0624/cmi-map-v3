@@ -21,3 +21,7 @@ test('地图动态 marker 只显示最近一周，历史动态仍可搜索打开
   assert.match(source, /onRecommendationSelect=\{handleMapRecommendationSelect\}/);
   assert.match(source, /if \(matchedMarker\) \{[\s\S]*onMarkerSelect\(matchedMarker\);[\s\S]*return;[\s\S]*\}[\s\S]*onRecommendationSelect\(recommendation\);/);
 });
+
+test('地图活动 marker 使用海报封面视觉', () => {
+  assert.match(source, /visualOverride: \{[\s\S]*label: '活动'[\s\S]*iconUrl: getCmiEventCardImageUrl\(event\)[\s\S]*isPoster: true[\s\S]*\}/);
+});

@@ -1453,3 +1453,17 @@
   - 正式站 `https://cmimap.com/events/new?verify=venue-space-9c1f9bd` 可打开活动发布表单，console 无 warn/error。
   - 绑定“清迈客栈”后显示六个区域：地毯区、圆桌区、办公区、4 楼天台区、2 楼沙发区、院子凉棚区。
   - 点击“地毯区”后 UI 显示“已选择”；本轮未提交真实活动，避免在线上生成测试活动和触发真实邮件。
+
+### 2026-06-02 09:57:52 +07 V3 地图活动 marker 海报封面裁切
+
+- 背景：用户在 V3 地图页标注活动 marker，指出活动图标不应该把整张海报缩在圆形里，而应该让海报放大并占满整个圆形。
+- 本轮实现：
+  - `MapMarker.visualOverride` 新增 `isPoster` 视觉标记，活动 marker 明确使用海报封面模式。
+  - 单个活动 marker 的图片改为圆形 `cover` 裁切，保留白色外框和地图针尾巴。
+  - 聚合 marker 里的活动小海报也同步改为 `cover` 裁切，避免两个活动靠近时又退回完整缩图。
+- 验证结果：
+  - `node --test src/lib/map-marker-visual.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/CmiMapV3Prototype.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/lib/map-marker-visual.ts src/lib/map-marker-visual.test.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/types/types.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地预览 `http://127.0.0.1:4176/?verify=event-poster-marker-3` 点击“活动”筛选后，聚合活动 marker DOM 确认 `object-fit: cover`、`border-radius: 999px`、`overflow: hidden` 和 42px 海报内径；截图显示活动海报已铺满圆形。

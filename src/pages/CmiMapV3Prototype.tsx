@@ -518,6 +518,7 @@ function getEventMarkers(events: CmiEvent[]): EventMarker[] {
       visualOverride: {
         label: '活动',
         iconUrl: getCmiEventCardImageUrl(event),
+        isPoster: true,
       },
     }];
   });
