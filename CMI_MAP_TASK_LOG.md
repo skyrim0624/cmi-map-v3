@@ -28,6 +28,23 @@
 
 ## 执行记录
 
+### 2026-06-02 08:55 +07 打卡文字输入区去掉重复预览
+
+- 背景：用户反馈打卡文字已经在下方输入框写完后，上方又生成一张写好内容的便签预览，信息重复；语音按钮和确认按钮也应放在输入框下面。
+- 本轮实现：
+  - 删除语音/文字阶段上方的描述便签预览，避免同一段打卡文字在页面里重复出现。
+  - 将文字输入框前移为主控件，麦克风按钮和确认按钮固定放在输入框下面；确认按钮在未输入内容或正在听写时禁用。
+  - 语音识别中的临时文本改为显示在输入框下方的小提示，不再生成上方预览卡片。
+- 验证结果：
+  - `node --test src/pages/MarkPlace.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - `pnpm lint` 通过；其中 `ast-grep` 未安装，项目脚本按既有逻辑跳过自定义 AST 扫描。
+  - 本地预览 `http://127.0.0.1:4173/mark?verify=voice-layout-local` 被登录保护重定向到 `/login`，无法在本地未登录会话里直接操作目标文字阶段；目标布局以源码测试、构建包和正式域名包检查为准。
+  - 已部署 v3 项目 `https://2a4e518a.cmi-map-v3.pages.dev` 和正式站 `https://c3f8a480.cmi-map.pages.dev`，Source 为 `d8dea74`。
+  - 正式域名 `https://cmimap.com/mark?verify=voice-layout-d8dea74` 返回 200，入口引用新包 `index-DwEIRZX7.js`；新 `MarkPlace-5gua22yM.js` 包内不含旧 `#fff9e6` 便签预览和“正在把这条清迈痕迹收进地图”文案，且确认按钮与语音临时提示均位于输入框之后。应用内浏览器已加载新 MarkPlace 包，但当前停在相机/权限阶段，未进入文字输入阶段。
+
 ### 2026-06-02 08:45 +07 打卡发布分类页滚动锁定
 
 - 背景：用户反馈拍照后在“选择发布标签 / 关联活动”阶段向下刷时，会带动整个网页滚动，底部发布按钮被挡住。
