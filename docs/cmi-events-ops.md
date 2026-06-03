@@ -81,23 +81,22 @@
 
 Time Out 的本周末专题可以作为及时线索源；如果只用 Time Out，`reliabilityNote` 必须写明“出发前仍建议复核场地方动态”。Citylife、主办方官网、场地方页面和 CMI 自有公告优先级更高。
 
-最新一次维护：2026-06-02 18:15 ICT，本轮扫描 `五月活动` 与 `六月活动`，新增处理 `/Users/andreas/CMI/活动宣传内容/六月活动/6.4 正念一小时`，活动 ID 为 `cmi-mindfulness-hour-singing-bowl-2026-06-04`。材料可确认活动标题、时间、地点、公益费用、活动内容和官方海报；原始材料未单列报名链接或二维码，本轮按 CMI Map 内置报名系统发布，并在 `reliabilityNote` / 审计迁移中记录。
+最新一次维护：2026-06-03 18:00 ICT，本轮扫描 `六月活动`，新增处理 `/Users/andreas/CMI/活动宣传内容/六月活动/6.6 旧物拍卖会`，活动 ID 为 `cmi-secondhand-auction-2026-06-06`。材料可确认活动标题、时间 `2026-06-06 15:00`、地点清迈客栈、免费费用、原始空降/扫码进群参与方式和官方海报；本轮按 CMI Map 内置报名系统发布，并在 `reliabilityNote` / 审计迁移中记录。
 
-本轮仍不发布 `/Users/andreas/CMI/活动宣传内容/六月活动/6.6 旧物交换市集`：文件夹名指向 6.6，但海报写“周日下午两点到五点”；2026-06-06 是周六、2026-06-07 才是周日，活动日期需人工确认后再发布。`六月第一周活动日历` 是周历物料，不作为单场活动发布。
+上一轮待复核的 `/Users/andreas/CMI/活动宣传内容/六月活动/6.6 旧物交换市集` 目录本轮已不存在，疑似被 `6.6 旧物拍卖会` 替代；新素材已经补齐具体开始时间，不再按缺少时间处理。`六月第一周活动日历` 仍是周历物料，不作为单场活动发布。
 
 同步动作：
 
-- `pnpm cmi:event:publish -- --input tmp/cmi-mindfulness-hour-singing-bowl-2026-06-04.json --admin-publish --dry-run` 与真实 `--admin-publish` 均已通过；远程 `public.cmi_events` 已写入 `published / verified / cmi` 正念活动。
-- 已新增并推送审计迁移 `supabase/migrations/20260602163904_sync_cmi_inn_events_and_publish_mindfulness_20260602.sql`，包含已结束 CMI / 清迈客栈活动归档、到期复核刷新和正念活动 upsert。
-- 已新增并推送修正迁移 `supabase/migrations/20260602181550_fix_mindfulness_storage_poster_url_20260602.sql`，把远程正念活动 `cover_image_url` 固定为已验证的 Supabase Storage 海报 URL，避免线上读取本地静态路径时拿到未部署资源。
-- 本地兜底 `src/data/cmi-events.ts` 已更新维护时间，新增 `cmi-mindfulness-hour-singing-bowl-2026-06-04`，并补齐上一轮已远程发布但本地兜底缺失的 `cmi-blood-on-the-clocktower-newbie-game-2026-06-04`。
-- `src/data/cmi-event-details.ts` 已补充 6.4 血染钟楼与 6.4 正念一小时的详情页海报、首页卡片背景和正文映射。
+- `pnpm cmi:event:check -- --input tmp/cmi-secondhand-auction-2026-06-06.json --admin-publish --strict`、真实 `pnpm cmi:event:publish -- --input tmp/cmi-secondhand-auction-2026-06-06.json --admin-publish` 与发布后 `--verify-remote --strict` 均已通过；远程 `public.cmi_events` 已写入 `published / verified / cmi` 旧物拍卖会活动。
+- 已新增审计迁移 `supabase/migrations/20260603110500_sync_cmi_inn_events_and_publish_secondhand_auction_20260603.sql`，包含已结束 CMI / 清迈客栈活动归档、到期复核刷新和旧物拍卖会 upsert。
+- 本地兜底 `src/data/cmi-events.ts` 已更新维护时间，新增 `cmi-secondhand-auction-2026-06-06`。
+- `src/data/cmi-event-details.ts` 已补充 6.6 旧物拍卖会的详情页海报、首页卡片背景和正文映射。
 - 已生成首页卡片背景图到 `public/cmi-home/event-card-backgrounds/`，尺寸为 1280x549；详情页海报已保存到 `public/cmi-home/event-posters/`。
 
-当前本地兜底可见的 future CMI / 清迈客栈活动：
-`cmi-five-minute-music-kid-a-2026-06-02`、`cmi-curiosity-old-city-temples-2026-06-03`、`cmi-blood-on-the-clocktower-newbie-game-2026-06-04`、`cmi-mindfulness-hour-singing-bowl-2026-06-04`、`cmi-ai-open-mic-vol-05-2026-06-05`、`cmi-kongxiang-canteen-hotpot-2026-06-05`、`cmi-my-octopus-teacher-screening-2026-06-06`、`cmi-talk-fathers-day-speaker-call-2026-06-07`。
+当前本地兜底包含的近期 CMI / 清迈客栈活动：
+`cmi-five-minute-music-kid-a-2026-06-02`、`cmi-curiosity-old-city-temples-2026-06-03`、`cmi-blood-on-the-clocktower-newbie-game-2026-06-04`、`cmi-mindfulness-hour-singing-bowl-2026-06-04`、`cmi-ai-open-mic-vol-05-2026-06-05`、`cmi-kongxiang-canteen-hotpot-2026-06-05`、`cmi-secondhand-auction-2026-06-06`、`cmi-my-octopus-teacher-screening-2026-06-06`、`cmi-talk-fathers-day-speaker-call-2026-06-07`。
 
-远程验证：`cmi-mindfulness-hour-singing-bowl-2026-06-04` 已可通过公开 REST 查询到，`visibility_status='published'`、`verification_status='verified'`、`is_cmi_related=true`、`source_type='cmi'`、`venue_name='清迈客栈'`；Storage 海报 URL 返回 `200 image/jpeg`。
+远程验证：`cmi-secondhand-auction-2026-06-06` 已可通过公开 REST 查询到，`visibility_status='published'`、`verification_status='verified'`、`is_cmi_related=true`、`source_type='cmi'`、`venue_name='清迈客栈'`；Storage 海报 URL 返回 `200 image/png`。
 
 ## 类型标签
 

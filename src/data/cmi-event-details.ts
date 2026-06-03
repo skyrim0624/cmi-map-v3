@@ -54,6 +54,8 @@ export const CMI_EVENT_POSTER_BY_ID: Partial<Record<string, string>> = {
     '/cmi-home/event-posters/cmi-ai-open-mic-vol-05-2026-06-05.png',
   'cmi-kongxiang-canteen-hotpot-2026-06-05':
     '/cmi-home/event-posters/cmi-kongxiang-canteen-hotpot-2026-06-05.png',
+  'cmi-secondhand-auction-2026-06-06':
+    '/cmi-home/event-posters/cmi-secondhand-auction-2026-06-06.png',
   'cmi-my-octopus-teacher-screening-2026-06-06':
     '/cmi-home/event-posters/cmi-my-octopus-teacher-screening-2026-06-06.png',
   'cmi-talk-fathers-day-speaker-call-2026-06-07':
@@ -88,6 +90,8 @@ export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = 
     '/cmi-home/event-card-backgrounds/cmi-ai-open-mic-vol-05-2026-06-05.jpg',
   'cmi-kongxiang-canteen-hotpot-2026-06-05':
     '/cmi-home/event-card-backgrounds/cmi-kongxiang-canteen-hotpot-2026-06-05.jpg',
+  'cmi-secondhand-auction-2026-06-06':
+    '/cmi-home/event-card-backgrounds/cmi-secondhand-auction-2026-06-06.jpg',
   'cmi-my-octopus-teacher-screening-2026-06-06':
     '/cmi-home/event-card-backgrounds/cmi-my-octopus-teacher-screening-2026-06-06.jpg',
   'cmi-talk-fathers-day-speaker-call-2026-06-07':
@@ -765,6 +769,60 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
           '活动时间：6 月 5 日（周五）19:00',
           '活动地点：清迈客栈',
           '场地费用：免费参与；请每个人带一道适合火锅的食材来和大家分享',
+          CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
+        ],
+      },
+    ],
+  },
+  'cmi-secondhand-auction-2026-06-06': {
+    eventId: 'cmi-secondhand-auction-2026-06-06',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-secondhand-auction-2026-06-06']!,
+    postTitle: '清迈客栈 CMI 社区二手物品“拍卖”大会',
+    postBlocks: [
+      {
+        kind: 'paragraph',
+        text: '二手物品也有义，二手物品也有情。',
+      },
+      {
+        kind: 'paragraph',
+        text: '我们身边总有一些东西：买来之后用得不多，但又舍不得扔；放在角落很久，但换到另一个人手里，可能刚好重新派上用场。',
+      },
+      {
+        kind: 'paragraph',
+        text: '这周六，CMI 第一届二手物品拍卖大会来了。我们想把这些“放错了位置的”宝物重新拿出来，让它们在现场找到新的主人。',
+      },
+      {
+        kind: 'heading',
+        text: '拍卖规则',
+      },
+      {
+        kind: 'list',
+        items: [
+          '谁开的价格高，物品就给谁',
+          '如果两个价格一样，就石头剪刀布，一把定输赢',
+          '社区物品不用钱拍卖，可以用空想食堂带来的菜品数量或社区共建时长竞拍',
+          '个人自带物品可以现场说明想换的物品方向，或需要别人帮忙的方向',
+        ],
+      },
+      {
+        kind: 'heading',
+        text: '活动当天流程',
+      },
+      {
+        kind: 'list',
+        items: ['开场破冰', '社区品拍卖', '个人品拍卖', '摆摊交流会'],
+      },
+      {
+        kind: 'heading',
+        text: '活动信息',
+      },
+      {
+        kind: 'list',
+        items: [
+          '活动时间：6 月 6 日（周六）15:00',
+          '活动地点：清迈客栈',
+          '场地费用：免费参与',
+          '原始参与方式：无需报名，直接空降即可；也可以扫描海报二维码进群',
           CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
         ],
       },

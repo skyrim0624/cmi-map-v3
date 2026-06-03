@@ -126,7 +126,7 @@ export const CMI_EVENT_TIME_BUCKET_LABELS: Record<CmiEventTimeBucket, string> = 
   stable: '稳定活动',
 };
 
-export const CMI_EVENTS_LAST_MAINTAINED_AT = '2026-06-02T16:39:04+07:00';
+export const CMI_EVENTS_LAST_MAINTAINED_AT = '2026-06-03T18:00:49+07:00';
 export const CMI_MAP_EVENT_REGISTRATION_LABEL = 'CMI Map 一键报名';
 export const CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE =
   '参与方式：通过 CMI Map 一键报名；报名成功后，确认邮件会附上微信群、联系人二维码和到场指引。';
@@ -597,6 +597,37 @@ export const CMI_EVENTS: CmiEvent[] = [
     registrationStatus: 'open',
     attendeeVisibility: 'count-only',
     coverImageUrl: '/cmi-home/event-posters/cmi-kongxiang-canteen-hotpot-2026-06-05.png',
+  },
+  {
+    id: 'cmi-secondhand-auction-2026-06-06',
+    title: '清迈客栈 CMI 社区二手物品“拍卖”大会',
+    type: 'market',
+    startAt: '2026-06-06T15:00:00+07:00',
+    venueName: '清迈客栈',
+    area: 'CMI / 清迈客栈',
+    mapLocation: { latitude: 18.7932, longitude: 98.9874, category: '清迈客栈' },
+    priceLabel: '免费参与',
+    registrationLabel: CMI_MAP_EVENT_REGISTRATION_LABEL,
+    sourceType: 'cmi',
+    sourceLabel: 'CMI 活动宣传内容文件夹',
+    hostName: 'CMI 社区',
+    language: '中文',
+    suitableFor: ['二手交换', '社区共建', '空想食堂', '轻社交'],
+    isCmiRelated: true,
+    isVerified: true,
+    verificationStatus: 'verified',
+    lastCheckedAt: '2026-06-03T18:00:49+07:00',
+    nextCheckBefore: '2026-06-06T13:00:00+07:00',
+    reliabilityNote:
+      '信息来自 6.6 旧物拍卖会推文、同目录发布页与官方海报；时间、地点、费用和原始参与方式均明确。本轮通过 CMI Map CLI 管理员通道发布。',
+    tags: ['CMI', '清迈客栈', '二手物品', '拍卖', '旧物交换', '社区活动', '免费'],
+    summary: '二手物品也有义，二手物品也有情。',
+    organizerName: 'CMI 社区',
+    organizerEmail: 'events@cmimap.com',
+    registrationEnabled: true,
+    registrationStatus: 'open',
+    attendeeVisibility: 'count-only',
+    coverImageUrl: '/cmi-home/event-posters/cmi-secondhand-auction-2026-06-06.png',
   },
   {
     id: 'cmi-my-octopus-teacher-screening-2026-06-06',
