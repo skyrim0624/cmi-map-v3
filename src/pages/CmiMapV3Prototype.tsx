@@ -108,6 +108,7 @@ import {
   getThemePath,
 } from '@/lib/paths';
 import { createCmiEventShareCard } from '@/lib/cmi-event-share-card';
+import { createCmiThemeShareCard } from '@/lib/cmi-theme-share-card';
 import { formatBlackboardCreatedLabel } from '@/features/home/blackboard/blackboard-model';
 import {
   CMI_INN_PLACE_NAME,
@@ -177,6 +178,11 @@ interface SheetAction {
   onClick?: () => void;
 }
 
+interface CmiThemePostShareInput {
+  theme: CmiMapTheme;
+  themeUrl: string;
+}
+
 const mapFilters: FilterItem[] = [
   { id: 'all', label: '动态' },
   { id: 'food', label: '好吃', iconUrl: '/map-icons/cmi-flat-v2/direct-eat.png' },
@@ -214,6 +220,17 @@ const foodCategories = new Set<Category>(['吃饭', '咖啡', '市集']);
 const playCategories = new Set<Category>(['户外', '景点', '购物', '运动', '酒吧', '身心']);
 
 const downloadCmiEventShareCard = (card: { blob: Blob; fileName: string }) => {
+  const downloadUrl = URL.createObjectURL(card.blob);
+  const anchor = document.createElement('a');
+  anchor.href = downloadUrl;
+  anchor.download = card.fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(downloadUrl);
+};
+
+const downloadCmiThemeShareCard = (card: { blob: Blob; fileName: string }) => {
   const downloadUrl = URL.createObjectURL(card.blob);
   const anchor = document.createElement('a');
   anchor.href = downloadUrl;
@@ -1488,6 +1505,12 @@ function MapMode({
   const selectedThemeName = selectedRecommendation && activeTheme && themeSubmissionIds.has(selectedRecommendation.id)
     ? activeTheme.title
     : undefined;
+  const themeShareInput = selectedRecommendation && activeTheme && themeSubmissionIds.has(selectedRecommendation.id)
+    ? {
+        theme: activeTheme,
+        themeUrl: new URL(getThemePath(activeTheme.slug), window.location.origin).toString(),
+      }
+    : undefined;
   const handleRecommendationSelect = (recommendation: Recommendation) => {
     const matchedMarker = markers.find(marker =>
       marker.recommendations.some(item => item.id === recommendation.id)
@@ -1604,6 +1627,7 @@ function MapMode({
           itemId={`recommendation:${selectedRecommendation.id}`}
           authorProfile={selectedRecommendationAuthorProfile}
           recommendation={selectedRecommendation}
+          themeShareInput={themeShareInput}
           themeName={selectedThemeName}
           onDismiss={onClearSelection}
         />
@@ -1653,16 +1677,19 @@ function PlacePostSheet({
   authorProfile,
   itemId,
   recommendation,
+  themeShareInput,
   themeName,
   onDismiss,
 }: {
   authorProfile: PublicProfile | null;
   itemId: string;
   recommendation: Recommendation;
+  themeShareInput?: CmiThemePostShareInput;
   themeName?: string;
   onDismiss?: () => void;
 }) {
   const { dragHandlers, dragOffset, isDragging, setSnap, snap } = useBottomSheetDrag(itemId);
+  const [isThemeShareCardLoading, setIsThemeShareCardLoading] = useState(false);
   const isExpanded = snap === 'expanded';
   const categoryConfig = getCategoryConfig(recommendation.category);
   const imageUrl = recommendation.images[0] || categoryConfig.iconUrl;
@@ -1686,6 +1713,45 @@ function PlacePostSheet({
 
     event.preventDefault();
     setSnap(isExpanded ? 'collapsed' : 'expanded');
+  };
+
+  const handleThemeShareCard = async () => {
+    if (!themeShareInput) return;
+    setIsThemeShareCardLoading(true);
+
+    try {
+      const card = await createCmiThemeShareCard({
+        theme: themeShareInput.theme,
+        recommendation,
+        authorName,
+        themeUrl: themeShareInput.themeUrl,
+      });
+      const file = new File([card.blob], card.fileName, { type: 'image/png' });
+      const shareData: FileShareData = {
+        files: [file],
+        title: `CMI Map · ${themeShareInput.theme.title}`,
+        text: `${themeShareInput.theme.title}｜${title}`,
+      };
+      const navigatorWithFileShare = navigator as NavigatorWithFileShare;
+
+      if (navigatorWithFileShare.share && (!navigatorWithFileShare.canShare || navigatorWithFileShare.canShare(shareData))) {
+        try {
+          await navigatorWithFileShare.share(shareData);
+          return;
+        } catch (error) {
+          if (error instanceof DOMException && error.name === 'AbortError') return;
+          console.error('主题分享卡分享失败:', error);
+        }
+      }
+
+      downloadCmiThemeShareCard(card);
+      toast.success('已生成主题分享卡');
+    } catch (error) {
+      console.error('主题分享卡生成失败:', error);
+      toast.error('主题分享卡生成失败，请稍后再试');
+    } finally {
+      setIsThemeShareCardLoading(false);
+    }
   };
 
   return (
@@ -1720,6 +1786,17 @@ function PlacePostSheet({
         </div>
         <img className="cmi-v3-place-post-photo" src={imageUrl} alt={title} />
       </div>
+      {themeShareInput && (
+        <button
+          type="button"
+          className="cmi-v3-theme-share-card-button"
+          disabled={isThemeShareCardLoading}
+          onClick={handleThemeShareCard}
+        >
+          <Share2 size={16} strokeWidth={3} />
+          <span>{isThemeShareCardLoading ? '生成中' : '分享卡'}</span>
+        </button>
+      )}
     </article>
   );
 }
