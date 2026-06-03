@@ -1709,3 +1709,17 @@
   - `https://cmimap.com/events/cmi-five-minute-music-kid-a-2026-06-02?verify=3552f3d`、`https://3a54352f.cmi-map.pages.dev/events/cmi-five-minute-music-kid-a-2026-06-02?verify=3552f3d` 和 `https://d1d4df43.cmi-map-v3.pages.dev/events/cmi-five-minute-music-kid-a-2026-06-02?verify=3552f3d` 均返回 200，入口均引用 `assets/index-DXbwOuuc.js`。
   - 正式域名入口引用 `CmiEventDetail-HztAMqFP.js`；线上相关数据包包含新清迈客栈坐标，未发现旧错误坐标残留。
   - 应用内浏览器复查 `https://3a54352f.cmi-map.pages.dev/events/cmi-five-minute-music-kid-a-2026-06-02?verify=3552f3d`：活动详情正常渲染，底部“导航”按钮可见。
+
+### 2026-06-03 23:18:00 +07 v3.1 约搭子步骤一：数据与发起基础
+
+- 背景：根据 `CMI Map 3.1 约搭子第一部分开发文档`，第一部分先做地点 / 活动驱动的轻型约搭子闭环，不扩展成论坛或完整活动管理系统。
+- 本轮实现：
+  - 新增约搭子模型，覆盖发起字段、好友 / 非好友申请初始状态、批准后联系方式展示规则。
+  - 新增 `cmi_companion_invites` 和 `cmi_companion_applications` 迁移；普通读取不授予 `contact_label`，避免地图公开列表泄露联系方式。
+  - 新增约搭子 Supabase 数据访问层，只包含发起、列表、单条、申请和审核。
+  - Obsidian 开发文档已在步骤一打勾并记录验证结果。
+- 验证结果：
+  - `node --test --experimental-strip-types src/features/companions/cmi-companions.test.ts src/db/cmi-companions.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/features/companions/cmi-companions.ts src/features/companions/cmi-companions.test.ts src/db/cmi-companions.ts src/db/cmi-companions.test.ts` 通过。
+  - `git diff --check -- src/features/companions/cmi-companions.ts src/features/companions/cmi-companions.test.ts src/db/cmi-companions.ts src/db/cmi-companions.test.ts supabase/migrations/20260603161708_cmi_companion_invites.sql` 通过。
