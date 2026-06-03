@@ -10,6 +10,7 @@ const AddTrace = lazy(() => import('./pages/AddTrace'));
 const CmiEventDetail = lazy(() => import('./pages/CmiEventDetail'));
 const CmiEventCreate = lazy(() => import('./pages/CmiEventCreate'));
 const CmiEventManage = lazy(() => import('./pages/CmiEventManage'));
+const CmiCompanionCreate = lazy(() => import('./pages/CmiCompanionCreate'));
 const CmiThemeDetail = lazy(() => import('./pages/CmiThemeDetail'));
 const CmiThemeManage = lazy(() => import('./pages/CmiThemeManage'));
 const AdminAgentTokens = lazy(() => import('./pages/AdminAgentTokens'));
@@ -106,6 +107,11 @@ export const routes: RouteConfig[] = [
     name: '活动管理',
     path: '/events/:eventId/manage',
     element: <CmiEventManage />,
+  },
+  {
+    name: '约搭子',
+    path: '/companions/new',
+    element: <CmiCompanionCreate />,
   },
   {
     name: '主题地图',

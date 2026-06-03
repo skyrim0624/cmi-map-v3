@@ -76,6 +76,24 @@ export const getCmiEventCreatePath = (input?: {
   return query ? `/events/new?${query}` : '/events/new';
 };
 
+export const getCmiCompanionCreatePath = (input?: {
+  placeId?: string | null;
+  placeName?: string | null;
+  eventId?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}) => {
+  const searchParams = new URLSearchParams();
+  if (input?.placeId) searchParams.set('placeId', input.placeId);
+  if (input?.placeName) searchParams.set('place', input.placeName);
+  if (input?.eventId) searchParams.set('event', input.eventId);
+  if (typeof input?.latitude === 'number') searchParams.set('lat', String(input.latitude));
+  if (typeof input?.longitude === 'number') searchParams.set('lng', String(input.longitude));
+
+  const query = searchParams.toString();
+  return query ? `/companions/new?${query}` : '/companions/new';
+};
+
 export const getCmiEventManagePath = (eventId: string) =>
   `/events/${encodeURIComponent(eventId)}/manage`;
 

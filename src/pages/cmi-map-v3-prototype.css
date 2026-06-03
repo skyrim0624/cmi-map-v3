@@ -824,6 +824,21 @@
   opacity: 0.72;
 }
 
+.cmi-v3-place-companion-button {
+  flex: 0 0 42px;
+  width: 100%;
+  min-height: 42px;
+  border-radius: 999px;
+  background: #161616;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 950;
+}
+
 .cmi-v3-selected-note h2,
 .cmi-v3-selected-note p {
   margin: 0;

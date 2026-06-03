@@ -25,3 +25,12 @@ test('主题管理页为登录后路由', () => {
   assert.match(source, /element: <CmiThemeManage \/>/);
   assert.match(source, /name: '主题管理'/);
 });
+
+test('约搭子发起页为登录后路由', () => {
+  assert.match(source, /const CmiCompanionCreate = lazy/);
+  assert.match(source, /path: '\/companions\/new'/);
+  assert.match(source, /element: <CmiCompanionCreate \/>/);
+  assert.match(source, /name: '约搭子'/);
+  const routeBlock = source.match(/\{\n    name: '约搭子',[\s\S]*?\n  \}/)?.[0] ?? '';
+  assert.doesNotMatch(routeBlock, /public: true/);
+});

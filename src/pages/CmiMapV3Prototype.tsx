@@ -100,6 +100,7 @@ import { getRecommendationLinkedEvent } from '@/lib/cmi-recommendation-events';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
 import {
   getAddTracePath,
+  getCmiCompanionCreatePath,
   getCmiEventCreatePath,
   getCmiEventPath,
   getCmiFeedPath,
@@ -1792,12 +1793,24 @@ function MapMode({
         />
       ) : selectedRecommendation ? (
         <PlacePostSheet
+          companionCreateHref={getCmiCompanionCreatePath({
+            placeId: selectedRecommendation.id,
+            placeName: selectedRecommendation.place_name,
+            latitude: selectedRecommendation.latitude,
+            longitude: selectedRecommendation.longitude,
+          })}
           itemId={`recommendation:${selectedRecommendation.id}`}
           authorProfile={selectedRecommendationAuthorProfile}
           recommendation={selectedRecommendation}
           themeShareInput={themeShareInput}
           themeName={selectedThemeName}
           onDismiss={onClearSelection}
+          onCompanionCreate={() => onOpenPath(getCmiCompanionCreatePath({
+            placeId: selectedRecommendation.id,
+            placeName: selectedRecommendation.place_name,
+            latitude: selectedRecommendation.latitude,
+            longitude: selectedRecommendation.longitude,
+          }))}
         />
       ) : selectedEvent ? (
         <MapBottomSheet
@@ -1811,6 +1824,21 @@ function MapMode({
             label: '打开活动页',
             href: getCmiEventPath(selectedEvent.id),
             onClick: () => onOpenPath(getCmiEventPath(selectedEvent.id)),
+          }}
+          secondaryAction={{
+            label: '约搭子',
+            href: getCmiCompanionCreatePath({
+              eventId: selectedEvent.id,
+              placeName: selectedEvent.venueName,
+              latitude: selectedEvent.mapLocation?.latitude,
+              longitude: selectedEvent.mapLocation?.longitude,
+            }),
+            onClick: () => onOpenPath(getCmiCompanionCreatePath({
+              eventId: selectedEvent.id,
+              placeName: selectedEvent.venueName,
+              latitude: selectedEvent.mapLocation?.latitude,
+              longitude: selectedEvent.mapLocation?.longitude,
+            })),
           }}
           title={selectedEvent.title}
           onDismiss={onClearSelection}
@@ -1932,18 +1960,22 @@ function CompanionEventDetails({
 
 function PlacePostSheet({
   authorProfile,
+  companionCreateHref,
   itemId,
   recommendation,
   themeShareInput,
   themeName,
   onDismiss,
+  onCompanionCreate,
 }: {
   authorProfile: PublicProfile | null;
+  companionCreateHref?: string;
   itemId: string;
   recommendation: Recommendation;
   themeShareInput?: CmiThemePostShareInput;
   themeName?: string;
   onDismiss?: () => void;
+  onCompanionCreate?: () => void;
 }) {
   const { dragHandlers, dragOffset, isDragging, setSnap, snap } = useBottomSheetDrag(itemId);
   const [isThemeShareCardLoading, setIsThemeShareCardLoading] = useState(false);
@@ -2010,6 +2042,13 @@ function PlacePostSheet({
       setIsThemeShareCardLoading(false);
     }
   };
+  const handleCompanionCreate = (event: ReactMouseEvent<HTMLAnchorElement>) => {
+    if (!onCompanionCreate) return;
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+    event.preventDefault();
+    onCompanionCreate();
+  };
 
   return (
     <article className={sheetClassName} data-sheet-state={snap} style={sheetStyle}>
@@ -2053,6 +2092,15 @@ function PlacePostSheet({
           <Share2 size={16} strokeWidth={3} />
           <span>{isThemeShareCardLoading ? '生成中' : '分享卡'}</span>
         </button>
+      )}
+      {companionCreateHref && (
+        <a
+          className="cmi-v3-place-companion-button"
+          href={companionCreateHref}
+          onClick={handleCompanionCreate}
+        >
+          约搭子
+        </a>
       )}
     </article>
   );

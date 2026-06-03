@@ -1757,3 +1757,16 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm exec biome lint src/lib/map-marker-visual.ts src/lib/map-marker-visual.test.ts src/types/types.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
   - `git diff --check -- src/lib/map-marker-visual.ts src/lib/map-marker-visual.test.ts src/types/types.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
+
+### 2026-06-03 23:38:02 +07 v3.1 约搭子步骤一补充：发起表单与入口
+
+- 本轮实现：
+  - 新增 `/companions/new` 登录后路由。
+  - 新增约搭子发起页，只保留第一部分规定字段。
+  - 地图地点卡和活动底部卡各接入一个“约搭子”发起入口，并自动带入地点 / 活动上下文。
+  - Obsidian 开发文档已在步骤一补充打勾并记录验证结果。
+- 验证结果：
+  - `node --test --experimental-strip-types src/lib/paths.test.ts src/routes.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/CmiCompanionCreate.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/lib/paths.ts src/lib/paths.test.ts src/routes.tsx src/routes.test.ts src/pages/CmiCompanionCreate.tsx src/pages/CmiCompanionCreate.test.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
+  - `git diff --check -- src/lib/paths.ts src/lib/paths.test.ts src/routes.tsx src/routes.test.ts src/pages/CmiCompanionCreate.tsx src/pages/CmiCompanionCreate.test.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css` 通过。

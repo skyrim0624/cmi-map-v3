@@ -47,6 +47,7 @@ test('主题投稿详情提供主题分享卡入口', () => {
 
 test('约搭子地图层遵守头像 marker 到轻卡片再到详情', () => {
   assert.match(source, /getOpenCmiCompanionInvites/);
+  assert.match(source, /getCmiCompanionCreatePath/);
   assert.match(source, /getCompanionInviteMarker/);
   assert.match(source, /isCompanion: true/);
   assert.match(source, /selectedCompanionCardInviteId/);
@@ -55,4 +56,9 @@ test('约搭子地图层遵守头像 marker 到轻卡片再到详情', () => {
   assert.match(source, /<CompanionEventDetails/);
   assert.match(source, /setSelectedCompanionCardInviteId\(marker\.companionInviteId\)/);
   assert.match(source, /setSelectedCompanionDetailsInviteId\(invite\.id\)/);
+});
+
+test('地图地点和活动详情提供约搭子发起入口', () => {
+  assert.match(source, /companionCreateHref=\{getCmiCompanionCreatePath\(\{[\s\S]*placeId: selectedRecommendation\.id[\s\S]*placeName: selectedRecommendation\.place_name[\s\S]*latitude: selectedRecommendation\.latitude[\s\S]*longitude: selectedRecommendation\.longitude[\s\S]*\}\)\}/);
+  assert.match(source, /secondaryAction=\{\{[\s\S]*label: '约搭子'[\s\S]*href: getCmiCompanionCreatePath\(\{[\s\S]*eventId: selectedEvent\.id[\s\S]*placeName: selectedEvent\.venueName[\s\S]*latitude: selectedEvent\.mapLocation\?\.latitude[\s\S]*longitude: selectedEvent\.mapLocation\?\.longitude[\s\S]*\}\)[\s\S]*\}\}/);
 });
