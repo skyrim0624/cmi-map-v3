@@ -2,6 +2,7 @@ import {
   buildCmiThemeSubmissionInsert,
   type CmiMapTheme,
   type CmiThemeSubmission,
+  type CmiThemeSubmissionStatus,
   type CmiThemeTask,
   type CreateCmiThemeSubmissionInput,
 } from '@/features/themes/cmi-themes';
@@ -16,6 +17,17 @@ type CmiThemeSubmissionRow = Omit<CmiThemeSubmission, 'recommendation' | 'task'>
   recommendation?: Recommendation | Recommendation[] | null;
   task?: CmiThemeTask | CmiThemeTask[] | null;
 };
+
+export interface GetCmiThemeSubmissionsOptions {
+  includeHidden?: boolean;
+}
+
+export interface UpdateCmiThemeSubmissionReviewInput {
+  submissionId: string;
+  adminId: string;
+  status?: CmiThemeSubmissionStatus;
+  isFeatured?: boolean;
+}
 
 const toSingleRelation = <T>(value: T | T[] | null | undefined): T | null => {
   if (Array.isArray(value)) return value[0] ?? null;
@@ -69,13 +81,20 @@ export const getCmiMapThemeBySlug = async (slug: string): Promise<CmiMapTheme | 
   return data ? toTheme(data as CmiMapThemeRow) : null;
 };
 
-export const getCmiThemeSubmissions = async (themeId: string): Promise<CmiThemeSubmission[]> => {
-  const { data, error } = await supabase
+export const getCmiThemeSubmissions = async (
+  themeId: string,
+  options: GetCmiThemeSubmissionsOptions = {}
+): Promise<CmiThemeSubmission[]> => {
+  let query = supabase
     .from('cmi_theme_submissions')
     .select('*, recommendation:recommendations(*), task:cmi_theme_tasks(*)')
-    .eq('theme_id', themeId)
-    .eq('status', 'published')
-    .order('created_at', { ascending: false });
+    .eq('theme_id', themeId);
+
+  if (!options.includeHidden) {
+    query = query.eq('status', 'published');
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false });
 
   if (error) {
     handleThemeReadError('获取主题投稿失败:', error);
@@ -94,6 +113,30 @@ export const createCmiThemeSubmission = async (
       onConflict: 'theme_id,recommendation_id',
     })
     .select('*')
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data ? toSubmission(data as CmiThemeSubmissionRow) : null;
+};
+
+export const updateCmiThemeSubmissionReview = async (
+  input: UpdateCmiThemeSubmissionReviewInput
+): Promise<CmiThemeSubmission | null> => {
+  const patch = Object.fromEntries(Object.entries({
+    status: input.status,
+    is_featured: input.isFeatured,
+    reviewed_by: input.adminId,
+    reviewed_at: new Date().toISOString(),
+  }).filter(([, value]) => value !== undefined));
+
+  const { data, error } = await supabase
+    .from('cmi_theme_submissions')
+    .update(patch)
+    .eq('id', input.submissionId)
+    .select('*, recommendation:recommendations(*), task:cmi_theme_tasks(*)')
     .maybeSingle();
 
   if (error) {
