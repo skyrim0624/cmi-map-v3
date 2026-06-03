@@ -1797,3 +1797,15 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm exec biome lint src/features/companions/cmi-companions.ts src/features/companions/cmi-companions.test.ts src/db/cmi-companions.ts src/db/cmi-companions.test.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
   - `git diff --check -- src/features/companions/cmi-companions.ts src/features/companions/cmi-companions.test.ts src/db/cmi-companions.ts src/db/cmi-companions.test.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css supabase/migrations/20260603164517_cmi_companion_join_flow.sql` 通过。
+
+### 2026-06-03 23:53:36 +07 v3.1 约搭子第一部分最终验证
+
+- Supabase：
+  - 远端已应用 `20260603161708_cmi_companion_invites`。
+  - 远端已应用 `20260603164517_cmi_companion_join_flow`。
+- 验证结果：
+  - `node --test --experimental-strip-types src/features/companions/cmi-companions.test.ts src/db/cmi-companions.test.ts src/lib/paths.test.ts src/routes.test.ts src/pages/CmiCompanionCreate.test.ts src/lib/map-marker-visual.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/features/companions/cmi-companions.ts src/features/companions/cmi-companions.test.ts src/db/cmi-companions.ts src/db/cmi-companions.test.ts src/lib/paths.ts src/lib/paths.test.ts src/routes.tsx src/routes.test.ts src/pages/CmiCompanionCreate.tsx src/pages/CmiCompanionCreate.test.ts src/lib/map-marker-visual.ts src/lib/map-marker-visual.test.ts src/types/types.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地浏览器检查 `http://127.0.0.1:5173/` 通过；`/companions/new` 未登录时跳转登录页；无 HTTP 4xx 和控制台错误。
