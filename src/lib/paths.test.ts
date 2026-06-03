@@ -7,6 +7,7 @@ import {
   getMarkPlacePath,
   getPublicCmiEventUrl,
   getSceneListPath,
+  getThemeManagePath,
   getThemePath,
 } from './paths.ts';
 
@@ -40,6 +41,7 @@ test('活动可以生成拍照返图入口', () => {
 
 test('主题任务可以进入发布页', () => {
   assert.equal(getThemePath('wild-chiang-mai'), '/themes/wild-chiang-mai');
+  assert.equal(getThemeManagePath('wild-chiang-mai'), '/admin/themes/wild-chiang-mai');
   assert.equal(
     getMarkPlacePath({ themeSlug: 'wild-chiang-mai', taskId: 'task-a' }),
     '/mark?theme=wild-chiang-mai&task=task-a'
