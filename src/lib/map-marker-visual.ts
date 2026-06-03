@@ -47,6 +47,7 @@ export type MapMarkerVisual = {
   isCommunity: boolean;
   isAvatar?: boolean;
   isPoster?: boolean;
+  themeAccent?: string;
 };
 
 const EASTER_EGG_ICON_PATHS = ['/map-icons/cmi-easter/', '/map-icons/cmi-easter-v2/'];
@@ -222,6 +223,7 @@ export const getMapMarkerVisual = (
         iconUrl: markerData.visualOverride.iconUrl,
         isAvatar: markerData.visualOverride.isAvatar,
         isPoster: markerData.visualOverride.isPoster,
+        themeAccent: markerData.visualOverride.themeAccent,
       }
       : visual
   );
@@ -264,6 +266,7 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
   const imageFit = shouldCoverImage ? 'cover' : 'contain';
   const imageRadius = shouldCoverImage ? '999px' : '0';
   const imageFilter = shouldCoverImage ? 'none' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))';
+  const borderColor = escapeHtml(visual.themeAccent ?? '#ffffff');
 
   return `
     <div title="${label}" aria-label="${label}" style="
@@ -276,7 +279,7 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
       border-radius:999px;
       background:#ffffff;
       padding:0;
-      border:3px solid #ffffff;
+      border:3px solid ${borderColor};
       box-shadow:0 4px 8px rgba(0,0,0,0.15), 0 0 0 1.5px rgba(47,43,38,0.08);
       display:flex;
       align-items:center;

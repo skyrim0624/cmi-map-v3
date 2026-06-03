@@ -60,10 +60,16 @@ import {
   getPublishedCmiEvents,
   registerForCmiEvent,
 } from '@/db/cmi-events';
+import { getActiveCmiMapTheme, getCmiThemeSubmissions } from '@/db/cmi-themes';
 import {
   getBlackboardPosts,
   type BlackboardPostRecord,
 } from '@/db/blackboard-posts';
+import {
+  getThemeSubmissionRecommendations,
+  type CmiMapTheme,
+  type CmiThemeSubmission,
+} from '@/features/themes/cmi-themes';
 import {
   appendStickerPlacement,
   applyWishlistState,
@@ -99,6 +105,7 @@ import {
   getPlacePath,
   getProfilePath,
   getPublicCmiEventUrl,
+  getThemePath,
 } from '@/lib/paths';
 import { createCmiEventShareCard } from '@/lib/cmi-event-share-card';
 import { formatBlackboardCreatedLabel } from '@/features/home/blackboard/blackboard-model';
@@ -117,7 +124,7 @@ import './cmi-map-v3-prototype.css';
 
 type ScreenId = 'map' | 'feed' | 'publish' | 'events';
 type PrimaryScreenId = 'feed' | 'map' | 'events' | 'publish';
-type MapFilterId = 'all' | 'food' | 'play' | 'events' | 'easter';
+type MapFilterId = 'all' | 'food' | 'play' | 'events' | 'easter' | 'theme';
 type FeedCardTone = 'paper' | 'yellow' | 'green' | 'pink';
 type EventStatusTone = 'open' | 'full' | 'ended';
 type EventTabId = 'ongoing' | 'upcoming' | 'ended' | 'joined';
@@ -176,6 +183,7 @@ const mapFilters: FilterItem[] = [
   { id: 'play', label: '好玩', iconUrl: '/map-icons/cmi-flat-v2/direct-play.png' },
   { id: 'events', label: '活动', iconUrl: '/map-icons/cmi-flat-v2/home-events.png' },
   { id: 'easter', label: '彩蛋', iconUrl: '/map-icons/cmi-easter-v2/egg-v2-03-cat-face.png' },
+  { id: 'theme', label: '主题' },
 ];
 const eventTabs: Array<{ id: EventTabId; label: string }> = [
   { id: 'ongoing', label: '正在发生' },
@@ -480,9 +488,28 @@ function getAuthorAvatarUrl(recommendation: Recommendation, profiles: ProfileLoo
   return profile?.avatar_url?.trim() || getFallbackAvatarUrl(authorName);
 }
 
-function getUserShareMarker(recommendation: Recommendation, profiles: ProfileLookup): MapMarker {
+function getCmiThemeColor(theme: CmiMapTheme | null, key: 'primaryColor' | 'accentColor', fallback: string) {
+  const value = theme?.theme_config?.[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : fallback;
+}
+
+function getCmiThemeStyle(theme: CmiMapTheme | null): CSSProperties | undefined {
+  if (!theme) return undefined;
+  return {
+    '--cmi-v3-theme-primary': getCmiThemeColor(theme, 'primaryColor', '#4f8f5b'),
+    '--cmi-v3-theme-accent': getCmiThemeColor(theme, 'accentColor', '#f1c64c'),
+  } as CSSProperties;
+}
+
+function getUserShareMarker(
+  recommendation: Recommendation,
+  profiles: ProfileLookup,
+  themeSubmissionIds?: Set<string>,
+  activeTheme?: CmiMapTheme | null
+): MapMarker {
   const authorProfile = getRecommendationAuthorProfile(recommendation, profiles);
   const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
+  const isThemeSubmission = themeSubmissionIds?.has(recommendation.id) ?? false;
 
   return {
     id: `share:${recommendation.id}`,
@@ -495,12 +522,18 @@ function getUserShareMarker(recommendation: Recommendation, profiles: ProfileLoo
       label: authorName,
       iconUrl: getAuthorAvatarUrl(recommendation, profiles),
       isAvatar: true,
+      themeAccent: isThemeSubmission ? getCmiThemeColor(activeTheme ?? null, 'primaryColor', '#4f8f5b') : undefined,
     },
   };
 }
 
-function getUserShareMarkers(recommendations: Recommendation[], profiles: ProfileLookup): MapMarker[] {
-  return recommendations.map(recommendation => getUserShareMarker(recommendation, profiles));
+function getUserShareMarkers(
+  recommendations: Recommendation[],
+  profiles: ProfileLookup,
+  themeSubmissionIds?: Set<string>,
+  activeTheme?: CmiMapTheme | null
+): MapMarker[] {
+  return recommendations.map(recommendation => getUserShareMarker(recommendation, profiles, themeSubmissionIds, activeTheme));
 }
 
 function getEventMarkers(events: CmiEvent[]): EventMarker[] {
@@ -813,6 +846,8 @@ export default function CmiMapV3Prototype() {
   const [blackboardPosts, setBlackboardPosts] = useState<BlackboardPostRecord[]>([]);
   const [profilesByAuthorKey, setProfilesByAuthorKey] = useState<ProfileLookup>({});
   const [events, setEvents] = useState<CmiEvent[]>(CMI_EVENTS);
+  const [activeTheme, setActiveTheme] = useState<CmiMapTheme | null>(null);
+  const [themeSubmissions, setThemeSubmissions] = useState<CmiThemeSubmission[]>([]);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(() => searchParams.get('event'));
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
@@ -983,9 +1018,48 @@ export default function CmiMapV3Prototype() {
       });
   }, []);
 
+  useEffect(() => {
+    let isActive = true;
+
+    getActiveCmiMapTheme()
+      .then(async theme => {
+        if (!isActive) return;
+        setActiveTheme(theme);
+        if (!theme) {
+          setThemeSubmissions([]);
+          return;
+        }
+        const submissions = await getCmiThemeSubmissions(theme.id);
+        if (isActive) setThemeSubmissions(submissions);
+      })
+      .catch(error => {
+        console.error('CMI Map 3.1 当前主题加载失败:', error);
+        if (isActive) {
+          setActiveTheme(null);
+          setThemeSubmissions([]);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   const userSharedRecommendations = useMemo(
     () => recommendations.filter(isUserSharedRecommendation),
     [recommendations]
+  );
+
+  const themeSubmissionRecommendations = useMemo(
+    () => activeTheme
+      ? getThemeSubmissionRecommendations(activeTheme.id, userSharedRecommendations, themeSubmissions)
+      : [],
+    [activeTheme, themeSubmissions, userSharedRecommendations]
+  );
+
+  const themeSubmissionIds = useMemo(
+    () => new Set(themeSubmissionRecommendations.map(recommendation => recommendation.id)),
+    [themeSubmissionRecommendations]
   );
 
   const normalizedMapSearchQuery = useMemo(
@@ -996,9 +1070,10 @@ export default function CmiMapV3Prototype() {
   const filteredMapRecommendations = useMemo(
     () => userSharedRecommendations.filter(recommendation => {
       if (normalizedMapSearchQuery) return recommendationMatchesSearch(recommendation, normalizedMapSearchQuery);
+      if (activeFilter === 'theme') return themeSubmissionIds.has(recommendation.id);
       return recommendationMatchesFilter(recommendation, activeFilter);
     }),
-    [activeFilter, normalizedMapSearchQuery, userSharedRecommendations]
+    [activeFilter, normalizedMapSearchQuery, themeSubmissionIds, userSharedRecommendations]
   );
 
   const mapMarkerRecommendations = useMemo(
@@ -1044,10 +1119,10 @@ export default function CmiMapV3Prototype() {
 
   const mapMarkers = useMemo(
     () => [
-      ...getUserShareMarkers(mapMarkerRecommendations, profilesByAuthorKey),
+      ...getUserShareMarkers(mapMarkerRecommendations, profilesByAuthorKey, themeSubmissionIds, activeTheme),
       ...getEventMarkers(visibleEvents),
     ],
-    [mapMarkerRecommendations, profilesByAuthorKey, visibleEvents]
+    [activeTheme, mapMarkerRecommendations, profilesByAuthorKey, themeSubmissionIds, visibleEvents]
   );
 
   const feedRecommendations = useMemo(
@@ -1159,9 +1234,9 @@ export default function CmiMapV3Prototype() {
   }, []);
 
   const handleMapRecommendationSelect = useCallback((recommendation: Recommendation) => {
-    setSelectedMarker(getUserShareMarker(recommendation, profilesByAuthorKey));
+    setSelectedMarker(getUserShareMarker(recommendation, profilesByAuthorKey, themeSubmissionIds, activeTheme));
     setSelectedEventId(null);
-  }, [profilesByAuthorKey]);
+  }, [activeTheme, profilesByAuthorKey, themeSubmissionIds]);
 
   const handleBottomAdd = useCallback((screen: PrimaryScreenId) => {
     if (screen === 'events') {
@@ -1226,13 +1301,15 @@ export default function CmiMapV3Prototype() {
   const activePrimaryScreen = getPrimaryScreen(activeScreen);
   const profileName = profile?.user_name || user?.email?.split('@')[0] || '游客';
   const profileAvatarUrl = profile?.avatar_url?.trim() || getFallbackAvatarUrl(profileName);
+  const themeStyle = getCmiThemeStyle(activeTheme);
 
   return (
-    <div className={`cmi-v3-screen cmi-v3-screen--${activeScreen}`}>
+    <div className={`cmi-v3-screen cmi-v3-screen--${activeScreen}`} style={themeStyle}>
       <div className="cmi-v3-main-view" data-active-screen={activeScreen}>
         {activeScreen === 'map' && (
           <MapMode
             activeFilter={activeFilter}
+            activeTheme={activeTheme}
             filters={mapFilters}
             isLoading={isLoadingRecommendations || isLoadingEvents}
             markers={mapMarkers}
@@ -1250,6 +1327,7 @@ export default function CmiMapV3Prototype() {
             locationRequestKey={locationRequestKey}
             selectedMarker={selectedMarker}
             selectedEvent={selectedEventId ? selectedEvent : null}
+            themeSubmissionIds={themeSubmissionIds}
             onClearSelection={() => {
               setSelectedMarker(null);
               setSelectedEventId(null);
@@ -1338,6 +1416,7 @@ export default function CmiMapV3Prototype() {
 
 function MapMode({
   activeFilter,
+  activeTheme,
   filters,
   locationRequestKey,
   markers,
@@ -1345,6 +1424,7 @@ function MapMode({
   listRecommendations,
   selectedMarker,
   selectedEvent,
+  themeSubmissionIds,
   isLoading,
   localWishlists,
   placedStickers,
@@ -1369,6 +1449,7 @@ function MapMode({
   onToggleWishlist,
 }: {
   activeFilter: MapFilterId;
+  activeTheme: CmiMapTheme | null;
   filters: FilterItem[];
   locationRequestKey: number;
   markers: MapMarker[];
@@ -1376,6 +1457,7 @@ function MapMode({
   listRecommendations: Recommendation[];
   selectedMarker: MapMarker | null;
   selectedEvent: CmiEvent | null;
+  themeSubmissionIds: Set<string>;
   isLoading: boolean;
   localWishlists: WishlistStateMap;
   placedStickers: PlacedStickerMap;
@@ -1403,6 +1485,9 @@ function MapMode({
   const selectedRecommendationAuthorProfile = selectedRecommendation
     ? getRecommendationAuthorProfile(selectedRecommendation, profilesByAuthorKey)
     : null;
+  const selectedThemeName = selectedRecommendation && activeTheme && themeSubmissionIds.has(selectedRecommendation.id)
+    ? activeTheme.title
+    : undefined;
   const handleRecommendationSelect = (recommendation: Recommendation) => {
     const matchedMarker = markers.find(marker =>
       marker.recommendations.some(item => item.id === recommendation.id)
@@ -1473,6 +1558,16 @@ function MapMode({
         ))}
       </div>
 
+      {activeTheme && (
+        <button
+          type="button"
+          className="cmi-v3-theme-entry"
+          onClick={() => onOpenPath(getThemePath(activeTheme.slug))}
+        >
+          <span>{activeTheme.title}</span>
+        </button>
+      )}
+
       <div className="cmi-v3-map-layer-control" aria-label="地图图层">
         <button type="button" aria-label="切换地图图层">
           <Layers size={22} strokeWidth={2.8} />
@@ -1509,6 +1604,7 @@ function MapMode({
           itemId={`recommendation:${selectedRecommendation.id}`}
           authorProfile={selectedRecommendationAuthorProfile}
           recommendation={selectedRecommendation}
+          themeName={selectedThemeName}
           onDismiss={onClearSelection}
         />
       ) : selectedEvent ? (
@@ -1557,11 +1653,13 @@ function PlacePostSheet({
   authorProfile,
   itemId,
   recommendation,
+  themeName,
   onDismiss,
 }: {
   authorProfile: PublicProfile | null;
   itemId: string;
   recommendation: Recommendation;
+  themeName?: string;
   onDismiss?: () => void;
 }) {
   const { dragHandlers, dragOffset, isDragging, setSnap, snap } = useBottomSheetDrag(itemId);
@@ -1571,6 +1669,7 @@ function PlacePostSheet({
   const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
   const authorAvatarUrl = authorProfile?.avatar_url?.trim() ?? '';
   const categoryLabel = normalizeCategory(recommendation.category);
+  const metaLabel = themeName ? `${themeName} · ${categoryLabel}` : categoryLabel;
   const summary = getRecommendationSummary(recommendation).trim();
   const title = recommendation.place_name.trim();
   const visibleSummary = summary && summary !== title ? summary : '';
@@ -1613,7 +1712,7 @@ function PlacePostSheet({
             </span>
             <div>
               <strong>{authorName}</strong>
-              <span>{`${categoryLabel} · ${formatTraceTime(recommendation.created_at)}`}</span>
+              <span>{`${metaLabel} · ${formatTraceTime(recommendation.created_at)}`}</span>
             </div>
           </div>
           <h2>{title}</h2>
