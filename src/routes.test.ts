@@ -18,3 +18,10 @@ test('主题详情页为公开路由', () => {
   assert.match(source, /name: '主题地图'/);
   assert.match(source, /public: true/);
 });
+
+test('主题管理页为登录后路由', () => {
+  assert.match(source, /const CmiThemeManage = lazy/);
+  assert.match(source, /path: '\/admin\/themes\/:themeSlug'/);
+  assert.match(source, /element: <CmiThemeManage \/>/);
+  assert.match(source, /name: '主题管理'/);
+});

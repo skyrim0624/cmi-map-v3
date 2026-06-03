@@ -33,6 +33,9 @@ export const getCmiHomePath = () => '/cmi-home';
 export const getThemePath = (themeSlug: string) =>
   `/themes/${encodeURIComponent(themeSlug)}`;
 
+export const getThemeManagePath = (themeSlug: string) =>
+  `/admin/themes/${encodeURIComponent(themeSlug)}`;
+
 export const getMarkPlacePath = (input?: {
   eventId?: string | null;
   themeSlug?: string | null;
