@@ -1,6 +1,6 @@
 # CMI Map 优化任务日志
 
-更新时间：2026-06-02 +07
+更新时间：2026-06-03 +07
 
 ## 目标
 
@@ -25,8 +25,26 @@
 10. [本地完成] 社交用户系统建立稳定身份路由，避免继续把昵称当作长期身份 ID
 11. [本地完成] 优化注册 / 登录体验，主流程改为邮箱验证码
 12. [本地完成] 黑板 / 论坛 MVP 追加精选、公告、信息流交互、详情页和头像显示优化
+13. [进行中] 将旧域名 `cmti.uk` 改作 CMI Map 3.1 测试域名
 
 ## 执行记录
+
+### 2026-06-03 22:47 +07 CMI Map 3.1 测试域名迁移
+
+- 背景：`cmimap.com` 已经作为 CMI Map 主站；旧主域名 `cmti.uk` 当前不再承担主站职责，用户决定把它改作 CMI Map 3.1 测试域名。`cmiti.uk` 拼写当前无法解析，历史和 Cloudflare 记录均指向 `cmti.uk`。
+- 本轮完成：
+  - 用当前分支 `codex/cmimapV3.1` 的 HEAD `992d21a` 重新执行生产构建，`pnpm build` 通过，PWA precache 检查通过。
+  - 将 `dist` 部署到 Cloudflare Pages 项目 `cmi-map-v3`，生产部署地址为 `https://48a8d83d.cmi-map-v3.pages.dev`，Source 为 `992d21a`。
+  - 通过 Cloudflare Pages API 将 `cmti.uk` 添加到 `cmi-map-v3` 自定义域名列表。
+  - 复查 `cmi-map` 正式项目仍只绑定 `cmimap.com` 与 `www.cmimap.com`；`stickers.cmti.uk` 仍绑定 `cmi-photo-sticker`，本轮未触碰贴纸子域名。
+- 当前卡点：
+  - `https://cmti.uk/?verify=v31-992d21a` 仍 301 跳转到 `https://cmimap.com/?verify=v31-992d21a`，说明旧跳转规则仍在生效。
+  - `cmti.uk` 在 `cmi-map-v3` 的 Pages 域名状态为 `pending`，Cloudflare 返回 `CNAME record not set`。
+  - 当前 Wrangler OAuth 具备 Pages 写权限，但 DNS records、Page Rules 和 Rulesets 查询 / 修改返回 403；Chrome profile 打开 Cloudflare Dashboard 会跳登录页，无法自动清理旧跳转或改 DNS。
+- 需要人工或更高权限完成：
+  - 在 Cloudflare 的 `cmti.uk` zone 中，删除或禁用根域名旧 301 跳转：`cmti.uk/* -> https://cmimap.com/*`，不要影响 `stickers.cmti.uk`。
+  - 将根域名 `cmti.uk` 的 DNS 记录改为指向 `cmi-map-v3.pages.dev` 的 proxied CNAME（Cloudflare 会对根域 CNAME flatten），或按 Pages 自定义域名提示创建等效记录。
+  - 等 `cmti.uk` Pages 域名状态变为 active 后，复查 `https://cmti.uk/?verify=v31-992d21a` 返回 V3.1 页面且不再跳转到 `cmimap.com`。
 
 ### 2026-06-02 13:49 +07 打卡发布前照片预览缩小
 
