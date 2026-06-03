@@ -1743,3 +1743,17 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm exec biome lint src/features/companions/cmi-companions.ts src/features/companions/cmi-companions.test.ts src/db/cmi-companions.ts src/db/cmi-companions.test.ts` 通过。
   - `git diff --check -- src/features/companions/cmi-companions.ts src/features/companions/cmi-companions.test.ts src/db/cmi-companions.ts src/db/cmi-companions.test.ts supabase/migrations/20260603161708_cmi_companion_invites.sql` 通过。
+
+### 2026-06-03 23:30:00 +07 v3.1 约搭子步骤二：地图 marker 与轻卡片
+
+- 本轮实现：
+  - 约搭子公开列表接入 v3 地图。
+  - 约搭子 marker 使用发起人头像，并在头像外加雷达波纹。
+  - 点击约搭子 marker 只浮出轻型小卡片，不直接进入详情。
+  - 点击小卡片后进入 Event Details，详情只展示当前发起字段，不加入 RSVP 额外按钮。
+  - Obsidian 开发文档已在步骤二打勾并记录验证结果。
+- 验证结果：
+  - `node --test src/lib/map-marker-visual.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/lib/map-marker-visual.ts src/lib/map-marker-visual.test.ts src/types/types.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
+  - `git diff --check -- src/lib/map-marker-visual.ts src/lib/map-marker-visual.test.ts src/types/types.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css` 通过。

@@ -47,6 +47,7 @@ export type MapMarkerVisual = {
   isCommunity: boolean;
   isAvatar?: boolean;
   isPoster?: boolean;
+  isCompanion?: boolean;
   themeAccent?: string;
 };
 
@@ -223,6 +224,7 @@ export const getMapMarkerVisual = (
         iconUrl: markerData.visualOverride.iconUrl,
         isAvatar: markerData.visualOverride.isAvatar,
         isPoster: markerData.visualOverride.isPoster,
+        isCompanion: markerData.visualOverride.isCompanion,
         themeAccent: markerData.visualOverride.themeAccent,
       }
       : visual
@@ -267,8 +269,39 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
   const imageRadius = shouldCoverImage ? '999px' : '0';
   const imageFilter = shouldCoverImage ? 'none' : 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))';
   const borderColor = escapeHtml(visual.themeAccent ?? '#ffffff');
+  const companionRadarHtml = visual.isCompanion
+    ? `
+      <span class="cmi-marker-radar-ring" aria-hidden="true" style="
+        position:absolute;
+        left:50%;
+        top:${iconSize / 2}px;
+        width:${iconSize + 8}px;
+        height:${iconSize + 8}px;
+        transform:translate(-50%, -50%) scale(0.55);
+        border-radius:999px;
+        border:2px solid rgba(65, 168, 111, 0.58);
+        animation:aura-pulse 1.9s infinite ease-out;
+        pointer-events:none;
+        box-sizing:border-box;
+      "></span>
+      <span class="cmi-marker-radar-ring cmi-marker-radar-ring--outer" aria-hidden="true" style="
+        position:absolute;
+        left:50%;
+        top:${iconSize / 2}px;
+        width:${iconSize + 8}px;
+        height:${iconSize + 8}px;
+        transform:translate(-50%, -50%) scale(0.55);
+        border-radius:999px;
+        border:2px solid rgba(65, 168, 111, 0.42);
+        animation:aura-pulse 1.9s 0.72s infinite ease-out;
+        pointer-events:none;
+        box-sizing:border-box;
+      "></span>
+    `
+    : '';
 
   return `
+    ${companionRadarHtml}
     <div title="${label}" aria-label="${label}" style="
       position:absolute;
       left:50%;

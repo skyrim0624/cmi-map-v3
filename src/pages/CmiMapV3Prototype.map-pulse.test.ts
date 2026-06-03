@@ -44,3 +44,15 @@ test('主题投稿详情提供主题分享卡入口', () => {
   assert.match(source, /themeUrl: new URL\(getThemePath\(activeTheme\.slug\), window\.location\.origin\)\.toString\(\)/);
   assert.match(source, /downloadCmiThemeShareCard/);
 });
+
+test('约搭子地图层遵守头像 marker 到轻卡片再到详情', () => {
+  assert.match(source, /getOpenCmiCompanionInvites/);
+  assert.match(source, /getCompanionInviteMarker/);
+  assert.match(source, /isCompanion: true/);
+  assert.match(source, /selectedCompanionCardInviteId/);
+  assert.match(source, /selectedCompanionDetailsInviteId/);
+  assert.match(source, /<CompanionMapCard/);
+  assert.match(source, /<CompanionEventDetails/);
+  assert.match(source, /setSelectedCompanionCardInviteId\(marker\.companionInviteId\)/);
+  assert.match(source, /setSelectedCompanionDetailsInviteId\(invite\.id\)/);
+});

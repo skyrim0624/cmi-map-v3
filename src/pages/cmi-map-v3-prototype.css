@@ -402,6 +402,78 @@
   object-fit: cover;
 }
 
+.cmi-v3-companion-map-card {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--cmi-v3-map-nav-height) + 118px);
+  z-index: 28;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 10px;
+  width: min(calc(100vw - 32px), 340px);
+  min-height: 76px;
+  border: 2px solid rgba(42, 36, 31, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 14px 34px rgba(34, 30, 25, 0.18);
+  padding: 10px;
+  text-align: left;
+  transform: translateX(-50%);
+}
+
+.cmi-v3-companion-map-card-avatar {
+  display: block;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  box-shadow: 0 5px 12px rgba(34, 30, 25, 0.18);
+}
+
+.cmi-v3-companion-map-card-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cmi-v3-companion-map-card-copy {
+  min-width: 0;
+}
+
+.cmi-v3-companion-map-card-copy strong,
+.cmi-v3-companion-map-card-copy em,
+.cmi-v3-companion-map-card-copy span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cmi-v3-companion-map-card-copy strong {
+  color: #161616;
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1.25;
+}
+
+.cmi-v3-companion-map-card-copy em {
+  margin-top: 4px;
+  color: rgba(22, 22, 22, 0.66);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 820;
+  line-height: 1.2;
+}
+
+.cmi-v3-companion-map-card-copy span {
+  margin-top: 5px;
+  color: rgba(22, 22, 22, 0.5);
+  font-size: 10.5px;
+  font-weight: 780;
+  line-height: 1.2;
+}
+
 .cmi-v3-map-pin {
   position: absolute;
   z-index: 8;
