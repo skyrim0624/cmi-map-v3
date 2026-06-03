@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   getActiveCmiTheme,
+  buildCmiThemeSubmissionInsert,
   getThemeSubmissionRecommendationIds,
   getThemeSubmissionRecommendations,
   isThemeSubmissionRecommendation,
@@ -91,5 +92,23 @@ test('主题筛选只返回当前主题的公开投稿', () => {
   assert.deepEqual(
     getThemeSubmissionRecommendations('theme-a', [current, hidden, other], submissions).map(item => item.id),
     [current.id]
+  );
+});
+
+test('主题投稿写入只包含主题、任务、动态和用户关系', () => {
+  assert.deepEqual(
+    buildCmiThemeSubmissionInsert({
+      themeId: 'theme-a',
+      taskId: 'task-a',
+      recommendationId: 'rec-a',
+      userId: 'user-a',
+    }),
+    {
+      theme_id: 'theme-a',
+      task_id: 'task-a',
+      recommendation_id: 'rec-a',
+      user_id: 'user-a',
+      status: 'published',
+    }
   );
 });
