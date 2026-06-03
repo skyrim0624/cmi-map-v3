@@ -70,6 +70,12 @@ test('清迈客栈标签打卡后进入动态页而不是旧客栈页', () => {
   assert.doesNotMatch(source, /留言墙/);
 });
 
+test('主题任务参数会在发布后写入主题投稿关系', () => {
+  assert.match(source, /const initialThemeSlug = searchParams\.get\('theme'\)\?\.trim\(\) \|\| ''/);
+  assert.match(source, /const initialThemeTaskId = searchParams\.get\('task'\)\?\.trim\(\) \|\| ''/);
+  assert.match(source, /createCmiThemeSubmission\(\{[\s\S]*themeId: selectedTheme\.id[\s\S]*taskId: selectedThemeTask\?\.id[\s\S]*recommendationId: recommendation\.id[\s\S]*userId: user!\.id[\s\S]*\}\)/);
+});
+
 test('发布完成反馈使用鼓励徽章而不是红色罚单感大章', () => {
   assert.match(source, /ThumbsUp/);
   assert.match(source, /功德 \+1/);
