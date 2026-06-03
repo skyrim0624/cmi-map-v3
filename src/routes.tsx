@@ -10,6 +10,7 @@ const AddTrace = lazy(() => import('./pages/AddTrace'));
 const CmiEventDetail = lazy(() => import('./pages/CmiEventDetail'));
 const CmiEventCreate = lazy(() => import('./pages/CmiEventCreate'));
 const CmiEventManage = lazy(() => import('./pages/CmiEventManage'));
+const CmiThemeDetail = lazy(() => import('./pages/CmiThemeDetail'));
 const AdminAgentTokens = lazy(() => import('./pages/AdminAgentTokens'));
 const SurvivalGuides = lazy(() => import('./pages/SurvivalGuides'));
 const MarkPlace = lazy(() => import('./pages/MarkPlace'));
@@ -104,6 +105,12 @@ export const routes: RouteConfig[] = [
     name: '活动管理',
     path: '/events/:eventId/manage',
     element: <CmiEventManage />,
+  },
+  {
+    name: '主题地图',
+    path: '/themes/:themeSlug',
+    element: <CmiThemeDetail />,
+    public: true,
   },
   {
     name: 'Agent Token',
