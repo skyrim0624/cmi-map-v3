@@ -37,3 +37,10 @@ test('主题投稿保留在默认动态层并支持主题筛选', () => {
   assert.match(source, /onOpenPath\(getThemePath\(activeTheme\.slug\)\)/);
   assert.match(source, /themeSubmissionIds\.has\(selectedRecommendation\.id\)/);
 });
+
+test('主题投稿详情提供主题分享卡入口', () => {
+  assert.match(source, /createCmiThemeShareCard/);
+  assert.match(source, /themeShareInput/);
+  assert.match(source, /themeUrl: new URL\(getThemePath\(activeTheme\.slug\), window\.location\.origin\)\.toString\(\)/);
+  assert.match(source, /downloadCmiThemeShareCard/);
+});

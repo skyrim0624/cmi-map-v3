@@ -505,6 +505,7 @@
 }
 
 .cmi-v3-selected-note[data-sheet-state="minimized"] .cmi-v3-selected-note-close,
+.cmi-v3-place-post-sheet[data-sheet-state="minimized"] .cmi-v3-theme-share-card-button,
 .cmi-v3-selected-note[data-sheet-state="minimized"] .cmi-v3-selected-note-body {
   display: none;
 }
@@ -729,6 +730,26 @@
   border-radius: 22px;
   background: #f7f3ed;
   object-fit: cover;
+}
+
+.cmi-v3-theme-share-card-button {
+  flex: 0 0 42px;
+  width: 100%;
+  min-height: 42px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cmi-v3-theme-primary);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.cmi-v3-theme-share-card-button:disabled {
+  opacity: 0.72;
 }
 
 .cmi-v3-selected-note h2,
