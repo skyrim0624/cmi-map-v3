@@ -55,6 +55,15 @@ export interface CreateCmiThemeSubmissionInput {
   userId: string;
 }
 
+export interface CmiThemeMaterialRow {
+  authorName: string;
+  placeName: string;
+  createdAt: string;
+  content: string;
+  photoUrls: string[];
+  isFeatured: boolean;
+}
+
 const isPublishedSubmission = (submission: CmiThemeSubmission) =>
   submission.status === 'published';
 
@@ -97,4 +106,42 @@ export function getThemeSubmissionRecommendations<T extends Pick<Recommendation,
 ) {
   const recommendationIds = new Set(getThemeSubmissionRecommendationIds(themeId, submissions));
   return recommendations.filter(recommendation => recommendationIds.has(recommendation.id));
+}
+
+const cleanMaterialText = (value: string | null | undefined) =>
+  (value ?? '').replace(/\s+/g, ' ').trim();
+
+const formatMaterialCell = (value: string) =>
+  value.replace(/\t/g, ' ').replace(/\r?\n/g, ' ').trim();
+
+export function buildCmiThemeMaterialRows(submissions: CmiThemeSubmission[]): CmiThemeMaterialRow[] {
+  return submissions
+    .filter(isPublishedSubmission)
+    .map(submission => {
+      const recommendation = submission.recommendation;
+      if (!recommendation) return null;
+      return {
+        authorName: cleanMaterialText(recommendation.user_name) || 'CMI 朋友',
+        placeName: cleanMaterialText(recommendation.place_name),
+        createdAt: recommendation.created_at,
+        content: cleanMaterialText(recommendation.reason),
+        photoUrls: recommendation.images,
+        isFeatured: submission.is_featured,
+      };
+    })
+    .filter((row): row is CmiThemeMaterialRow => Boolean(row));
+}
+
+export function formatCmiThemeMaterialExport(rows: CmiThemeMaterialRow[]) {
+  const header = '作者\t地点\t时间\t文案\t照片链接\t精选';
+  const body = rows.map(row => [
+    row.authorName,
+    row.placeName,
+    row.createdAt,
+    row.content,
+    row.photoUrls.join(' '),
+    row.isFeatured ? '是' : '否',
+  ].map(formatMaterialCell).join('\t'));
+
+  return [header, ...body].join('\n');
 }
