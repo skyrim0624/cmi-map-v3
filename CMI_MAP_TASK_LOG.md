@@ -1809,3 +1809,12 @@
   - `pnpm exec biome lint src/features/companions/cmi-companions.ts src/features/companions/cmi-companions.test.ts src/db/cmi-companions.ts src/db/cmi-companions.test.ts src/lib/paths.ts src/lib/paths.test.ts src/routes.tsx src/routes.test.ts src/pages/CmiCompanionCreate.tsx src/pages/CmiCompanionCreate.test.ts src/lib/map-marker-visual.ts src/lib/map-marker-visual.test.ts src/types/types.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地浏览器检查 `http://127.0.0.1:5173/` 通过；`/companions/new` 未登录时跳转登录页；无 HTTP 4xx 和控制台错误。
+
+### 2026-06-04 00:28:55 +07 v3.1 约搭子第一部分部署状态
+
+- 已部署到 Cloudflare Pages 项目 `cmi-map-v3` 的 Production，部署地址为 `https://79ea7a85.cmi-map-v3.pages.dev`，Source 为 `70d4e2d`。
+- 部署前 `pnpm build` 通过，PWA precache 检查通过。
+- 新 Pages 部署地址返回 `HTTP 200`，页面引用新构建入口资源。
+- `cmti.uk` 仍未真正指向 `cmi-map-v3`：访问 `https://cmti.uk/?verify=companion-70d4e2d` 仍会 `301` 到 `https://cmimap.com/?verify=companion-70d4e2d`。
+- Cloudflare Pages 自定义域名中 `cmti.uk` 仍为 `pending`，错误为 `CNAME record not set`。
+- 当前 Wrangler OAuth 权限可部署 Pages，但读取 DNS records / rulesets API 仍返回 `Authentication error`；本轮未触碰 `stickers.cmti.uk`。
