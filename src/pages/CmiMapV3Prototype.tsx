@@ -169,6 +169,12 @@ type CmiV3FeedItem =
       type: 'forumPost';
       createdAt: string;
       post: BlackboardPostRecord;
+    }
+  | {
+      id: string;
+      type: 'companionInvite';
+      createdAt: string;
+      invite: CmiCompanionInviteCard;
     };
 
 interface EventMarker extends MapMarker {
@@ -1521,16 +1527,23 @@ export default function CmiMapV3Prototype() {
           <FeedMode
             blackboardPosts={blackboardPosts}
             blackboardPostsError={blackboardPostsError}
+            companionInvites={companionInvites}
             events={communityEvents}
-            isLoading={isLoadingRecommendations || isLoadingBlackboardPosts}
+            isLoading={isLoadingRecommendations || isLoadingBlackboardPosts || isLoadingCompanionInvites}
             localWishlists={localWishlists}
             placedStickers={placedStickers}
             activeRecIdForSticker={activeRecIdForSticker}
             activeStickerId={activeStickerId}
             profilesByAuthorKey={profilesByAuthorKey}
             recommendations={feedRecommendations}
+            selectedCompanionDetailsInvite={selectedCompanionDetailsInvite}
             onNavigate={handleNavigate}
             onPlaceStamp={handleRecommendationCardClick}
+            onClearCompanionDetails={() => setSelectedCompanionDetailsInviteId(null)}
+            onOpenCompanionDetails={(invite) => {
+              setSelectedCompanionDetailsInviteId(invite.id);
+              setSelectedCompanionCardInviteId(null);
+            }}
             onOpenPath={navigate}
             onStartStamp={handleStartStamp}
             onToggleWishlist={handleToggleWishlist}
@@ -2436,6 +2449,7 @@ function EventSheetBody({ event }: { event: CmiEvent }) {
 function FeedMode({
   blackboardPosts,
   blackboardPostsError,
+  companionInvites,
   events,
   recommendations,
   isLoading,
@@ -2444,14 +2458,18 @@ function FeedMode({
   activeRecIdForSticker,
   activeStickerId,
   profilesByAuthorKey,
+  selectedCompanionDetailsInvite,
+  onClearCompanionDetails,
   onNavigate,
   onPlaceStamp,
+  onOpenCompanionDetails,
   onOpenPath,
   onStartStamp,
   onToggleWishlist,
 }: {
   blackboardPosts: BlackboardPostRecord[];
   blackboardPostsError: string | null;
+  companionInvites: CmiCompanionInviteCard[];
   events: CmiEvent[];
   recommendations: Recommendation[];
   isLoading: boolean;
@@ -2460,8 +2478,11 @@ function FeedMode({
   activeRecIdForSticker: string | null;
   activeStickerId: string | null;
   profilesByAuthorKey: ProfileLookup;
+  selectedCompanionDetailsInvite: CmiCompanionInviteCard | null;
+  onClearCompanionDetails: () => void;
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
   onPlaceStamp: (event: ReactMouseEvent<HTMLElement>, recommendationId: string) => void;
+  onOpenCompanionDetails: (invite: CmiCompanionInviteCard) => void;
   onOpenPath: (path: string) => void;
   onStartStamp: (recommendationId: string) => void;
   onToggleWishlist: (recommendation: Recommendation) => void;
@@ -2480,15 +2501,25 @@ function FeedMode({
         createdAt: recommendation.created_at,
         recommendation,
       })),
+      ...companionInvites.map(invite => ({
+        id: `companion:${invite.id}`,
+        type: 'companionInvite' as const,
+        createdAt: invite.created_at,
+        invite,
+      })),
     ]).slice(0, 60),
-    [blackboardPosts, recommendations]
+    [blackboardPosts, companionInvites, recommendations]
+  );
+  const featuredFeedItems = useMemo(
+    () => feedItems.filter(feedItem => feedItem.type !== 'companionInvite'),
+    [feedItems]
   );
   const featuredFeedItem = useMemo(
-    () => feedItems.find(feedItem => feedItem.type === 'forumPost' && Boolean(feedItem.post.is_featured))
-      ?? feedItems.find(feedItem => feedItem.type === 'forumPost')
-      ?? feedItems[0]
+    () => featuredFeedItems.find(feedItem => feedItem.type === 'forumPost' && Boolean(feedItem.post.is_featured))
+      ?? featuredFeedItems.find(feedItem => feedItem.type === 'forumPost')
+      ?? featuredFeedItems[0]
       ?? null,
-    [feedItems]
+    [featuredFeedItems]
   );
   const streamFeedItems = useMemo(
     () => featuredFeedItem
@@ -2496,54 +2527,73 @@ function FeedMode({
       : feedItems,
     [featuredFeedItem, feedItems]
   );
+  const selectedCompanionDetailsCreatorProfile = selectedCompanionDetailsInvite
+    ? getCompanionInviteCreatorProfile(selectedCompanionDetailsInvite, profilesByAuthorKey)
+    : null;
 
   return (
-    <ComicPage title="动态" hideTitle onTitleClick={() => onNavigate('map')}>
-      <FeedCenterPanel
-        item={featuredFeedItem}
-        events={events}
-        profilesByAuthorKey={profilesByAuthorKey}
-        onOpenPath={onOpenPath}
-      />
+    <>
+      <ComicPage title="动态" hideTitle onTitleClick={() => onNavigate('map')}>
+        <FeedCenterPanel
+          item={featuredFeedItem}
+          events={events}
+          profilesByAuthorKey={profilesByAuthorKey}
+          onOpenPath={onOpenPath}
+        />
 
-      {isLoading && <p className="cmi-v3-inline-state">正在同步社区动态</p>}
-      {blackboardPostsError && <p className="cmi-v3-inline-state">{blackboardPostsError}</p>}
+        {isLoading && <p className="cmi-v3-inline-state">正在同步社区动态</p>}
+        {blackboardPostsError && <p className="cmi-v3-inline-state">{blackboardPostsError}</p>}
 
-      <div className="cmi-v3-feed-stream" aria-label="社区动态列表">
-        {streamFeedItems.map(feedItem => (
-          feedItem.type === 'forumPost' ? (
-            <BlackboardFeedCard
-              key={feedItem.id}
-              authorProfile={getBlackboardPostAuthorProfile(feedItem.post, profilesByAuthorKey)}
-              events={events}
-              post={feedItem.post}
-              onOpenPath={onOpenPath}
-            />
-          ) : (
-            <RecommendationFeedCard
-              key={feedItem.id}
-              activeRecIdForSticker={activeRecIdForSticker}
-              activeStickerId={activeStickerId}
-              authorProfile={getRecommendationAuthorProfile(feedItem.recommendation, profilesByAuthorKey)}
-              isWishlisted={localWishlists[feedItem.recommendation.id] ?? false}
-              linkedEventBadge={getRecommendationEventBadge(feedItem.recommendation, events)}
-              placedStickers={placedStickers[feedItem.recommendation.id] ?? []}
-              recommendation={feedItem.recommendation}
-              onComment={() => onOpenPath(getAddTracePath(feedItem.recommendation.place_name))}
-              onPlaceStamp={onPlaceStamp}
-              onSelect={() => onOpenPath(getPlacePath(feedItem.recommendation.place_name))}
-              onStartStamp={() => onStartStamp(feedItem.recommendation.id)}
-              onToggleWishlist={() => onToggleWishlist(feedItem.recommendation)}
-            />
-          )
-        ))}
-      </div>
+        <div className="cmi-v3-feed-stream" aria-label="社区动态列表">
+          {streamFeedItems.map(feedItem => (
+            feedItem.type === 'companionInvite' ? (
+              <CompanionFeedCard
+                key={feedItem.id}
+                authorProfile={getCompanionInviteCreatorProfile(feedItem.invite, profilesByAuthorKey)}
+                invite={feedItem.invite}
+                onOpen={() => onOpenCompanionDetails(feedItem.invite)}
+              />
+            ) : feedItem.type === 'forumPost' ? (
+              <BlackboardFeedCard
+                key={feedItem.id}
+                authorProfile={getBlackboardPostAuthorProfile(feedItem.post, profilesByAuthorKey)}
+                events={events}
+                post={feedItem.post}
+                onOpenPath={onOpenPath}
+              />
+            ) : (
+              <RecommendationFeedCard
+                key={feedItem.id}
+                activeRecIdForSticker={activeRecIdForSticker}
+                activeStickerId={activeStickerId}
+                authorProfile={getRecommendationAuthorProfile(feedItem.recommendation, profilesByAuthorKey)}
+                isWishlisted={localWishlists[feedItem.recommendation.id] ?? false}
+                linkedEventBadge={getRecommendationEventBadge(feedItem.recommendation, events)}
+                placedStickers={placedStickers[feedItem.recommendation.id] ?? []}
+                recommendation={feedItem.recommendation}
+                onComment={() => onOpenPath(getAddTracePath(feedItem.recommendation.place_name))}
+                onPlaceStamp={onPlaceStamp}
+                onSelect={() => onOpenPath(getPlacePath(feedItem.recommendation.place_name))}
+                onStartStamp={() => onStartStamp(feedItem.recommendation.id)}
+                onToggleWishlist={() => onToggleWishlist(feedItem.recommendation)}
+              />
+            )
+          ))}
+        </div>
 
-      {!isLoading && feedItems.length === 0 && (
-        <p className="cmi-v3-inline-state">还没有新的社区动态。</p>
+        {!isLoading && feedItems.length === 0 && (
+          <p className="cmi-v3-inline-state">还没有新的社区动态。</p>
+        )}
+
+      </ComicPage>
+      {selectedCompanionDetailsInvite && (
+        <CompanionEventDetails
+          authorProfile={selectedCompanionDetailsCreatorProfile}
+          invite={selectedCompanionDetailsInvite}
+          onDismiss={onClearCompanionDetails}
+        />
       )}
-
-    </ComicPage>
+    </>
   );
 }
 
@@ -2964,6 +3014,8 @@ function FeedCenterPanel({
       };
     }
 
+    if (item.type === 'companionInvite') return null;
+
     const recommendation = item.recommendation;
     const authorProfile = getRecommendationAuthorProfile(recommendation, profilesByAuthorKey);
     const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
@@ -3109,6 +3161,55 @@ function BlackboardFeedCard({
             {metaItems.slice(0, 3).map(item => <span key={item}>{item}</span>)}
           </div>
         )}
+      </div>
+    </article>
+  );
+}
+
+function CompanionFeedCard({
+  authorProfile,
+  invite,
+  onOpen,
+}: {
+  authorProfile: PublicProfile | null;
+  invite: CmiCompanionInviteCard;
+  onOpen: () => void;
+}) {
+  const authorName = authorProfile?.user_name || 'CMI 朋友';
+  const avatarUrl = authorProfile?.avatar_url?.trim() || getFallbackAvatarUrl(authorName);
+  const handleKeyDown = (keyboardEvent: KeyboardEvent<HTMLElement>) => {
+    if (keyboardEvent.key !== 'Enter' && keyboardEvent.key !== ' ') return;
+    keyboardEvent.preventDefault();
+    onOpen();
+  };
+
+  return (
+    <article
+      className="cmi-v3-feed-card cmi-v3-companion-feed-card"
+      role="link"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={handleKeyDown}
+    >
+      <span className="cmi-v3-companion-feed-avatar" aria-hidden="true">
+        <img src={avatarUrl} alt="" />
+      </span>
+      <div className="cmi-v3-companion-feed-copy">
+        <div className="cmi-v3-feed-head cmi-v3-forum-post-head">
+          <span className="cmi-v3-avatar cmi-v3-feed-user-avatar">
+            <img src={avatarUrl} alt="" />
+          </span>
+          <div>
+            <strong>{authorName}</strong>
+            <span>{getCompanionInviteTimeLabel(invite)}</span>
+          </div>
+        </div>
+        <h2>{invite.title}</h2>
+        <div className="cmi-v3-feed-meta-line" aria-label="约搭子信息">
+          <span>{getCompanionInvitePlaceLabel(invite)}</span>
+          <span>{getCompanionInviteCapacityLabel(invite)}</span>
+          <span>{getCompanionInviteStatusLabel(invite)}</span>
+        </div>
       </div>
     </article>
   );

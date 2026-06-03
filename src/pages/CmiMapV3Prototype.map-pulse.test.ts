@@ -62,3 +62,14 @@ test('地图地点和活动详情提供约搭子发起入口', () => {
   assert.match(source, /companionCreateHref=\{getCmiCompanionCreatePath\(\{[\s\S]*placeId: selectedRecommendation\.id[\s\S]*placeName: selectedRecommendation\.place_name[\s\S]*latitude: selectedRecommendation\.latitude[\s\S]*longitude: selectedRecommendation\.longitude[\s\S]*\}\)\}/);
   assert.match(source, /secondaryAction=\{\{[\s\S]*label: '约搭子'[\s\S]*href: getCmiCompanionCreatePath\(\{[\s\S]*eventId: selectedEvent\.id[\s\S]*placeName: selectedEvent\.venueName[\s\S]*latitude: selectedEvent\.mapLocation\?\.latitude[\s\S]*longitude: selectedEvent\.mapLocation\?\.longitude[\s\S]*\}\)[\s\S]*\}\}/);
 });
+
+test('约搭子请求进入现有动态流并点击进入详情', () => {
+  assert.match(source, /type: 'companionInvite'/);
+  assert.match(source, /companionInvites=\{companionInvites\}/);
+  assert.match(source, /selectedCompanionDetailsInvite=\{selectedCompanionDetailsInvite\}/);
+  assert.match(source, /onOpenCompanionDetails=\{\(invite\) => \{[\s\S]*setSelectedCompanionDetailsInviteId\(invite\.id\)/);
+  assert.match(source, /\.\.\.companionInvites\.map\(invite => \(\{[\s\S]*id: `companion:\$\{invite\.id\}`[\s\S]*type: 'companionInvite' as const[\s\S]*invite,[\s\S]*\}\)\)/);
+  assert.match(source, /feedItem\.type === 'companionInvite' \? \(/);
+  assert.match(source, /<CompanionFeedCard/);
+  assert.match(source, /onOpen=\{\(\) => onOpenCompanionDetails\(feedItem\.invite\)\}/);
+});

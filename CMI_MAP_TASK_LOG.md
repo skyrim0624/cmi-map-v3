@@ -1770,3 +1770,16 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm exec biome lint src/lib/paths.ts src/lib/paths.test.ts src/routes.tsx src/routes.test.ts src/pages/CmiCompanionCreate.tsx src/pages/CmiCompanionCreate.test.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
   - `git diff --check -- src/lib/paths.ts src/lib/paths.test.ts src/routes.tsx src/routes.test.ts src/pages/CmiCompanionCreate.tsx src/pages/CmiCompanionCreate.test.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
+
+### 2026-06-03 23:43:14 +07 v3.1 约搭子步骤三：动态卡片
+
+- 本轮实现：
+  - 约搭子请求接入现有动态流，不新增独立信息流结构。
+  - 动态卡片展示标题、地点、时间、发起人、人数和状态。
+  - 点击动态卡片进入同一套 Event Details。
+  - Obsidian 开发文档已在步骤三打勾并记录验证结果。
+- 验证结果：
+  - `node --test src/pages/CmiMapV3Prototype.map-pulse.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
+  - `git diff --check -- src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
