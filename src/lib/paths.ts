@@ -30,9 +30,18 @@ export const getPersonMapPath = (profileIdentity: string) =>
 
 export const getCmiHomePath = () => '/cmi-home';
 
-export const getMarkPlacePath = (input?: { eventId?: string | null }) => {
+export const getThemePath = (themeSlug: string) =>
+  `/themes/${encodeURIComponent(themeSlug)}`;
+
+export const getMarkPlacePath = (input?: {
+  eventId?: string | null;
+  themeSlug?: string | null;
+  taskId?: string | null;
+}) => {
   const searchParams = new URLSearchParams();
   if (input?.eventId) searchParams.set('event', input.eventId);
+  if (input?.themeSlug) searchParams.set('theme', input.themeSlug);
+  if (input?.taskId) searchParams.set('task', input.taskId);
 
   const query = searchParams.toString();
   return query ? `/mark?${query}` : '/mark';
