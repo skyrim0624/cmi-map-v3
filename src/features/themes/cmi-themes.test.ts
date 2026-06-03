@@ -3,6 +3,8 @@ import test from 'node:test';
 import {
   getActiveCmiTheme,
   buildCmiThemeSubmissionInsert,
+  buildCmiThemeMaterialRows,
+  formatCmiThemeMaterialExport,
   getThemeSubmissionRecommendationIds,
   getThemeSubmissionRecommendations,
   isThemeSubmissionRecommendation,
@@ -110,5 +112,46 @@ test('主题投稿写入只包含主题、任务、动态和用户关系', () =>
       user_id: 'user-a',
       status: 'published',
     }
+  );
+});
+
+test('主题素材提取只输出作者、地点、时间、文案和照片链接', () => {
+  const rows = buildCmiThemeMaterialRows([
+    createSubmission({
+      id: 'sub-a',
+      theme_id: 'theme-a',
+      recommendation_id: 'rec-a',
+      is_featured: true,
+      recommendation: createRecommendation({
+        id: 'rec-a',
+        place_name: '清迈动物角落',
+        reason: '看到一只很淡定的猫',
+        user_name: 'Andreas',
+        images: ['/cat-a.jpg', '/cat-b.jpg'],
+        created_at: '2026-06-03T09:10:00+07:00',
+      }),
+    }),
+    createSubmission({
+      id: 'sub-hidden',
+      theme_id: 'theme-a',
+      recommendation_id: 'rec-hidden',
+      status: 'hidden',
+      recommendation: createRecommendation({ id: 'rec-hidden' }),
+    }),
+  ]);
+
+  assert.deepEqual(rows, [
+    {
+      authorName: 'Andreas',
+      placeName: '清迈动物角落',
+      createdAt: '2026-06-03T09:10:00+07:00',
+      content: '看到一只很淡定的猫',
+      photoUrls: ['/cat-a.jpg', '/cat-b.jpg'],
+      isFeatured: true,
+    },
+  ]);
+  assert.equal(
+    formatCmiThemeMaterialExport(rows),
+    '作者\t地点\t时间\t文案\t照片链接\t精选\nAndreas\t清迈动物角落\t2026-06-03T09:10:00+07:00\t看到一只很淡定的猫\t/cat-a.jpg /cat-b.jpg\t是'
   );
 });
