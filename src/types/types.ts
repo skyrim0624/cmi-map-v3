@@ -65,6 +65,7 @@ export interface MapMarker {
     iconUrl: string;
     isAvatar?: boolean;
     isPoster?: boolean;
+    themeAccent?: string;
   };
 }
 

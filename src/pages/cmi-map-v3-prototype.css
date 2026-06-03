@@ -6,6 +6,8 @@
   --cmi-v3-pink: #ff6fba;
   --cmi-v3-purple: #8b6bbf;
   --cmi-v3-muted: rgba(22, 22, 22, 0.66);
+  --cmi-v3-theme-primary: #4f8f5b;
+  --cmi-v3-theme-accent: #f1c64c;
   --cmi-v3-viewport-height: 100vh;
   --cmi-v3-map-nav-height: calc(env(safe-area-inset-bottom) + 58px);
   --cmi-v3-map-pulse-peek-height: clamp(96px, 12vh, 104px);
@@ -309,6 +311,34 @@
   border: 2px solid #fff;
   border-radius: 50%;
   object-fit: cover;
+}
+
+.cmi-v3-theme-entry {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 110px);
+  left: 14px;
+  z-index: 17;
+  max-width: calc(100% - 96px);
+  height: 36px;
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  border-radius: 999px;
+  background: var(--cmi-v3-theme-primary);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(22, 22, 22, 0.18);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+  overflow: hidden;
+}
+
+.cmi-v3-theme-entry span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cmi-v3-map-layer-control {

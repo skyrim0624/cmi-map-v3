@@ -16,7 +16,7 @@ test('地图动态 marker 只显示最近一周，历史动态仍可搜索打开
   assert.match(source, /function isRecentMapMarkerRecommendation/);
   assert.match(source, /referenceDate\.getTime\(\) - createdAt <= MAP_MARKER_VISIBLE_WINDOW_MS/);
   assert.match(source, /const mapMarkerRecommendations = useMemo/);
-  assert.match(source, /getUserShareMarkers\(mapMarkerRecommendations, profilesByAuthorKey\)/);
+  assert.match(source, /getUserShareMarkers\(mapMarkerRecommendations, profilesByAuthorKey/);
   assert.match(source, /listRecommendations=\{filteredMapRecommendations\}/);
   assert.match(source, /onRecommendationSelect=\{handleMapRecommendationSelect\}/);
   assert.match(source, /if \(matchedMarker\) \{[\s\S]*onMarkerSelect\(matchedMarker\);[\s\S]*return;[\s\S]*\}[\s\S]*onRecommendationSelect\(recommendation\);/);
@@ -24,4 +24,16 @@ test('地图动态 marker 只显示最近一周，历史动态仍可搜索打开
 
 test('地图活动 marker 使用海报封面视觉', () => {
   assert.match(source, /visualOverride: \{[\s\S]*label: '活动'[\s\S]*iconUrl: getCmiEventCardImageUrl\(event\)[\s\S]*isPoster: true[\s\S]*\}/);
+});
+
+test('主题投稿保留在默认动态层并支持主题筛选', () => {
+  assert.match(source, /type MapFilterId = 'all' \| 'food' \| 'play' \| 'events' \| 'easter' \| 'theme'/);
+  assert.match(source, /\{ id: 'theme', label: '主题' \}/);
+  assert.match(source, /getActiveCmiMapTheme/);
+  assert.match(source, /getCmiThemeSubmissions/);
+  assert.match(source, /getThemeSubmissionRecommendations\(activeTheme\.id, userSharedRecommendations, themeSubmissions\)/);
+  assert.match(source, /activeFilter === 'theme'/);
+  assert.match(source, /getUserShareMarkers\(mapMarkerRecommendations, profilesByAuthorKey, themeSubmissionIds, activeTheme\)/);
+  assert.match(source, /onOpenPath\(getThemePath\(activeTheme\.slug\)\)/);
+  assert.match(source, /themeSubmissionIds\.has\(selectedRecommendation\.id\)/);
 });
