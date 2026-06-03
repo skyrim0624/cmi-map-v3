@@ -48,8 +48,25 @@ export interface CmiThemeSubmission {
   task?: CmiThemeTask | null;
 }
 
+export interface CreateCmiThemeSubmissionInput {
+  themeId: string;
+  taskId?: string | null;
+  recommendationId: string;
+  userId: string;
+}
+
 const isPublishedSubmission = (submission: CmiThemeSubmission) =>
   submission.status === 'published';
+
+export function buildCmiThemeSubmissionInsert(input: CreateCmiThemeSubmissionInput) {
+  return {
+    theme_id: input.themeId,
+    task_id: input.taskId ?? null,
+    recommendation_id: input.recommendationId,
+    user_id: input.userId,
+    status: 'published' as const,
+  };
+}
 
 export function getActiveCmiTheme(themes: CmiMapTheme[]) {
   return themes.find(theme => theme.status === 'active') ?? null;
