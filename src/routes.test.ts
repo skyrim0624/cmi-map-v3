@@ -10,3 +10,11 @@ test('旧清迈客栈页不再渲染独立页面，改为动态页入口', () =>
   assert.doesNotMatch(source, /const CmiHome = lazy/);
   assert.doesNotMatch(source, /element: <CmiHome \/>/);
 });
+
+test('主题详情页为公开路由', () => {
+  assert.match(source, /const CmiThemeDetail = lazy/);
+  assert.match(source, /path: '\/themes\/:themeSlug'/);
+  assert.match(source, /element: <CmiThemeDetail \/>/);
+  assert.match(source, /name: '主题地图'/);
+  assert.match(source, /public: true/);
+});
