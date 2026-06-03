@@ -104,3 +104,26 @@ export function getApprovedCompanionContactLabel(
   if (application?.status !== 'approved') return null;
   return invite.contact_label?.trim() || null;
 }
+
+export function getCmiCompanionJoinActionLabel({
+  invite,
+  viewerId,
+  application,
+}: {
+  invite: Pick<CmiCompanionInvite, 'creator_id'>;
+  viewerId: string | null | undefined;
+  application: Pick<CmiCompanionApplication, 'status'> | null;
+}) {
+  if (viewerId && viewerId === invite.creator_id) return null;
+  if (application?.status === 'pending') return '已申请';
+  if (application?.status === 'approved') return '已通过';
+  if (application?.status === 'rejected') return '已拒绝';
+  return '申请加入';
+}
+
+export function canReviewCmiCompanionApplications(
+  invite: Pick<CmiCompanionInvite, 'creator_id'>,
+  viewerId: string | null | undefined
+) {
+  return Boolean(viewerId && viewerId === invite.creator_id);
+}

@@ -1783,3 +1783,17 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm exec biome lint src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
   - `git diff --check -- src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
+
+### 2026-06-03 23:48:51 +07 v3.1 约搭子步骤四：加入申请与批准
+
+- 本轮实现：
+  - Event Details 增加唯一加入动作，不加入 Maybe、不参加、我来了等 RSVP。
+  - 非好友加入后进入申请状态；发起人在 Event Details 看到申请人、主页入口、批准和拒绝。
+  - 新增受限数据库函数 `get_cmi_companion_contact_label`，只有发起人或已批准申请人能读取联系方式。
+  - 当前代码库没有好友关系数据源，未新增额外社交结构；好友直通由 `relationship_type='friend'` 的数据规则支撑。
+  - Obsidian 开发文档已在步骤四打勾并记录验证结果。
+- 验证结果：
+  - `node --test --experimental-strip-types src/features/companions/cmi-companions.test.ts src/db/cmi-companions.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/features/companions/cmi-companions.ts src/features/companions/cmi-companions.test.ts src/db/cmi-companions.ts src/db/cmi-companions.test.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
+  - `git diff --check -- src/features/companions/cmi-companions.ts src/features/companions/cmi-companions.test.ts src/db/cmi-companions.ts src/db/cmi-companions.test.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css supabase/migrations/20260603164517_cmi_companion_join_flow.sql` 通过。

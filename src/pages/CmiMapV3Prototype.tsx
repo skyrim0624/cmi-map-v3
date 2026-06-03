@@ -60,13 +60,25 @@ import {
   getPublishedCmiEvents,
   registerForCmiEvent,
 } from '@/db/cmi-events';
-import { getOpenCmiCompanionInvites } from '@/db/cmi-companions';
+import {
+  createCmiCompanionApplication,
+  getApprovedCmiCompanionContactLabel,
+  getCmiCompanionApplicationsForInvite,
+  getOpenCmiCompanionInvites,
+  reviewCmiCompanionApplication,
+} from '@/db/cmi-companions';
 import { getActiveCmiMapTheme, getCmiThemeSubmissions } from '@/db/cmi-themes';
 import {
   getBlackboardPosts,
   type BlackboardPostRecord,
 } from '@/db/blackboard-posts';
-import type { CmiCompanionInviteCard } from '@/features/companions/cmi-companions';
+import {
+  canReviewCmiCompanionApplications,
+  getCmiCompanionJoinActionLabel,
+  type CmiCompanionApplication,
+  type CmiCompanionApplicationStatus,
+  type CmiCompanionInviteCard,
+} from '@/features/companions/cmi-companions';
 import {
   getThemeSubmissionRecommendations,
   type CmiMapTheme,
@@ -105,6 +117,7 @@ import {
   getCmiEventPath,
   getCmiFeedPath,
   getMarkPlacePath,
+  getPersonMapPath,
   getPlacePath,
   getProfilePath,
   getPublicCmiEventUrl,
@@ -1908,6 +1921,34 @@ function CompanionMapCard({
   );
 }
 
+function upsertCompanionApplication(
+  applications: CmiCompanionApplication[],
+  nextApplication: CmiCompanionApplication
+) {
+  const nextApplications = applications.filter(application => application.id !== nextApplication.id);
+  return [nextApplication, ...nextApplications];
+}
+
+function getCompanionApplicationStatusLabel(status: CmiCompanionApplicationStatus) {
+  if (status === 'approved') return '已通过';
+  if (status === 'rejected') return '已拒绝';
+  return '待审核';
+}
+
+function getCompanionApplicantName(
+  application: CmiCompanionApplication,
+  applicantProfile: PublicProfile | null
+) {
+  return applicantProfile?.user_name || application.applicant_id.slice(0, 8);
+}
+
+function getCompanionApplicantIdentity(
+  application: CmiCompanionApplication,
+  applicantProfile: PublicProfile | null
+) {
+  return applicantProfile?.handle || applicantProfile?.user_name || application.applicant_id;
+}
+
 function CompanionEventDetails({
   authorProfile,
   invite,
@@ -1917,8 +1958,138 @@ function CompanionEventDetails({
   invite: CmiCompanionInviteCard;
   onDismiss: () => void;
 }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+  const [applications, setApplications] = useState<CmiCompanionApplication[]>([]);
+  const [applicantProfilesById, setApplicantProfilesById] = useState<ProfileLookup>({});
+  const [approvedContactLabel, setApprovedContactLabel] = useState<string | null>(null);
+  const [isJoining, setIsJoining] = useState(false);
+  const [reviewingApplicationIds, setReviewingApplicationIds] = useState<Record<string, boolean>>({});
   const authorName = authorProfile?.user_name || 'CMI 朋友';
   const avatarUrl = authorProfile?.avatar_url?.trim() || getFallbackAvatarUrl(authorName);
+  const currentUserApplication = useMemo(
+    () => applications.find(application => application.applicant_id === user?.id) ?? null,
+    [applications, user?.id]
+  );
+  const joinActionLabel = getCmiCompanionJoinActionLabel({
+    invite,
+    viewerId: user?.id,
+    application: currentUserApplication,
+  });
+  const canReviewApplications = canReviewCmiCompanionApplications(invite, user?.id);
+  const visibleContactLabel = currentUserApplication?.status === 'approved' ? approvedContactLabel : null;
+
+  useEffect(() => {
+    let isActive = true;
+    setApplications([]);
+    setApplicantProfilesById({});
+
+    if (!user) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    getCmiCompanionApplicationsForInvite(invite.id)
+      .then(async nextApplications => {
+        if (!isActive) return;
+        setApplications(nextApplications);
+        const applicantProfiles = await getProfilesByUserIds(nextApplications.map(application => application.applicant_id));
+        if (!isActive) return;
+        setApplicantProfilesById(
+          applicantProfiles.reduce<ProfileLookup>((lookup, applicantProfile) => {
+            lookup[applicantProfile.id] = applicantProfile;
+            return lookup;
+          }, {})
+        );
+      })
+      .catch(error => {
+        console.error('约搭子申请加载失败:', error);
+        if (isActive) setApplications([]);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [invite.id, user]);
+
+  useEffect(() => {
+    let isActive = true;
+    setApprovedContactLabel(null);
+
+    if (!user || currentUserApplication?.status !== 'approved') {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    getApprovedCmiCompanionContactLabel(invite.id)
+      .then(contactLabel => {
+        if (isActive) setApprovedContactLabel(contactLabel);
+      })
+      .catch(error => {
+        console.error('约搭子联系方式加载失败:', error);
+        if (isActive) setApprovedContactLabel(null);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentUserApplication?.status, invite.id, user]);
+
+  const handleJoin = async () => {
+    if (!user) {
+      navigate('/login', { state: { from: `${location.pathname}${location.search}` } });
+      return;
+    }
+    if (joinActionLabel !== '申请加入' || isJoining) return;
+
+    setIsJoining(true);
+    try {
+      const application = await createCmiCompanionApplication({
+        inviteId: invite.id,
+        applicantId: user.id,
+        relationshipType: 'non_friend',
+      });
+      if (application) {
+        setApplications(currentApplications => upsertCompanionApplication(currentApplications, application));
+      }
+    } catch (error) {
+      console.error('约搭子申请加入失败:', error);
+      toast.error('申请失败');
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  const handleReviewApplication = async (
+    application: CmiCompanionApplication,
+    status: Extract<CmiCompanionApplicationStatus, 'approved' | 'rejected'>
+  ) => {
+    if (!user || reviewingApplicationIds[application.id]) return;
+
+    setReviewingApplicationIds(current => ({ ...current, [application.id]: true }));
+    try {
+      const reviewedApplication = await reviewCmiCompanionApplication({
+        applicationId: application.id,
+        reviewerId: user.id,
+        status,
+      });
+      if (reviewedApplication) {
+        setApplications(currentApplications => upsertCompanionApplication(currentApplications, reviewedApplication));
+      }
+    } catch (error) {
+      console.error('约搭子申请审核失败:', error);
+      toast.error('处理失败');
+    } finally {
+      setReviewingApplicationIds(current => {
+        const next = { ...current };
+        delete next[application.id];
+        return next;
+      });
+    }
+  };
 
   return (
     <MapBottomSheet
@@ -1966,7 +2137,62 @@ function CompanionEventDetails({
           <span>状态</span>
           <p>{getCompanionInviteStatusLabel(invite)}</p>
         </article>
+        {visibleContactLabel && (
+          <article>
+            <span>联系方式</span>
+            <p>{visibleContactLabel}</p>
+          </article>
+        )}
       </div>
+      {joinActionLabel && (
+        <button
+          type="button"
+          className="cmi-v3-companion-join-button"
+          disabled={isJoining || joinActionLabel !== '申请加入'}
+          onClick={handleJoin}
+        >
+          {isJoining ? '申请加入' : joinActionLabel}
+        </button>
+      )}
+      {canReviewApplications && applications.length > 0 && (
+        <div className="cmi-v3-companion-application-list">
+          {applications.map(application => {
+            const applicantProfile = applicantProfilesById[application.applicant_id] ?? null;
+            const applicantIdentity = getCompanionApplicantIdentity(application, applicantProfile);
+            const applicantPath = getPersonMapPath(applicantIdentity);
+
+            return (
+              <article key={application.id} className="cmi-v3-companion-application-row">
+                <div>
+                  <strong>{getCompanionApplicantName(application, applicantProfile)}</strong>
+                  <span>{getCompanionApplicationStatusLabel(application.status)}</span>
+                </div>
+                <a
+                  href={applicantPath}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    navigate(applicantPath);
+                  }}
+                >主页</a>
+                {application.status === 'pending' && (
+                  <>
+                    <button
+                      type="button"
+                      disabled={Boolean(reviewingApplicationIds[application.id])}
+                      onClick={() => handleReviewApplication(application, 'approved')}
+                    >批准</button>
+                    <button
+                      type="button"
+                      disabled={Boolean(reviewingApplicationIds[application.id])}
+                      onClick={() => handleReviewApplication(application, 'rejected')}
+                    >拒绝</button>
+                  </>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
     </MapBottomSheet>
   );
 }

@@ -73,3 +73,18 @@ test('约搭子请求进入现有动态流并点击进入详情', () => {
   assert.match(source, /<CompanionFeedCard/);
   assert.match(source, /onOpen=\{\(\) => onOpenCompanionDetails\(feedItem\.invite\)\}/);
 });
+
+test('约搭子 Event Details 保留最小加入申请和审核闭环', () => {
+  assert.match(source, /createCmiCompanionApplication/);
+  assert.match(source, /getCmiCompanionApplicationsForInvite/);
+  assert.match(source, /getApprovedCmiCompanionContactLabel/);
+  assert.match(source, /reviewCmiCompanionApplication/);
+  assert.match(source, /getCmiCompanionJoinActionLabel/);
+  assert.match(source, /relationshipType: 'non_friend'/);
+  assert.match(source, /cmi-v3-companion-join-button/);
+  assert.match(source, /getPersonMapPath/);
+  assert.match(source, />主页</);
+  assert.match(source, />批准</);
+  assert.match(source, />拒绝</);
+  assert.doesNotMatch(source, /Maybe|不参加|我来了/);
+});

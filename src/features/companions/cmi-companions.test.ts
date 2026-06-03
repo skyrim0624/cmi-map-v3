@@ -3,7 +3,9 @@ import { test } from 'node:test';
 import {
   buildCmiCompanionApplicationInsert,
   buildCmiCompanionInviteInsert,
+  canReviewCmiCompanionApplications,
   getApprovedCompanionContactLabel,
+  getCmiCompanionJoinActionLabel,
 } from './cmi-companions.ts';
 
 test('约搭子发起必须绑定地点或活动', () => {
@@ -80,4 +82,31 @@ test('联系方式只在批准后展示', () => {
   assert.equal(getApprovedCompanionContactLabel(invite, { status: 'pending' }), null);
   assert.equal(getApprovedCompanionContactLabel(invite, { status: 'rejected' }), null);
   assert.equal(getApprovedCompanionContactLabel(invite, { status: 'approved' }), '微信 cmi');
+});
+
+test('Event Details 加入动作只保留一个状态入口', () => {
+  const invite = { creator_id: 'creator-user' };
+
+  assert.equal(getCmiCompanionJoinActionLabel({ invite, viewerId: null, application: null }), '申请加入');
+  assert.equal(getCmiCompanionJoinActionLabel({ invite, viewerId: 'creator-user', application: null }), null);
+  assert.equal(
+    getCmiCompanionJoinActionLabel({ invite, viewerId: 'applicant-user', application: { status: 'pending' } }),
+    '已申请'
+  );
+  assert.equal(
+    getCmiCompanionJoinActionLabel({ invite, viewerId: 'applicant-user', application: { status: 'approved' } }),
+    '已通过'
+  );
+  assert.equal(
+    getCmiCompanionJoinActionLabel({ invite, viewerId: 'applicant-user', application: { status: 'rejected' } }),
+    '已拒绝'
+  );
+});
+
+test('只有发起人可以审核约搭子申请', () => {
+  const invite = { creator_id: 'creator-user' };
+
+  assert.equal(canReviewCmiCompanionApplications(invite, 'creator-user'), true);
+  assert.equal(canReviewCmiCompanionApplications(invite, 'applicant-user'), false);
+  assert.equal(canReviewCmiCompanionApplications(invite, null), false);
 });

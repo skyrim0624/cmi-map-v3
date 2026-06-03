@@ -81,6 +81,37 @@ export const getCmiCompanionInviteById = async (
   return data ? data as unknown as CmiCompanionInviteCard : null;
 };
 
+export const getCmiCompanionApplicationsForInvite = async (
+  inviteId: string
+): Promise<CmiCompanionApplication[]> => {
+  const { data, error } = await supabase
+    .from('cmi_companion_applications')
+    .select('*')
+    .eq('invite_id', inviteId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    handleCompanionReadError('获取约搭子申请失败:', error);
+    return [];
+  }
+
+  return Array.isArray(data) ? data as CmiCompanionApplication[] : [];
+};
+
+export const getApprovedCmiCompanionContactLabel = async (
+  inviteId: string
+): Promise<string | null> => {
+  const { data, error } = await supabase
+    .rpc('get_cmi_companion_contact_label', { p_invite_id: inviteId });
+
+  if (error) {
+    handleCompanionReadError('获取约搭子联系方式失败:', error);
+    return null;
+  }
+
+  return typeof data === 'string' && data.trim() ? data.trim() : null;
+};
+
 export const createCmiCompanionApplication = async (
   input: CreateCmiCompanionApplicationInput
 ): Promise<CmiCompanionApplication | null> => {
