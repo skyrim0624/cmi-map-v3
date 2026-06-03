@@ -1642,6 +1642,24 @@
   - 正式站 `MarkPlace-BkKmmGNg.js` 确认包含“功德 +1”、“大拇哥收到了”和 `checkin-badge-pop`。
   - 正式站 `MarkPlace-BkKmmGNg.js` 对 `RECORDED` 和 `#da2222` 均无匹配，旧红色罚单感大章已从线上包移除。
 
+### 2026-06-03 11:15:55 +07 v3 公开仓库安全收紧
+
+- 背景：v3 仓库改为公开后，用户担心朋友或其他访问者看到公开配置后误刷 API / Token。
+- 本轮判断：
+  - 当前仓库没有发现 Supabase service role、Resend、OpenAI、GitHub PAT 或 CMI Agent Token 这类高危服务端密钥明文。
+  - 仓库里有前端可公开的 Supabase URL / publishable key；它不是服务端密钥，但公开后任何人都更容易尝试调用前端可用接口。
+- 本轮实现：
+  - `.env` 改为本地文件，不再进入公开仓库；新增 `.env.example` 只保留变量名。
+  - 报名写入 RLS 从 `anon, authenticated` 收紧为仅 `authenticated`，且必须是登录用户本人邮箱和本人 `user_id`。
+  - 活动报名通知、活动发起通知 Edge Function 增加用户 JWT 校验和归属校验，避免公开 key 被用来匿名触发邮件通知。
+- 验证结果：
+  - `deno check supabase/functions/notify-cmi-event-registration/index.ts supabase/functions/notify-cmi-event-application/index.ts` 通过。
+  - `pnpm exec tsc -p tsconfig.check.json --noEmit` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - Supabase 远端迁移 `20260603041534_harden_public_registration_notifications` 已应用。
+  - Supabase Edge Functions `notify-cmi-event-registration` 和 `notify-cmi-event-application` 已重新部署。
+  - 匿名调用两个通知函数均返回 401；匿名 REST 写入 `cmi_event_registrations` 返回 401 / `permission denied`。
+
 ### 2026-06-02 14:42:37 +07 清迈客栈活动导航坐标修复
 
 - 背景：用户反馈从活动详情页点击“导航”后，Google Maps 目的地跑到古城 TCDC / Chaivapoom Soi 2 附近；这些活动实际都在清迈客栈。

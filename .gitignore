@@ -12,6 +12,9 @@ dist
 dist-ssr
 output
 backups/
+.env
+.env.*
+!.env.example
 *.local
 package-lock.json
 

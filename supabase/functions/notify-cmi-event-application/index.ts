@@ -46,6 +46,20 @@ const venueSpaceLabels: Record<string, string> = {
   'yard-canopy': '院子凉棚区',
 };
 
+interface AuthenticatedUser {
+  id: string;
+  email?: string | null;
+}
+
+interface SupabaseAuthClient {
+  auth: {
+    getUser: (jwt?: string) => Promise<{
+      data: { user: AuthenticatedUser | null };
+      error: { message?: string } | null;
+    }>;
+  };
+}
+
 const getSupabaseServiceKey = () => {
   const legacyServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (legacyServiceRoleKey) return legacyServiceRoleKey;
@@ -59,6 +73,25 @@ const getSupabaseServiceKey = () => {
   } catch {
     return undefined;
   }
+};
+
+const getBearerToken = (req: Request) => {
+  const authorization = req.headers.get('authorization')?.trim() ?? '';
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim() ?? '';
+};
+
+const getAuthenticatedUser = async (
+  supabase: SupabaseAuthClient,
+  req: Request
+) => {
+  const token = getBearerToken(req);
+  if (!token) return { user: null, error: 'Missing auth token' };
+
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) return { user: null, error: 'Invalid auth token' };
+
+  return { user: data.user, error: null };
 };
 
 const formatEventTime = (startAt: string | null | undefined, endAt: string | null | undefined) => {
@@ -161,14 +194,27 @@ Deno.serve(async (req) => {
     },
   });
 
+  const authResult = await getAuthenticatedUser(supabase, req);
+  if (!authResult.user) {
+    return jsonResponse({ error: authResult.error }, 401);
+  }
+
   const { data: event, error: eventError } = await supabase
     .from('cmi_events')
-    .select('id,title,start_at,end_at,venue_name,area,venue_space,organizer_name,organizer_email,summary,detail_body,visibility_status,verification_status')
+    .select('id,title,start_at,end_at,venue_name,area,venue_space,organizer_name,organizer_email,summary,detail_body,visibility_status,verification_status,created_by,organizer_id')
     .eq('id', eventId)
     .maybeSingle();
 
   if (eventError || !event) {
     return jsonResponse({ error: eventError?.message ?? 'Event not found' }, 404);
+  }
+
+  const eventBelongsToCaller =
+    event.created_by === authResult.user.id ||
+    event.organizer_id === authResult.user.id;
+
+  if (!eventBelongsToCaller) {
+    return jsonResponse({ error: 'Event does not belong to caller' }, 403);
   }
 
   const adminEmail = Deno.env.get('CMI_EVENT_ADMIN_EMAIL') ?? Deno.env.get('CMI_ADMIN_EMAIL');

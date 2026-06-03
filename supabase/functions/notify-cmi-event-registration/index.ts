@@ -37,6 +37,20 @@ const uniqueEmails = (emails: Array<string | null | undefined>) => {
   return Array.from(unique.values());
 };
 
+interface AuthenticatedUser {
+  id: string;
+  email?: string | null;
+}
+
+interface SupabaseAuthClient {
+  auth: {
+    getUser: (jwt?: string) => Promise<{
+      data: { user: AuthenticatedUser | null };
+      error: { message?: string } | null;
+    }>;
+  };
+}
+
 const getSupabaseServiceKey = () => {
   const legacyServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (legacyServiceRoleKey) return legacyServiceRoleKey;
@@ -50,6 +64,25 @@ const getSupabaseServiceKey = () => {
   } catch {
     return undefined;
   }
+};
+
+const getBearerToken = (req: Request) => {
+  const authorization = req.headers.get('authorization')?.trim() ?? '';
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim() ?? '';
+};
+
+const getAuthenticatedUser = async (
+  supabase: SupabaseAuthClient,
+  req: Request
+) => {
+  const token = getBearerToken(req);
+  if (!token) return { user: null, error: 'Missing auth token' };
+
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) return { user: null, error: 'Invalid auth token' };
+
+  return { user: data.user, error: null };
 };
 
 const absoluteAssetUrl = (siteUrl: string, path: string) =>
@@ -158,6 +191,11 @@ Deno.serve(async (req) => {
     },
   });
 
+  const authResult = await getAuthenticatedUser(supabase, req);
+  if (!authResult.user) {
+    return jsonResponse({ error: authResult.error }, 401);
+  }
+
   const { data: event, error: eventError } = await supabase
     .from('cmi_events')
     .select('id,title,start_at,venue_name,area,source_type,is_cmi_related,organizer_name,organizer_email,contact_email,created_by')
@@ -170,7 +208,7 @@ Deno.serve(async (req) => {
 
   const { data: registrations, error: registrationError } = await supabase
     .from('cmi_event_registrations')
-    .select('attendee_name,attendee_email,note,created_at')
+    .select('user_id,attendee_name,attendee_email,note,created_at')
     .eq('event_id', eventId)
     .eq('status', 'going')
     .order('created_at', { ascending: false })
@@ -186,6 +224,15 @@ Deno.serve(async (req) => {
 
   if (!registration) {
     return jsonResponse({ error: 'Registration not found' }, 404);
+  }
+
+  const authenticatedEmail = normalizeEmail(authResult.user.email);
+  const registrationBelongsToCaller =
+    registration.user_id === authResult.user.id &&
+    normalizeEmail(registration.attendee_email) === authenticatedEmail;
+
+  if (!registrationBelongsToCaller) {
+    return jsonResponse({ error: 'Registration does not belong to caller' }, 403);
   }
 
   const { data: managers, error: managersError } = await supabase
