@@ -1818,3 +1818,14 @@
 - `cmti.uk` 仍未真正指向 `cmi-map-v3`：访问 `https://cmti.uk/?verify=companion-70d4e2d` 仍会 `301` 到 `https://cmimap.com/?verify=companion-70d4e2d`。
 - Cloudflare Pages 自定义域名中 `cmti.uk` 仍为 `pending`，错误为 `CNAME record not set`。
 - 当前 Wrangler OAuth 权限可部署 Pages，但读取 DNS records / rulesets API 仍返回 `Authentication error`；本轮未触碰 `stickers.cmti.uk`。
+
+### 2026-06-04 09:01:01 +07 v3.1 约搭子第一部分 cmti.uk 域名切换完成
+
+- Cloudflare DNS：将 `cmti.uk` 根域名 CNAME 从 `cmi-map.pages.dev` 改为 `cmi-map-v3.pages.dev`，保持 Proxied。
+- Cloudflare Redirect Rules：停用旧规则 `Redirect cmti.uk to cmimap.com`，该规则原先将 `cmti.uk` 301 到 `cmimap.com`。
+- Cloudflare Pages：`cmi-map-v3` 的自定义域名 `cmti.uk` 已变为 `active`；verification 和 HTTP validation 均为 `active`。
+- 线上验证：
+  - `https://cmti.uk/?verify=companion-88946ad` 返回 `HTTP 200`，不再跳转到 `cmimap.com`。
+  - 页面 HTML 引用 v3 当前构建入口资源 `/assets/index-BHR7oLpB.js`。
+  - `/assets/index-BHR7oLpB.js` 返回 `HTTP 200`。
+  - `https://stickers.cmti.uk/` 返回 `HTTP 200`，未被本轮修改影响。
