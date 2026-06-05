@@ -58,6 +58,8 @@ export const CMI_EVENT_POSTER_BY_ID: Partial<Record<string, string>> = {
     '/cmi-home/event-posters/cmi-secondhand-auction-2026-06-06.png',
   'cmi-my-octopus-teacher-screening-2026-06-06':
     '/cmi-home/event-posters/cmi-my-octopus-teacher-screening-2026-06-06.png',
+  'cmi-ai-3d-spaceship-workshop-2026-06-07':
+    '/cmi-home/event-posters/cmi-ai-3d-spaceship-workshop-2026-06-07.jpg',
   'cmi-talk-fathers-day-speaker-call-2026-06-07':
     '/cmi-home/event-posters/cmi-talk-fathers-day-speaker-call-2026-06-07.png',
 };
@@ -94,6 +96,8 @@ export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = 
     '/cmi-home/event-card-backgrounds/cmi-secondhand-auction-2026-06-06.jpg',
   'cmi-my-octopus-teacher-screening-2026-06-06':
     '/cmi-home/event-card-backgrounds/cmi-my-octopus-teacher-screening-2026-06-06.jpg',
+  'cmi-ai-3d-spaceship-workshop-2026-06-07':
+    '/cmi-home/event-card-backgrounds/cmi-ai-3d-spaceship-workshop-2026-06-07.jpg',
   'cmi-talk-fathers-day-speaker-call-2026-06-07':
     '/cmi-home/event-card-backgrounds/cmi-talk-fathers-day-speaker-call-2026-06-07.jpg',
 };
@@ -863,6 +867,63 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
           '活动时间：6 月 6 日（周六）19:00',
           '活动地点：CMI',
           '场地费用：免费参与',
+          CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
+        ],
+      },
+    ],
+  },
+  'cmi-ai-3d-spaceship-workshop-2026-06-07': {
+    eventId: 'cmi-ai-3d-spaceship-workshop-2026-06-07',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-ai-3d-spaceship-workshop-2026-06-07']!,
+    postTitle: 'AI + 3D 青少年创意工坊：星际飞船设计工作坊',
+    postBlocks: [
+      {
+        kind: 'paragraph',
+        text: '一颗到访地球的小行星，原来是一艘为和平而来的星际航母。',
+      },
+      {
+        kind: 'paragraph',
+        text: '人类准备派出大使前往太空，与外星生物建立第一次外交联系。',
+      },
+      {
+        kind: 'paragraph',
+        text: '问题来了：能载着大使往返太空的飞行器，应该长什么样？',
+      },
+      {
+        kind: 'paragraph',
+        text: '本周日 15:00-17:00，我们会把这个问题交给孩子们：先用生成式 AI 打开想象，再用 AI 建模把飞行器一层层做出来，最后通过 VR 眼镜走进星际航母内部，体验一次沉浸式的星际外交之旅。',
+      },
+      {
+        kind: 'paragraph',
+        text: '不需要基础，适合第一次接触 AI 建模和 3D 打印的孩子。重点不是做一艘“标准答案”的飞船，而是把自己的想象变成看得见的作品。',
+      },
+      {
+        kind: 'heading',
+        text: '活动亮点',
+      },
+      {
+        kind: 'list',
+        items: [
+          '零基础也能完成 AI 设计作品',
+          '亲手创造属于星际生物的飞行器',
+          '体验从创意到模型的完整设计流程',
+          '获得个人 AI 生成作品与 3D 模型文件',
+          '使用 VR 眼镜走进星际航母内部',
+        ],
+      },
+      {
+        kind: 'heading',
+        text: '活动信息',
+      },
+      {
+        kind: 'list',
+        items: [
+          '活动时间：6 月 7 日（周日）15:00-17:00',
+          '活动地点：清迈客栈 Chiangmai Inn Guesthouse',
+          '面向人群：10-18 岁青少年，新手小白友好',
+          '名额限制：10 人，小班教学',
+          '提前准备：手机、笔记本电脑；请提前用 Google 账号登录 Google Chrome 浏览器',
+          '费用说明：免费参与',
           CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
         ],
       },

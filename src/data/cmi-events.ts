@@ -126,7 +126,7 @@ export const CMI_EVENT_TIME_BUCKET_LABELS: Record<CmiEventTimeBucket, string> = 
   stable: '稳定活动',
 };
 
-export const CMI_EVENTS_LAST_MAINTAINED_AT = '2026-06-03T18:00:49+07:00';
+export const CMI_EVENTS_LAST_MAINTAINED_AT = '2026-06-05T20:40:13+07:00';
 export const CMI_MAP_EVENT_REGISTRATION_LABEL = 'CMI Map 一键报名';
 export const CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE =
   '参与方式：通过 CMI Map 一键报名；报名成功后，确认邮件会附上微信群、联系人二维码和到场指引。';
@@ -659,6 +659,39 @@ export const CMI_EVENTS: CmiEvent[] = [
     registrationStatus: 'open',
     attendeeVisibility: 'count-only',
     coverImageUrl: '/cmi-home/event-posters/cmi-my-octopus-teacher-screening-2026-06-06.png',
+  },
+  {
+    id: 'cmi-ai-3d-spaceship-workshop-2026-06-07',
+    title: 'AI + 3D 青少年创意工坊：星际飞船设计工作坊',
+    type: 'workshop',
+    startAt: '2026-06-07T15:00:00+07:00',
+    endAt: '2026-06-07T17:00:00+07:00',
+    venueName: '清迈客栈',
+    area: 'CMI / 清迈客栈',
+    mapLocation: { latitude: 18.7932, longitude: 98.9874, category: '清迈客栈' },
+    priceLabel: '免费参与',
+    registrationLabel: CMI_MAP_EVENT_REGISTRATION_LABEL,
+    sourceType: 'cmi',
+    sourceLabel: 'CMI 活动宣传内容文件夹',
+    hostName: 'CMI 社区',
+    language: '中文',
+    suitableFor: ['10-18 岁青少年', 'AI 建模新手', '3D 打印体验', '亲子活动'],
+    isCmiRelated: true,
+    isVerified: true,
+    verificationStatus: 'verified',
+    lastCheckedAt: '2026-06-05T20:40:13+07:00',
+    nextCheckBefore: '2026-06-07T13:00:00+07:00',
+    reliabilityNote:
+      '信息来自 6.7 AI+3D 星际飞船设计工作坊推文、同目录发布页与官方海报；时间、地点、参与方式和适合人群明确。用户补充确认费用免费，本轮通过 CMI Map CLI 管理员通道发布。',
+    tags: ['CMI', '清迈客栈', 'AI', '3D打印', '青少年', '工作坊', '免费'],
+    summary: '面向 10-18 岁青少年的 AI + 3D 创意工坊，用生成式 AI 与 AI 建模设计星际飞船。',
+    organizerName: 'CMI 社区',
+    organizerEmail: 'events@cmimap.com',
+    capacity: 10,
+    registrationEnabled: true,
+    registrationStatus: 'open',
+    attendeeVisibility: 'count-only',
+    coverImageUrl: '/cmi-home/event-posters/cmi-ai-3d-spaceship-workshop-2026-06-07.jpg',
   },
   {
     id: 'cmi-talk-fathers-day-speaker-call-2026-06-07',
