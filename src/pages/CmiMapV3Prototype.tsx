@@ -61,29 +61,9 @@ import {
   registerForCmiEvent,
 } from '@/db/cmi-events';
 import {
-  createCmiCompanionApplication,
-  getApprovedCmiCompanionContactLabel,
-  getCmiCompanionApplicationsForInvite,
-  getOpenCmiCompanionInvites,
-  reviewCmiCompanionApplication,
-} from '@/db/cmi-companions';
-import { getActiveCmiMapTheme, getCmiThemeSubmissions } from '@/db/cmi-themes';
-import {
   getBlackboardPosts,
   type BlackboardPostRecord,
 } from '@/db/blackboard-posts';
-import {
-  canReviewCmiCompanionApplications,
-  getCmiCompanionJoinActionLabel,
-  type CmiCompanionApplication,
-  type CmiCompanionApplicationStatus,
-  type CmiCompanionInviteCard,
-} from '@/features/companions/cmi-companions';
-import {
-  getThemeSubmissionRecommendations,
-  type CmiMapTheme,
-  type CmiThemeSubmission,
-} from '@/features/themes/cmi-themes';
 import {
   appendStickerPlacement,
   applyWishlistState,
@@ -112,19 +92,15 @@ import { getRecommendationLinkedEvent } from '@/lib/cmi-recommendation-events';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
 import {
   getAddTracePath,
-  getCmiCompanionCreatePath,
   getCmiEventCreatePath,
   getCmiEventPath,
   getCmiFeedPath,
   getMarkPlacePath,
-  getPersonMapPath,
   getPlacePath,
   getProfilePath,
   getPublicCmiEventUrl,
-  getThemePath,
 } from '@/lib/paths';
 import { createCmiEventShareCard } from '@/lib/cmi-event-share-card';
-import { createCmiThemeShareCard } from '@/lib/cmi-theme-share-card';
 import { formatBlackboardCreatedLabel } from '@/features/home/blackboard/blackboard-model';
 import {
   CMI_INN_PLACE_NAME,
@@ -141,7 +117,7 @@ import './cmi-map-v3-prototype.css';
 
 type ScreenId = 'map' | 'feed' | 'publish' | 'events';
 type PrimaryScreenId = 'feed' | 'map' | 'events' | 'publish';
-type MapFilterId = 'all' | 'food' | 'play' | 'events' | 'easter' | 'theme';
+type MapFilterId = 'all' | 'food' | 'play' | 'events' | 'easter';
 type FeedCardTone = 'paper' | 'yellow' | 'green' | 'pink';
 type EventStatusTone = 'open' | 'full' | 'ended';
 type EventTabId = 'ongoing' | 'upcoming' | 'ended' | 'joined';
@@ -182,20 +158,10 @@ type CmiV3FeedItem =
       type: 'forumPost';
       createdAt: string;
       post: BlackboardPostRecord;
-    }
-  | {
-      id: string;
-      type: 'companionInvite';
-      createdAt: string;
-      invite: CmiCompanionInviteCard;
     };
 
 interface EventMarker extends MapMarker {
   eventId: string;
-}
-
-interface CompanionMarker extends MapMarker {
-  companionInviteId: string;
 }
 
 interface SheetAction {
@@ -204,18 +170,12 @@ interface SheetAction {
   onClick?: () => void;
 }
 
-interface CmiThemePostShareInput {
-  theme: CmiMapTheme;
-  themeUrl: string;
-}
-
 const mapFilters: FilterItem[] = [
   { id: 'all', label: '动态' },
   { id: 'food', label: '好吃', iconUrl: '/map-icons/cmi-flat-v2/direct-eat.png' },
   { id: 'play', label: '好玩', iconUrl: '/map-icons/cmi-flat-v2/direct-play.png' },
   { id: 'events', label: '活动', iconUrl: '/map-icons/cmi-flat-v2/home-events.png' },
   { id: 'easter', label: '彩蛋', iconUrl: '/map-icons/cmi-easter-v2/egg-v2-03-cat-face.png' },
-  { id: 'theme', label: '主题' },
 ];
 const eventTabs: Array<{ id: EventTabId; label: string }> = [
   { id: 'ongoing', label: '正在发生' },
@@ -246,17 +206,6 @@ const foodCategories = new Set<Category>(['吃饭', '咖啡', '市集']);
 const playCategories = new Set<Category>(['户外', '景点', '购物', '运动', '酒吧', '身心']);
 
 const downloadCmiEventShareCard = (card: { blob: Blob; fileName: string }) => {
-  const downloadUrl = URL.createObjectURL(card.blob);
-  const anchor = document.createElement('a');
-  anchor.href = downloadUrl;
-  anchor.download = card.fileName;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(downloadUrl);
-};
-
-const downloadCmiThemeShareCard = (card: { blob: Blob; fileName: string }) => {
   const downloadUrl = URL.createObjectURL(card.blob);
   const anchor = document.createElement('a');
   anchor.href = downloadUrl;
@@ -408,38 +357,6 @@ function getBlackboardPostAuthorProfile(post: BlackboardPostRecord, profiles: Pr
     ?? null;
 }
 
-function getCompanionInviteCreatorProfile(invite: CmiCompanionInviteCard, profiles: ProfileLookup) {
-  return profiles[getProfileLookupKey(invite.creator_id)] ?? null;
-}
-
-function getCompanionInviteCreatorName(invite: CmiCompanionInviteCard, profiles: ProfileLookup) {
-  return getCompanionInviteCreatorProfile(invite, profiles)?.user_name || 'CMI 朋友';
-}
-
-function getCompanionInvitePlaceLabel(invite: CmiCompanionInviteCard) {
-  return invite.place_name?.trim() || '地点待定';
-}
-
-function getCompanionInviteTimeLabel(invite: Pick<CmiCompanionInviteCard, 'starts_at'>) {
-  const date = new Date(invite.starts_at);
-  if (Number.isNaN(date.getTime())) return '时间待定';
-
-  return date.toLocaleString('zh-CN', {
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function getCompanionInviteCapacityLabel(invite: Pick<CmiCompanionInviteCard, 'capacity'>) {
-  return invite.capacity ? `${invite.capacity} 人` : '人数待定';
-}
-
-function getCompanionInviteStatusLabel(invite: Pick<CmiCompanionInviteCard, 'status'>) {
-  return invite.status === 'open' ? '招募中' : invite.status;
-}
-
 function getBlackboardPostImageUrl(post: BlackboardPostRecord, events: CmiEvent[]) {
   const uploadedImageUrl = post.image_urls?.find(Boolean);
   if (uploadedImageUrl) return uploadedImageUrl;
@@ -563,28 +480,9 @@ function getAuthorAvatarUrl(recommendation: Recommendation, profiles: ProfileLoo
   return profile?.avatar_url?.trim() || getFallbackAvatarUrl(authorName);
 }
 
-function getCmiThemeColor(theme: CmiMapTheme | null, key: 'primaryColor' | 'accentColor', fallback: string) {
-  const value = theme?.theme_config?.[key];
-  return typeof value === 'string' && value.trim() ? value.trim() : fallback;
-}
-
-function getCmiThemeStyle(theme: CmiMapTheme | null): CSSProperties | undefined {
-  if (!theme) return undefined;
-  return {
-    '--cmi-v3-theme-primary': getCmiThemeColor(theme, 'primaryColor', '#4f8f5b'),
-    '--cmi-v3-theme-accent': getCmiThemeColor(theme, 'accentColor', '#f1c64c'),
-  } as CSSProperties;
-}
-
-function getUserShareMarker(
-  recommendation: Recommendation,
-  profiles: ProfileLookup,
-  themeSubmissionIds?: Set<string>,
-  activeTheme?: CmiMapTheme | null
-): MapMarker {
+function getUserShareMarker(recommendation: Recommendation, profiles: ProfileLookup): MapMarker {
   const authorProfile = getRecommendationAuthorProfile(recommendation, profiles);
   const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
-  const isThemeSubmission = themeSubmissionIds?.has(recommendation.id) ?? false;
 
   return {
     id: `share:${recommendation.id}`,
@@ -597,18 +495,12 @@ function getUserShareMarker(
       label: authorName,
       iconUrl: getAuthorAvatarUrl(recommendation, profiles),
       isAvatar: true,
-      themeAccent: isThemeSubmission ? getCmiThemeColor(activeTheme ?? null, 'primaryColor', '#4f8f5b') : undefined,
     },
   };
 }
 
-function getUserShareMarkers(
-  recommendations: Recommendation[],
-  profiles: ProfileLookup,
-  themeSubmissionIds?: Set<string>,
-  activeTheme?: CmiMapTheme | null
-): MapMarker[] {
-  return recommendations.map(recommendation => getUserShareMarker(recommendation, profiles, themeSubmissionIds, activeTheme));
+function getUserShareMarkers(recommendations: Recommendation[], profiles: ProfileLookup): MapMarker[] {
+  return recommendations.map(recommendation => getUserShareMarker(recommendation, profiles));
 }
 
 function getEventMarkers(events: CmiEvent[]): EventMarker[] {
@@ -632,48 +524,8 @@ function getEventMarkers(events: CmiEvent[]): EventMarker[] {
   });
 }
 
-function getCompanionInviteMarker(
-  invite: CmiCompanionInviteCard,
-  profiles: ProfileLookup
-): CompanionMarker | null {
-  if (invite.latitude === null || invite.longitude === null) return null;
-
-  const creatorProfile = getCompanionInviteCreatorProfile(invite, profiles);
-  const creatorName = getCompanionInviteCreatorName(invite, profiles);
-
-  return {
-    id: `companion:${invite.id}`,
-    companionInviteId: invite.id,
-    place_name: getCompanionInvitePlaceLabel(invite),
-    category: '彩蛋',
-    latitude: invite.latitude,
-    longitude: invite.longitude,
-    recommendations: [],
-    visualOverride: {
-      label: creatorName,
-      iconUrl: creatorProfile?.avatar_url?.trim() || getFallbackAvatarUrl(creatorName),
-      isAvatar: true,
-      isCompanion: true,
-    },
-  };
-}
-
-function getCompanionInviteMarkers(
-  invites: CmiCompanionInviteCard[],
-  profiles: ProfileLookup
-): CompanionMarker[] {
-  return invites.flatMap(invite => {
-    const marker = getCompanionInviteMarker(invite, profiles);
-    return marker ? [marker] : [];
-  });
-}
-
 function isEventMarker(marker: MapMarker): marker is EventMarker {
   return marker.id.startsWith('event:') && 'eventId' in marker;
-}
-
-function isCompanionMarker(marker: MapMarker): marker is CompanionMarker {
-  return marker.id.startsWith('companion:') && 'companionInviteId' in marker;
 }
 
 function supportsPointerEvents() {
@@ -959,18 +811,12 @@ export default function CmiMapV3Prototype() {
   const [locationRequestKey, setLocationRequestKey] = useState(0);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [blackboardPosts, setBlackboardPosts] = useState<BlackboardPostRecord[]>([]);
-  const [companionInvites, setCompanionInvites] = useState<CmiCompanionInviteCard[]>([]);
   const [profilesByAuthorKey, setProfilesByAuthorKey] = useState<ProfileLookup>({});
   const [events, setEvents] = useState<CmiEvent[]>(CMI_EVENTS);
-  const [activeTheme, setActiveTheme] = useState<CmiMapTheme | null>(null);
-  const [themeSubmissions, setThemeSubmissions] = useState<CmiThemeSubmission[]>([]);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(() => searchParams.get('event'));
-  const [selectedCompanionCardInviteId, setSelectedCompanionCardInviteId] = useState<string | null>(null);
-  const [selectedCompanionDetailsInviteId, setSelectedCompanionDetailsInviteId] = useState<string | null>(null);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
   const [isLoadingBlackboardPosts, setIsLoadingBlackboardPosts] = useState(true);
-  const [isLoadingCompanionInvites, setIsLoadingCompanionInvites] = useState(true);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
   const [blackboardPostsError, setBlackboardPostsError] = useState<string | null>(null);
@@ -999,8 +845,6 @@ export default function CmiMapV3Prototype() {
       } else {
         setSelectedEventId(null);
       }
-      setSelectedCompanionCardInviteId(null);
-      setSelectedCompanionDetailsInviteId(null);
 
       const nextParams = new URLSearchParams();
       if (screen !== 'map') nextParams.set('screen', screen);
@@ -1075,31 +919,9 @@ export default function CmiMapV3Prototype() {
 
   useEffect(() => {
     let isActive = true;
-    setIsLoadingCompanionInvites(true);
-
-    getOpenCmiCompanionInvites()
-      .then(data => {
-        if (isActive) setCompanionInvites(data);
-      })
-      .catch(error => {
-        console.warn('CMI Map 3.1 约搭子加载失败:', error);
-        if (isActive) setCompanionInvites([]);
-      })
-      .finally(() => {
-        if (isActive) setIsLoadingCompanionInvites(false);
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let isActive = true;
     const userIds = [
       ...recommendations.map(recommendation => recommendation.user_id),
       ...blackboardPosts.map(post => post.author_id),
-      ...companionInvites.map(invite => invite.creator_id),
     ];
     const userNames = [
       ...recommendations.map(recommendation => recommendation.user_name),
@@ -1136,7 +958,7 @@ export default function CmiMapV3Prototype() {
     return () => {
       isActive = false;
     };
-  }, [blackboardPosts, companionInvites, recommendations]);
+  }, [blackboardPosts, recommendations]);
 
   useEffect(() => {
     const nextWishlists: WishlistStateMap = {};
@@ -1161,48 +983,9 @@ export default function CmiMapV3Prototype() {
       });
   }, []);
 
-  useEffect(() => {
-    let isActive = true;
-
-    getActiveCmiMapTheme()
-      .then(async theme => {
-        if (!isActive) return;
-        setActiveTheme(theme);
-        if (!theme) {
-          setThemeSubmissions([]);
-          return;
-        }
-        const submissions = await getCmiThemeSubmissions(theme.id);
-        if (isActive) setThemeSubmissions(submissions);
-      })
-      .catch(error => {
-        console.error('CMI Map 3.1 当前主题加载失败:', error);
-        if (isActive) {
-          setActiveTheme(null);
-          setThemeSubmissions([]);
-        }
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
   const userSharedRecommendations = useMemo(
     () => recommendations.filter(isUserSharedRecommendation),
     [recommendations]
-  );
-
-  const themeSubmissionRecommendations = useMemo(
-    () => activeTheme
-      ? getThemeSubmissionRecommendations(activeTheme.id, userSharedRecommendations, themeSubmissions)
-      : [],
-    [activeTheme, themeSubmissions, userSharedRecommendations]
-  );
-
-  const themeSubmissionIds = useMemo(
-    () => new Set(themeSubmissionRecommendations.map(recommendation => recommendation.id)),
-    [themeSubmissionRecommendations]
   );
 
   const normalizedMapSearchQuery = useMemo(
@@ -1213,10 +996,9 @@ export default function CmiMapV3Prototype() {
   const filteredMapRecommendations = useMemo(
     () => userSharedRecommendations.filter(recommendation => {
       if (normalizedMapSearchQuery) return recommendationMatchesSearch(recommendation, normalizedMapSearchQuery);
-      if (activeFilter === 'theme') return themeSubmissionIds.has(recommendation.id);
       return recommendationMatchesFilter(recommendation, activeFilter);
     }),
-    [activeFilter, normalizedMapSearchQuery, themeSubmissionIds, userSharedRecommendations]
+    [activeFilter, normalizedMapSearchQuery, userSharedRecommendations]
   );
 
   const mapMarkerRecommendations = useMemo(
@@ -1260,18 +1042,12 @@ export default function CmiMapV3Prototype() {
     [activeFilter, normalizedMapSearchQuery, upcomingCommunityEvents]
   );
 
-  const companionMapMarkers = useMemo(
-    () => getCompanionInviteMarkers(companionInvites, profilesByAuthorKey),
-    [companionInvites, profilesByAuthorKey]
-  );
-
   const mapMarkers = useMemo(
     () => [
-      ...getUserShareMarkers(mapMarkerRecommendations, profilesByAuthorKey, themeSubmissionIds, activeTheme),
-      ...companionMapMarkers,
+      ...getUserShareMarkers(mapMarkerRecommendations, profilesByAuthorKey),
       ...getEventMarkers(visibleEvents),
     ],
-    [activeTheme, companionMapMarkers, mapMarkerRecommendations, profilesByAuthorKey, themeSubmissionIds, visibleEvents]
+    [mapMarkerRecommendations, profilesByAuthorKey, visibleEvents]
   );
 
   const feedRecommendations = useMemo(
@@ -1335,14 +1111,6 @@ export default function CmiMapV3Prototype() {
     () => communityEvents.find(event => event.id === selectedEventId) ?? communityEvents[0] ?? null,
     [communityEvents, selectedEventId]
   );
-  const selectedCompanionCardInvite = useMemo(
-    () => companionInvites.find(invite => invite.id === selectedCompanionCardInviteId) ?? null,
-    [companionInvites, selectedCompanionCardInviteId]
-  );
-  const selectedCompanionDetailsInvite = useMemo(
-    () => companionInvites.find(invite => invite.id === selectedCompanionDetailsInviteId) ?? null,
-    [companionInvites, selectedCompanionDetailsInviteId]
-  );
 
   const getCurrentV3Path = useCallback(() => {
     const queryString = searchParams.toString();
@@ -1388,16 +1156,12 @@ export default function CmiMapV3Prototype() {
     setMapSearchQuery(query);
     setSelectedMarker(null);
     setSelectedEventId(null);
-    setSelectedCompanionCardInviteId(null);
-    setSelectedCompanionDetailsInviteId(null);
   }, []);
 
   const handleMapRecommendationSelect = useCallback((recommendation: Recommendation) => {
-    setSelectedMarker(getUserShareMarker(recommendation, profilesByAuthorKey, themeSubmissionIds, activeTheme));
+    setSelectedMarker(getUserShareMarker(recommendation, profilesByAuthorKey));
     setSelectedEventId(null);
-    setSelectedCompanionCardInviteId(null);
-    setSelectedCompanionDetailsInviteId(null);
-  }, [activeTheme, profilesByAuthorKey, themeSubmissionIds]);
+  }, [profilesByAuthorKey]);
 
   const handleBottomAdd = useCallback((screen: PrimaryScreenId) => {
     if (screen === 'events') {
@@ -1462,17 +1226,15 @@ export default function CmiMapV3Prototype() {
   const activePrimaryScreen = getPrimaryScreen(activeScreen);
   const profileName = profile?.user_name || user?.email?.split('@')[0] || '游客';
   const profileAvatarUrl = profile?.avatar_url?.trim() || getFallbackAvatarUrl(profileName);
-  const themeStyle = getCmiThemeStyle(activeTheme);
 
   return (
-    <div className={`cmi-v3-screen cmi-v3-screen--${activeScreen}`} style={themeStyle}>
+    <div className={`cmi-v3-screen cmi-v3-screen--${activeScreen}`}>
       <div className="cmi-v3-main-view" data-active-screen={activeScreen}>
         {activeScreen === 'map' && (
           <MapMode
             activeFilter={activeFilter}
-            activeTheme={activeTheme}
             filters={mapFilters}
-            isLoading={isLoadingRecommendations || isLoadingEvents || isLoadingCompanionInvites}
+            isLoading={isLoadingRecommendations || isLoadingEvents}
             markers={mapMarkers}
             recommendationsError={recommendationsError}
             searchQuery={mapSearchQuery}
@@ -1486,16 +1248,11 @@ export default function CmiMapV3Prototype() {
             activeStickerId={activeStickerId}
             profilesByAuthorKey={profilesByAuthorKey}
             locationRequestKey={locationRequestKey}
-            selectedCompanionCardInvite={selectedCompanionCardInvite}
-            selectedCompanionDetailsInvite={selectedCompanionDetailsInvite}
             selectedMarker={selectedMarker}
             selectedEvent={selectedEventId ? selectedEvent : null}
-            themeSubmissionIds={themeSubmissionIds}
             onClearSelection={() => {
               setSelectedMarker(null);
               setSelectedEventId(null);
-              setSelectedCompanionCardInviteId(null);
-              setSelectedCompanionDetailsInviteId(null);
             }}
             onFilterChange={setActiveFilter}
             onLocateUser={() => setLocationRequestKey(current => current + 1)}
@@ -1510,27 +1267,11 @@ export default function CmiMapV3Prototype() {
                 const event = events.find(item => item.id === marker.eventId);
                 setSelectedEventId(event?.id ?? marker.eventId);
                 setSelectedMarker(null);
-                setSelectedCompanionCardInviteId(null);
-                setSelectedCompanionDetailsInviteId(null);
-                return;
-              }
-
-              if (isCompanionMarker(marker)) {
-                setSelectedCompanionCardInviteId(marker.companionInviteId);
-                setSelectedCompanionDetailsInviteId(null);
-                setSelectedMarker(null);
-                setSelectedEventId(null);
                 return;
               }
 
               setSelectedMarker(marker);
               setSelectedEventId(null);
-              setSelectedCompanionCardInviteId(null);
-              setSelectedCompanionDetailsInviteId(null);
-            }}
-            onOpenCompanionDetails={(invite) => {
-              setSelectedCompanionDetailsInviteId(invite.id);
-              setSelectedCompanionCardInviteId(null);
             }}
             onNavigate={handleNavigate}
             onOpenPath={navigate}
@@ -1540,23 +1281,16 @@ export default function CmiMapV3Prototype() {
           <FeedMode
             blackboardPosts={blackboardPosts}
             blackboardPostsError={blackboardPostsError}
-            companionInvites={companionInvites}
             events={communityEvents}
-            isLoading={isLoadingRecommendations || isLoadingBlackboardPosts || isLoadingCompanionInvites}
+            isLoading={isLoadingRecommendations || isLoadingBlackboardPosts}
             localWishlists={localWishlists}
             placedStickers={placedStickers}
             activeRecIdForSticker={activeRecIdForSticker}
             activeStickerId={activeStickerId}
             profilesByAuthorKey={profilesByAuthorKey}
             recommendations={feedRecommendations}
-            selectedCompanionDetailsInvite={selectedCompanionDetailsInvite}
             onNavigate={handleNavigate}
             onPlaceStamp={handleRecommendationCardClick}
-            onClearCompanionDetails={() => setSelectedCompanionDetailsInviteId(null)}
-            onOpenCompanionDetails={(invite) => {
-              setSelectedCompanionDetailsInviteId(invite.id);
-              setSelectedCompanionCardInviteId(null);
-            }}
             onOpenPath={navigate}
             onStartStamp={handleStartStamp}
             onToggleWishlist={handleToggleWishlist}
@@ -1604,17 +1338,13 @@ export default function CmiMapV3Prototype() {
 
 function MapMode({
   activeFilter,
-  activeTheme,
   filters,
   locationRequestKey,
   markers,
   listEvents,
   listRecommendations,
-  selectedCompanionCardInvite,
-  selectedCompanionDetailsInvite,
   selectedMarker,
   selectedEvent,
-  themeSubmissionIds,
   isLoading,
   localWishlists,
   placedStickers,
@@ -1634,23 +1364,18 @@ function MapMode({
   onOpenProfile,
   onSearchChange,
   onRecommendationSelect,
-  onOpenCompanionDetails,
   onPlaceStamp,
   onStartStamp,
   onToggleWishlist,
 }: {
   activeFilter: MapFilterId;
-  activeTheme: CmiMapTheme | null;
   filters: FilterItem[];
   locationRequestKey: number;
   markers: MapMarker[];
   listEvents: CmiEvent[];
   listRecommendations: Recommendation[];
-  selectedCompanionCardInvite: CmiCompanionInviteCard | null;
-  selectedCompanionDetailsInvite: CmiCompanionInviteCard | null;
   selectedMarker: MapMarker | null;
   selectedEvent: CmiEvent | null;
-  themeSubmissionIds: Set<string>;
   isLoading: boolean;
   localWishlists: WishlistStateMap;
   placedStickers: PlacedStickerMap;
@@ -1670,7 +1395,6 @@ function MapMode({
   onOpenProfile: () => void;
   onSearchChange: (query: string) => void;
   onRecommendationSelect: (recommendation: Recommendation) => void;
-  onOpenCompanionDetails: (invite: CmiCompanionInviteCard) => void;
   onPlaceStamp: (event: ReactMouseEvent<HTMLElement>, recommendationId: string) => void;
   onStartStamp: (recommendationId: string) => void;
   onToggleWishlist: (recommendation: Recommendation) => void;
@@ -1678,21 +1402,6 @@ function MapMode({
   const selectedRecommendation = selectedMarker?.recommendations[0] ?? null;
   const selectedRecommendationAuthorProfile = selectedRecommendation
     ? getRecommendationAuthorProfile(selectedRecommendation, profilesByAuthorKey)
-    : null;
-  const selectedThemeName = selectedRecommendation && activeTheme && themeSubmissionIds.has(selectedRecommendation.id)
-    ? activeTheme.title
-    : undefined;
-  const themeShareInput = selectedRecommendation && activeTheme && themeSubmissionIds.has(selectedRecommendation.id)
-    ? {
-        theme: activeTheme,
-        themeUrl: new URL(getThemePath(activeTheme.slug), window.location.origin).toString(),
-      }
-    : undefined;
-  const selectedCompanionCardCreatorProfile = selectedCompanionCardInvite
-    ? getCompanionInviteCreatorProfile(selectedCompanionCardInvite, profilesByAuthorKey)
-    : null;
-  const selectedCompanionDetailsCreatorProfile = selectedCompanionDetailsInvite
-    ? getCompanionInviteCreatorProfile(selectedCompanionDetailsInvite, profilesByAuthorKey)
     : null;
   const handleRecommendationSelect = (recommendation: Recommendation) => {
     const matchedMarker = markers.find(marker =>
@@ -1764,16 +1473,6 @@ function MapMode({
         ))}
       </div>
 
-      {activeTheme && (
-        <button
-          type="button"
-          className="cmi-v3-theme-entry"
-          onClick={() => onOpenPath(getThemePath(activeTheme.slug))}
-        >
-          <span>{activeTheme.title}</span>
-        </button>
-      )}
-
       <div className="cmi-v3-map-layer-control" aria-label="地图图层">
         <button type="button" aria-label="切换地图图层">
           <Layers size={22} strokeWidth={2.8} />
@@ -1805,38 +1504,12 @@ function MapMode({
         </div>
       )}
 
-      {selectedCompanionDetailsInvite ? (
-        <CompanionEventDetails
-          authorProfile={selectedCompanionDetailsCreatorProfile}
-          invite={selectedCompanionDetailsInvite}
-          onDismiss={onClearSelection}
-        />
-      ) : selectedCompanionCardInvite ? (
-        <CompanionMapCard
-          authorProfile={selectedCompanionCardCreatorProfile}
-          invite={selectedCompanionCardInvite}
-          onOpen={() => onOpenCompanionDetails(selectedCompanionCardInvite)}
-        />
-      ) : selectedRecommendation ? (
+      {selectedRecommendation ? (
         <PlacePostSheet
-          companionCreateHref={getCmiCompanionCreatePath({
-            placeId: selectedRecommendation.id,
-            placeName: selectedRecommendation.place_name,
-            latitude: selectedRecommendation.latitude,
-            longitude: selectedRecommendation.longitude,
-          })}
           itemId={`recommendation:${selectedRecommendation.id}`}
           authorProfile={selectedRecommendationAuthorProfile}
           recommendation={selectedRecommendation}
-          themeShareInput={themeShareInput}
-          themeName={selectedThemeName}
           onDismiss={onClearSelection}
-          onCompanionCreate={() => onOpenPath(getCmiCompanionCreatePath({
-            placeId: selectedRecommendation.id,
-            placeName: selectedRecommendation.place_name,
-            latitude: selectedRecommendation.latitude,
-            longitude: selectedRecommendation.longitude,
-          }))}
         />
       ) : selectedEvent ? (
         <MapBottomSheet
@@ -1850,21 +1523,6 @@ function MapMode({
             label: '打开活动页',
             href: getCmiEventPath(selectedEvent.id),
             onClick: () => onOpenPath(getCmiEventPath(selectedEvent.id)),
-          }}
-          secondaryAction={{
-            label: '约搭子',
-            href: getCmiCompanionCreatePath({
-              eventId: selectedEvent.id,
-              placeName: selectedEvent.venueName,
-              latitude: selectedEvent.mapLocation?.latitude,
-              longitude: selectedEvent.mapLocation?.longitude,
-            }),
-            onClick: () => onOpenPath(getCmiCompanionCreatePath({
-              eventId: selectedEvent.id,
-              placeName: selectedEvent.venueName,
-              latitude: selectedEvent.mapLocation?.latitude,
-              longitude: selectedEvent.mapLocation?.longitude,
-            })),
           }}
           title={selectedEvent.title}
           onDismiss={onClearSelection}
@@ -1895,336 +1553,24 @@ function MapMode({
   );
 }
 
-function CompanionMapCard({
-  authorProfile,
-  invite,
-  onOpen,
-}: {
-  authorProfile: PublicProfile | null;
-  invite: CmiCompanionInviteCard;
-  onOpen: () => void;
-}) {
-  const authorName = authorProfile?.user_name || 'CMI 朋友';
-  const avatarUrl = authorProfile?.avatar_url?.trim() || getFallbackAvatarUrl(authorName);
-
-  return (
-    <button type="button" className="cmi-v3-companion-map-card" onClick={onOpen}>
-      <span className="cmi-v3-companion-map-card-avatar">
-        <img src={avatarUrl} alt="" />
-      </span>
-      <span className="cmi-v3-companion-map-card-copy">
-        <strong>{invite.title}</strong>
-        <em>{`${getCompanionInvitePlaceLabel(invite)} · ${getCompanionInviteTimeLabel(invite)}`}</em>
-        <span>{`${authorName} · ${getCompanionInviteCapacityLabel(invite)} · ${getCompanionInviteStatusLabel(invite)}`}</span>
-      </span>
-    </button>
-  );
-}
-
-function upsertCompanionApplication(
-  applications: CmiCompanionApplication[],
-  nextApplication: CmiCompanionApplication
-) {
-  const nextApplications = applications.filter(application => application.id !== nextApplication.id);
-  return [nextApplication, ...nextApplications];
-}
-
-function getCompanionApplicationStatusLabel(status: CmiCompanionApplicationStatus) {
-  if (status === 'approved') return '已通过';
-  if (status === 'rejected') return '已拒绝';
-  return '待审核';
-}
-
-function getCompanionApplicantName(
-  application: CmiCompanionApplication,
-  applicantProfile: PublicProfile | null
-) {
-  return applicantProfile?.user_name || application.applicant_id.slice(0, 8);
-}
-
-function getCompanionApplicantIdentity(
-  application: CmiCompanionApplication,
-  applicantProfile: PublicProfile | null
-) {
-  return applicantProfile?.handle || applicantProfile?.user_name || application.applicant_id;
-}
-
-function CompanionEventDetails({
-  authorProfile,
-  invite,
-  onDismiss,
-}: {
-  authorProfile: PublicProfile | null;
-  invite: CmiCompanionInviteCard;
-  onDismiss: () => void;
-}) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { user } = useAuth();
-  const [applications, setApplications] = useState<CmiCompanionApplication[]>([]);
-  const [applicantProfilesById, setApplicantProfilesById] = useState<ProfileLookup>({});
-  const [approvedContactLabel, setApprovedContactLabel] = useState<string | null>(null);
-  const [isJoining, setIsJoining] = useState(false);
-  const [reviewingApplicationIds, setReviewingApplicationIds] = useState<Record<string, boolean>>({});
-  const authorName = authorProfile?.user_name || 'CMI 朋友';
-  const avatarUrl = authorProfile?.avatar_url?.trim() || getFallbackAvatarUrl(authorName);
-  const currentUserApplication = useMemo(
-    () => applications.find(application => application.applicant_id === user?.id) ?? null,
-    [applications, user?.id]
-  );
-  const joinActionLabel = getCmiCompanionJoinActionLabel({
-    invite,
-    viewerId: user?.id,
-    application: currentUserApplication,
-  });
-  const canReviewApplications = canReviewCmiCompanionApplications(invite, user?.id);
-  const visibleContactLabel = currentUserApplication?.status === 'approved' ? approvedContactLabel : null;
-
-  useEffect(() => {
-    let isActive = true;
-    setApplications([]);
-    setApplicantProfilesById({});
-
-    if (!user) {
-      return () => {
-        isActive = false;
-      };
-    }
-
-    getCmiCompanionApplicationsForInvite(invite.id)
-      .then(async nextApplications => {
-        if (!isActive) return;
-        setApplications(nextApplications);
-        const applicantProfiles = await getProfilesByUserIds(nextApplications.map(application => application.applicant_id));
-        if (!isActive) return;
-        setApplicantProfilesById(
-          applicantProfiles.reduce<ProfileLookup>((lookup, applicantProfile) => {
-            lookup[applicantProfile.id] = applicantProfile;
-            return lookup;
-          }, {})
-        );
-      })
-      .catch(error => {
-        console.error('约搭子申请加载失败:', error);
-        if (isActive) setApplications([]);
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [invite.id, user]);
-
-  useEffect(() => {
-    let isActive = true;
-    setApprovedContactLabel(null);
-
-    if (!user || currentUserApplication?.status !== 'approved') {
-      return () => {
-        isActive = false;
-      };
-    }
-
-    getApprovedCmiCompanionContactLabel(invite.id)
-      .then(contactLabel => {
-        if (isActive) setApprovedContactLabel(contactLabel);
-      })
-      .catch(error => {
-        console.error('约搭子联系方式加载失败:', error);
-        if (isActive) setApprovedContactLabel(null);
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [currentUserApplication?.status, invite.id, user]);
-
-  const handleJoin = async () => {
-    if (!user) {
-      navigate('/login', { state: { from: `${location.pathname}${location.search}` } });
-      return;
-    }
-    if (joinActionLabel !== '申请加入' || isJoining) return;
-
-    setIsJoining(true);
-    try {
-      const application = await createCmiCompanionApplication({
-        inviteId: invite.id,
-        applicantId: user.id,
-        relationshipType: 'non_friend',
-      });
-      if (application) {
-        setApplications(currentApplications => upsertCompanionApplication(currentApplications, application));
-      }
-    } catch (error) {
-      console.error('约搭子申请加入失败:', error);
-      toast.error('申请失败');
-    } finally {
-      setIsJoining(false);
-    }
-  };
-
-  const handleReviewApplication = async (
-    application: CmiCompanionApplication,
-    status: Extract<CmiCompanionApplicationStatus, 'approved' | 'rejected'>
-  ) => {
-    if (!user || reviewingApplicationIds[application.id]) return;
-
-    setReviewingApplicationIds(current => ({ ...current, [application.id]: true }));
-    try {
-      const reviewedApplication = await reviewCmiCompanionApplication({
-        applicationId: application.id,
-        reviewerId: user.id,
-        status,
-      });
-      if (reviewedApplication) {
-        setApplications(currentApplications => upsertCompanionApplication(currentApplications, reviewedApplication));
-      }
-    } catch (error) {
-      console.error('约搭子申请审核失败:', error);
-      toast.error('处理失败');
-    } finally {
-      setReviewingApplicationIds(current => {
-        const next = { ...current };
-        delete next[application.id];
-        return next;
-      });
-    }
-  };
-
-  return (
-    <MapBottomSheet
-      imageAlt={authorName}
-      imageUrl={avatarUrl}
-      itemId={`companion:${invite.id}`}
-      meta={`${getCompanionInviteTimeLabel(invite)} · ${getCompanionInvitePlaceLabel(invite)}`}
-      title={invite.title}
-      onDismiss={onDismiss}
-    >
-      <div className="cmi-v3-selected-note-thread">
-        <article>
-          <span>发起人</span>
-          <p>{authorName}</p>
-        </article>
-        <article>
-          <span>人数</span>
-          <p>{getCompanionInviteCapacityLabel(invite)}</p>
-        </article>
-        {invite.cost_note && (
-          <article>
-            <span>费用</span>
-            <p>{invite.cost_note}</p>
-          </article>
-        )}
-        {invite.condition_note && (
-          <article>
-            <span>条件</span>
-            <p>{invite.condition_note}</p>
-          </article>
-        )}
-        {invite.vibe && (
-          <article>
-            <span>氛围</span>
-            <p>{invite.vibe}</p>
-          </article>
-        )}
-        {invite.host_note && (
-          <article>
-            <span>Host note</span>
-            <p>{invite.host_note}</p>
-          </article>
-        )}
-        <article>
-          <span>状态</span>
-          <p>{getCompanionInviteStatusLabel(invite)}</p>
-        </article>
-        {visibleContactLabel && (
-          <article>
-            <span>联系方式</span>
-            <p>{visibleContactLabel}</p>
-          </article>
-        )}
-      </div>
-      {joinActionLabel && (
-        <button
-          type="button"
-          className="cmi-v3-companion-join-button"
-          disabled={isJoining || joinActionLabel !== '申请加入'}
-          onClick={handleJoin}
-        >
-          {isJoining ? '申请加入' : joinActionLabel}
-        </button>
-      )}
-      {canReviewApplications && applications.length > 0 && (
-        <div className="cmi-v3-companion-application-list">
-          {applications.map(application => {
-            const applicantProfile = applicantProfilesById[application.applicant_id] ?? null;
-            const applicantIdentity = getCompanionApplicantIdentity(application, applicantProfile);
-            const applicantPath = getPersonMapPath(applicantIdentity);
-
-            return (
-              <article key={application.id} className="cmi-v3-companion-application-row">
-                <div>
-                  <strong>{getCompanionApplicantName(application, applicantProfile)}</strong>
-                  <span>{getCompanionApplicationStatusLabel(application.status)}</span>
-                </div>
-                <a
-                  href={applicantPath}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    navigate(applicantPath);
-                  }}
-                >主页</a>
-                {application.status === 'pending' && (
-                  <>
-                    <button
-                      type="button"
-                      disabled={Boolean(reviewingApplicationIds[application.id])}
-                      onClick={() => handleReviewApplication(application, 'approved')}
-                    >批准</button>
-                    <button
-                      type="button"
-                      disabled={Boolean(reviewingApplicationIds[application.id])}
-                      onClick={() => handleReviewApplication(application, 'rejected')}
-                    >拒绝</button>
-                  </>
-                )}
-              </article>
-            );
-          })}
-        </div>
-      )}
-    </MapBottomSheet>
-  );
-}
-
 function PlacePostSheet({
   authorProfile,
-  companionCreateHref,
   itemId,
   recommendation,
-  themeShareInput,
-  themeName,
   onDismiss,
-  onCompanionCreate,
 }: {
   authorProfile: PublicProfile | null;
-  companionCreateHref?: string;
   itemId: string;
   recommendation: Recommendation;
-  themeShareInput?: CmiThemePostShareInput;
-  themeName?: string;
   onDismiss?: () => void;
-  onCompanionCreate?: () => void;
 }) {
   const { dragHandlers, dragOffset, isDragging, setSnap, snap } = useBottomSheetDrag(itemId);
-  const [isThemeShareCardLoading, setIsThemeShareCardLoading] = useState(false);
   const isExpanded = snap === 'expanded';
   const categoryConfig = getCategoryConfig(recommendation.category);
   const imageUrl = recommendation.images[0] || categoryConfig.iconUrl;
   const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
   const authorAvatarUrl = authorProfile?.avatar_url?.trim() ?? '';
   const categoryLabel = normalizeCategory(recommendation.category);
-  const metaLabel = themeName ? `${themeName} · ${categoryLabel}` : categoryLabel;
   const summary = getRecommendationSummary(recommendation).trim();
   const title = recommendation.place_name.trim();
   const visibleSummary = summary && summary !== title ? summary : '';
@@ -2241,52 +1587,6 @@ function PlacePostSheet({
 
     event.preventDefault();
     setSnap(isExpanded ? 'collapsed' : 'expanded');
-  };
-
-  const handleThemeShareCard = async () => {
-    if (!themeShareInput) return;
-    setIsThemeShareCardLoading(true);
-
-    try {
-      const card = await createCmiThemeShareCard({
-        theme: themeShareInput.theme,
-        recommendation,
-        authorName,
-        themeUrl: themeShareInput.themeUrl,
-      });
-      const file = new File([card.blob], card.fileName, { type: 'image/png' });
-      const shareData: FileShareData = {
-        files: [file],
-        title: `CMI Map · ${themeShareInput.theme.title}`,
-        text: `${themeShareInput.theme.title}｜${title}`,
-      };
-      const navigatorWithFileShare = navigator as NavigatorWithFileShare;
-
-      if (navigatorWithFileShare.share && (!navigatorWithFileShare.canShare || navigatorWithFileShare.canShare(shareData))) {
-        try {
-          await navigatorWithFileShare.share(shareData);
-          return;
-        } catch (error) {
-          if (error instanceof DOMException && error.name === 'AbortError') return;
-          console.error('主题分享卡分享失败:', error);
-        }
-      }
-
-      downloadCmiThemeShareCard(card);
-      toast.success('已生成主题分享卡');
-    } catch (error) {
-      console.error('主题分享卡生成失败:', error);
-      toast.error('主题分享卡生成失败，请稍后再试');
-    } finally {
-      setIsThemeShareCardLoading(false);
-    }
-  };
-  const handleCompanionCreate = (event: ReactMouseEvent<HTMLAnchorElement>) => {
-    if (!onCompanionCreate) return;
-    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-
-    event.preventDefault();
-    onCompanionCreate();
   };
 
   return (
@@ -2313,7 +1613,7 @@ function PlacePostSheet({
             </span>
             <div>
               <strong>{authorName}</strong>
-              <span>{`${metaLabel} · ${formatTraceTime(recommendation.created_at)}`}</span>
+              <span>{`${categoryLabel} · ${formatTraceTime(recommendation.created_at)}`}</span>
             </div>
           </div>
           <h2>{title}</h2>
@@ -2321,26 +1621,6 @@ function PlacePostSheet({
         </div>
         <img className="cmi-v3-place-post-photo" src={imageUrl} alt={title} />
       </div>
-      {themeShareInput && (
-        <button
-          type="button"
-          className="cmi-v3-theme-share-card-button"
-          disabled={isThemeShareCardLoading}
-          onClick={handleThemeShareCard}
-        >
-          <Share2 size={16} strokeWidth={3} />
-          <span>{isThemeShareCardLoading ? '生成中' : '分享卡'}</span>
-        </button>
-      )}
-      {companionCreateHref && (
-        <a
-          className="cmi-v3-place-companion-button"
-          href={companionCreateHref}
-          onClick={handleCompanionCreate}
-        >
-          约搭子
-        </a>
-      )}
     </article>
   );
 }
@@ -2675,7 +1955,6 @@ function EventSheetBody({ event }: { event: CmiEvent }) {
 function FeedMode({
   blackboardPosts,
   blackboardPostsError,
-  companionInvites,
   events,
   recommendations,
   isLoading,
@@ -2684,18 +1963,14 @@ function FeedMode({
   activeRecIdForSticker,
   activeStickerId,
   profilesByAuthorKey,
-  selectedCompanionDetailsInvite,
-  onClearCompanionDetails,
   onNavigate,
   onPlaceStamp,
-  onOpenCompanionDetails,
   onOpenPath,
   onStartStamp,
   onToggleWishlist,
 }: {
   blackboardPosts: BlackboardPostRecord[];
   blackboardPostsError: string | null;
-  companionInvites: CmiCompanionInviteCard[];
   events: CmiEvent[];
   recommendations: Recommendation[];
   isLoading: boolean;
@@ -2704,11 +1979,8 @@ function FeedMode({
   activeRecIdForSticker: string | null;
   activeStickerId: string | null;
   profilesByAuthorKey: ProfileLookup;
-  selectedCompanionDetailsInvite: CmiCompanionInviteCard | null;
-  onClearCompanionDetails: () => void;
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
   onPlaceStamp: (event: ReactMouseEvent<HTMLElement>, recommendationId: string) => void;
-  onOpenCompanionDetails: (invite: CmiCompanionInviteCard) => void;
   onOpenPath: (path: string) => void;
   onStartStamp: (recommendationId: string) => void;
   onToggleWishlist: (recommendation: Recommendation) => void;
@@ -2727,25 +1999,15 @@ function FeedMode({
         createdAt: recommendation.created_at,
         recommendation,
       })),
-      ...companionInvites.map(invite => ({
-        id: `companion:${invite.id}`,
-        type: 'companionInvite' as const,
-        createdAt: invite.created_at,
-        invite,
-      })),
     ]).slice(0, 60),
-    [blackboardPosts, companionInvites, recommendations]
-  );
-  const featuredFeedItems = useMemo(
-    () => feedItems.filter(feedItem => feedItem.type !== 'companionInvite'),
-    [feedItems]
+    [blackboardPosts, recommendations]
   );
   const featuredFeedItem = useMemo(
-    () => featuredFeedItems.find(feedItem => feedItem.type === 'forumPost' && Boolean(feedItem.post.is_featured))
-      ?? featuredFeedItems.find(feedItem => feedItem.type === 'forumPost')
-      ?? featuredFeedItems[0]
+    () => feedItems.find(feedItem => feedItem.type === 'forumPost' && Boolean(feedItem.post.is_featured))
+      ?? feedItems.find(feedItem => feedItem.type === 'forumPost')
+      ?? feedItems[0]
       ?? null,
-    [featuredFeedItems]
+    [feedItems]
   );
   const streamFeedItems = useMemo(
     () => featuredFeedItem
@@ -2753,73 +2015,54 @@ function FeedMode({
       : feedItems,
     [featuredFeedItem, feedItems]
   );
-  const selectedCompanionDetailsCreatorProfile = selectedCompanionDetailsInvite
-    ? getCompanionInviteCreatorProfile(selectedCompanionDetailsInvite, profilesByAuthorKey)
-    : null;
 
   return (
-    <>
-      <ComicPage title="动态" hideTitle onTitleClick={() => onNavigate('map')}>
-        <FeedCenterPanel
-          item={featuredFeedItem}
-          events={events}
-          profilesByAuthorKey={profilesByAuthorKey}
-          onOpenPath={onOpenPath}
-        />
+    <ComicPage title="动态" hideTitle onTitleClick={() => onNavigate('map')}>
+      <FeedCenterPanel
+        item={featuredFeedItem}
+        events={events}
+        profilesByAuthorKey={profilesByAuthorKey}
+        onOpenPath={onOpenPath}
+      />
 
-        {isLoading && <p className="cmi-v3-inline-state">正在同步社区动态</p>}
-        {blackboardPostsError && <p className="cmi-v3-inline-state">{blackboardPostsError}</p>}
+      {isLoading && <p className="cmi-v3-inline-state">正在同步社区动态</p>}
+      {blackboardPostsError && <p className="cmi-v3-inline-state">{blackboardPostsError}</p>}
 
-        <div className="cmi-v3-feed-stream" aria-label="社区动态列表">
-          {streamFeedItems.map(feedItem => (
-            feedItem.type === 'companionInvite' ? (
-              <CompanionFeedCard
-                key={feedItem.id}
-                authorProfile={getCompanionInviteCreatorProfile(feedItem.invite, profilesByAuthorKey)}
-                invite={feedItem.invite}
-                onOpen={() => onOpenCompanionDetails(feedItem.invite)}
-              />
-            ) : feedItem.type === 'forumPost' ? (
-              <BlackboardFeedCard
-                key={feedItem.id}
-                authorProfile={getBlackboardPostAuthorProfile(feedItem.post, profilesByAuthorKey)}
-                events={events}
-                post={feedItem.post}
-                onOpenPath={onOpenPath}
-              />
-            ) : (
-              <RecommendationFeedCard
-                key={feedItem.id}
-                activeRecIdForSticker={activeRecIdForSticker}
-                activeStickerId={activeStickerId}
-                authorProfile={getRecommendationAuthorProfile(feedItem.recommendation, profilesByAuthorKey)}
-                isWishlisted={localWishlists[feedItem.recommendation.id] ?? false}
-                linkedEventBadge={getRecommendationEventBadge(feedItem.recommendation, events)}
-                placedStickers={placedStickers[feedItem.recommendation.id] ?? []}
-                recommendation={feedItem.recommendation}
-                onComment={() => onOpenPath(getAddTracePath(feedItem.recommendation.place_name))}
-                onPlaceStamp={onPlaceStamp}
-                onSelect={() => onOpenPath(getPlacePath(feedItem.recommendation.place_name))}
-                onStartStamp={() => onStartStamp(feedItem.recommendation.id)}
-                onToggleWishlist={() => onToggleWishlist(feedItem.recommendation)}
-              />
-            )
-          ))}
-        </div>
+      <div className="cmi-v3-feed-stream" aria-label="社区动态列表">
+        {streamFeedItems.map(feedItem => (
+          feedItem.type === 'forumPost' ? (
+            <BlackboardFeedCard
+              key={feedItem.id}
+              authorProfile={getBlackboardPostAuthorProfile(feedItem.post, profilesByAuthorKey)}
+              events={events}
+              post={feedItem.post}
+              onOpenPath={onOpenPath}
+            />
+          ) : (
+            <RecommendationFeedCard
+              key={feedItem.id}
+              activeRecIdForSticker={activeRecIdForSticker}
+              activeStickerId={activeStickerId}
+              authorProfile={getRecommendationAuthorProfile(feedItem.recommendation, profilesByAuthorKey)}
+              isWishlisted={localWishlists[feedItem.recommendation.id] ?? false}
+              linkedEventBadge={getRecommendationEventBadge(feedItem.recommendation, events)}
+              placedStickers={placedStickers[feedItem.recommendation.id] ?? []}
+              recommendation={feedItem.recommendation}
+              onComment={() => onOpenPath(getAddTracePath(feedItem.recommendation.place_name))}
+              onPlaceStamp={onPlaceStamp}
+              onSelect={() => onOpenPath(getPlacePath(feedItem.recommendation.place_name))}
+              onStartStamp={() => onStartStamp(feedItem.recommendation.id)}
+              onToggleWishlist={() => onToggleWishlist(feedItem.recommendation)}
+            />
+          )
+        ))}
+      </div>
 
-        {!isLoading && feedItems.length === 0 && (
-          <p className="cmi-v3-inline-state">还没有新的社区动态。</p>
-        )}
-
-      </ComicPage>
-      {selectedCompanionDetailsInvite && (
-        <CompanionEventDetails
-          authorProfile={selectedCompanionDetailsCreatorProfile}
-          invite={selectedCompanionDetailsInvite}
-          onDismiss={onClearCompanionDetails}
-        />
+      {!isLoading && feedItems.length === 0 && (
+        <p className="cmi-v3-inline-state">还没有新的社区动态。</p>
       )}
-    </>
+
+    </ComicPage>
   );
 }
 
@@ -3240,8 +2483,6 @@ function FeedCenterPanel({
       };
     }
 
-    if (item.type === 'companionInvite') return null;
-
     const recommendation = item.recommendation;
     const authorProfile = getRecommendationAuthorProfile(recommendation, profilesByAuthorKey);
     const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
@@ -3387,55 +2628,6 @@ function BlackboardFeedCard({
             {metaItems.slice(0, 3).map(item => <span key={item}>{item}</span>)}
           </div>
         )}
-      </div>
-    </article>
-  );
-}
-
-function CompanionFeedCard({
-  authorProfile,
-  invite,
-  onOpen,
-}: {
-  authorProfile: PublicProfile | null;
-  invite: CmiCompanionInviteCard;
-  onOpen: () => void;
-}) {
-  const authorName = authorProfile?.user_name || 'CMI 朋友';
-  const avatarUrl = authorProfile?.avatar_url?.trim() || getFallbackAvatarUrl(authorName);
-  const handleKeyDown = (keyboardEvent: KeyboardEvent<HTMLElement>) => {
-    if (keyboardEvent.key !== 'Enter' && keyboardEvent.key !== ' ') return;
-    keyboardEvent.preventDefault();
-    onOpen();
-  };
-
-  return (
-    <article
-      className="cmi-v3-feed-card cmi-v3-companion-feed-card"
-      role="link"
-      tabIndex={0}
-      onClick={onOpen}
-      onKeyDown={handleKeyDown}
-    >
-      <span className="cmi-v3-companion-feed-avatar" aria-hidden="true">
-        <img src={avatarUrl} alt="" />
-      </span>
-      <div className="cmi-v3-companion-feed-copy">
-        <div className="cmi-v3-feed-head cmi-v3-forum-post-head">
-          <span className="cmi-v3-avatar cmi-v3-feed-user-avatar">
-            <img src={avatarUrl} alt="" />
-          </span>
-          <div>
-            <strong>{authorName}</strong>
-            <span>{getCompanionInviteTimeLabel(invite)}</span>
-          </div>
-        </div>
-        <h2>{invite.title}</h2>
-        <div className="cmi-v3-feed-meta-line" aria-label="约搭子信息">
-          <span>{getCompanionInvitePlaceLabel(invite)}</span>
-          <span>{getCompanionInviteCapacityLabel(invite)}</span>
-          <span>{getCompanionInviteStatusLabel(invite)}</span>
-        </div>
       </div>
     </article>
   );

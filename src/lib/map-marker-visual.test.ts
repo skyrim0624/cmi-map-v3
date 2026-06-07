@@ -21,10 +21,3 @@ test('地图 marker 整体尺寸保持轻量', () => {
   assert.match(source, /height:40px/);
   assert.match(source, /width:62px; height:54px/);
 });
-
-test('约搭子头像 marker 带雷达波纹', () => {
-  assert.match(source, /isCompanion\?: boolean/);
-  assert.match(source, /isCompanion: markerData\.visualOverride\.isCompanion/);
-  assert.match(source, /visual\.isCompanion[\s\S]*cmi-marker-radar-ring/);
-  assert.match(source, /cmi-marker-radar-ring--outer/);
-});

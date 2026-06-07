@@ -30,21 +30,9 @@ export const getPersonMapPath = (profileIdentity: string) =>
 
 export const getCmiHomePath = () => '/cmi-home';
 
-export const getThemePath = (themeSlug: string) =>
-  `/themes/${encodeURIComponent(themeSlug)}`;
-
-export const getThemeManagePath = (themeSlug: string) =>
-  `/admin/themes/${encodeURIComponent(themeSlug)}`;
-
-export const getMarkPlacePath = (input?: {
-  eventId?: string | null;
-  themeSlug?: string | null;
-  taskId?: string | null;
-}) => {
+export const getMarkPlacePath = (input?: { eventId?: string | null }) => {
   const searchParams = new URLSearchParams();
   if (input?.eventId) searchParams.set('event', input.eventId);
-  if (input?.themeSlug) searchParams.set('theme', input.themeSlug);
-  if (input?.taskId) searchParams.set('task', input.taskId);
 
   const query = searchParams.toString();
   return query ? `/mark?${query}` : '/mark';
@@ -74,24 +62,6 @@ export const getCmiEventCreatePath = (input?: {
 
   const query = searchParams.toString();
   return query ? `/events/new?${query}` : '/events/new';
-};
-
-export const getCmiCompanionCreatePath = (input?: {
-  placeId?: string | null;
-  placeName?: string | null;
-  eventId?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-}) => {
-  const searchParams = new URLSearchParams();
-  if (input?.placeId) searchParams.set('placeId', input.placeId);
-  if (input?.placeName) searchParams.set('place', input.placeName);
-  if (input?.eventId) searchParams.set('event', input.eventId);
-  if (typeof input?.latitude === 'number') searchParams.set('lat', String(input.latitude));
-  if (typeof input?.longitude === 'number') searchParams.set('lng', String(input.longitude));
-
-  const query = searchParams.toString();
-  return query ? `/companions/new?${query}` : '/companions/new';
 };
 
 export const getCmiEventManagePath = (eventId: string) =>

@@ -2,14 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   getCmiBlackboardPath,
-  getCmiCompanionCreatePath,
   getCmiEventsPath,
   getCmiFeedPath,
   getMarkPlacePath,
   getPublicCmiEventUrl,
   getSceneListPath,
-  getThemeManagePath,
-  getThemePath,
 } from './paths.ts';
 
 test('活动分享链接指向生产站活动详情页', () => {
@@ -33,33 +30,10 @@ test('动态页入口承接旧发帖参数', () => {
   );
 });
 
-test('约搭子发起入口承接地点和活动上下文', () => {
-  assert.equal(
-    getCmiCompanionCreatePath({
-      placeId: 'place-cmi-inn',
-      placeName: '清迈客栈',
-      eventId: 'cmi-mindfulness-hour-2026-05-28',
-      latitude: 18.79891,
-      longitude: 98.96711,
-    }),
-    '/companions/new?placeId=place-cmi-inn&place=%E6%B8%85%E8%BF%88%E5%AE%A2%E6%A0%88&event=cmi-mindfulness-hour-2026-05-28&lat=18.79891&lng=98.96711'
-  );
-  assert.equal(getCmiCompanionCreatePath(), '/companions/new');
-});
-
 test('活动可以生成拍照返图入口', () => {
   assert.equal(
     getMarkPlacePath({ eventId: 'cmi-mindfulness-hour-2026-05-28' }),
     '/mark?event=cmi-mindfulness-hour-2026-05-28'
-  );
-});
-
-test('主题任务可以进入发布页', () => {
-  assert.equal(getThemePath('wild-chiang-mai'), '/themes/wild-chiang-mai');
-  assert.equal(getThemeManagePath('wild-chiang-mai'), '/admin/themes/wild-chiang-mai');
-  assert.equal(
-    getMarkPlacePath({ themeSlug: 'wild-chiang-mai', taskId: 'task-a' }),
-    '/mark?theme=wild-chiang-mai&task=task-a'
   );
 });
 

@@ -11,30 +11,6 @@ test('旧清迈客栈页不再渲染独立页面，改为动态页入口', () =>
   assert.doesNotMatch(source, /element: <CmiHome \/>/);
 });
 
-test('主题详情页为公开路由', () => {
-  assert.match(source, /const CmiThemeDetail = lazy/);
-  assert.match(source, /path: '\/themes\/:themeSlug'/);
-  assert.match(source, /element: <CmiThemeDetail \/>/);
-  assert.match(source, /name: '主题地图'/);
-  assert.match(source, /public: true/);
-});
-
-test('主题管理页为登录后路由', () => {
-  assert.match(source, /const CmiThemeManage = lazy/);
-  assert.match(source, /path: '\/admin\/themes\/:themeSlug'/);
-  assert.match(source, /element: <CmiThemeManage \/>/);
-  assert.match(source, /name: '主题管理'/);
-});
-
-test('约搭子发起页为登录后路由', () => {
-  assert.match(source, /const CmiCompanionCreate = lazy/);
-  assert.match(source, /path: '\/companions\/new'/);
-  assert.match(source, /element: <CmiCompanionCreate \/>/);
-  assert.match(source, /name: '约搭子'/);
-  const routeBlock = source.match(/\{\n    name: '约搭子',[\s\S]*?\n  \}/)?.[0] ?? '';
-  assert.doesNotMatch(routeBlock, /public: true/);
-});
-
 test('社区统一入口和 Swap 栏目为公开路由', () => {
   assert.match(source, /const CmiCommunityEntrance = lazy/);
   assert.match(source, /const CmiSwapPage = lazy/);
