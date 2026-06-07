@@ -41,14 +41,14 @@ export default function CmiCommunityEntrance() {
           to={getCmiEventPath(primaryFeaturedEvent.id)}
           aria-label="近期活动 / 精选内容"
         />
-        <Link
+        <a
           className="cmi-prototype-hotspot cmi-prototype-hotspot--map"
-          to="/v3?screen=map"
+          href="https://cmimap.com"
           aria-label="CMI MAP"
         />
-        <Link
+        <a
           className="cmi-prototype-hotspot cmi-prototype-hotspot--swap"
-          to="/swap"
+          href="https://cmiswap.com"
           aria-label="CMI SWAP"
         />
         <Link

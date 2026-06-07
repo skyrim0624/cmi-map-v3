@@ -33,6 +33,19 @@
 
 ## 执行记录
 
+### 2026-06-07 13:12 +07 统一入口主按钮改为独立域名
+
+- 本轮实现：
+  - `/community` 原型图上的 `CMI MAP` 热区改为跳转 `https://cmimap.com`。
+  - `/community` 原型图上的 `CMI SWAP` 热区改为跳转 `https://cmiswap.com`。
+  - 新增源码断言，防止两个主入口回退到站内 `/v3?screen=map` 和 `/swap`。
+- 验证结果：
+  - `node --test --experimental-strip-types src/pages/CmiCommunityEntrance.test.ts src/routes.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/CmiCommunityEntrance.tsx src/pages/CmiCommunityEntrance.test.ts src/pages/cmi-community-entrance.css src/App.tsx src/routes.tsx src/routes.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 应用内浏览器复查：`CMI MAP` 点击后 URL 为 `https://cmimap.com/`；`CMI SWAP` 点击后 URL 为 `https://cmiswap.com/`。
+
 ### 2026-06-07 12:52 +07 统一入口改用原型图
 
 - 背景：用户明确要求 `/community` 使用已生成的街机原型图，而不是继续用 CSS 近似拼接。
