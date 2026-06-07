@@ -33,18 +33,13 @@
 
 ## 执行记录
 
-### 2026-06-07 13:14 +07 统一入口街机动效
+### 2026-06-07 13:20 +07 统一入口街机动效回滚
 
-- 本轮实现：
-  - `/community` 原型图入口加入 CRT 屏幕闪烁、扫描线、霓虹灯条脉冲、主入口霓虹呼吸和底部按钮发光。
-  - `CMI MAP`、`CMI SWAP` 的英文像素字和图标使用原型图区域复制层做 1px 跳帧抖动，不重排文字、不新增按钮。
-  - 保留 `prefers-reduced-motion` 降级，用户系统偏好减少动态时关闭这些循环动画。
-- 验证结果：
-  - `node --test --experimental-strip-types src/pages/CmiCommunityEntrance.test.ts src/routes.test.ts` 通过。
-  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
-  - `pnpm exec biome lint src/pages/CmiCommunityEntrance.tsx src/pages/CmiCommunityEntrance.test.ts src/pages/cmi-community-entrance.css src/App.tsx src/routes.tsx src/routes.test.ts` 通过。
-  - `pnpm build` 通过，PWA precache 检查通过。
-  - 应用内浏览器复查 `http://127.0.0.1:4973/community?verify=pixel-jitter`：两个像素抖动层动画名均为 `cmi-button-pixel-jitter`，两帧截图不同；`CMI MAP` / `CMI SWAP` 链接仍分别为 `https://cmimap.com/` 和 `https://cmiswap.com/`。
+- 背景：用户反馈上一版 CRT / 霓虹 / 像素字图标抖动动效太夸张，不喜欢。
+- 本轮回滚：
+  - 移除 `/community` 的循环动效层、屏幕闪烁层、霓虹呼吸层、底部按钮发光层。
+  - 移除 `CMI MAP` / `CMI SWAP` 英文像素字和图标的持续抖动层。
+  - 保留原型图底图、真实点击热区和两个主入口外链。
 
 ### 2026-06-07 13:12 +07 统一入口主按钮改为独立域名
 

@@ -36,17 +36,6 @@ export default function CmiCommunityEntrance() {
           alt=""
           aria-hidden="true"
         />
-        <div className="cmi-prototype-effect cmi-prototype-effect--screen" aria-hidden="true" />
-        <div className="cmi-prototype-effect cmi-prototype-effect--screen-scan" aria-hidden="true" />
-        <div className="cmi-prototype-effect cmi-prototype-effect--top-light" aria-hidden="true" />
-        <div className="cmi-prototype-effect cmi-prototype-effect--bottom-light" aria-hidden="true" />
-        <div className="cmi-prototype-effect cmi-prototype-effect--map-neon" aria-hidden="true" />
-        <div className="cmi-prototype-effect cmi-prototype-effect--swap-neon" aria-hidden="true" />
-        <div className="cmi-prototype-effect cmi-prototype-effect--pixel-copy cmi-prototype-effect--map-pixels" aria-hidden="true" />
-        <div className="cmi-prototype-effect cmi-prototype-effect--pixel-copy cmi-prototype-effect--swap-pixels" aria-hidden="true" />
-        <div className="cmi-prototype-effect cmi-prototype-effect--button-glow cmi-prototype-effect--button-event" aria-hidden="true" />
-        <div className="cmi-prototype-effect cmi-prototype-effect--button-glow cmi-prototype-effect--button-home" aria-hidden="true" />
-        <div className="cmi-prototype-effect cmi-prototype-effect--button-glow cmi-prototype-effect--button-partner" aria-hidden="true" />
         <Link
           className="cmi-prototype-hotspot cmi-prototype-hotspot--event"
           to={getCmiEventPath(primaryFeaturedEvent.id)}
