@@ -65,9 +65,23 @@ test('打卡文字输入不再重复生成预览且操作按钮在输入框下�
 test('清迈客栈标签打卡后进入动态页而不是旧客栈页', () => {
   assert.match(source, /import \{ getCmiFeedPath, getPlacePath \} from '@\/lib\/paths'/);
   assert.match(source, /这张客栈现场已经放到动态里了/);
-  assert.match(source, /navigate\(isCmiInnCheckIn \? getCmiFeedPath\(\) : getPlacePath\(recommendation\.place_name\)/);
+  assert.match(source, /const defaultDestinationPath = isCmiInnCheckIn \? getCmiFeedPath\(\) : getPlacePath\(recommendation\.place_name\)/);
   assert.doesNotMatch(source, /getCmiHomePath/);
   assert.doesNotMatch(source, /留言墙/);
+});
+
+test('主题任务打卡带主题标签并写入主题投稿关系', () => {
+  assert.match(source, /const initialThemeSlug = searchParams\.get\('theme'\)/);
+  assert.match(source, /const initialThemeTaskId = searchParams\.get\('task'\)/);
+  assert.match(source, /getCmiMapThemeBySlug\(initialThemeSlug\)/);
+  assert.match(source, /const selectedThemeTask = selectedTheme\?\.tasks\?\.find/);
+  assert.match(source, /createCmiThemeSubmission\(\{/);
+  assert.match(source, /themeId: selectedTheme\.id/);
+  assert.match(source, /recommendationId: recommendation\.id/);
+  assert.match(source, /getThemePath\(selectedTheme\.slug\)/);
+  assert.doesNotMatch(source, /奖励/);
+  assert.doesNotMatch(source, /成就/);
+  assert.doesNotMatch(source, /排行榜/);
 });
 
 test('发布完成反馈使用鼓励徽章而不是红色罚单感大章', () => {
