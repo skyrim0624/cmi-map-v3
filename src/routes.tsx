@@ -21,7 +21,6 @@ const Login = lazy(() => import('./pages/Login'));
 const CmiMapV3Prototype = lazy(() => import('./pages/CmiMapV3Prototype'));
 const CmiCommunityEntrance = lazy(() => import('./pages/CmiCommunityEntrance'));
 const CmiSwapPage = lazy(() => import('./pages/CmiSwapPage'));
-const CmiThemeDetail = lazy(() => import('./pages/CmiThemeDetail'));
 
 export interface RouteConfig {
   name: string;
@@ -102,12 +101,6 @@ export const routes: RouteConfig[] = [
     name: 'CMI Map 3.0 原型',
     path: '/v3',
     element: <CmiMapV3Prototype />,
-    public: true,
-  },
-  {
-    name: '主题地图',
-    path: '/themes/:themeSlug',
-    element: <CmiThemeDetail />,
     public: true,
   },
   {

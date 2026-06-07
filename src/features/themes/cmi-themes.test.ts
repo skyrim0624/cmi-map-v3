@@ -61,7 +61,7 @@ test('主题投稿写入只包含主题、任务、动态和用户关系', () =>
   );
 });
 
-test('主题页只展示当前主题绑定的动态', () => {
+test('主题投稿关系只筛当前主题绑定的动态', () => {
   const current = createRecommendation({ id: 'rec-current' });
   const other = createRecommendation({ id: 'rec-other' });
 

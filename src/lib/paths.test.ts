@@ -7,7 +7,6 @@ import {
   getMarkPlacePath,
   getPublicCmiEventUrl,
   getSceneListPath,
-  getThemePath,
 } from './paths.ts';
 
 test('活动分享链接指向生产站活动详情页', () => {
@@ -35,14 +34,6 @@ test('活动可以生成拍照返图入口', () => {
   assert.equal(
     getMarkPlacePath({ eventId: 'cmi-mindfulness-hour-2026-05-28' }),
     '/mark?event=cmi-mindfulness-hour-2026-05-28'
-  );
-});
-
-test('主题任务可以进入发布页', () => {
-  assert.equal(getThemePath('wild-chiang-mai'), '/themes/wild-chiang-mai');
-  assert.equal(
-    getMarkPlacePath({ themeSlug: 'wild-chiang-mai', taskId: 'task-a' }),
-    '/mark?theme=wild-chiang-mai&task=task-a'
   );
 });
 

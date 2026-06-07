@@ -78,7 +78,8 @@ test('主题任务打卡带主题标签并写入主题投稿关系', () => {
   assert.match(source, /createCmiThemeSubmission\(\{/);
   assert.match(source, /themeId: selectedTheme\.id/);
   assert.match(source, /recommendationId: recommendation\.id/);
-  assert.match(source, /getThemePath\(selectedTheme\.slug\)/);
+  assert.match(source, /navigate\(defaultDestinationPath, \{/);
+  assert.doesNotMatch(source, /getThemePath/);
   assert.doesNotMatch(source, /奖励/);
   assert.doesNotMatch(source, /成就/);
   assert.doesNotMatch(source, /排行榜/);

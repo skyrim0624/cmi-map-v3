@@ -39,7 +39,6 @@ import {
   getCmiEasterIconById,
 } from '@/lib/easter-icons';
 import { getCmiFeedPath, getPlacePath } from '@/lib/paths';
-import { getThemePath } from '@/lib/paths';
 import type { CmiMapTheme } from '@/features/themes/cmi-themes';
 import type { Category } from '@/types/types';
 import {
@@ -1134,8 +1133,7 @@ export default function MarkPlace() {
                 : '你的这一笔清迈痕迹已经留下了 🎉'
           );
           const defaultDestinationPath = isCmiInnCheckIn ? getCmiFeedPath() : getPlacePath(recommendation.place_name);
-          const destinationPath = selectedTheme ? getThemePath(selectedTheme.slug) : defaultDestinationPath;
-          navigate(destinationPath, {
+          navigate(defaultDestinationPath, {
             replace: true,
             state: { newTraceId: recommendation.id },
           });
