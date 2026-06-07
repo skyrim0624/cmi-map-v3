@@ -21,3 +21,10 @@ test('社区统一入口和 Swap 栏目为公开路由', () => {
   assert.match(source, /element: <CmiSwapPage \/>/);
   assert.match(source, /name: 'CMI Swap'/);
 });
+
+test('主题地图详情页为公开路由', () => {
+  assert.match(source, /const CmiThemeDetail = lazy/);
+  assert.match(source, /path: '\/themes\/:themeSlug'/);
+  assert.match(source, /element: <CmiThemeDetail \/>/);
+  assert.match(source, /name: '主题地图'/);
+});
