@@ -7,7 +7,8 @@
   --cmi-v3-purple: #8b6bbf;
   --cmi-v3-muted: rgba(22, 22, 22, 0.66);
   --cmi-v3-viewport-height: 100vh;
-  --cmi-v3-map-nav-height: calc(env(safe-area-inset-bottom) + 58px);
+  --cmi-v3-map-bottom-inset: env(safe-area-inset-bottom);
+  --cmi-v3-map-nav-height: calc(var(--cmi-v3-map-bottom-inset) + 58px);
   --cmi-v3-map-pulse-peek-height: clamp(96px, 12vh, 104px);
   position: relative;
   height: 100%;
@@ -25,6 +26,19 @@
   .cmi-v3-screen {
     --cmi-v3-viewport-height: 100svh;
     --cmi-v3-map-pulse-peek-height: clamp(96px, 12svh, 104px);
+  }
+}
+
+@supports (height: 100dvh) {
+  .cmi-v3-screen {
+    --cmi-v3-viewport-height: 100dvh;
+    --cmi-v3-map-pulse-peek-height: clamp(96px, 12dvh, 104px);
+  }
+}
+
+@media (max-width: 480px) {
+  .cmi-v3-screen {
+    --cmi-v3-map-bottom-inset: max(env(safe-area-inset-bottom), 16px);
   }
 }
 
@@ -848,6 +862,7 @@
   height: var(--cmi-v3-map-pulse-peek-height);
   max-height: min(84vh, 670px);
   max-height: min(84svh, 670px);
+  max-height: min(84dvh, 670px);
   border-radius: 26px 26px 0 0;
   background: #fff;
   box-shadow: 0 -10px 32px rgba(22, 22, 22, 0.18);
@@ -1090,6 +1105,7 @@
 .cmi-v3-map-pulse-sheet.is-expanded .cmi-v3-map-pulse-card img {
   height: min(30vh, 224px);
   height: min(30svh, 224px);
+  height: min(30dvh, 224px);
 }
 
 .cmi-v3-map-pulse-card-copy {
@@ -1378,7 +1394,7 @@
   border-top: 1px solid rgba(22, 22, 22, 0.08);
   background: rgba(239, 248, 249, 0.96);
   box-shadow: 0 -4px 20px rgba(22, 22, 22, 0.08);
-  padding: 3px 10px calc(env(safe-area-inset-bottom) + 3px);
+  padding: 3px 10px calc(var(--cmi-v3-map-bottom-inset) + 3px);
   backdrop-filter: blur(16px);
   overflow: visible;
 }

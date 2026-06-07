@@ -144,6 +144,14 @@ All colors MUST be HSL.
     }
   }
 
+  @supports (height: 100dvh) {
+    .cmi-v3-app-shell {
+      height: 100dvh;
+      min-height: 100dvh;
+      max-height: 100dvh;
+    }
+  }
+
   [data-radix-scroll-area-viewport] {
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
