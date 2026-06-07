@@ -22,6 +22,8 @@ const PlaygroundWishlist = lazy(() => import('./pages/PlaygroundWishlist'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Login = lazy(() => import('./pages/Login'));
 const CmiMapV3Prototype = lazy(() => import('./pages/CmiMapV3Prototype'));
+const CmiCommunityEntrance = lazy(() => import('./pages/CmiCommunityEntrance'));
+const CmiSwapPage = lazy(() => import('./pages/CmiSwapPage'));
 
 export interface RouteConfig {
   name: string;
@@ -43,6 +45,18 @@ export const routes: RouteConfig[] = [
     name: 'CMI Map 3.0',
     path: '/',
     element: <CmiMapV3Prototype />,
+    public: true,
+  },
+  {
+    name: 'CMI 社区入口',
+    path: '/community',
+    element: <CmiCommunityEntrance />,
+    public: true,
+  },
+  {
+    name: 'CMI Swap',
+    path: '/swap',
+    element: <CmiSwapPage />,
     public: true,
   },
   {

@@ -27,9 +27,36 @@
 12. [本地完成] 黑板 / 论坛 MVP 追加精选、公告、信息流交互、详情页和头像显示优化
 13. [进行中] 将旧域名 `cmti.uk` 改作 CMI Map 3.1 测试域名
 14. [完成] CMI Map 3.1 主题地图拍照令 MVP
-15. [准备开始] 6.6 会议后的统一社区入口：活动轮播、CMI Map、CMI Swap、一键入住 / 加群
+15. [完成] 6.6 会议后的统一社区入口：活动轮播、CMI Map、CMI Swap、一键入住 / 加群
 
 ## 执行记录
+
+### 2026-06-07 11:32 +07 统一社区入口网页第一版
+
+- 本轮实现：
+  - 新增公开路由 `/community`，作为 CMI 统一入口网页第一版。
+  - 页面按用户草图和街机参考图实现：顶部为近期活动 / 精选内容轮播，中央为 `CMI MAP` 和 `CMI SWAP` 两个主入口，底部为 `发起活动`、`一键住房`、`相关合作` 三个街机按钮。
+  - 新增公开路由 `/swap`，作为 CMI Swap 第一阶段承接页，只展示已有旧物交换 / 二手拍卖活动，不做交易系统、上架系统或额外功能。
+- 亮度调整：
+  - 用户反馈第一版整体偏暗压抑后，已把机身紫色、霓虹粉、青蓝入口面板、绿色 CRT 屏和底部按钮整体提亮，参考新的街机明度。
+- 视觉重做：
+  - 用户强烈否定蓝色空卡片版后，已废掉卡片式视觉，重做为绿色 CRT 活动屏、青色霓虹主入口、粉 / 绿 / 蓝实体按钮和 joystick 控制台。
+  - `/community` 和 `/swap` 改为全屏街机页，不再被旧 480px 移动容器限制，桌面宽度下不会露出白边。
+- 入口指向：
+  - `CMI MAP` 跳转 `/v3?screen=map`。
+  - `CMI SWAP` 跳转 `/swap`。
+  - `发起活动` 跳转 `/events/new`。
+  - `一键住房` 打开林可二维码 `/cmi-home/qr-linke.jpg`。
+  - `相关合作` 打开子扬二维码 `/cmi-home/qr-andreas.jpg`。
+- 验证结果：
+  - `node --test --experimental-strip-types src/routes.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/App.tsx src/pages/CmiCommunityEntrance.tsx src/pages/CmiSwapPage.tsx src/routes.tsx src/routes.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 应用内浏览器移动视口复查 `http://127.0.0.1:4673/community?verify=mobile-final-qa`：页面非空、无框架错误，能看到 `CMI MAP`、`CMI SWAP`、`发起活动`、`一键住房`、`相关合作`。
+  - 应用内浏览器桌面视口复查 `http://127.0.0.1:4673/community?verify=desktop-fullbleed-qa-new-port`：入口页全屏背景正常，不再有左右白边。
+  - 应用内浏览器点击验证：`CMI MAP` 进入 `/v3?screen=map`；`CMI SWAP` 进入 `/swap`，Swap 页显示二手拍卖和旧物交换活动。
+  - 本地 `4173` / `4573` 预览曾被旧 PWA / service worker 缓存带回旧包；最终换到未被旧缓存控制的 `4673` 端口复查通过。
 
 ### 2026-06-07 10:52 +07 6.6 会议方向留档与技术侧启动
 

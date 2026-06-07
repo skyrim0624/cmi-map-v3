@@ -34,3 +34,14 @@ test('约搭子发起页为登录后路由', () => {
   const routeBlock = source.match(/\{\n    name: '约搭子',[\s\S]*?\n  \}/)?.[0] ?? '';
   assert.doesNotMatch(routeBlock, /public: true/);
 });
+
+test('社区统一入口和 Swap 栏目为公开路由', () => {
+  assert.match(source, /const CmiCommunityEntrance = lazy/);
+  assert.match(source, /const CmiSwapPage = lazy/);
+  assert.match(source, /path: '\/community'/);
+  assert.match(source, /element: <CmiCommunityEntrance \/>/);
+  assert.match(source, /name: 'CMI 社区入口'/);
+  assert.match(source, /path: '\/swap'/);
+  assert.match(source, /element: <CmiSwapPage \/>/);
+  assert.match(source, /name: 'CMI Swap'/);
+});
