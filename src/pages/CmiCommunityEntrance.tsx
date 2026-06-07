@@ -43,7 +43,7 @@ export default function CmiCommunityEntrance() {
         />
         <a
           className="cmi-prototype-hotspot cmi-prototype-hotspot--map"
-          href="https://cmimap.com/v3?screen=map"
+          href="https://cmimap.com/map"
           aria-label="CMI MAP"
         />
         <a
