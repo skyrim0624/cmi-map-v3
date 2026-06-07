@@ -42,8 +42,10 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import {
   CMI_EVENTS,
+  CMI_MAP_WILD_CHIANG_MAI_EVENT_ID,
   formatCmiEventTime,
   getCmiEventSortTime,
+  isCmiMapCheckinActivityEvent,
   isCmiInnEvent,
   isCmiEventExpired,
   type CmiEvent,
@@ -306,7 +308,7 @@ function getUserInitial(name: string | null | undefined) {
 }
 
 function isCuratedCommunityEvent(event: CmiEvent) {
-  return isCmiInnEvent(event);
+  return isCmiInnEvent(event) || isCmiMapCheckinActivityEvent(event);
 }
 
 function getCuratedCommunityEventLabel(event: CmiEvent) {
@@ -1111,6 +1113,10 @@ export default function CmiMapV3Prototype() {
     () => communityEvents.find(event => event.id === selectedEventId) ?? communityEvents[0] ?? null,
     [communityEvents, selectedEventId]
   );
+  const primaryActivityEvent = useMemo(
+    () => upcomingCommunityEvents.find(event => event.id === CMI_MAP_WILD_CHIANG_MAI_EVENT_ID) ?? null,
+    [upcomingCommunityEvents]
+  );
 
   const getCurrentV3Path = useCallback(() => {
     const queryString = searchParams.toString();
@@ -1250,6 +1256,7 @@ export default function CmiMapV3Prototype() {
             locationRequestKey={locationRequestKey}
             selectedMarker={selectedMarker}
             selectedEvent={selectedEventId ? selectedEvent : null}
+            primaryActivityEvent={primaryActivityEvent}
             onClearSelection={() => {
               setSelectedMarker(null);
               setSelectedEventId(null);
@@ -1345,6 +1352,7 @@ function MapMode({
   listRecommendations,
   selectedMarker,
   selectedEvent,
+  primaryActivityEvent,
   isLoading,
   localWishlists,
   placedStickers,
@@ -1376,6 +1384,7 @@ function MapMode({
   listRecommendations: Recommendation[];
   selectedMarker: MapMarker | null;
   selectedEvent: CmiEvent | null;
+  primaryActivityEvent: CmiEvent | null;
   isLoading: boolean;
   localWishlists: WishlistStateMap;
   placedStickers: PlacedStickerMap;
@@ -1472,6 +1481,18 @@ function MapMode({
           </button>
         ))}
       </div>
+
+      {primaryActivityEvent && (
+        <button
+          type="button"
+          className="cmi-v3-map-activity-entry"
+          onClick={() => onOpenPath(getCmiEventPath(primaryActivityEvent.id))}
+          aria-label={`打开${primaryActivityEvent.title}活动说明`}
+        >
+          <Calendar size={17} strokeWidth={3} />
+          <span>活动</span>
+        </button>
+      )}
 
       <div className="cmi-v3-map-layer-control" aria-label="地图图层">
         <button type="button" aria-label="切换地图图层">

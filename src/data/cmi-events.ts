@@ -37,6 +37,9 @@ export type CmiEventTimeBucket = 'today-afternoon' | 'tonight' | 'tomorrow' | 't
 export type CmiEventRegistrationStatus = 'open' | 'closed';
 export type CmiEventAttendeeVisibility = 'public' | 'count-only';
 
+export const CMI_MAP_WILD_CHIANG_MAI_EVENT_ID = 'cmi-wild-chiang-mai-2026-06';
+export const CMI_MAP_CHECKIN_ACTIVITY_LABEL = '拍照打卡时关联活动';
+
 export interface CmiEventRecurrence {
   weekdays: number[];
   startTime: string;
@@ -93,6 +96,9 @@ export interface CmiEvent {
   createdBy?: string;
 }
 
+export const isCmiMapCheckinActivityEvent = (event: Pick<CmiEvent, 'id'> | null | undefined) =>
+  event?.id === CMI_MAP_WILD_CHIANG_MAI_EVENT_ID;
+
 export const CMI_EVENT_TYPE_OPTIONS: Array<{ id: 'all' | CmiEventType; label: string }> = [
   { id: 'all', label: '全部' },
   { id: 'cmi', label: 'CMI' },
@@ -132,6 +138,39 @@ export const CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE =
   '参与方式：通过 CMI Map 一键报名；报名成功后，确认邮件会附上微信群、联系人二维码和到场指引。';
 
 export const CMI_EVENTS: CmiEvent[] = [
+  {
+    id: CMI_MAP_WILD_CHIANG_MAI_EVENT_ID,
+    title: '神奇动物在哪里',
+    type: 'cmi',
+    startAt: '2026-06-07T00:00:00+07:00',
+    endAt: '2026-06-21T23:59:00+07:00',
+    venueName: '清迈',
+    area: '清迈',
+    priceLabel: '免费参与',
+    registrationLabel: CMI_MAP_CHECKIN_ACTIVITY_LABEL,
+    sourceType: 'manual',
+    sourceLabel: 'CMI Map',
+    hostName: 'CMI 社区',
+    language: '中文',
+    suitableFor: ['拍照打卡', '清迈散步', '社区动态'],
+    isCmiRelated: false,
+    isVerified: true,
+    verificationStatus: 'verified',
+    visibilityStatus: 'published',
+    lastCheckedAt: '2026-06-07T15:30:00+07:00',
+    reliabilityNote: '按 CMI Map 3.1 最短链路创建，只用于主地图活动入口和拍照关联活动标签。',
+    tags: ['CMI Map', '拍照打卡', '活动'],
+    summary: '在清迈遇到动物、植物、街角小生命或奇妙生物时，拍照打卡，把动态关联到这场活动。',
+    organizerName: 'CMI 社区',
+    registrationEnabled: false,
+    registrationStatus: 'closed',
+    attendeeVisibility: 'count-only',
+    detailBody: [
+      '活动介绍',
+      '',
+      '在清迈遇到动物、植物、街角小生命或奇妙生物时，拍照打卡，把动态关联到这场活动。',
+    ].join('\n'),
+  },
   {
     id: 'cmi-ai-nomad-community-2026-05-20',
     title: 'AI 时代，数智游民社区发展趋势探讨',

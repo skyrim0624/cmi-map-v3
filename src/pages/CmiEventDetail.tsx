@@ -28,6 +28,7 @@ import {
   type CmiEvent,
   formatCmiEventTime,
   getCmiEventById,
+  isCmiMapCheckinActivityEvent,
 } from '@/data/cmi-events';
 import {
   type CmiEventPublicRegistration,
@@ -290,6 +291,7 @@ export default function CmiEventDetail() {
     : event?.registrationLabel ?? '报名方式待确认';
 
   const navigationTarget = useMemo(() => getCmiEventNavigationTarget(event), [event]);
+  const isCheckinActivityEvent = event ? isCmiMapCheckinActivityEvent(event) : false;
 
   useEffect(() => {
     let isMounted = true;
@@ -790,7 +792,7 @@ export default function CmiEventDetail() {
         </main>
 
         <div className="pointer-events-none fixed bottom-0 left-0 right-0 z-50 px-3 pb-[calc(0.875rem+env(safe-area-inset-bottom))] pt-3">
-          <div className="mx-auto grid max-w-[520px] grid-cols-3 gap-2">
+          <div className={cn('mx-auto grid max-w-[520px] gap-2', isCheckinActivityEvent ? 'grid-cols-2' : 'grid-cols-3')}>
             <button
               type="button"
               className="pointer-events-auto flex min-h-14 min-w-0 items-center justify-center gap-1.5 rounded-full border-[3px] border-[#050505] bg-white px-2 text-[14px] font-black text-[#050505] shadow-[3px_4px_0_rgba(5,5,5,0.18)] transition active:scale-95 disabled:opacity-80"
@@ -800,24 +802,26 @@ export default function CmiEventDetail() {
               {sharingEvent ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
               分享
             </button>
-            <button
-              type="button"
-              className={cn('pointer-events-auto', getRegistrationButtonClass(registrationButtonState?.tone ?? 'closed'))}
-              onClick={handleRegistrationAction}
-              disabled={registrationButtonState?.disabled ?? true}
-              aria-label={registrationButtonState?.ariaLabel ?? '报名活动'}
-            >
-              {registrationButtonState?.tone === 'busy' ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : registrationButtonState?.tone === 'registered' ? (
-                <Check className="h-4 w-4" />
-              ) : registrationButtonState?.tone === 'external' ? (
-                <Copy className="h-4 w-4" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-              {registrationButtonState?.label ?? '报名'}
-            </button>
+            {!isCheckinActivityEvent && (
+              <button
+                type="button"
+                className={cn('pointer-events-auto', getRegistrationButtonClass(registrationButtonState?.tone ?? 'closed'))}
+                onClick={handleRegistrationAction}
+                disabled={registrationButtonState?.disabled ?? true}
+                aria-label={registrationButtonState?.ariaLabel ?? '报名活动'}
+              >
+                {registrationButtonState?.tone === 'busy' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : registrationButtonState?.tone === 'registered' ? (
+                  <Check className="h-4 w-4" />
+                ) : registrationButtonState?.tone === 'external' ? (
+                  <Copy className="h-4 w-4" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                {registrationButtonState?.label ?? '报名'}
+              </button>
+            )}
             <button
               type="button"
               className="pointer-events-auto flex min-h-14 min-w-0 items-center justify-center gap-1.5 rounded-full border-[3px] border-[#050505] bg-[#160f25] px-2 text-[14px] font-black text-white shadow-[3px_4px_0_rgba(5,5,5,0.18)] transition active:scale-95"

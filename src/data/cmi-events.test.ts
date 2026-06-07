@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  CMI_EVENTS,
+  CMI_MAP_CHECKIN_ACTIVITY_LABEL,
+  CMI_MAP_WILD_CHIANG_MAI_EVENT_ID,
   CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
   formatCmiEventShareCardTime,
+  isCmiMapCheckinActivityEvent,
   isCmiInnEvent,
   normalizeCmiEventRegistration,
   type CmiEvent,
@@ -96,6 +100,18 @@ test('清迈客栈未来活动统一归一为 CMI Map 一键报名', () => {
   assert.equal(normalizedEvent.registrationLabel, 'CMI Map 一键报名');
   assert.equal(normalizedEvent.registrationEnabled, true);
   assert.equal(normalizedEvent.registrationStatus, 'open');
+});
+
+test('神奇动物在哪里是普通打卡活动，不归一为报名活动', () => {
+  const event = CMI_EVENTS.find(candidate => candidate.id === CMI_MAP_WILD_CHIANG_MAI_EVENT_ID);
+
+  assert.ok(event);
+  assert.equal(event.title, '神奇动物在哪里');
+  assert.equal(event.registrationLabel, CMI_MAP_CHECKIN_ACTIVITY_LABEL);
+  assert.equal(event.registrationEnabled, false);
+  assert.equal(isCmiMapCheckinActivityEvent(event), true);
+  assert.equal(isCmiInnEvent(event), false);
+  assert.equal(normalizeCmiEventRegistration(event).registrationLabel, CMI_MAP_CHECKIN_ACTIVITY_LABEL);
 });
 
 test('清迈客栈活动开始后归一为已关闭报名', () => {

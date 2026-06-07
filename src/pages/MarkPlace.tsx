@@ -11,12 +11,12 @@ import {
   formatCmiEventTime,
   getCmiEventById,
   getCmiEventSortTime,
+  isCmiMapCheckinActivityEvent,
   isCmiInnEvent,
 } from '@/data/cmi-events';
 import { getCmiInputCategoryOptionById, getCmiInputCategoryOptions } from '@/data/cmi-taxonomy';
 import { createRecommendation, getAllRecommendations, uploadImages } from '@/db/api';
 import { getPublishedCmiEvents } from '@/db/cmi-events';
-import { createCmiThemeSubmission, getCmiMapThemeBySlug } from '@/db/cmi-themes';
 import {
   DEFAULT_CAMERA_CAPTURE_QUALITY,
   DEFAULT_CAMERA_OUTPUT_SIZE,
@@ -39,7 +39,6 @@ import {
   getCmiEasterIconById,
 } from '@/lib/easter-icons';
 import { getCmiFeedPath, getPlacePath } from '@/lib/paths';
-import type { CmiMapTheme } from '@/features/themes/cmi-themes';
 import type { Category } from '@/types/types';
 import {
   CMI_INN_CATEGORY,
@@ -116,7 +115,7 @@ const getMarkPlaceEventOptions = (
 
   return events
     .filter(event => {
-      if (!isCmiInnEvent(event)) return false;
+      if (!isCmiInnEvent(event) && !isCmiMapCheckinActivityEvent(event)) return false;
 
       const eventTime = getCmiEventSortTime(event, referenceDate);
       if (eventTime === Number.MAX_SAFE_INTEGER) return true;
@@ -281,8 +280,6 @@ export default function MarkPlace() {
   const { user, profile, loading: authLoading } = useAuth();
   const initialPlaceName = searchParams.get('place')?.trim() || '';
   const initialEventId = searchParams.get('event')?.trim() || '';
-  const initialThemeSlug = searchParams.get('theme')?.trim() || '';
-  const initialThemeTaskId = searchParams.get('task')?.trim() || '';
   const initialLatitude = Number(searchParams.get('lat'));
   const initialLongitude = Number(searchParams.get('lng'));
   const hasInitialPickedPlace =
@@ -335,10 +332,8 @@ export default function MarkPlace() {
   const [externalPlaceCandidates, setExternalPlaceCandidates] = useState<EventPlaceCandidate[]>([]);
   const [isLoadingExternalPlaces, setIsLoadingExternalPlaces] = useState(false);
   const [externalPlaceSearchError, setExternalPlaceSearchError] = useState<string | null>(null);
-  const [selectedTheme, setSelectedTheme] = useState<CmiMapTheme | null>(null);
   const inputCategoryOptions = getCmiInputCategoryOptions();
   const selectedEasterIcon = getCmiEasterIconById(selectedEasterIconId);
-  const selectedThemeTask = selectedTheme?.tasks?.find(task => task.id === initialThemeTaskId) ?? selectedTheme?.tasks?.[0] ?? null;
   const selectedEvent = selectedEventId
     ? eventOptions.find(event => event.id === selectedEventId) ?? getCmiEventById(selectedEventId)
     : null;
@@ -421,29 +416,6 @@ export default function MarkPlace() {
       scrollContainer.style.overscrollBehavior = previousOverscrollBehavior;
     };
   }, [stage]);
-
-  useEffect(() => {
-    let isMounted = true;
-    if (!initialThemeSlug) {
-      setSelectedTheme(null);
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    getCmiMapThemeBySlug(initialThemeSlug)
-      .then(theme => {
-        if (isMounted) setSelectedTheme(theme);
-      })
-      .catch(error => {
-        console.error('主题任务加载失败:', error);
-        if (isMounted) setSelectedTheme(null);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [initialThemeSlug]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1115,22 +1087,11 @@ export default function MarkPlace() {
       const recommendation = await createRecommendation(recommendationInput);
 
       if (recommendation) {
-        if (selectedTheme) {
-          await createCmiThemeSubmission({
-            themeId: selectedTheme.id,
-            taskId: selectedThemeTask?.id,
-            recommendationId: recommendation.id,
-            userId: user!.id,
-          });
-        }
-
         setTimeout(() => {
           toast.success(
-            selectedTheme
-              ? '主题投稿已发布'
-              : isCmiInnCheckIn
-                ? '这张客栈现场已经放到动态里了'
-                : '你的这一笔清迈痕迹已经留下了 🎉'
+            isCmiInnCheckIn
+              ? '这张客栈现场已经放到动态里了'
+              : '你的这一笔清迈痕迹已经留下了 🎉'
           );
           const defaultDestinationPath = isCmiInnCheckIn ? getCmiFeedPath() : getPlacePath(recommendation.place_name);
           navigate(defaultDestinationPath, {
@@ -1532,12 +1493,6 @@ export default function MarkPlace() {
                   <div className="flex min-h-0 w-full flex-1 flex-col items-center animate-in slide-in-from-bottom-10 fade-in">
                     <div className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain pb-4 pt-4 [-webkit-overflow-scrolling:touch]">
                       <div className="flex w-full flex-col items-center gap-3">
-                        {selectedTheme && selectedThemeTask && (
-                          <div className="w-full max-w-sm rounded-3xl border border-[#4f8f5b]/25 bg-[#f1f7ed] p-3 text-left shadow-sm">
-                            <p className="text-xs font-black text-[#4f8f5b]">{selectedTheme.title}</p>
-                            <p className="mt-1 text-sm font-black text-stone-800">{selectedThemeTask.title}</p>
-                          </div>
-                        )}
                         <div className="w-full max-w-sm rounded-3xl border border-stone-200 bg-white/90 p-3 shadow-sm">
                       <div className="mb-2 flex items-start justify-between gap-3 text-left">
                       <div>

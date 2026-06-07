@@ -70,15 +70,16 @@ test('清迈客栈标签打卡后进入动态页而不是旧客栈页', () => {
   assert.doesNotMatch(source, /留言墙/);
 });
 
-test('主题任务打卡带主题标签并写入主题投稿关系', () => {
-  assert.match(source, /const initialThemeSlug = searchParams\.get\('theme'\)/);
-  assert.match(source, /const initialThemeTaskId = searchParams\.get\('task'\)/);
-  assert.match(source, /getCmiMapThemeBySlug\(initialThemeSlug\)/);
-  assert.match(source, /const selectedThemeTask = selectedTheme\?\.tasks\?\.find/);
-  assert.match(source, /createCmiThemeSubmission\(\{/);
-  assert.match(source, /themeId: selectedTheme\.id/);
-  assert.match(source, /recommendationId: recommendation\.id/);
+test('打卡只保留活动关联，不再写主题投稿关系', () => {
+  assert.match(source, /const initialEventId = searchParams\.get\('event'\)/);
+  assert.match(source, /isCmiMapCheckinActivityEvent\(event\)/);
+  assert.match(source, /linked_event_id: linkedEvent\.id/);
+  assert.match(source, /linked_event_title: linkedEvent\.title/);
   assert.match(source, /navigate\(defaultDestinationPath, \{/);
+  assert.doesNotMatch(source, /searchParams\.get\('theme'\)/);
+  assert.doesNotMatch(source, /searchParams\.get\('task'\)/);
+  assert.doesNotMatch(source, /getCmiMapThemeBySlug/);
+  assert.doesNotMatch(source, /createCmiThemeSubmission/);
   assert.doesNotMatch(source, /getThemePath/);
   assert.doesNotMatch(source, /奖励/);
   assert.doesNotMatch(source, /成就/);

@@ -311,6 +311,29 @@
   object-fit: cover;
 }
 
+.cmi-v3-map-activity-entry {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 118px);
+  left: 18px;
+  z-index: 18;
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(22, 22, 22, 0.12);
+  border-radius: 999px;
+  background: var(--cmi-v3-yellow);
+  box-shadow: 0 12px 30px rgba(22, 22, 22, 0.2);
+  color: var(--cmi-v3-ink);
+  font-size: 14px;
+  font-weight: 950;
+  padding: 0 14px;
+}
+
+.cmi-v3-map-activity-entry svg {
+  flex: 0 0 auto;
+}
+
 .cmi-v3-map-layer-control {
   position: absolute;
   top: calc(env(safe-area-inset-top) + 118px);
