@@ -33,6 +33,21 @@
 
 ## 执行记录
 
+### 2026-06-07 12:52 +07 统一入口改用原型图
+
+- 背景：用户明确要求 `/community` 使用已生成的街机原型图，而不是继续用 CSS 近似拼接。
+- 本轮实现：
+  - 将原型图保存为 `public/brand/cmi-community-arcade-prototype.png`。
+  - `/community` 改为以原型图作为可视底图，覆盖真实点击热区：近期活动、`CMI MAP`、`CMI SWAP`、`发起活动`、`一键住房`、`相关合作`。
+  - 保留真实入口跳转：`CMI MAP` 到 `/v3?screen=map`，`CMI SWAP` 到 `/swap`，底部三个按钮仍进入原有对应路径。
+- 验证结果：
+  - `node --test --experimental-strip-types src/routes.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/CmiCommunityEntrance.tsx src/pages/cmi-community-entrance.css src/App.tsx src/routes.tsx src/routes.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 应用内浏览器 `486x777` 视口复查 `http://127.0.0.1:4773/community?verify=prototype-final-aspect`：页面显示与原型图一致，图片加载正常，无 console error / warning。
+  - 点击验证：`CMI MAP` 进入 `/v3?screen=map`；`CMI SWAP` 进入 `/swap`。
+
 ### 2026-06-07 12:15 +07 回滚旧主题地图 MVP 与约搭子第一部分
 
 - 背景：用户要求先回滚之前已经做进代码的主题地图和约搭子功能，后续重新开始。
