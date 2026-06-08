@@ -47,6 +47,10 @@
   - `git diff --check -- src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts CMI_MAP_TASK_LOG.md` 通过。
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
+  - 已部署 Cloudflare Pages：`https://51945c39.cmi-map-v3.pages.dev`，正式域名 `https://cmti.uk/mark?verify=e837fad` 返回 `HTTP 200`。
+  - 线上脚本 `MarkPlace-BxJ1K2hY.js` 已包含“识别动物 / 动物识别已开启”。
+  - 内置浏览器线上验证：旧 PWA 缓存首次打开仍可能短暂显示旧相机页，随后自动刷新到新构建；刷新后“识别动物”按钮可见，点击后状态变为“动物识别已开启”。
+  - 线上 `/api/animal-identify` 热启动复测猫图：总耗时约 `0.95s`，模型耗时 `404ms`，返回 `猫 / TIGER CAT`。
 
 ### 2026-06-08 22:05 +07 神奇动物在哪里拍照识别第一版
 
