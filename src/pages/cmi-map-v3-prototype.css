@@ -1,11 +1,15 @@
 .cmi-v3-screen {
-  --cmi-v3-ink: #161616;
-  --cmi-v3-paper: #fff9e8;
-  --cmi-v3-green: #2eb45e;
-  --cmi-v3-yellow: #ffe35b;
-  --cmi-v3-pink: #ff6fba;
-  --cmi-v3-purple: #8b6bbf;
-  --cmi-v3-muted: rgba(22, 22, 22, 0.66);
+  --cmi-v3-ink: #080806;
+  --cmi-v3-paper: #fff3c9;
+  --cmi-v3-paper-soft: #fff8df;
+  --cmi-v3-green: #008d5f;
+  --cmi-v3-yellow: #ffd83f;
+  --cmi-v3-orange: #f26322;
+  --cmi-v3-pink: #f06aa8;
+  --cmi-v3-purple: #8c4fc4;
+  --cmi-v3-blue: #127db3;
+  --cmi-v3-muted: rgba(8, 8, 6, 0.66);
+  --cmi-v3-hard-shadow: rgba(8, 8, 6, 0.24);
   --cmi-v3-viewport-height: 100vh;
   --cmi-v3-map-edge: 14px;
   --cmi-v3-map-control-gap: 7px;
@@ -43,7 +47,7 @@
   max-height: 100%;
   overflow: hidden;
   overscroll-behavior: none;
-  background: #050505;
+  background: var(--cmi-v3-ink);
   color: var(--cmi-v3-ink);
   font-family: ui-rounded, "Arial Rounded MT Bold", "PingFang SC", "Microsoft YaHei", sans-serif;
   letter-spacing: 0;
@@ -205,7 +209,24 @@
   max-height: 100%;
   overflow: hidden;
   overscroll-behavior: none;
-  background: #fbfcfb;
+  background: var(--cmi-v3-paper);
+  isolation: isolate;
+}
+
+.cmi-v3-map-mode::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.3;
+  background-image:
+    radial-gradient(rgba(8, 8, 6, 0.24) 0.75px, transparent 0.75px),
+    radial-gradient(rgba(255, 255, 255, 0.42) 0.9px, transparent 0.9px),
+    linear-gradient(105deg, rgba(242, 99, 34, 0.08), transparent 34%, rgba(18, 125, 179, 0.08));
+  background-position: 0 0, 5px 6px, 0 0;
+  background-size: 12px 12px, 14px 14px, 100% 100%;
+  mix-blend-mode: multiply;
 }
 
 .cmi-v3-live-map {
@@ -224,7 +245,7 @@
     linear-gradient(68deg, transparent 0 32%, rgba(94, 158, 148, 0.16) 32.2% 32.9%, transparent 33.1% 100%),
     linear-gradient(155deg, transparent 0 42%, rgba(184, 174, 162, 0.3) 42.1% 42.5%, transparent 42.7% 100%),
     radial-gradient(circle at 72% 16%, rgba(160, 218, 218, 0.34) 0 5px, transparent 6px),
-    #fbfcfb;
+    var(--cmi-v3-paper);
 }
 
 .cmi-v3-map-canvas::before {

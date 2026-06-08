@@ -85,7 +85,7 @@ const MAP_BACKGROUND_OVERLAYS: MapBackgroundOverlay[] = [
       [18.7811, 98.9774],
       [18.7962, 98.9944],
     ],
-    opacity: 0.16,
+    opacity: 0.74,
   },
 ];
 
@@ -293,9 +293,9 @@ const getRiverLineStyle = (layer: 'casing' | 'stroke'): L.PolylineOptions => ({
   lineCap: 'round',
   lineJoin: 'round',
   smoothFactor: 0.8,
-  color: layer === 'casing' ? '#e8f4f4' : '#9edce1',
-  weight: layer === 'casing' ? 8.2 : 4.1,
-  opacity: layer === 'casing' ? 0.26 : 0.42,
+  color: layer === 'casing' ? '#f9e7b0' : '#1687ba',
+  weight: layer === 'casing' ? 9.6 : 4.8,
+  opacity: layer === 'casing' ? 0.72 : 0.78,
 });
 
 const addMapBackgroundLayer = (map: L.Map) => {
@@ -330,7 +330,7 @@ const addMapBackgroundLayer = (map: L.Map) => {
     interactive: false,
     stroke: false,
     fill: true,
-    fillColor: '#fffefb',
+    fillColor: '#fff0bd',
     fillOpacity: 1,
     fillRule: 'evenodd',
     smoothFactor: 0.6,
@@ -339,10 +339,10 @@ const addMapBackgroundLayer = (map: L.Map) => {
   L.polyline(CHIANG_MAI_PROVINCE_BOUNDARY, {
     pane: 'cmi-map-boundary-line-pane',
     interactive: false,
-    color: '#d7cbb8',
-    weight: 1.4,
-    opacity: 0.72,
-    dashArray: '1 7',
+    color: '#2b241c',
+    weight: 1.2,
+    opacity: 0.24,
+    dashArray: '2 7',
     lineCap: 'round',
     lineJoin: 'round',
     smoothFactor: 0.6,
@@ -491,10 +491,10 @@ export const LeafletMap = ({
     const style = document.createElement('style');
     style.textContent = `
       .leaflet-container {
-        background: #faf8f1 !important;
+        background: #fff0bd !important;
       }
       .leaflet-tile-pane {
-        filter: brightness(0.99) saturate(0.76) contrast(1.18) sepia(0.035);
+        filter: brightness(1.08) saturate(0.95) contrast(1.2) sepia(0.16);
       }
       .cmi-map-boundary-mask-pane,
       .cmi-map-boundary-line-pane,
@@ -513,34 +513,34 @@ export const LeafletMap = ({
         align-items: center;
         justify-content: center;
         min-width: 88px;
-        color: rgba(62, 59, 68, 0.39);
+        color: rgba(8, 8, 6, 0.52);
         font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif;
         font-size: 16px;
-        font-weight: 500;
+        font-weight: 900;
         letter-spacing: 0;
         line-height: 1;
         text-align: center;
         white-space: nowrap;
         text-shadow:
-          0 0 2px rgba(255, 255, 255, 0.96),
-          0 0 8px rgba(255, 255, 255, 0.84);
+          0 1px 0 rgba(255, 248, 220, 0.96),
+          0 0 7px rgba(255, 248, 220, 0.8);
         transform: translateZ(0);
         transition: opacity 160ms ease;
       }
       .cmi-map-area-label--primary {
-        color: rgba(62, 59, 68, 0.39);
-        font-size: 23px;
-        font-weight: 570;
+        color: rgba(8, 8, 6, 0.76);
+        font-size: 25px;
+        font-weight: 950;
       }
       .cmi-map-overlay-pane img {
         mix-blend-mode: multiply;
-        filter: saturate(0.7) contrast(0.9);
+        filter: saturate(1.45) contrast(1.35) brightness(0.94);
       }
       .cmi-map-landmark {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 1px;
+        gap: 2px;
         opacity: 0;
         transform: translateZ(0) scale(0.96);
         transition: opacity 160ms ease;
@@ -552,21 +552,21 @@ export const LeafletMap = ({
         height: var(--landmark-height);
         max-width: none;
         object-fit: contain;
-        filter: saturate(0.68) contrast(0.92);
+        filter: saturate(1.18) contrast(1.16) brightness(0.98);
         mix-blend-mode: multiply;
         user-select: none;
       }
       .cmi-map-landmark--stamp img {
-        filter: saturate(0.9) contrast(1.2) brightness(0.94);
+        filter: saturate(1.24) contrast(1.28) brightness(0.96);
       }
       .cmi-map-landmark span {
-        color: rgba(57, 52, 68, 0.34);
+        color: rgba(8, 8, 6, 0.58);
         font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif;
         font-size: 10px;
-        font-weight: 520;
+        font-weight: 900;
         line-height: 1;
         opacity: 0;
-        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+        text-shadow: 0 1px 0 rgba(255, 248, 220, 0.84);
         white-space: nowrap;
       }
       .cmi-map-zoom-wide .cmi-map-area-label {
