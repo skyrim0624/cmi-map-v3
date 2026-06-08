@@ -4,6 +4,7 @@ import { MapPin } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { CHIANG_MAI_PROVINCE_BOUNDARY, CHIANG_MAI_PROVINCE_BOUNDS } from '@/data/chiang-mai-boundary';
 import { CHIANG_MAI_FEATURE_LINES } from '@/data/chiang-mai-map-features';
+import { CHIANG_MAI_THEME_MAP_FEATURES, type ChiangMaiThemeMapFeatureTheme } from '@/data/chiang-mai-theme-map-features';
 import {
   getMapMarkerVisual,
   isEasterEggMarkerVisual,
@@ -52,13 +53,6 @@ const MAP_BOUNDARY_MASK_OUTER_RING: L.LatLngExpression[] = [
   [16.2, 97.2],
 ];
 
-type MapBackgroundOverlay = {
-  id: string;
-  imageUrl: string;
-  bounds: L.LatLngBoundsExpression;
-  opacity: number;
-};
-
 type MapBackgroundArea = {
   id: string;
   label: string;
@@ -76,18 +70,6 @@ type MapBackgroundLandmark = {
   nearOpacity?: number;
   visualTone?: 'stamp';
 };
-
-const MAP_BACKGROUND_OVERLAYS: MapBackgroundOverlay[] = [
-  {
-    id: 'wild-chiang-mai-map',
-    imageUrl: '/map-background-overlays/theme/wild-chiang-mai-map.webp',
-    bounds: [
-      [18.7556, 98.948],
-      [18.8106, 99.009],
-    ],
-    opacity: 0.96,
-  },
-];
 
 const MAP_BACKGROUND_AREA_LABELS: MapBackgroundArea[] = [
   { id: 'nimman', label: '尼曼区', position: [18.8026, 98.9624] },
@@ -287,15 +269,79 @@ const createLandmarkIcon = (landmark: MapBackgroundLandmark) => L.divIcon({
   iconAnchor: [landmark.iconSize[0] / 2, landmark.iconSize[1] / 2],
 });
 
+const getThemeMapAreaStyle = (theme: ChiangMaiThemeMapFeatureTheme): L.PolylineOptions => {
+  const base: L.PolylineOptions = {
+    pane: 'cmi-map-theme-area-pane',
+    interactive: false,
+    stroke: true,
+    weight: 1.1,
+    smoothFactor: 0.6,
+    lineJoin: 'round',
+    color: 'rgba(8, 8, 6, 0.18)',
+    opacity: 0.45,
+  };
+
+  switch (theme) {
+    case 'greenArea':
+      return { ...base, fillColor: '#14895f', fillOpacity: 0.28, color: 'rgba(8, 8, 6, 0.22)' };
+    case 'playArea':
+      return { ...base, fillColor: '#82c94b', fillOpacity: 0.23, color: 'rgba(8, 8, 6, 0.18)' };
+    case 'marketArea':
+      return { ...base, fillColor: '#f56aa0', fillOpacity: 0.24, color: 'rgba(8, 8, 6, 0.18)' };
+    case 'templeArea':
+      return { ...base, fillColor: '#ffd85e', fillOpacity: 0.24, color: 'rgba(8, 8, 6, 0.24)' };
+    case 'waterArea':
+      return {
+        ...base,
+        pane: 'cmi-map-theme-water-pane',
+        fillColor: '#43bed0',
+        fillOpacity: 0.34,
+        color: '#fff2c8',
+        weight: 2.8,
+        opacity: 0.7,
+      };
+    case 'airportArea':
+      return { ...base, fillColor: '#d2d1c3', fillOpacity: 0.32, color: 'rgba(8, 8, 6, 0.24)' };
+    case 'cityArea':
+      return { ...base, fillColor: '#f4b09c', fillOpacity: 0.11, stroke: false };
+    default:
+      return { ...base, fillColor: '#fff2c8', fillOpacity: 0.12 };
+  }
+};
+
+const getThemeMapLineStyle = (theme: ChiangMaiThemeMapFeatureTheme, layer: 'casing' | 'stroke'): L.PolylineOptions => {
+  const settings: Record<string, { stroke: string; casing: string; strokeWeight: number; casingWeight: number; opacity: number; casingOpacity: number; dashArray?: string }> = {
+    airportLine: { stroke: '#7d817d', casing: '#fff2c8', strokeWeight: 2.8, casingWeight: 5.8, opacity: 0.62, casingOpacity: 0.58 },
+    roadConnector: { stroke: '#fff2c8', casing: '#080806', strokeWeight: 3.2, casingWeight: 6.2, opacity: 0.76, casingOpacity: 0.22 },
+    roadLocal: { stroke: '#fff7d6', casing: '#080806', strokeWeight: 1.7, casingWeight: 3.3, opacity: 0.5, casingOpacity: 0.12 },
+    roadMajor: { stroke: '#ffd85e', casing: '#080806', strokeWeight: 4.8, casingWeight: 8.8, opacity: 0.9, casingOpacity: 0.36 },
+    roadWalk: { stroke: '#f56aa0', casing: '#080806', strokeWeight: 1.8, casingWeight: 3.4, opacity: 0.56, casingOpacity: 0.16, dashArray: '2 6' },
+    waterLine: { stroke: '#2a9fb0', casing: '#fff2c8', strokeWeight: 3.8, casingWeight: 8.4, opacity: 0.62, casingOpacity: 0.55 },
+    waterMoat: { stroke: '#43bed0', casing: '#080806', strokeWeight: 7.2, casingWeight: 10.8, opacity: 0.86, casingOpacity: 0.24 },
+  };
+  const style = settings[theme] ?? settings.roadLocal;
+  return {
+    pane: layer === 'casing' ? 'cmi-map-theme-line-casing-pane' : 'cmi-map-theme-line-stroke-pane',
+    interactive: false,
+    lineCap: 'round',
+    lineJoin: 'round',
+    smoothFactor: 0.7,
+    color: layer === 'casing' ? style.casing : style.stroke,
+    weight: layer === 'casing' ? style.casingWeight : style.strokeWeight,
+    opacity: layer === 'casing' ? style.casingOpacity : style.opacity,
+    dashArray: layer === 'stroke' ? style.dashArray : undefined,
+  };
+};
+
 const getRiverLineStyle = (layer: 'casing' | 'stroke'): L.PolylineOptions => ({
-  pane: 'cmi-map-feature-pane',
+  pane: layer === 'casing' ? 'cmi-map-theme-line-casing-pane' : 'cmi-map-theme-line-stroke-pane',
   interactive: false,
   lineCap: 'round',
   lineJoin: 'round',
   smoothFactor: 0.8,
   color: layer === 'casing' ? '#fff2c8' : '#2a9fb0',
-  weight: layer === 'casing' ? 9.6 : 4.2,
-  opacity: layer === 'casing' ? 0.46 : 0.52,
+  weight: layer === 'casing' ? 10.4 : 5.2,
+  opacity: layer === 'casing' ? 0.64 : 0.72,
 });
 
 const addMapBackgroundLayer = (map: L.Map) => {
@@ -307,13 +353,21 @@ const addMapBackgroundLayer = (map: L.Map) => {
   boundaryLinePane.style.zIndex = '306';
   boundaryLinePane.style.pointerEvents = 'none';
 
-  const overlayPane = map.createPane('cmi-map-overlay-pane');
-  overlayPane.style.zIndex = '308';
-  overlayPane.style.pointerEvents = 'none';
+  const themeAreaPane = map.createPane('cmi-map-theme-area-pane');
+  themeAreaPane.style.zIndex = '308';
+  themeAreaPane.style.pointerEvents = 'none';
 
-  const featurePane = map.createPane('cmi-map-feature-pane');
-  featurePane.style.zIndex = '312';
-  featurePane.style.pointerEvents = 'none';
+  const themeWaterPane = map.createPane('cmi-map-theme-water-pane');
+  themeWaterPane.style.zIndex = '310';
+  themeWaterPane.style.pointerEvents = 'none';
+
+  const themeLineCasingPane = map.createPane('cmi-map-theme-line-casing-pane');
+  themeLineCasingPane.style.zIndex = '314';
+  themeLineCasingPane.style.pointerEvents = 'none';
+
+  const themeLineStrokePane = map.createPane('cmi-map-theme-line-stroke-pane');
+  themeLineStrokePane.style.zIndex = '315';
+  themeLineStrokePane.style.pointerEvents = 'none';
 
   const areaPane = map.createPane('cmi-map-area-pane');
   areaPane.style.zIndex = '342';
@@ -348,13 +402,28 @@ const addMapBackgroundLayer = (map: L.Map) => {
     smoothFactor: 0.6,
   }).addTo(backgroundLayer);
 
-  MAP_BACKGROUND_OVERLAYS.forEach((overlay) => {
-    L.imageOverlay(overlay.imageUrl, overlay.bounds, {
-      alt: '',
-      pane: 'cmi-map-overlay-pane',
-      interactive: false,
-      opacity: overlay.opacity,
-    }).addTo(backgroundLayer);
+  const themeAreaPaths = new Map<ChiangMaiThemeMapFeatureTheme, L.LatLngExpression[][][]>();
+  const themeLinePaths = new Map<ChiangMaiThemeMapFeatureTheme, L.LatLngExpression[][]>();
+
+  CHIANG_MAI_THEME_MAP_FEATURES.forEach((feature) => {
+    if (feature.kind === 'area') {
+      const paths = themeAreaPaths.get(feature.theme) ?? [];
+      paths.push([feature.points as L.LatLngExpression[]]);
+      themeAreaPaths.set(feature.theme, paths);
+      return;
+    }
+    const paths = themeLinePaths.get(feature.theme) ?? [];
+    paths.push(feature.points as L.LatLngExpression[]);
+    themeLinePaths.set(feature.theme, paths);
+  });
+
+  themeAreaPaths.forEach((paths, theme) => {
+    L.polygon(paths, getThemeMapAreaStyle(theme)).addTo(backgroundLayer);
+  });
+
+  themeLinePaths.forEach((paths, theme) => {
+    L.polyline(paths, getThemeMapLineStyle(theme, 'casing')).addTo(backgroundLayer);
+    L.polyline(paths, getThemeMapLineStyle(theme, 'stroke')).addTo(backgroundLayer);
   });
 
   CHIANG_MAI_FEATURE_LINES.forEach((line) => {
@@ -494,17 +563,38 @@ export const LeafletMap = ({
       .leaflet-container {
         background: #fff2c8 !important;
       }
+      .leaflet-container::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 318;
+        pointer-events: none;
+        opacity: 0.2;
+        background-image: url('/map-background-overlays/theme/wild-paper-texture.webp');
+        background-size: 256px 256px;
+        mix-blend-mode: multiply;
+      }
       .leaflet-tile-pane {
-        opacity: 0.08;
-        filter: sepia(0.8) saturate(0.72) hue-rotate(342deg) brightness(1.32) contrast(0.78);
+        opacity: 0.024;
+        filter: sepia(0.82) saturate(0.7) hue-rotate(342deg) brightness(1.35) contrast(0.76);
         mix-blend-mode: multiply;
       }
       .cmi-map-boundary-mask-pane,
+      .leaflet-cmi-map-boundary-mask-pane-pane,
       .cmi-map-boundary-line-pane,
-      .cmi-map-feature-pane,
-      .cmi-map-overlay-pane,
+      .leaflet-cmi-map-boundary-line-pane-pane,
+      .cmi-map-theme-area-pane,
+      .leaflet-cmi-map-theme-area-pane-pane,
+      .cmi-map-theme-water-pane,
+      .leaflet-cmi-map-theme-water-pane-pane,
+      .cmi-map-theme-line-casing-pane,
+      .leaflet-cmi-map-theme-line-casing-pane-pane,
+      .cmi-map-theme-line-stroke-pane,
+      .leaflet-cmi-map-theme-line-stroke-pane-pane,
       .cmi-map-area-pane,
+      .leaflet-cmi-map-area-pane-pane,
       .cmi-map-landmark-pane,
+      .leaflet-cmi-map-landmark-pane-pane,
       .cmi-map-area-label-icon,
       .cmi-map-landmark-icon,
       .cmi-map-area-label,
@@ -535,12 +625,15 @@ export const LeafletMap = ({
         font-size: 25px;
         font-weight: 950;
       }
-      .cmi-map-overlay-pane img {
-        mix-blend-mode: normal;
-        filter: saturate(1.04) contrast(1.04) brightness(0.98);
-      }
-      .cmi-map-feature-pane path {
-        filter: drop-shadow(2px 2px 0 rgba(8, 8, 6, 0.07));
+      .cmi-map-theme-area-pane path,
+      .leaflet-cmi-map-theme-area-pane-pane path,
+      .cmi-map-theme-water-pane path,
+      .leaflet-cmi-map-theme-water-pane-pane path,
+      .cmi-map-theme-line-casing-pane path,
+      .leaflet-cmi-map-theme-line-casing-pane-pane path,
+      .cmi-map-theme-line-stroke-pane path,
+      .leaflet-cmi-map-theme-line-stroke-pane-pane path {
+        filter: drop-shadow(2px 2px 0 rgba(8, 8, 6, 0.06));
       }
       .cmi-map-landmark {
         display: flex;

@@ -1934,3 +1934,17 @@
   - 页面 HTML 引用 v3 当前构建入口资源 `/assets/index-BHR7oLpB.js`。
   - `/assets/index-BHR7oLpB.js` 返回 `HTTP 200`。
   - `https://stickers.cmti.uk/` 返回 `HTTP 200`，未被本轮修改影响。
+
+### 2026-06-08 14:32:08 +07 神奇动物在哪里主题地图重绘方向修正
+
+- 本轮实现：
+  - 撤掉整张主题地图贴图，不再用单张图片覆盖真实地图。
+  - 新增 OpenStreetMap/Overpass 清迈城区真实 geometry 精简数据，用真实道路、水系、区域和机场/寺庙等面进行主题化分层绘制。
+  - 新增轻量纸张底纹，只作为质感，不承载道路或地标信息。
+  - 同样式路径合并绘制，避免数千条独立 SVG 路径拖慢首屏。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `node --test --experimental-strip-types src/components/map/LeafletMap.test.ts src/pages/CmiMapV3Prototype.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts src/lib/map-marker-visual.test.ts` 通过。
+  - `npx tailwindcss -i ./src/index.css -o /dev/null` CSS 检查通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地浏览器检查 `http://127.0.0.1:5188/`：整图贴片数量为 0，真实主题图层合并后为 46 条 SVG 路径，地图拖动后主题图层继续跟随移动。
