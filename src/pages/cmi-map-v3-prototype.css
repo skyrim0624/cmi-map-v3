@@ -219,14 +219,14 @@
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  opacity: 0.3;
+  opacity: 0.42;
   background-image:
-    radial-gradient(rgba(8, 8, 6, 0.24) 0.75px, transparent 0.75px),
-    radial-gradient(rgba(255, 255, 255, 0.42) 0.9px, transparent 0.9px),
-    linear-gradient(105deg, rgba(242, 99, 34, 0.08), transparent 34%, rgba(18, 125, 179, 0.08));
+    radial-gradient(rgba(8, 8, 6, 0.18) 0.7px, transparent 0.7px),
+    radial-gradient(rgba(255, 248, 218, 0.72) 0.9px, transparent 0.9px),
+    linear-gradient(105deg, rgba(242, 99, 34, 0.1), transparent 34%, rgba(255, 216, 94, 0.16));
   background-position: 0 0, 5px 6px, 0 0;
   background-size: 12px 12px, 14px 14px, 100% 100%;
-  mix-blend-mode: multiply;
+  mix-blend-mode: normal;
 }
 
 .cmi-v3-live-map {

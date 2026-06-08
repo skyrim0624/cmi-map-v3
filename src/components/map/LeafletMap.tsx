@@ -77,6 +77,22 @@ type MapBackgroundLandmark = {
   visualTone?: 'stamp';
 };
 
+type MapThemeArea = {
+  id: string;
+  points: L.LatLngExpression[];
+  fillColor: string;
+  borderColor: string;
+  fillOpacity: number;
+};
+
+type MapThemeRoute = {
+  id: string;
+  points: L.LatLngExpression[];
+  color: string;
+  weight: number;
+  opacity?: number;
+};
+
 const MAP_BACKGROUND_OVERLAYS: MapBackgroundOverlay[] = [
   {
     id: 'old-city-moat-wall',
@@ -85,7 +101,182 @@ const MAP_BACKGROUND_OVERLAYS: MapBackgroundOverlay[] = [
       [18.7811, 98.9774],
       [18.7962, 98.9944],
     ],
-    opacity: 0.74,
+    opacity: 0.38,
+  },
+];
+
+const MAP_THEME_AREAS: MapThemeArea[] = [
+  {
+    id: 'suthep-green',
+    points: [
+      [18.839, 98.905],
+      [18.824, 98.944],
+      [18.800, 98.956],
+      [18.774, 98.956],
+      [18.754, 98.937],
+      [18.762, 98.898],
+      [18.803, 98.886],
+    ],
+    fillColor: '#17996f',
+    borderColor: '#080806',
+    fillOpacity: 0.15,
+  },
+  {
+    id: 'nimman-pink',
+    points: [
+      [18.815, 98.955],
+      [18.814, 98.969],
+      [18.793, 98.971],
+      [18.789, 98.958],
+      [18.798, 98.952],
+    ],
+    fillColor: '#f56aa0',
+    borderColor: '#080806',
+    fillOpacity: 0.18,
+  },
+  {
+    id: 'old-city-gold',
+    points: [
+      [18.7965, 98.9773],
+      [18.7964, 98.9945],
+      [18.781, 98.9944],
+      [18.7812, 98.9774],
+    ],
+    fillColor: '#ffd85e',
+    borderColor: '#080806',
+    fillOpacity: 0.22,
+  },
+  {
+    id: 'riverside-cyan',
+    points: [
+      [18.814, 98.996],
+      [18.812, 99.015],
+      [18.762, 99.018],
+      [18.763, 99.001],
+      [18.788, 98.997],
+    ],
+    fillColor: '#33b9c9',
+    borderColor: '#080806',
+    fillOpacity: 0.14,
+  },
+  {
+    id: 'south-orange',
+    points: [
+      [18.767, 98.94],
+      [18.759, 99.003],
+      [18.704, 98.998],
+      [18.698, 98.925],
+      [18.733, 98.912],
+    ],
+    fillColor: '#f27a1a',
+    borderColor: '#080806',
+    fillOpacity: 0.12,
+  },
+];
+
+const MAP_THEME_ROUTES: MapThemeRoute[] = [
+  {
+    id: 'old-city-moat-frame',
+    points: [
+      [18.7962, 98.9774],
+      [18.7962, 98.9944],
+      [18.7811, 98.9944],
+      [18.7811, 98.9774],
+      [18.7962, 98.9774],
+    ],
+    color: '#34b7c9',
+    weight: 8.8,
+    opacity: 0.78,
+  },
+  {
+    id: 'old-city-wall-frame',
+    points: [
+      [18.7948, 98.979],
+      [18.7948, 98.9928],
+      [18.7827, 98.9928],
+      [18.7827, 98.979],
+      [18.7948, 98.979],
+    ],
+    color: '#f27a1a',
+    weight: 3.4,
+    opacity: 0.9,
+  },
+  {
+    id: 'huay-kaew-road',
+    points: [
+      [18.7955, 98.978],
+      [18.799, 98.972],
+      [18.802, 98.965],
+      [18.807, 98.9607],
+      [18.811, 98.952],
+      [18.817, 98.942],
+      [18.807, 98.932],
+    ],
+    color: '#ffd85e',
+    weight: 3.2,
+    opacity: 0.9,
+  },
+  {
+    id: 'suthep-road',
+    points: [
+      [18.7892, 98.9735],
+      [18.7878, 98.964],
+      [18.79, 98.956],
+      [18.793, 98.946],
+      [18.793, 98.936],
+    ],
+    color: '#f56aa0',
+    weight: 2.8,
+    opacity: 0.84,
+  },
+  {
+    id: 'canal-road',
+    points: [
+      [18.822, 98.951],
+      [18.808, 98.951],
+      [18.792, 98.953],
+      [18.775, 98.954],
+      [18.759, 98.956],
+    ],
+    color: '#17996f',
+    weight: 2.8,
+    opacity: 0.78,
+  },
+  {
+    id: 'nimman-road',
+    points: [
+      [18.807, 98.965],
+      [18.801, 98.966],
+      [18.795, 98.966],
+      [18.7895, 98.9665],
+    ],
+    color: '#f56aa0',
+    weight: 3,
+    opacity: 0.86,
+  },
+  {
+    id: 'tha-phae-road',
+    points: [
+      [18.7878, 98.9931],
+      [18.788, 99.001],
+      [18.786, 99.009],
+      [18.783, 99.017],
+    ],
+    color: '#f27a1a',
+    weight: 3.1,
+    opacity: 0.86,
+  },
+  {
+    id: 'chang-klan-road',
+    points: [
+      [18.7885, 98.9993],
+      [18.783, 98.9997],
+      [18.776, 99.0005],
+      [18.768, 99.001],
+    ],
+    color: '#f27a1a',
+    weight: 2.6,
+    opacity: 0.78,
   },
 ];
 
@@ -293,15 +484,44 @@ const getRiverLineStyle = (layer: 'casing' | 'stroke'): L.PolylineOptions => ({
   lineCap: 'round',
   lineJoin: 'round',
   smoothFactor: 0.8,
-  color: layer === 'casing' ? '#f9e7b0' : '#1687ba',
-  weight: layer === 'casing' ? 9.6 : 4.8,
-  opacity: layer === 'casing' ? 0.72 : 0.78,
+  color: layer === 'casing' ? '#080806' : '#34b7c9',
+  weight: layer === 'casing' ? 12 : 6,
+  opacity: layer === 'casing' ? 0.32 : 0.88,
+});
+
+const getThemeAreaStyle = (area: MapThemeArea): L.PathOptions => ({
+  pane: 'cmi-map-theme-area-pane',
+  interactive: false,
+  stroke: true,
+  color: area.borderColor,
+  weight: 1.5,
+  opacity: 0.14,
+  fill: true,
+  fillColor: area.fillColor,
+  fillOpacity: area.fillOpacity,
+  lineCap: 'round',
+  lineJoin: 'round',
+});
+
+const getThemeRouteStyle = (route: MapThemeRoute, layer: 'casing' | 'stroke'): L.PolylineOptions => ({
+  pane: 'cmi-map-theme-route-pane',
+  interactive: false,
+  lineCap: 'round',
+  lineJoin: 'round',
+  smoothFactor: 1,
+  color: layer === 'casing' ? '#080806' : route.color,
+  weight: layer === 'casing' ? route.weight + 4.4 : route.weight,
+  opacity: layer === 'casing' ? 0.26 : (route.opacity ?? 0.82),
 });
 
 const addMapBackgroundLayer = (map: L.Map) => {
   const boundaryMaskPane = map.createPane('cmi-map-boundary-mask-pane');
   boundaryMaskPane.style.zIndex = '305';
   boundaryMaskPane.style.pointerEvents = 'none';
+
+  const themeAreaPane = map.createPane('cmi-map-theme-area-pane');
+  themeAreaPane.style.zIndex = '308';
+  themeAreaPane.style.pointerEvents = 'none';
 
   const boundaryLinePane = map.createPane('cmi-map-boundary-line-pane');
   boundaryLinePane.style.zIndex = '306';
@@ -314,6 +534,10 @@ const addMapBackgroundLayer = (map: L.Map) => {
   const overlayPane = map.createPane('cmi-map-overlay-pane');
   overlayPane.style.zIndex = '318';
   overlayPane.style.pointerEvents = 'none';
+
+  const themeRoutePane = map.createPane('cmi-map-theme-route-pane');
+  themeRoutePane.style.zIndex = '326';
+  themeRoutePane.style.pointerEvents = 'none';
 
   const areaPane = map.createPane('cmi-map-area-pane');
   areaPane.style.zIndex = '342';
@@ -348,6 +572,10 @@ const addMapBackgroundLayer = (map: L.Map) => {
     smoothFactor: 0.6,
   }).addTo(backgroundLayer);
 
+  MAP_THEME_AREAS.forEach((area) => {
+    L.polygon(area.points, getThemeAreaStyle(area)).addTo(backgroundLayer);
+  });
+
   CHIANG_MAI_FEATURE_LINES.forEach((line) => {
     L.polyline(line.paths as L.LatLngExpression[][], getRiverLineStyle('casing')).addTo(backgroundLayer);
     L.polyline(line.paths as L.LatLngExpression[][], getRiverLineStyle('stroke')).addTo(backgroundLayer);
@@ -359,6 +587,11 @@ const addMapBackgroundLayer = (map: L.Map) => {
       interactive: false,
       opacity: overlay.opacity,
     }).addTo(backgroundLayer);
+  });
+
+  MAP_THEME_ROUTES.forEach((route) => {
+    L.polyline(route.points, getThemeRouteStyle(route, 'casing')).addTo(backgroundLayer);
+    L.polyline(route.points, getThemeRouteStyle(route, 'stroke')).addTo(backgroundLayer);
   });
 
   MAP_BACKGROUND_AREA_LABELS.forEach((area) => {
@@ -491,15 +724,19 @@ export const LeafletMap = ({
     const style = document.createElement('style');
     style.textContent = `
       .leaflet-container {
-        background: #fff0bd !important;
+        background: #fff2c8 !important;
       }
       .leaflet-tile-pane {
-        filter: brightness(1.08) saturate(0.95) contrast(1.2) sepia(0.16);
+        opacity: 0.18;
+        filter: sepia(0.8) saturate(0.72) hue-rotate(342deg) brightness(1.32) contrast(0.78);
+        mix-blend-mode: multiply;
       }
       .cmi-map-boundary-mask-pane,
+      .cmi-map-theme-area-pane,
       .cmi-map-boundary-line-pane,
       .cmi-map-feature-pane,
       .cmi-map-overlay-pane,
+      .cmi-map-theme-route-pane,
       .cmi-map-area-pane,
       .cmi-map-landmark-pane,
       .cmi-map-area-label-icon,
@@ -535,6 +772,11 @@ export const LeafletMap = ({
       .cmi-map-overlay-pane img {
         mix-blend-mode: multiply;
         filter: saturate(1.45) contrast(1.35) brightness(0.94);
+      }
+      .cmi-map-theme-area-pane path,
+      .cmi-map-feature-pane path,
+      .cmi-map-theme-route-pane path {
+        filter: drop-shadow(2px 2px 0 rgba(8, 8, 6, 0.07));
       }
       .cmi-map-landmark {
         display: flex;
