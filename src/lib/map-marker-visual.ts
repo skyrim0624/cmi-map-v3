@@ -274,10 +274,10 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
       height:${iconSize}px;
       transform:translateX(-50%);
       border-radius:999px;
-      background:#ffffff;
+      background:#fff8df;
       padding:0;
-      border:3px solid #ffffff;
-      box-shadow:0 4px 8px rgba(0,0,0,0.15), 0 0 0 1.5px rgba(47,43,38,0.08);
+      border:3px solid #080806;
+      box-shadow:4px 5px 0 rgba(8,8,6,0.24), 0 0 0 2px rgba(255,248,223,0.72);
       display:flex;
       align-items:center;
       justify-content:center;
@@ -301,8 +301,8 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
           height:7px;
           border-radius:999px;
           background:${visual.accent};
-          border:1.5px solid #fff;
-          box-shadow:0 2px 4px ${visual.shadow};
+          border:1.5px solid #080806;
+          box-shadow:0 2px 0 rgba(8,8,6,0.2);
         "></div>
       ` : ''}
     </div>
@@ -313,10 +313,10 @@ export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolea
       width:10px;
       height:10px;
       transform:translateX(-50%) rotate(45deg);
-      background:#ffffff;
-      border-right:1.5px solid rgba(70,61,52,0.12);
-      border-bottom:1.5px solid rgba(70,61,52,0.12);
-      box-shadow:4px 4px 7px ${visual.shadow};
+      background:#fff8df;
+      border-right:3px solid #080806;
+      border-bottom:3px solid #080806;
+      box-shadow:4px 4px 0 rgba(8,8,6,0.2);
     "></div>
   `;
 };
@@ -338,13 +338,17 @@ export const renderEasterEggMarkerHtml = (visual: MapMarkerVisual) => {
       align-items:center;
       justify-content:center;
       box-sizing:border-box;
+      border-radius:999px;
+      background:#fff8df;
+      border:2.5px solid #080806;
+      box-shadow:3px 4px 0 rgba(8,8,6,0.22);
     ">
       <img src="${iconUrl}" alt="${label}" loading="lazy" style="
         width:${iconSize}px;
         height:${iconSize}px;
         object-fit:contain;
         display:block;
-        filter:drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+        filter:drop-shadow(0 1px 0 rgba(8,8,6,0.18));
       " />
     </div>
   `;
@@ -391,14 +395,15 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
             height:16px;
             padding:0 4px;
             border-radius:999px;
-            background:#fff8eb;
-            color:#342f2a;
+            background:#ffd83f;
+            color:#080806;
             font-family:'Inter','PingFang SC','Noto Sans SC',sans-serif;
             font-weight:950;
             font-size:10px;
             line-height:16px;
             text-align:center;
-            box-shadow:0 2px 5px rgba(0,0,0,0.14);
+            border:1.5px solid #080806;
+            box-shadow:2px 2px 0 rgba(8,8,6,0.22);
           ">+${count}</div>
         ` : ''}
       </div>
@@ -428,11 +433,11 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
       height:40px;
       transform:${transforms[index]};
       z-index:${index + 1};
-      background:#ffffff;
+      background:#fff8df;
       border-radius:50%;
       padding:0;
-      border:3px solid #ffffff;
-      box-shadow:0 3px 6px rgba(0,0,0,0.15), 0 0 0 1.5px rgba(47,43,38,0.08);
+      border:3px solid #080806;
+      box-shadow:3px 4px 0 rgba(8,8,6,0.22);
       display:flex;
       align-items:center;
       justify-content:center;
@@ -463,8 +468,8 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
           z-index:10;
           min-width:23px;
           height:18px;
-          background:#fff8eb;
-          color:#342f2a;
+          background:#ffd83f;
+          color:#080806;
           font-family:'Inter','PingFang SC','Noto Sans SC',sans-serif;
           font-weight:950;
           font-size:11px;
@@ -473,8 +478,8 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
           display:flex;
           align-items:center;
           justify-content:center;
-          box-shadow:0 2px 0 rgba(45,39,34,0.15), 0 3px 7px rgba(45,39,34,0.14);
-          border:1.5px solid rgba(55,49,43,0.28);
+          box-shadow:2px 3px 0 rgba(8,8,6,0.22);
+          border:1.5px solid #080806;
           border-radius:999px;
         ">
           +${remaining}
@@ -487,10 +492,10 @@ export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number)
         width:9px;
         height:9px;
         transform:translateX(-50%) rotate(45deg);
-        background:#ffffff;
-        border-right:1.5px solid rgba(47,43,38,0.12);
-        border-bottom:1.5px solid rgba(47,43,38,0.12);
-        box-shadow:3px 3px 5px rgba(35,31,27,0.12);
+        background:#fff8df;
+        border-right:2.5px solid #080806;
+        border-bottom:2.5px solid #080806;
+        box-shadow:3px 3px 0 rgba(8,8,6,0.2);
       "></div>
     </div>
   `;

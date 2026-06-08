@@ -1437,6 +1437,13 @@ function MapMode({
         className="cmi-v3-live-map"
       />
 
+      <div className="cmi-v3-map-theme-stickers" aria-hidden="true">
+        <img className="cmi-v3-map-theme-sticker cmi-v3-map-theme-sticker--cat" src="/map-icons/cmi-easter-v2/egg-v2-03-cat-face.png" alt="" />
+        <img className="cmi-v3-map-theme-sticker cmi-v3-map-theme-sticker--gecko" src="/map-icons/cmi-easter-v2/egg-v2-37-gecko.png" alt="" />
+        <img className="cmi-v3-map-theme-sticker cmi-v3-map-theme-sticker--bird" src="/map-icons/cmi-easter-v2/egg-v2-38-bird.png" alt="" />
+        <img className="cmi-v3-map-theme-sticker cmi-v3-map-theme-sticker--butterfly" src="/map-icons/cmi-easter-v2/egg-v2-36-butterfly.png" alt="" />
+      </div>
+
       <header className="cmi-v3-map-topbar">
         <form
           className={`cmi-v3-map-search ${searchQuery.trim() ? 'has-value' : ''}`}

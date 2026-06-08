@@ -261,6 +261,47 @@
   background-size: 180px 210px, 260px 280px, 230px 240px, 320px 300px;
 }
 
+.cmi-v3-map-theme-stickers {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.cmi-v3-map-theme-sticker {
+  position: absolute;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  filter: drop-shadow(3px 4px 0 rgba(8, 8, 6, 0.22));
+  opacity: 0.96;
+}
+
+.cmi-v3-map-theme-sticker--cat {
+  top: 38%;
+  left: 49%;
+  width: 52px;
+  height: 52px;
+}
+
+.cmi-v3-map-theme-sticker--gecko {
+  top: 28%;
+  right: 23%;
+  transform: rotate(-9deg);
+}
+
+.cmi-v3-map-theme-sticker--bird {
+  top: 58%;
+  left: 8%;
+  transform: rotate(-8deg);
+}
+
+.cmi-v3-map-theme-sticker--butterfly {
+  right: 31%;
+  bottom: calc(var(--cmi-v3-map-nav-height) + var(--cmi-v3-map-pulse-peek-height) + 18px);
+  transform: rotate(8deg);
+}
+
 .cmi-v3-river {
   position: absolute;
   top: -30px;
