@@ -116,30 +116,61 @@
 }
 
 .cmi-prototype-joystick-frame {
-  z-index: 4;
-  top: 74.7%;
-  left: 2.4%;
-  width: 27.8%;
-  height: 19.4%;
-  overflow: hidden;
+  z-index: 3;
+  top: 78.1%;
+  left: 4.9%;
+  width: 23%;
+  height: 14.7%;
+  overflow: visible;
   opacity: 0;
   transform-origin: 48% 86%;
-  filter: brightness(1.15) saturate(1.12) contrast(1.04);
-  mask-image: radial-gradient(ellipse 76% 88% at 42% 54%, #000 0 62%, transparent 80%);
+  filter: none;
+  mix-blend-mode: screen;
   pointer-events: none;
-  -webkit-mask-image: radial-gradient(ellipse 76% 88% at 42% 54%, #000 0 62%, transparent 80%);
+}
+
+.cmi-prototype-joystick-frame::before,
+.cmi-prototype-joystick-frame::after {
+  position: absolute;
+  content: "";
+  pointer-events: none;
 }
 
 .cmi-prototype-joystick-frame::before {
-  position: absolute;
-  top: -385.05%;
-  left: -8.64%;
-  width: 359.72%;
-  height: 515.47%;
-  background-image: url("/brand/cmi-community-arcade-prototype.png");
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  content: "";
+  inset: 15% 20% 0 4%;
+  border: 2px solid rgba(255, 43, 196, 0.72);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 48% 44%, rgba(255, 42, 196, 0.3), transparent 36%),
+    radial-gradient(ellipse at center, rgba(33, 234, 255, 0.16), transparent 68%);
+  box-shadow:
+    0 0 14px rgba(255, 42, 196, 0.72),
+    0 0 28px rgba(255, 42, 196, 0.34),
+    inset 0 0 18px rgba(33, 234, 255, 0.16);
+}
+
+.cmi-prototype-joystick-frame::after {
+  top: 43%;
+  left: 28%;
+  width: 52%;
+  height: 12%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 42, 196, 0), rgba(255, 42, 196, 0.85), rgba(33, 234, 255, 0.42));
+  box-shadow:
+    0 0 10px rgba(255, 42, 196, 0.82),
+    0 0 22px rgba(33, 234, 255, 0.32);
+  opacity: 0.82;
+  transform-origin: 0 50%;
+}
+
+.cmi-prototype-joystick-frame--left::after {
+  left: 16%;
+  transform: rotate(202deg);
+}
+
+.cmi-prototype-joystick-frame--right::after {
+  left: 36%;
+  transform: rotate(-22deg);
 }
 
 .cmi-prototype-joystick-frame--left {
@@ -1958,46 +1989,46 @@
 @keyframes cmi-joystick-frame-left {
   0% {
     opacity: 0;
-    transform: rotate(0deg) translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0) scale(0.96);
   }
   14% {
-    opacity: 0.96;
-    transform: rotate(-9deg) translate3d(-5px, 1px, 0) scale(1.02);
+    opacity: 0.86;
+    transform: translate3d(-4px, 0, 0) scale(1.02);
   }
   46% {
-    opacity: 0.94;
-    transform: rotate(-14deg) translate3d(-8px, 2px, 0) scale(1.03);
+    opacity: 0.72;
+    transform: translate3d(-9px, -1px, 0) scale(1.06);
   }
   74% {
-    opacity: 0.76;
-    transform: rotate(-5deg) translate3d(-2px, 0, 0) scale(1.01);
+    opacity: 0.4;
+    transform: translate3d(-3px, 0, 0) scale(1.01);
   }
   100% {
     opacity: 0;
-    transform: rotate(0deg) translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0) scale(0.96);
   }
 }
 
 @keyframes cmi-joystick-frame-right {
   0% {
     opacity: 0;
-    transform: rotate(0deg) translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0) scale(0.96);
   }
   14% {
-    opacity: 0.96;
-    transform: rotate(9deg) translate3d(5px, 1px, 0) scale(1.02);
+    opacity: 0.86;
+    transform: translate3d(4px, 0, 0) scale(1.02);
   }
   46% {
-    opacity: 0.94;
-    transform: rotate(14deg) translate3d(8px, 2px, 0) scale(1.03);
+    opacity: 0.72;
+    transform: translate3d(9px, -1px, 0) scale(1.06);
   }
   74% {
-    opacity: 0.76;
-    transform: rotate(5deg) translate3d(2px, 0, 0) scale(1.01);
+    opacity: 0.4;
+    transform: translate3d(3px, 0, 0) scale(1.01);
   }
   100% {
     opacity: 0;
-    transform: rotate(0deg) translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0) scale(0.96);
   }
 }
 
