@@ -464,7 +464,7 @@
   border: 1.5px solid rgba(8, 8, 6, 0.18);
   border-radius: 50%;
   background: var(--cmi-v3-paper-soft);
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .cmi-v3-map-activity-entry {
@@ -715,10 +715,10 @@
 
 .cmi-v3-map-state {
   position: absolute;
-  top: calc(env(safe-area-inset-top) + 126px);
+  top: calc(env(safe-area-inset-top) + var(--cmi-v3-map-side-top) + var(--cmi-v3-map-control-size) + 12px);
   left: 16px;
   right: 16px;
-  z-index: 20;
+  z-index: 17;
   border: 2px solid var(--cmi-v3-ink);
   border-radius: 18px;
   background: rgba(255, 249, 232, 0.94);
