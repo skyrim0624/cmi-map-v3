@@ -73,6 +73,8 @@ test('清迈客栈标签打卡后进入动态页而不是旧客栈页', () => {
 test('打卡只保留活动关联，不再写主题投稿关系', () => {
   assert.match(source, /const initialEventId = searchParams\.get\('event'\)/);
   assert.match(source, /isCmiMapCheckinActivityEvent\(event\)/);
+  assert.match(source, /prioritizeCheckinActivityEvent\(sortedEvents\)\.slice\(0, 8\)/);
+  assert.match(source, /return leftIsCheckinActivity \? -1 : 1/);
   assert.match(source, /linked_event_id: linkedEvent\.id/);
   assert.match(source, /linked_event_title: linkedEvent\.title/);
   assert.match(source, /navigate\(defaultDestinationPath, \{/);

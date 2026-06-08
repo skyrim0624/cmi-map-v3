@@ -38,7 +38,7 @@ export type CmiEventRegistrationStatus = 'open' | 'closed';
 export type CmiEventAttendeeVisibility = 'public' | 'count-only';
 
 export const CMI_MAP_WILD_CHIANG_MAI_EVENT_ID = 'cmi-wild-chiang-mai-2026-06';
-export const CMI_MAP_CHECKIN_ACTIVITY_LABEL = '拍照打卡时关联活动';
+export const CMI_MAP_CHECKIN_ACTIVITY_LABEL = '拍照打卡时关联主题';
 
 export interface CmiEventRecurrence {
   weekdays: number[];
@@ -158,17 +158,17 @@ export const CMI_EVENTS: CmiEvent[] = [
     verificationStatus: 'verified',
     visibilityStatus: 'published',
     lastCheckedAt: '2026-06-07T15:30:00+07:00',
-    reliabilityNote: '按 CMI Map 3.1 最短链路创建，只用于主地图活动入口和拍照关联活动标签。',
-    tags: ['CMI Map', '拍照打卡', '活动'],
-    summary: '在清迈遇到动物、植物、街角小生命或奇妙生物时，拍照打卡，把动态关联到这场活动。',
+    reliabilityNote: '按 CMI Map 3.1 最短链路创建，只用于主地图活动入口和拍照关联主题标签。',
+    tags: ['CMI Map', '拍照打卡', '主题'],
+    summary: '在清迈遇到动物、植物、街角小生命或奇妙生物时，拍照打卡，把动态关联到这个主题。',
     organizerName: 'CMI 社区',
     registrationEnabled: false,
     registrationStatus: 'closed',
     attendeeVisibility: 'count-only',
     detailBody: [
-      '活动介绍',
+      '主题介绍',
       '',
-      '在清迈遇到动物、植物、街角小生命或奇妙生物时，拍照打卡，把动态关联到这场活动。',
+      '在清迈遇到动物、植物、街角小生命或奇妙生物时，拍照打卡，把动态关联到这个主题。',
     ].join('\n'),
   },
   {

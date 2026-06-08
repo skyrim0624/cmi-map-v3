@@ -102,12 +102,14 @@ test('清迈客栈未来活动统一归一为 CMI Map 一键报名', () => {
   assert.equal(normalizedEvent.registrationStatus, 'open');
 });
 
-test('神奇动物在哪里是普通打卡活动，不归一为报名活动', () => {
+test('神奇动物在哪里是主题打卡活动，不归一为报名活动', () => {
   const event = CMI_EVENTS.find(candidate => candidate.id === CMI_MAP_WILD_CHIANG_MAI_EVENT_ID);
 
   assert.ok(event);
   assert.equal(event.title, '神奇动物在哪里');
   assert.equal(event.registrationLabel, CMI_MAP_CHECKIN_ACTIVITY_LABEL);
+  assert.match(event.detailBody ?? '', /主题介绍/);
+  assert.match(event.summary, /这个主题/);
   assert.equal(event.registrationEnabled, false);
   assert.equal(isCmiMapCheckinActivityEvent(event), true);
   assert.equal(isCmiInnEvent(event), false);

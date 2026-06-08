@@ -113,7 +113,7 @@ const getMarkPlaceEventOptions = (
 ) => {
   const referenceTime = referenceDate.getTime();
 
-  return events
+  const sortedEvents = events
     .filter(event => {
       if (!isCmiInnEvent(event) && !isCmiMapCheckinActivityEvent(event)) return false;
 
@@ -130,16 +130,31 @@ const getMarkPlaceEventOptions = (
       const rightTime = getCmiEventSortTime(right, referenceDate);
 
       return Math.abs(leftTime - referenceTime) - Math.abs(rightTime - referenceTime);
-    })
-    .slice(0, 8);
+    });
+
+  return prioritizeCheckinActivityEvent(sortedEvents).slice(0, 8);
+};
+
+const prioritizeCheckinActivityEvent = (events: CmiEvent[]) => {
+  return [...events].sort((left, right) => {
+    const leftIsCheckinActivity = isCmiMapCheckinActivityEvent(left);
+    const rightIsCheckinActivity = isCmiMapCheckinActivityEvent(right);
+
+    if (leftIsCheckinActivity === rightIsCheckinActivity) return 0;
+    return leftIsCheckinActivity ? -1 : 1;
+  });
 };
 
 const mergeInitialEventIntoOptions = (
   options: CmiEvent[],
   initialEvent: CmiEvent | null
 ) => {
-  if (!initialEvent || options.some(event => event.id === initialEvent.id)) return options;
-  return [initialEvent, ...options].slice(0, 8);
+  const mergedOptions =
+    !initialEvent || options.some(event => event.id === initialEvent.id)
+      ? options
+      : [initialEvent, ...options];
+
+  return prioritizeCheckinActivityEvent(mergedOptions).slice(0, 8);
 };
 
 const appendTranscript = (currentText: string, nextText: string) => {
