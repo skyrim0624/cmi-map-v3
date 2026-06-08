@@ -253,7 +253,7 @@ export default function CmiCommunityEntrance() {
           <span className="cmi-prototype-entry-glow cmi-prototype-entry-glow--swap" />
           <span className="cmi-prototype-control-deck-cover" />
           <span className="cmi-prototype-joystick-base" />
-          <span key={joystickMotion.tick} className={joystickClassName} />
+          <span key={`joystick-stick-${joystickMotion.tick}`} className={joystickClassName} />
           <span className="cmi-prototype-control-button cmi-prototype-control-button--event-create">
             发起
             <br />
@@ -270,11 +270,9 @@ export default function CmiCommunityEntrance() {
             合作
           </span>
           <span className="cmi-prototype-home-label-fix">
-            一键
-            <br />
             订房
           </span>
-          <span key={joystickMotion.tick} className={joystickFrameClassName} />
+          <span key={`joystick-frame-${joystickMotion.tick}`} className={joystickFrameClassName} />
           <span className="cmi-prototype-pixel-label cmi-prototype-pixel-label--screen-title">
             近期活动 / 精选内容
           </span>

@@ -116,17 +116,7 @@
 }
 
 .cmi-prototype-joystick-frame {
-  z-index: 3;
-  top: 78.1%;
-  left: 4.9%;
-  width: 23%;
-  height: 14.7%;
-  overflow: visible;
-  opacity: 0;
-  transform-origin: 48% 86%;
-  filter: none;
-  mix-blend-mode: screen;
-  pointer-events: none;
+  display: none !important;
 }
 
 .cmi-prototype-joystick-frame::before,
@@ -504,7 +494,7 @@
   left: 6.2%;
   width: 87.8%;
   height: 16.3%;
-  overflow: hidden;
+  overflow: visible;
   border: 3px solid rgba(44, 78, 255, 0.74);
   border-radius: 3.4%;
   background:
@@ -1186,6 +1176,145 @@
   display: none !important;
 }
 
+.cmi-prototype-control-deck-cover,
+.cmi-prototype-control-button,
+.cmi-prototype-joystick-base {
+  display: none !important;
+}
+
+.cmi-prototype-home-label-fix {
+  z-index: 5;
+  top: 83.1%;
+  left: 51.15%;
+  display: grid !important;
+  width: 15.6%;
+  height: 3.55%;
+  opacity: 0.98;
+  font-size: clamp(14px, 4.4vw, 20px);
+  line-height: 1;
+  text-shadow:
+    0 0 5px rgba(255, 255, 255, 0.86),
+    0 0 12px rgba(108, 255, 72, 0.62),
+    2px 2px 0 rgba(5, 16, 24, 0.68);
+  transform: translate3d(0, 0, 0);
+}
+
+.cmi-prototype-home-label-fix::before {
+  inset: -8% -14% -5%;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(89, 239, 103, 0.98), rgba(29, 176, 72, 0.96) 60%, rgba(5, 86, 45, 0.86) 84%);
+  filter: blur(1.2px);
+  opacity: 0.96;
+}
+
+.cmi-prototype-joystick-stick {
+  z-index: 4;
+  top: 76.7%;
+  left: 3.2%;
+  display: block !important;
+  width: 26%;
+  height: 16.6%;
+  border-radius: 999px;
+  background:
+    radial-gradient(ellipse at 34% 82%, rgba(255, 35, 196, 0.32), transparent 48%),
+    radial-gradient(ellipse at 42% 62%, rgba(34, 238, 255, 0.16), transparent 56%);
+  filter: blur(1px);
+  mix-blend-mode: screen;
+  opacity: 0.18;
+  transform: translate3d(0, 0, 0);
+  animation: cmi-joystick-area-idle 5.4s steps(5, end) infinite;
+}
+
+.cmi-prototype-joystick-stick::before,
+.cmi-prototype-joystick-stick::after {
+  position: absolute;
+  content: "";
+  pointer-events: none;
+}
+
+.cmi-prototype-joystick-stick::before {
+  inset: 46% 11% 4% 3%;
+  border: 2px solid rgba(255, 35, 196, 0.35);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 16px rgba(255, 35, 196, 0.16),
+    0 0 20px rgba(255, 35, 196, 0.22);
+}
+
+.cmi-prototype-joystick-stick::after {
+  top: 28%;
+  left: 12%;
+  width: 30%;
+  height: 12%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.58), transparent);
+  border-radius: 999px;
+  filter: blur(5px);
+  transform: rotate(-24deg);
+  opacity: 0;
+}
+
+.cmi-prototype-joystick-stick--left {
+  animation: cmi-joystick-area-left 0.58s steps(5, end);
+}
+
+.cmi-prototype-joystick-stick--right {
+  animation: cmi-joystick-area-right 0.58s steps(5, end);
+}
+
+.cmi-prototype-joystick-stick--left::after,
+.cmi-prototype-joystick-stick--right::after {
+  opacity: 0.88;
+  animation: cmi-joystick-glint 0.46s steps(4, end);
+}
+
+.cmi-prototype-hotspot--event-create::before,
+.cmi-prototype-hotspot--home::before,
+.cmi-prototype-hotspot--partner::before,
+.cmi-prototype-hotspot--event-create::after,
+.cmi-prototype-hotspot--home::after,
+.cmi-prototype-hotspot--partner::after {
+  display: block;
+}
+
+.cmi-prototype-hotspot--event-create::before,
+.cmi-prototype-hotspot--home::before,
+.cmi-prototype-hotspot--partner::before {
+  inset: 7% 5% 3%;
+  border-width: 2px;
+  background:
+    radial-gradient(circle at 32% 18%, rgba(255, 255, 255, 0.46), transparent 18%),
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.1), transparent 62%);
+  opacity: 0;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.cmi-prototype-hotspot--event-create::after,
+.cmi-prototype-hotspot--home::after,
+.cmi-prototype-hotspot--partner::after {
+  inset: 18% 26% 60%;
+  opacity: 0;
+}
+
+.cmi-arcade-prototype--press-event-create .cmi-prototype-hotspot--event-create::before,
+.cmi-arcade-prototype--press-home .cmi-prototype-hotspot--home::before,
+.cmi-arcade-prototype--press-partner .cmi-prototype-hotspot--partner::before {
+  opacity: 0.72;
+  filter: brightness(1.22);
+  transform: translate3d(0, 4px, 0) scale(0.94);
+}
+
+.cmi-arcade-prototype--press-event-create .cmi-prototype-hotspot--event-create::after,
+.cmi-arcade-prototype--press-home .cmi-prototype-hotspot--home::after,
+.cmi-arcade-prototype--press-partner .cmi-prototype-hotspot--partner::after {
+  opacity: 0.68;
+  animation: cmi-button-press-spark 0.28s steps(4, end);
+}
+
+.cmi-arcade-prototype--press-home .cmi-prototype-home-label-fix {
+  filter: brightness(1.18) saturate(1.12);
+  transform: translate3d(0, 4px, 0) scale(0.96);
+}
+
 .cmi-prototype-motion {
   z-index: 1;
   transform: none;
@@ -1553,6 +1682,75 @@
   }
   100% {
     transform: rotate(0deg) translate3d(0, 0, 0);
+  }
+}
+
+@keyframes cmi-joystick-area-idle {
+  0%,
+  100% {
+    opacity: 0.13;
+    transform: translate3d(0, 0, 0);
+  }
+  42% {
+    opacity: 0.22;
+    transform: translate3d(0, -1px, 0);
+  }
+  68% {
+    opacity: 0.16;
+    transform: translate3d(0, 1px, 0);
+  }
+}
+
+@keyframes cmi-joystick-area-left {
+  0% {
+    opacity: 0.18;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  24% {
+    opacity: 0.56;
+    transform: translate3d(-4px, 1px, 0) scale(1.03);
+  }
+  58% {
+    opacity: 0.42;
+    transform: translate3d(-7px, 2px, 0) scale(1.02);
+  }
+  100% {
+    opacity: 0.16;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes cmi-joystick-area-right {
+  0% {
+    opacity: 0.18;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  24% {
+    opacity: 0.56;
+    transform: translate3d(4px, 1px, 0) scale(1.03);
+  }
+  58% {
+    opacity: 0.42;
+    transform: translate3d(7px, 2px, 0) scale(1.02);
+  }
+  100% {
+    opacity: 0.16;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes cmi-joystick-glint {
+  0% {
+    opacity: 0;
+    transform: translate3d(-18%, 10%, 0) rotate(-24deg);
+  }
+  42% {
+    opacity: 0.82;
+    transform: translate3d(10%, -2%, 0) rotate(-24deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(38%, -8%, 0) rotate(-24deg);
   }
 }
 
