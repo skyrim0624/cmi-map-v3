@@ -119,7 +119,7 @@ const MAP_THEME_AREAS: MapThemeArea[] = [
     ],
     fillColor: '#17996f',
     borderColor: '#080806',
-    fillOpacity: 0.15,
+    fillOpacity: 0.19,
   },
   {
     id: 'nimman-pink',
@@ -132,7 +132,7 @@ const MAP_THEME_AREAS: MapThemeArea[] = [
     ],
     fillColor: '#f56aa0',
     borderColor: '#080806',
-    fillOpacity: 0.18,
+    fillOpacity: 0.24,
   },
   {
     id: 'old-city-gold',
@@ -144,7 +144,7 @@ const MAP_THEME_AREAS: MapThemeArea[] = [
     ],
     fillColor: '#ffd85e',
     borderColor: '#080806',
-    fillOpacity: 0.22,
+    fillOpacity: 0.31,
   },
   {
     id: 'riverside-cyan',
@@ -157,7 +157,7 @@ const MAP_THEME_AREAS: MapThemeArea[] = [
     ],
     fillColor: '#33b9c9',
     borderColor: '#080806',
-    fillOpacity: 0.14,
+    fillOpacity: 0.18,
   },
   {
     id: 'south-orange',
@@ -170,7 +170,7 @@ const MAP_THEME_AREAS: MapThemeArea[] = [
     ],
     fillColor: '#f27a1a',
     borderColor: '#080806',
-    fillOpacity: 0.12,
+    fillOpacity: 0.16,
   },
 ];
 
@@ -727,7 +727,7 @@ export const LeafletMap = ({
         background: #fff2c8 !important;
       }
       .leaflet-tile-pane {
-        opacity: 0.18;
+        opacity: 0.14;
         filter: sepia(0.8) saturate(0.72) hue-rotate(342deg) brightness(1.32) contrast(0.78);
         mix-blend-mode: multiply;
       }
