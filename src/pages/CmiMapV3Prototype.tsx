@@ -176,8 +176,8 @@ const mapFilters: FilterItem[] = [
   { id: 'all', label: '动态' },
   { id: 'food', label: '好吃', iconUrl: '/map-icons/cmi-flat-v2/direct-eat.png' },
   { id: 'play', label: '好玩', iconUrl: '/map-icons/cmi-flat-v2/direct-play.png' },
-  { id: 'events', label: '活动', iconUrl: '/map-icons/cmi-flat-v2/home-events.png' },
-  { id: 'easter', label: '彩蛋', iconUrl: '/map-icons/cmi-easter-v2/egg-v2-03-cat-face.png' },
+  { id: 'events', label: '活动', iconUrl: '/map-icons/cmi-easter-v2/egg-v2-41-lantern.png' },
+  { id: 'easter', label: '彩蛋', iconUrl: '/map-icons/cmi-easter-v2/egg-v2-01-question.png' },
 ];
 const eventTabs: Array<{ id: EventTabId; label: string }> = [
   { id: 'ongoing', label: '正在发生' },
@@ -1489,7 +1489,7 @@ function MapMode({
           onClick={() => onOpenPath(getCmiEventPath(primaryActivityEvent.id))}
           aria-label={`打开${primaryActivityEvent.title}活动说明`}
         >
-          <Calendar size={17} strokeWidth={3} />
+          <img className="cmi-v3-map-activity-entry-icon" src="/map-icons/cmi-easter-v2/egg-v2-41-lantern.png" alt="" />
           <span>活动</span>
         </button>
       )}

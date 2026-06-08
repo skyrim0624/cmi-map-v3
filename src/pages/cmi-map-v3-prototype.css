@@ -299,11 +299,11 @@
 .cmi-v3-map-search,
 .cmi-v3-round-button {
   min-height: var(--cmi-v3-map-control-size);
-  border: 1px solid rgba(22, 22, 22, 0.08);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 14px 38px rgba(22, 22, 22, 0.14);
+  border: 3px solid var(--cmi-v3-ink);
+  background: rgba(255, 248, 223, 0.96);
+  box-shadow: 4px 5px 0 var(--cmi-v3-hard-shadow);
   color: var(--cmi-v3-ink);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(6px);
 }
 
 .cmi-v3-map-search {
@@ -312,18 +312,20 @@
   border-radius: 999px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   padding: 0 var(--cmi-v3-map-search-padding-x);
-  color: #928a84;
+  color: rgba(8, 8, 6, 0.58);
   font-size: var(--cmi-v3-map-search-font-size);
   font-weight: 950;
 }
 
 .cmi-v3-map-search:focus-within,
 .cmi-v3-map-search.has-value {
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--cmi-v3-paper-soft);
   color: var(--cmi-v3-ink);
-  box-shadow: 0 14px 38px rgba(22, 22, 22, 0.16), inset 0 0 0 2px rgba(148, 221, 230, 0.46);
+  box-shadow:
+    4px 5px 0 var(--cmi-v3-hard-shadow),
+    inset 0 0 0 2px rgba(18, 125, 179, 0.34);
 }
 
 .cmi-v3-map-search input {
@@ -340,7 +342,7 @@
 }
 
 .cmi-v3-map-search input::placeholder {
-  color: #928a84;
+  color: rgba(8, 8, 6, 0.56);
 }
 
 .cmi-v3-map-search input::-webkit-search-cancel-button {
@@ -354,8 +356,9 @@
   min-height: 0;
   border: 0;
   border-radius: 50%;
-  background: rgba(22, 22, 22, 0.08);
-  color: rgba(22, 22, 22, 0.68);
+  border: 1.5px solid var(--cmi-v3-ink);
+  background: var(--cmi-v3-yellow);
+  color: var(--cmi-v3-ink);
   display: grid;
   place-items: center;
   padding: 0;
@@ -390,34 +393,36 @@
 .cmi-v3-map-filter {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 34px;
+  gap: 7px;
+  height: 42px;
   flex: 0 0 auto;
-  border: 1px solid rgba(22, 22, 22, 0.08);
+  border: 3px solid var(--cmi-v3-ink);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 5px 14px rgba(22, 22, 22, 0.08);
-  padding: 0 12px 0 6px;
-  color: rgba(22, 22, 22, 0.82);
+  background: rgba(255, 248, 223, 0.95);
+  box-shadow: 3px 4px 0 var(--cmi-v3-hard-shadow);
+  padding: 0 14px 0 7px;
+  color: var(--cmi-v3-ink);
   line-height: 1;
 }
 
 .cmi-v3-map-filters .cmi-v3-map-filter {
-  font-size: 12.5px;
-  font-weight: 900;
+  font-size: 14px;
+  font-weight: 950;
 }
 
 .cmi-v3-map-filter.is-active {
   background: var(--cmi-v3-purple);
   color: #fff;
-  padding-left: 13px;
+  padding-left: 15px;
+  box-shadow: 3px 4px 0 rgba(8, 8, 6, 0.34);
 }
 
 .cmi-v3-map-filter img {
-  width: 24px;
-  height: 24px;
-  border: 2px solid #fff;
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid rgba(8, 8, 6, 0.18);
   border-radius: 50%;
+  background: var(--cmi-v3-paper-soft);
   object-fit: cover;
 }
 
@@ -429,19 +434,23 @@
   display: inline-flex;
   min-height: var(--cmi-v3-map-control-size);
   align-items: center;
-  gap: 7px;
-  border: 1px solid rgba(22, 22, 22, 0.12);
-  border-radius: 999px;
+  gap: 9px;
+  border: 3px solid var(--cmi-v3-ink);
+  border-radius: 18px;
   background: var(--cmi-v3-yellow);
-  box-shadow: 0 12px 30px rgba(22, 22, 22, 0.2);
+  box-shadow: 5px 6px 0 var(--cmi-v3-hard-shadow);
   color: var(--cmi-v3-ink);
-  font-size: 14px;
+  font-size: 19px;
   font-weight: 950;
-  padding: 0 14px;
+  padding: 0 17px 0 13px;
 }
 
-.cmi-v3-map-activity-entry svg {
+.cmi-v3-map-activity-entry-icon {
   flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 0 rgba(8, 8, 6, 0.18));
 }
 
 .cmi-v3-map-layer-control {
@@ -453,11 +462,11 @@
 
 .cmi-v3-map-layer-control button,
 .cmi-v3-map-side-button {
-  border: 1px solid rgba(22, 22, 22, 0.1);
+  border: 3px solid var(--cmi-v3-ink);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 248, 223, 0.96);
   color: var(--cmi-v3-ink);
-  box-shadow: 0 12px 30px rgba(22, 22, 22, 0.2);
+  box-shadow: 4px 5px 0 var(--cmi-v3-hard-shadow);
   display: grid;
   place-items: center;
   backdrop-filter: blur(10px);
@@ -485,17 +494,17 @@
 }
 
 .cmi-v3-map-side-button--locate {
-  border: 2px solid rgba(255, 255, 255, 0.74);
+  border: 3px solid var(--cmi-v3-ink);
   background: var(--cmi-v3-purple);
   color: #fff;
-  box-shadow: 0 14px 30px rgba(80, 50, 135, 0.32);
+  box-shadow: 5px 6px 0 var(--cmi-v3-hard-shadow);
 }
 
 .cmi-v3-map-side-button--profile {
-  border: 3px solid #fff;
-  background: #fff;
+  border: 3px solid var(--cmi-v3-ink);
+  background: var(--cmi-v3-paper-soft);
   padding: 0;
-  box-shadow: 0 12px 28px rgba(22, 22, 22, 0.18);
+  box-shadow: 4px 5px 0 var(--cmi-v3-hard-shadow);
 }
 
 .cmi-v3-map-side-button--profile img {
