@@ -30,8 +30,26 @@
 15. [完成] 6.6 会议后的统一社区入口：活动轮播、CMI Map、CMI Swap、一键入住 / 加群
 16. [记录完成] 主题地图最短链路：发布主题、主题页、带主题 tag 打卡、主题帖子展示、分享卡外传
 17. [完成] 回滚旧主题地图 MVP 与约搭子第一部分，准备重新开始
+18. [完成] 主题地图最短链路第一版：主题页、主题 tag 打卡、投稿回流、主题分享卡
+19. [完成] 神奇动物在哪里拍照识别第一版：Cloudflare Workers AI API + `/mark` 候选确认
 
 ## 执行记录
+
+### 2026-06-08 22:05 +07 神奇动物在哪里拍照识别第一版
+
+- 本轮实现：
+  - 新增 Pages Function `/api/animal-identify`，使用 Cloudflare Workers AI `@cf/microsoft/resnet-50` 做线上图片分类。
+  - `/mark?event=cmi-wild-chiang-mai-2026-06` 拍照后会压缩图片、调用识别 API，并在文字输入页显示动物候选。
+  - 识别到候选后自动预选 `彩蛋` 标签，并按候选匹配猫、狗、壁虎、小鸟、蝴蝶等现有彩蛋图标。
+  - 新增 `wrangler.jsonc`，为 Pages Functions 配置 `AI` 绑定。
+- 验证结果：
+  - 本地 Pages + 远程 AI 绑定实测猫图：接口约 `1.50s`，返回 `cat / TIGER CAT`。
+  - 本地 Pages + 远程 AI 绑定实测压缩后 Tokay gecko 图：接口约 `1.53s`，返回 `大壁虎 / Tokay gecko`。
+  - `node --test --experimental-strip-types src/services/animal-identification.test.ts src/pages/MarkPlace.test.ts src/routes.test.ts src/data/cmi-events.test.ts src/pages/CmiEventDetail.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint` 通过。
+  - `npx wrangler pages functions build --outfile /tmp/cmi-map-v3-functions-worker.js` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
 
 ### 2026-06-07 13:20 +07 统一入口街机动效回滚
 
@@ -53,6 +71,30 @@
   - `pnpm exec biome lint src/pages/CmiCommunityEntrance.tsx src/pages/CmiCommunityEntrance.test.ts src/pages/cmi-community-entrance.css src/App.tsx src/routes.tsx src/routes.test.ts` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 应用内浏览器复查：`CMI MAP` 点击后 URL 为 `https://cmimap.com/`；`CMI SWAP` 点击后 URL 为 `https://cmiswap.com/`。
+
+### 2026-06-07 12:44 +07 主题地图最短链路第一版
+
+- 本轮实现：
+  - 新增主题基础路径和模型：`/themes/:themeSlug`、`getThemePath`、`getMarkPlacePath({ themeSlug, taskId })`。
+  - 恢复主题最短链路数据层：读取当前主题、读取主题详情、读取主题投稿、写入主题投稿关系。
+  - 新增晚于旧 rollback 的最小恢复 migration：只包含 `cmi_map_themes`、`cmi_theme_tasks`、`cmi_theme_submissions`，并种子 `wild-chiang-mai / 神奇动物在哪里`。
+  - 新增公开主题页 `/themes/wild-chiang-mai`：展示主题介绍、当前任务、大家的投稿；主题投稿卡可生成分享卡。
+  - `/mark?theme=wild-chiang-mai&task=...` 会显示主题标签；发布动态后写入主题投稿关系，并回到主题页。
+- 明确未做：
+  - 不做奖励、玩法、成就、徽章、排行榜、积分、AR 宠物。
+  - 不恢复主题后台管理页。
+  - 不恢复约搭子功能。
+- Supabase 状态：
+  - 远端公开读取已确认 `cmi_map_themes` 存在，且 `wild-chiang-mai` 为 `active`。
+  - `npx supabase db push --dry-run --linked` 显示会同时推送旧 `20260607051500_rollback_theme_and_companion_features.sql` 和新恢复 migration；为避免连带旧 rollback 删表，本轮没有执行远端 `db push`。
+- 验证结果：
+  - `node --test --experimental-strip-types src/features/themes/cmi-themes.test.ts src/db/cmi-themes.test.ts src/lib/paths.test.ts src/lib/cmi-theme-share-card.test.ts src/pages/CmiThemeDetail.test.ts src/pages/MarkPlace.test.ts src/routes.test.ts` 通过。
+  - `pnpm exec biome lint` 目标文件通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 应用内浏览器复查 `http://127.0.0.1:5176/themes/wild-chiang-mai?verify=theme-shortest-chain`：主题标题、主题介绍、当前任务、参加任务入口、大家的投稿均正常显示，页面非空，无框架错误。
+  - 应用内浏览器点击 `参加任务`：链接携带 `theme=wild-chiang-mai` 和真实 task id，未登录状态按预期进入登录页。
+  - 移动视口 `393x852` 复查主题页：首屏正常，无横向溢出。
 
 ### 2026-06-07 12:52 +07 统一入口改用原型图
 
@@ -1934,3 +1976,16 @@
   - 页面 HTML 引用 v3 当前构建入口资源 `/assets/index-BHR7oLpB.js`。
   - `/assets/index-BHR7oLpB.js` 返回 `HTTP 200`。
   - `https://stickers.cmti.uk/` 返回 `HTTP 200`，未被本轮修改影响。
+
+### 2026-06-08 10:37:19 +07 社区统一入口原型图主视觉回退
+
+- 本轮实现：
+  - `/community` 入口不再用 CSS 重画游戏机屏幕、按钮、摇杆和像素文字，改为以 `cmi-community-arcade-prototype.png` 原型图作为主视觉。
+  - 动效策略改为整机亮度跳帧、CRT 扫描线、灯管呼吸，以及点击时截取原图对应区域做局部帧式高亮，避免出现外来覆盖层虚影。
+  - 保留 CMI MAP / CMI SWAP 跳转，CMI MAP 修正为 `https://cmimap.com`，CMI SWAP 为 `https://cmiswap.com`。
+  - “一键订房”和“相关合作”保留页面风格弹窗，均展示林可微信二维码；绿色按钮文案修正为“一键订房”。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
+  - 已部署 Cloudflare Pages：`https://61e4fadb.cmi-map-v3.pages.dev/community`。
+  - Playwright 线上验证：原型图加载成功，CSS 重绘层均为 `display: none`，CMI MAP / CMI SWAP 外链正确，订房和合作弹窗二维码加载成功。

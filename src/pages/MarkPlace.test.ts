@@ -88,6 +88,15 @@ test('打卡只保留活动关联，不再写主题投稿关系', () => {
   assert.doesNotMatch(source, /排行榜/);
 });
 
+test('神奇动物打卡会调用动物识别并预选彩蛋', () => {
+  assert.match(source, /CMI_MAP_WILD_CHIANG_MAI_EVENT_ID/);
+  assert.match(source, /identifyAnimalPhoto\(images\[0\]\)/);
+  assert.match(source, /setSelectedInputCategoryId\(easterOption\.id\)/);
+  assert.match(source, /setSelectedEasterIconId\(candidate\.iconId\)/);
+  assert.match(source, /动物识别/);
+  assert.doesNotMatch(source, /BioCLIP/);
+});
+
 test('发布完成反馈使用鼓励徽章而不是红色罚单感大章', () => {
   assert.match(source, /ThumbsUp/);
   assert.match(source, /功德 \+1/);

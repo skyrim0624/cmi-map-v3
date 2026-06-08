@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   CMI_EVENTS,
   type CmiEvent,
+  CMI_MAP_WILD_CHIANG_MAI_EVENT_ID,
   formatCmiEventTime,
   getCmiEventById,
   getCmiEventSortTime,
@@ -39,6 +40,13 @@ import {
   getCmiEasterIconById,
 } from '@/lib/easter-icons';
 import { getCmiFeedPath, getPlacePath } from '@/lib/paths';
+import {
+  type AnimalIdentificationCandidate,
+  type AnimalIdentificationResult,
+  buildAnimalCandidateDescription,
+  formatAnimalCandidateLabel,
+  identifyAnimalPhoto,
+} from '@/services/animal-identification';
 import type { Category } from '@/types/types';
 import {
   CMI_INN_CATEGORY,
@@ -78,6 +86,7 @@ type SpeechRecognitionErrorEventLike = {
 };
 type SpeechPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied' | 'checking';
 type CameraStatus = 'starting' | 'ready' | 'blocked' | 'unsupported' | 'error';
+type AnimalIdentificationStatus = 'idle' | 'running' | 'done' | 'no-match' | 'unavailable' | 'error';
 type MediaTrackConstraintSetWithZoom = MediaTrackConstraintSet & { zoom?: number };
 type CameraPinchState = {
   distance: number;
@@ -328,6 +337,9 @@ export default function MarkPlace() {
   const [cameraZoomRange, setCameraZoomRange] = useState(DEFAULT_CAMERA_ZOOM_RANGE);
   const [cameraZoom, setCameraZoom] = useState(DEFAULT_CAMERA_ZOOM_RANGE.min);
   const [isCameraZoomFeedbackVisible, setIsCameraZoomFeedbackVisible] = useState(false);
+  const [animalIdentification, setAnimalIdentification] = useState<AnimalIdentificationResult | null>(null);
+  const [animalIdentificationStatus, setAnimalIdentificationStatus] = useState<AnimalIdentificationStatus>('idle');
+  const [selectedAnimalCandidateId, setSelectedAnimalCandidateId] = useState<string>('');
 
   const [sourceType, setSourceType] = useState<'live' | 'exif' | null>(null);
 
@@ -352,7 +364,10 @@ export default function MarkPlace() {
   const selectedEvent = selectedEventId
     ? eventOptions.find(event => event.id === selectedEventId) ?? getCmiEventById(selectedEventId)
     : null;
+  const isWildAnimalCheckin = selectedEventId === CMI_MAP_WILD_CHIANG_MAI_EVENT_ID || isCmiMapCheckinActivityEvent(selectedEvent);
   const selectedPlaceLabel = pickedPlaceName;
+  const animalCandidates = animalIdentification?.candidates ?? [];
+  const selectedAnimalCandidate = animalCandidates.find(candidate => candidate.id === selectedAnimalCandidateId) ?? animalCandidates[0];
   const publishCategoryOptions = useMemo(() => {
     const priorityCategoryIds = new Set(['cmi-inn', 'easter']);
     const priorityOptions = inputCategoryOptions.filter(option => priorityCategoryIds.has(option.id));
@@ -392,6 +407,7 @@ export default function MarkPlace() {
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const routeRootRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<InstanceType<SpeechRecognitionConstructor> | null>(null);
+  const animalIdentificationRequestRef = useRef(0);
   const speechStartingRef = useRef(false);
   const speechHadResultRef = useRef(false);
   const interimTranscriptRef = useRef('');
@@ -834,6 +850,8 @@ export default function MarkPlace() {
           if (blob) {
             const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
             const url = URL.createObjectURL(file);
+            resetAnimalIdentification();
+            setScanned(false);
             setImages([file]);
             setFlash(true);
             fetchCurrentLocation();
@@ -900,6 +918,8 @@ export default function MarkPlace() {
         return sourceFile;
       });
       const url = URL.createObjectURL(file);
+      resetAnimalIdentification();
+      setScanned(false);
       setImages([file]);
       setFlash(true);
       
@@ -923,6 +943,8 @@ export default function MarkPlace() {
     setPhotoURL(null);
     setSourceType(null);
     setDescription('');
+    resetAnimalIdentification();
+    setScanned(false);
     updateInterimTranscript('');
     setIsListening(false);
     speechStartingRef.current = false;
@@ -974,17 +996,77 @@ export default function MarkPlace() {
     }
   };
 
+  const resetAnimalIdentification = () => {
+    animalIdentificationRequestRef.current += 1;
+    setAnimalIdentification(null);
+    setAnimalIdentificationStatus('idle');
+    setSelectedAnimalCandidateId('');
+  };
+
+  const applyAnimalCandidate = (candidate: AnimalIdentificationCandidate) => {
+    const easterOption = inputCategoryOptions.find(option => option.id === 'easter');
+
+    setSelectedAnimalCandidateId(candidate.id);
+    if (easterOption) {
+      setSelectedInputCategoryId(easterOption.id);
+      setSelectedCat(easterOption.storedCategory);
+    }
+    if (candidate.iconId) setSelectedEasterIconId(candidate.iconId);
+    setDescription(current => current.trim() || buildAnimalCandidateDescription(candidate));
+  };
+
   // 2. 定位分析动画
   useEffect(() => {
     if (stage === 'analyzing') {
-      const timer1 = setTimeout(() => setScanned(true), 1500);
+      const timer1 = setTimeout(() => setScanned(true), isWildAnimalCheckin ? 700 : 1500);
+
+      if (isWildAnimalCheckin && images[0]) {
+        const requestId = animalIdentificationRequestRef.current + 1;
+        animalIdentificationRequestRef.current = requestId;
+        setAnimalIdentificationStatus('running');
+
+        void identifyAnimalPhoto(images[0])
+          .then(result => {
+            if (animalIdentificationRequestRef.current !== requestId) return;
+
+            setAnimalIdentification(result);
+            setAnimalIdentificationStatus(
+              result.status === 'ready'
+                ? 'done'
+                : result.status === 'no-match'
+                  ? 'no-match'
+                  : result.status === 'unavailable'
+                    ? 'unavailable'
+                    : 'error'
+            );
+            if (result.candidates[0]) applyAnimalCandidate(result.candidates[0]);
+            setStage('voice');
+          })
+          .catch(error => {
+            if (animalIdentificationRequestRef.current !== requestId) return;
+
+            console.error('动物识别失败:', error);
+            setAnimalIdentificationStatus('error');
+            setStage('voice');
+          });
+
+        const fallbackTimer = setTimeout(() => {
+          setStage('voice');
+        }, 2200);
+
+        return () => {
+          clearTimeout(timer1);
+          clearTimeout(fallbackTimer);
+        };
+      }
+
       // NOTE: 相册旧照不再先逼用户拖地图，先写体验，再关联地点或活动。
       const timer2 = setTimeout(() => {
         setStage('voice');
       }, 3000);
       return () => { clearTimeout(timer1); clearTimeout(timer2); };
     }
-  }, [stage]);
+  }, [stage, isWildAnimalCheckin, images]);
 
   // 3. 语音对话控制
   const handleVoiceInput = async () => {
@@ -1312,7 +1394,9 @@ export default function MarkPlace() {
                     <div className="flex flex-col items-center text-white/90 drop-shadow-md">
                       <Loader2 className="w-8 h-8 animate-spin mb-2" />
                       <span className="font-medium tracking-wide">
-                        {sourceType === 'live' ? '获取当前实时坐标...' : '解析旧照空间记忆...'}
+                        {isWildAnimalCheckin
+                          ? '正在识别这只小生命...'
+                          : sourceType === 'live' ? '获取当前实时坐标...' : '解析旧照空间记忆...'}
                       </span>
                     </div>
                   </div>
@@ -1453,6 +1537,44 @@ export default function MarkPlace() {
             {stage === 'voice' && (
               <div className="w-full flex flex-col items-center gap-4 py-4 animate-in slide-in-from-bottom-10 fade-in duration-500">
                 <div className="w-full max-w-sm">
+                  {isWildAnimalCheckin && (
+                    <div className="mb-3 rounded-3xl border border-stone-200 bg-white/90 p-3 text-left shadow-sm">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-black text-stone-800">动物识别</p>
+                        {animalIdentificationStatus === 'running' && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                      </div>
+                      {animalCandidates.length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {animalCandidates.map(candidate => {
+                            const isSelectedCandidate = selectedAnimalCandidate?.id === candidate.id;
+
+                            return (
+                              <button
+                                key={`${candidate.id}:${candidate.rawLabel}`}
+                                type="button"
+                                onClick={() => applyAnimalCandidate(candidate)}
+                                className={`rounded-full border px-3 py-1.5 text-xs font-black transition active:scale-95 ${
+                                  isSelectedCandidate
+                                    ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/15'
+                                    : 'border-stone-200 bg-stone-50 text-stone-700'
+                                }`}
+                              >
+                                {formatAnimalCandidateLabel(candidate)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-xs font-semibold leading-relaxed text-stone-500">
+                          {animalIdentificationStatus === 'running'
+                            ? '拍照后会先给出可能候选。'
+                            : animalIdentificationStatus === 'idle'
+                              ? '拍下动物后会自动识别。'
+                              : '这张暂时没识别准，可以直接手写。'}
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
