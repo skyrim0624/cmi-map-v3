@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { type CSSProperties, type MouseEvent, type PointerEvent, useEffect, useRef, useState } from 'react';
 import {
   CMI_EVENTS,
@@ -33,7 +33,6 @@ const minimumSwipeDistance = 44;
 const linkeQrImageUrl = '/cmi-home/qr-linke.jpg';
 
 type ContactModalType = 'booking' | 'partner';
-type ControlPressId = 'map' | 'swap' | 'event-create' | 'home' | 'partner';
 
 const contactModalCopy: Record<ContactModalType, { eyebrow: string; title: string; hint: string }> = {
   booking: {
@@ -49,17 +48,10 @@ const contactModalCopy: Record<ContactModalType, { eyebrow: string; title: strin
 };
 
 export default function CmiCommunityEntrance() {
-  const navigate = useNavigate();
   const [activeEventIndex, setActiveEventIndex] = useState(0);
   const [contactModalType, setContactModalType] = useState<ContactModalType | null>(null);
-  const [joystickMotion, setJoystickMotion] = useState<{
-    direction: 'left' | 'right' | null;
-    tick: number;
-  }>({ direction: null, tick: 0 });
-  const [controlPress, setControlPress] = useState<{ id: ControlPressId; tick: number } | null>(null);
   const swipeStartXRef = useRef<number | null>(null);
   const swipeStartYRef = useRef<number | null>(null);
-  const controlPressTimeoutRef = useRef<number | null>(null);
   const swipedRef = useRef(false);
   const selectedFeaturedEvent = featuredEvents[activeEventIndex] ?? primaryFeaturedEvent;
   const selectedFeaturedPosterUrl = getCmiEventCardImageUrl(selectedFeaturedEvent);
@@ -84,12 +76,6 @@ export default function CmiCommunityEntrance() {
   }, [contactModalType]);
 
   useEffect(() => {
-    return () => {
-      if (controlPressTimeoutRef.current) window.clearTimeout(controlPressTimeoutRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
     const preloadedImages = featuredPosterUrls.map(src => {
       const image = new Image();
       image.decoding = 'async';
@@ -109,30 +95,18 @@ export default function CmiCommunityEntrance() {
 
     const carouselTimer = window.setInterval(() => {
       setActiveEventIndex(previousIndex => (previousIndex + 1) % featuredEventCount);
-      triggerJoystickMotion('right');
     }, 5600);
 
     return () => window.clearInterval(carouselTimer);
   }, [featuredEventCount]);
 
-  const triggerControlPress = (id: ControlPressId) => {
-    if (controlPressTimeoutRef.current) window.clearTimeout(controlPressTimeoutRef.current);
-    setControlPress(previous => ({ id, tick: (previous?.tick ?? 0) + 1 }));
-    controlPressTimeoutRef.current = window.setTimeout(() => setControlPress(null), 820);
-  };
-
-  const triggerJoystickMotion = (direction: 'left' | 'right') => {
-    setJoystickMotion(({ tick }) => ({ direction, tick: tick + 1 }));
-  };
-
-  const goToEvent = (nextIndex: number, direction: 'left' | 'right') => {
+  const goToEvent = (nextIndex: number) => {
     if (nextIndex < 0 || nextIndex >= featuredEventCount) return;
     setActiveEventIndex(nextIndex);
-    triggerJoystickMotion(direction);
   };
 
-  const goPrevious = () => goToEvent(activeEventIndex - 1, 'left');
-  const goNext = () => goToEvent(activeEventIndex + 1, 'right');
+  const goPrevious = () => goToEvent(activeEventIndex - 1);
+  const goNext = () => goToEvent(activeEventIndex + 1);
 
   const handleEventPointerDown = (event: PointerEvent<HTMLAnchorElement>) => {
     swipeStartXRef.current = event.clientX;
@@ -171,55 +145,10 @@ export default function CmiCommunityEntrance() {
     swipeStartYRef.current = null;
   };
 
-  const openContactModalWithPress = (type: ContactModalType, id: Extract<ControlPressId, 'home' | 'partner'>) => {
-    triggerControlPress(id);
-    triggerJoystickMotion(id === 'home' ? 'left' : 'right');
-    window.setTimeout(() => setContactModalType(type), 280);
-  };
-
-  const handleExternalHotspotClick = (
-    event: MouseEvent<HTMLAnchorElement>,
-    id: Extract<ControlPressId, 'map' | 'swap'>,
-    url: string,
-  ) => {
-    event.preventDefault();
-    triggerControlPress(id);
-    triggerJoystickMotion(id === 'map' ? 'left' : 'right');
-    window.setTimeout(() => {
-      window.location.href = url;
-    }, 520);
-  };
-
-  const handleEventCreateClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-    triggerControlPress('event-create');
-    triggerJoystickMotion('left');
-    window.setTimeout(() => navigate(getCmiEventCreatePath()), 520);
-  };
-
-  const handleControlPointerDown = (id: ControlPressId) => {
-    triggerControlPress(id);
-    if (id === 'swap' || id === 'partner') {
-      triggerJoystickMotion('right');
-    } else {
-      triggerJoystickMotion('left');
-    }
-  };
-
-  const arcadePressClassName = controlPress
-    ? `cmi-arcade-prototype cmi-arcade-prototype--press-${controlPress.id}`
-    : 'cmi-arcade-prototype';
-  const joystickClassName = joystickMotion.direction
-    ? `cmi-prototype-joystick-stick cmi-prototype-joystick-stick--${joystickMotion.direction}`
-    : 'cmi-prototype-joystick-stick';
-  const joystickFrameClassName = joystickMotion.direction
-    ? `cmi-prototype-joystick-frame cmi-prototype-joystick-frame--${joystickMotion.direction}`
-    : 'cmi-prototype-joystick-frame';
-
   return (
     <div className="cmi-community-page">
       <h1 className="sr-only">CMI 社区统一入口</h1>
-      <main className={arcadePressClassName} aria-label="CMI 社区统一入口">
+      <main className="cmi-arcade-prototype" aria-label="CMI 社区统一入口">
         <img
           className="cmi-arcade-prototype-image"
           src="/brand/cmi-community-arcade-prototype.png"
@@ -253,7 +182,7 @@ export default function CmiCommunityEntrance() {
           <span className="cmi-prototype-entry-glow cmi-prototype-entry-glow--swap" />
           <span className="cmi-prototype-control-deck-cover" />
           <span className="cmi-prototype-joystick-base" />
-          <span key={`joystick-stick-${joystickMotion.tick}`} className={joystickClassName} />
+          <span className="cmi-prototype-joystick-stick" />
           <span className="cmi-prototype-control-button cmi-prototype-control-button--event-create">
             发起
             <br />
@@ -272,7 +201,7 @@ export default function CmiCommunityEntrance() {
           <span className="cmi-prototype-home-label-fix">
             订房
           </span>
-          <span key={`joystick-frame-${joystickMotion.tick}`} className={joystickFrameClassName} />
+          <span className="cmi-prototype-joystick-frame" />
           <span className="cmi-prototype-pixel-label cmi-prototype-pixel-label--screen-title">
             近期活动 / 精选内容
           </span>
@@ -323,36 +252,28 @@ export default function CmiCommunityEntrance() {
           className="cmi-prototype-hotspot cmi-prototype-hotspot--map"
           href="https://cmimap.com"
           aria-label="CMI MAP"
-          onPointerDown={() => handleControlPointerDown('map')}
-          onClick={event => handleExternalHotspotClick(event, 'map', 'https://cmimap.com')}
         />
         <a
           className="cmi-prototype-hotspot cmi-prototype-hotspot--swap"
           href="https://cmiswap.com"
           aria-label="CMI SWAP"
-          onPointerDown={() => handleControlPointerDown('swap')}
-          onClick={event => handleExternalHotspotClick(event, 'swap', 'https://cmiswap.com')}
         />
         <Link
           className="cmi-prototype-hotspot cmi-prototype-hotspot--event-create"
           to={getCmiEventCreatePath()}
           aria-label="发起活动"
-          onPointerDown={() => handleControlPointerDown('event-create')}
-          onClick={handleEventCreateClick}
         />
         <button
           type="button"
           className="cmi-prototype-hotspot cmi-prototype-hotspot--home"
           aria-label="一键订房"
-          onPointerDown={() => handleControlPointerDown('home')}
-          onClick={() => openContactModalWithPress('booking', 'home')}
+          onClick={() => setContactModalType('booking')}
         />
         <button
           type="button"
           className="cmi-prototype-hotspot cmi-prototype-hotspot--partner"
           aria-label="相关合作"
-          onPointerDown={() => handleControlPointerDown('partner')}
-          onClick={() => openContactModalWithPress('partner', 'partner')}
+          onClick={() => setContactModalType('partner')}
         />
       </main>
       {activeContactModal && (
