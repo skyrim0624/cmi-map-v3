@@ -1,6 +1,6 @@
 # CMI Map 优化任务日志
 
-更新时间：2026-06-07 +07
+更新时间：2026-06-09 +07
 
 ## 目标
 
@@ -32,8 +32,21 @@
 17. [完成] 回滚旧主题地图 MVP 与约搭子第一部分，准备重新开始
 18. [完成] 主题地图最短链路第一版：主题页、主题 tag 打卡、投稿回流、主题分享卡
 19. [完成] 神奇动物在哪里拍照识别第一版：Cloudflare Workers AI API + `/mark` 候选确认
+20. [完成] `/mark` 相机页补充可见“识别动物”入口
 
 ## 执行记录
+
+### 2026-06-09 01:11 +07 神奇动物在哪里识别入口补充
+
+- 本轮实现：
+  - `/mark` 相机页新增可见“识别动物”按钮，点按后把当前打卡切到神奇动物活动识别模式。
+  - 保持拍照后自动识别和候选确认逻辑，不恢复独立主题页、主题任务、奖励或成就。
+- 验证结果：
+  - `node --test --experimental-strip-types src/pages/MarkPlace.test.ts src/services/animal-identification.test.ts` 通过。
+  - `pnpm exec biome lint src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts src/services/animal-identification.ts src/services/animal-identification.test.ts` 通过。
+  - `git diff --check -- src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts CMI_MAP_TASK_LOG.md` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
 
 ### 2026-06-08 22:05 +07 神奇动物在哪里拍照识别第一版
 

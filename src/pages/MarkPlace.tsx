@@ -1,4 +1,4 @@
-import { ArrowLeft, Calendar, Check, Image as ImageIcon, Loader2, MapPin, Mic, MicOff, PencilLine, Search, Shuffle, ThumbsUp, X } from 'lucide-react';
+import { ArrowLeft, Calendar, Check, Image as ImageIcon, Loader2, MapPin, Mic, MicOff, PawPrint, PencilLine, Search, Shuffle, ThumbsUp, X } from 'lucide-react';
 import { type TouchEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -875,6 +875,19 @@ export default function MarkPlace() {
     captureFromPreview();
   };
 
+  const enableWildAnimalIdentification = () => {
+    const wildAnimalEvent = getCmiEventById(CMI_MAP_WILD_CHIANG_MAI_EVENT_ID);
+
+    setSelectedEventId(CMI_MAP_WILD_CHIANG_MAI_EVENT_ID);
+    if (wildAnimalEvent) {
+      setEventOptions(current =>
+        current.some(event => event.id === wildAnimalEvent.id)
+          ? current
+          : [wildAnimalEvent, ...current]
+      );
+    }
+  };
+
   // 未登录保护
   useEffect(() => {
     if (authLoading) return;
@@ -1369,8 +1382,21 @@ export default function MarkPlace() {
               </button>
             </div>
             <button
+              type="button"
+              onClick={enableWildAnimalIdentification}
+              aria-pressed={isWildAnimalCheckin}
+              className={`mt-3 inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-black shadow-sm active:scale-95 ${
+                isWildAnimalCheckin
+                  ? 'border-[#f97316]/45 bg-[#fff3e8] text-[#9a3412]'
+                  : 'border-stone-300/75 bg-white/70 text-stone-700 hover:bg-white'
+              }`}
+            >
+              <PawPrint className="h-4 w-4" />
+              {isWildAnimalCheckin ? '动物识别已开启' : '识别动物'}
+            </button>
+            <button
               onClick={startQuickTextFlow}
-              className="mt-3 text-xs font-bold text-stone-600 underline underline-offset-4 active:scale-95"
+              className="mt-2 text-xs font-bold text-stone-600 underline underline-offset-4 active:scale-95"
             >
               不拍照，直接文字推荐
             </button>

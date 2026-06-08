@@ -90,9 +90,13 @@ test('打卡只保留活动关联，不再写主题投稿关系', () => {
 
 test('神奇动物打卡会调用动物识别并预选彩蛋', () => {
   assert.match(source, /CMI_MAP_WILD_CHIANG_MAI_EVENT_ID/);
+  assert.match(source, /const enableWildAnimalIdentification = \(\) => \{/);
+  assert.match(source, /setSelectedEventId\(CMI_MAP_WILD_CHIANG_MAI_EVENT_ID\)/);
+  assert.match(source, /aria-pressed=\{isWildAnimalCheckin\}/);
   assert.match(source, /identifyAnimalPhoto\(images\[0\]\)/);
   assert.match(source, /setSelectedInputCategoryId\(easterOption\.id\)/);
   assert.match(source, /setSelectedEasterIconId\(candidate\.iconId\)/);
+  assert.match(source, /识别动物/);
   assert.match(source, /动物识别/);
   assert.doesNotMatch(source, /BioCLIP/);
 });
