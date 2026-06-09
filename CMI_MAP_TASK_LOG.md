@@ -2262,3 +2262,15 @@
   - `pnpm exec tsgo -p tsconfig.check.json` 通过。
   - 本地浏览器 390×844 手机视口验证：点击右箭头从 `01/05` 到 `02/05`，横向左滑从 `02/05` 到 `03/05`，等待 5 秒后自动从 `01/05` 到 `02/05`。
   - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
+
+### 2026-06-09 社区入口轮播箭头视觉轻量化
+
+- 背景：用户指出手机轮播箭头按钮过大、违和，遮挡显示屏内容。
+- 本轮实现：
+  - 保留手机可点击热区，将可见按钮缩成轻量半透明侧边箭头。
+  - 去掉大圆盘、金色外圈和厚阴影，减少对活动标题和海报的遮挡。
+- 验证结果：
+  - `node --test --experimental-strip-types src/pages/CmiCommunityEntrance.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - 本地浏览器 390×844 手机视口验证：箭头触控区约 45×49px，点击右箭头可切到 `02/05`，横向左滑可切到 `03/05`。
+  - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
