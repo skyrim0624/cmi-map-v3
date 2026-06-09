@@ -2237,3 +2237,15 @@
   - `pnpm exec tsgo -p tsconfig.check.json` 通过。
   - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
   - 本地浏览器检查 `/community`：移动端首屏无白边，活动海报加载，按钮排列规整；矮屏可滚动到底部按钮；订房弹窗二维码正常。
+
+### 2026-06-09 社区入口显示屏箭头按钮放大
+
+- 背景：用户指出显示屏左右箭头太小，桌面宽屏下几乎看不见。
+- 本轮实现：
+  - 将原本透明的小箭头热区改为可见的大号圆形切换按钮。
+  - 按钮使用浅色圆底、黑色描边、粗箭头和实体阴影，提高可见性和点击面积。
+- 验证结果：
+  - `node --test --experimental-strip-types src/pages/CmiCommunityEntrance.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
+  - 线上预览 `https://aa5ed505.cmi-map-v3.pages.dev/community` 验证：桌面 1440×844 视口下左右箭头约 52×52px，点击右箭头可从第一屏切换到 `02/05`。

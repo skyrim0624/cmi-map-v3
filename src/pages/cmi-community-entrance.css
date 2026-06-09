@@ -192,21 +192,55 @@
 .cmi-reference-arrow {
   position: absolute;
   z-index: 8;
-  top: 31.15%;
-  width: 7%;
-  height: 7.4%;
-  border: 0;
-  background: transparent;
+  top: 29.6%;
+  display: grid;
+  width: 10.9%;
+  height: 6.15%;
+  place-items: center;
+  border: clamp(2px, 0.62vw, 4px) solid #202223;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.94), rgba(255, 249, 229, 0.78) 44%, rgba(225, 229, 216, 0.88) 100%);
+  box-shadow:
+    0 clamp(3px, 0.9vw, 6px) 0 rgba(32, 34, 35, 0.5),
+    0 0 0 clamp(2px, 0.5vw, 3px) rgba(255, 211, 66, 0.72),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.42);
+  color: #202223;
   cursor: pointer;
   padding: 0;
 }
 
+.cmi-reference-arrow::before {
+  width: 36%;
+  height: 36%;
+  border-color: currentColor;
+  border-style: solid;
+  border-width: 0 clamp(4px, 1.1vw, 6px) clamp(4px, 1.1vw, 6px) 0;
+  content: "";
+}
+
+.cmi-reference-arrow:active {
+  box-shadow:
+    0 2px 0 rgba(32, 34, 35, 0.48),
+    0 0 0 clamp(2px, 0.5vw, 3px) rgba(255, 211, 66, 0.72),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.42);
+  transform: translateY(3px);
+}
+
 .cmi-reference-arrow--previous {
-  left: 2.7%;
+  left: 0.85%;
+}
+
+.cmi-reference-arrow--previous::before {
+  transform: translateX(10%) rotate(135deg);
 }
 
 .cmi-reference-arrow--next {
-  right: 2.7%;
+  right: 0.85%;
+}
+
+.cmi-reference-arrow--next::before {
+  transform: translateX(-10%) rotate(-45deg);
 }
 
 .cmi-reference-hotspot:focus-visible,
