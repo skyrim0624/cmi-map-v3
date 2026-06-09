@@ -50,6 +50,8 @@
   - `pnpm build` 通过，PWA precache 检查通过。
   - 应用内浏览器复查 `http://localhost:5174/?screen=map&verify=wild-skin-qa`：移动视口底部主按钮为绿色放大镜，页面非空，无框架错误；点击“打卡拍照”进入未登录前置流程。
   - 应用内浏览器桌面视口复查 `http://localhost:5174/?screen=map&verify=wild-skin-desktop-clean`：页面保持 478px 容器，无横向溢出。
+  - 已部署 v3 项目 `https://844b647a.cmi-map-v3.pages.dev` 和正式站 `https://2debdd43.cmi-map.pages.dev`，Source 为 `b05b7ee`。
+  - 正式域名 `https://cmimap.com/?verify=wild-skin-b05b7ee` 已确认加载新资源：入口引用 `CmiMapV3Prototype-DD_PNS0U.js` 和 `CmiMapV3Prototype-DxlICJqy.css`；线上浏览器复查底部主按钮为绿色放大镜，活动筛选和定位按钮为绿色主题，无框架错误。
 
 ### 2026-06-09 11:58 +07 神奇动物分享图鉴卡编号口径
 
