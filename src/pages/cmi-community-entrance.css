@@ -191,13 +191,13 @@
 
 .cmi-reference-arrow {
   position: absolute;
-  z-index: 8;
-  top: 29.6%;
+  z-index: 14;
+  top: 29.05%;
   display: grid;
-  width: 10.9%;
-  height: 6.15%;
+  width: 13.6%;
+  height: 7.8%;
   place-items: center;
-  border: clamp(2px, 0.62vw, 4px) solid #202223;
+  border: clamp(3px, 0.78vw, 5px) solid #202223;
   border-radius: 999px;
   background:
     radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.94), rgba(255, 249, 229, 0.78) 44%, rgba(225, 229, 216, 0.88) 100%);
@@ -208,14 +208,15 @@
   color: #202223;
   cursor: pointer;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .cmi-reference-arrow::before {
-  width: 36%;
-  height: 36%;
+  width: 34%;
+  height: 34%;
   border-color: currentColor;
   border-style: solid;
-  border-width: 0 clamp(4px, 1.1vw, 6px) clamp(4px, 1.1vw, 6px) 0;
+  border-width: 0 clamp(5px, 1.3vw, 7px) clamp(5px, 1.3vw, 7px) 0;
   content: "";
 }
 
@@ -224,23 +225,23 @@
     0 2px 0 rgba(32, 34, 35, 0.48),
     0 0 0 clamp(2px, 0.5vw, 3px) rgba(255, 211, 66, 0.72),
     inset 0 0 0 2px rgba(255, 255, 255, 0.42);
-  transform: translateY(3px);
+  transform: translateY(3px) scale(0.98);
 }
 
 .cmi-reference-arrow--previous {
-  left: 0.85%;
+  left: 3.7%;
 }
 
 .cmi-reference-arrow--previous::before {
-  transform: translateX(10%) rotate(135deg);
+  transform: translateX(14%) rotate(135deg);
 }
 
 .cmi-reference-arrow--next {
-  right: 0.85%;
+  right: 3.7%;
 }
 
 .cmi-reference-arrow--next::before {
-  transform: translateX(-10%) rotate(-45deg);
+  transform: translateX(-14%) rotate(-45deg);
 }
 
 .cmi-reference-hotspot:focus-visible,
@@ -252,10 +253,12 @@
 
 .cmi-reference-hotspot--event {
   z-index: 6;
-  left: 5.9%;
-  top: 13.25%;
-  width: 88.2%;
-  height: 39.75%;
+  left: 5.5%;
+  top: 11.75%;
+  width: 89%;
+  height: 50.45%;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .cmi-reference-hotspot--map {

@@ -1,5 +1,5 @@
 import { CalendarDays, MapPin, X } from 'lucide-react';
-import { type MouseEvent, type PointerEvent, useEffect, useRef, useState } from 'react';
+import { type MouseEvent, type PointerEvent, type TouchEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getCmiEventCardImageUrl } from '@/components/intent/event-card-presentation';
 import { CMI_EVENTS, formatCmiEventTime } from '@/data/cmi-events';
@@ -8,6 +8,7 @@ import './cmi-community-entrance.css';
 
 const referenceImageUrl = '/cmi-home/community-entry-reference.png';
 const linkeQrImageUrl = '/cmi-home/qr-linke.jpg';
+const carouselIntervalMs = 5000;
 const minimumSwipeDistance = 42;
 const featuredEventIds = [
   'cmi-secondhand-auction-2026-06-06',
@@ -47,6 +48,13 @@ export default function CmiCommunityEntrance() {
   const showDynamicScreen = activeEventIndex > 0;
   const carouselCountLabel = `${String(activeEventIndex + 1).padStart(2, '0')}/${String(featuredEvents.length).padStart(2, '0')}`;
 
+  const changeActiveEventIndex = useCallback((step: number) => {
+    setActiveEventIndex(previousIndex => {
+      if (featuredEvents.length <= 1) return previousIndex;
+      return (previousIndex + step + featuredEvents.length) % featuredEvents.length;
+    });
+  }, []);
+
   useEffect(() => {
     if (!contactModalType) return undefined;
 
@@ -58,25 +66,35 @@ export default function CmiCommunityEntrance() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [contactModalType]);
 
-  const goPrevious = () => {
-    setActiveEventIndex(previousIndex => (previousIndex - 1 + featuredEvents.length) % featuredEvents.length);
-  };
+  useEffect(() => {
+    if (contactModalType || featuredEvents.length <= 1) return undefined;
 
-  const goNext = () => {
-    setActiveEventIndex(previousIndex => (previousIndex + 1) % featuredEvents.length);
-  };
+    const intervalId = window.setInterval(() => {
+      changeActiveEventIndex(1);
+    }, carouselIntervalMs);
 
-  const handleScreenPointerDown = (event: PointerEvent<HTMLAnchorElement>) => {
-    swipeStartXRef.current = event.clientX;
-    swipeStartYRef.current = event.clientY;
+    return () => window.clearInterval(intervalId);
+  }, [activeEventIndex, changeActiveEventIndex, contactModalType]);
+
+  const goPrevious = useCallback(() => {
+    changeActiveEventIndex(-1);
+  }, [changeActiveEventIndex]);
+
+  const goNext = useCallback(() => {
+    changeActiveEventIndex(1);
+  }, [changeActiveEventIndex]);
+
+  const beginScreenSwipe = (clientX: number, clientY: number) => {
+    swipeStartXRef.current = clientX;
+    swipeStartYRef.current = clientY;
     swipedRef.current = false;
   };
 
-  const handleScreenPointerUp = (event: PointerEvent<HTMLAnchorElement>) => {
+  const finishScreenSwipe = (clientX: number, clientY: number) => {
     if (swipeStartXRef.current === null || swipeStartYRef.current === null) return;
 
-    const deltaX = event.clientX - swipeStartXRef.current;
-    const deltaY = event.clientY - swipeStartYRef.current;
+    const deltaX = clientX - swipeStartXRef.current;
+    const deltaY = clientY - swipeStartYRef.current;
     swipeStartXRef.current = null;
     swipeStartYRef.current = null;
 
@@ -88,6 +106,28 @@ export default function CmiCommunityEntrance() {
     } else {
       goNext();
     }
+  };
+
+  const handleScreenPointerDown = (event: PointerEvent<HTMLAnchorElement>) => {
+    beginScreenSwipe(event.clientX, event.clientY);
+  };
+
+  const handleScreenPointerUp = (event: PointerEvent<HTMLAnchorElement>) => {
+    finishScreenSwipe(event.clientX, event.clientY);
+  };
+
+  const handleScreenTouchStart = (event: TouchEvent<HTMLAnchorElement>) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    beginScreenSwipe(touch.clientX, touch.clientY);
+  };
+
+  const handleScreenTouchEnd = (event: TouchEvent<HTMLAnchorElement>) => {
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+    const previousSwiped = swipedRef.current;
+    finishScreenSwipe(touch.clientX, touch.clientY);
+    if (!previousSwiped && swipedRef.current) event.preventDefault();
   };
 
   const handleScreenClick = (event: MouseEvent<HTMLAnchorElement>) => {
@@ -161,6 +201,9 @@ export default function CmiCommunityEntrance() {
           onPointerCancel={resetScreenSwipe}
           onPointerDown={handleScreenPointerDown}
           onPointerUp={handleScreenPointerUp}
+          onTouchCancel={resetScreenSwipe}
+          onTouchEnd={handleScreenTouchEnd}
+          onTouchStart={handleScreenTouchStart}
         />
         <a
           className="cmi-reference-hotspot cmi-reference-hotspot--map"

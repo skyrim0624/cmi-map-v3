@@ -21,4 +21,8 @@ test('社区入口显示屏支持箭头和左右滑动切换精选内容', () =>
   assert.match(source, /cmi-reference-arrow--next/);
   assert.match(source, /onPointerDown=\{handleScreenPointerDown\}/);
   assert.match(source, /onPointerUp=\{handleScreenPointerUp\}/);
+  assert.match(source, /onTouchStart=\{handleScreenTouchStart\}/);
+  assert.match(source, /onTouchEnd=\{handleScreenTouchEnd\}/);
+  assert.match(source, /carouselIntervalMs = 5000/);
+  assert.match(source, /window\.setInterval/);
 });

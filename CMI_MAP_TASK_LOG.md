@@ -2249,3 +2249,16 @@
   - `pnpm exec tsgo -p tsconfig.check.json` 通过。
   - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
   - 线上预览 `https://aa5ed505.cmi-map-v3.pages.dev/community` 验证：桌面 1440×844 视口下左右箭头约 52×52px，点击右箭头可从第一屏切换到 `02/05`。
+
+### 2026-06-09 社区入口手机轮播交互修复
+
+- 背景：用户反馈手机上点击箭头和滑动屏幕都无法切换展示，并希望加入轮播功能。
+- 本轮实现：
+  - 将左右箭头从屏幕边缘挪到显示屏内侧，并扩大为约 53×54px 的触控按钮。
+  - 显示屏热区扩大到整块屏幕，补充 `touch` 事件处理，手机横向滑动可切换活动。
+  - 加入 5 秒自动轮播；用户手动切换后会重新计时。
+- 验证结果：
+  - `node --test --experimental-strip-types src/pages/CmiCommunityEntrance.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - 本地浏览器 390×844 手机视口验证：点击右箭头从 `01/05` 到 `02/05`，横向左滑从 `02/05` 到 `03/05`，等待 5 秒后自动从 `01/05` 到 `02/05`。
+  - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
