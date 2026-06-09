@@ -49,9 +49,9 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 应用内浏览器复查 `http://127.0.0.1:5178/?screen=feed&verify=feed-white-posts`：554x699 视口下页面非空、无框架错误、无控制台警告；动态页容器和列表容器背景为 `rgb(7, 147, 77)`，帖子卡片背景为 `rgb(255, 255, 255)`。
-  - 已部署 v3 预览 `https://64e7f85b.cmi-map-v3.pages.dev` 和正式站预览 `https://a8e9e9e9.cmi-map.pages.dev`。
-  - 正式域名 `https://cmimap.com/?screen=feed&verify=feed-white-posts-f5f1dcc` 已确认加载新资源：入口引用 `assets/index-BtwZtEaA.js`，懒加载包引用 `CmiMapV3Prototype-BTCDkr2I.js` 和 `CmiMapV3Prototype-BoSHwPjn.css`。
-  - 线上应用内浏览器复查 554x699 视口：页面标题为 `CMI Map`，页面非空，无框架错误和控制台警告；动态页外层、滚动容器、顶部精选区和列表容器背景为 `rgb(7, 147, 77)`，普通帖子卡片背景为 `rgb(255, 255, 255)`。
+  - 已部署当前分支 HEAD `58f8493`：v3 预览 `https://eb68153b.cmi-map-v3.pages.dev`，正式站预览 `https://9230f963.cmi-map.pages.dev`。
+  - 正式域名 `https://cmimap.com/?screen=feed&verify=feed-white-posts-58f8493` 已确认加载新资源：入口引用 `assets/index-B3vioOwZ.js`，懒加载包引用 `CmiMapV3Prototype-C0CdV9O-.js` 和 `CmiMapV3Prototype-odldOtYj.css`。
+  - 线上应用内浏览器复查 554x699 视口：页面标题为 `CMI Map`，15 张普通帖子加载完成，无框架错误和控制台警告；动态页外层、滚动容器、顶部精选区和列表容器背景为 `rgb(7, 147, 77)`，普通帖子卡片背景为 `rgb(255, 255, 255)`。
 
 ### 2026-06-09 13:30 +07 动态页底色改为神奇动物活动绿
 
