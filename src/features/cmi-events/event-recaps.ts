@@ -27,6 +27,12 @@ export interface EventRecapImage {
   createdAt: string;
 }
 
+export interface EventRecapLeaderboardEntry {
+  userName: string;
+  captureCount: number;
+  latestCaptureAt: string;
+}
+
 const getCreatedAtTime = (recommendation: EventRecapRecommendation) => {
   const time = Date.parse(recommendation.created_at);
   return Number.isFinite(time) ? time : 0;
@@ -77,3 +83,33 @@ export const getEventRecapImages = (
       createdAt: recommendation.created_at,
     }))
 );
+
+export const getEventRecapLeaderboard = (
+  images: EventRecapImage[]
+): EventRecapLeaderboardEntry[] => {
+  const entriesByUserName = new Map<string, EventRecapLeaderboardEntry>();
+
+  images.forEach(image => {
+    const userName = image.userName.trim() || 'CMI 朋友';
+    const current = entriesByUserName.get(userName);
+
+    if (!current) {
+      entriesByUserName.set(userName, {
+        userName,
+        captureCount: 1,
+        latestCaptureAt: image.createdAt,
+      });
+      return;
+    }
+
+    current.captureCount += 1;
+    if (Date.parse(image.createdAt) > Date.parse(current.latestCaptureAt)) {
+      current.latestCaptureAt = image.createdAt;
+    }
+  });
+
+  return Array.from(entriesByUserName.values()).sort((left, right) => {
+    if (right.captureCount !== left.captureCount) return right.captureCount - left.captureCount;
+    return Date.parse(right.latestCaptureAt) - Date.parse(left.latestCaptureAt);
+  });
+};

@@ -2006,3 +2006,15 @@
   - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
   - 已部署 Cloudflare Pages：`https://61e4fadb.cmi-map-v3.pages.dev/community`。
   - Playwright 线上验证：原型图加载成功，CSS 重绘层均为 `display: none`，CMI MAP / CMI SWAP 外链正确，订房和合作弹窗二维码加载成功。
+
+### 2026-06-09 神奇动物在哪里活动主页首版
+
+- 本轮实现：
+  - `神奇动物在哪里` 活动详情页改为专用活动主页布局。
+  - 顶部使用用户指定主 KV：`public/cmi-home/event-posters/cmi-wild-chiang-mai-2026-06.png`。
+  - 页面顺序收束为：活动标题 / KV / 活动介绍入口 / 排行榜 / 大家捕获的神奇动物。
+  - 排行榜只基于现有活动关联返图按用户图片数计算，不新增奖励、成就或独立主题系统。
+- 验证结果：
+  - `pnpm lint` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地浏览器检查 `http://localhost:5173/events/cmi-wild-chiang-mai-2026-06`：标题、KV、活动介绍入口、排行榜、捕获列表均显示。

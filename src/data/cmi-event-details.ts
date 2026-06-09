@@ -29,6 +29,7 @@ export const CMI_INN_EVENT_LOCATION = {
 };
 
 export const CMI_EVENT_POSTER_BY_ID: Partial<Record<string, string>> = {
+  'cmi-wild-chiang-mai-2026-06': '/cmi-home/event-posters/cmi-wild-chiang-mai-2026-06.png',
   'cmi-mindfulness-hour-2026-05-21': '/cmi-home/event-posters/cmi-mindfulness-hour-2026-05-21.jpg',
   'cmi-friday-afternoon-yoga-2026-05-22': '/cmi-home/event-posters/cmi-friday-yoga-2026-05-22.jpg',
   'cmi-kongxiang-canteen-2026-05-22': '/cmi-home/event-posters/cmi-kongxiang-canteen-2026-05-22.jpg',

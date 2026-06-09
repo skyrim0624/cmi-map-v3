@@ -49,6 +49,7 @@ import {
   getEventRecapImages,
   getEventRecapRecommendations,
 } from '@/features/cmi-events/event-recaps';
+import { WildChiangMaiEventHome } from '@/features/cmi-events/wild-chiang-mai-event-home';
 import { getCmiEventNavigationTarget } from '@/features/cmi-events/event-navigation';
 import { isCapacityFullRegistrationError } from '@/features/cmi-events/event-list-registration-state';
 import { getCmiInnVenueSpaceLabel, isCmiEventManager } from '@/features/cmi-events/event-management';
@@ -635,6 +636,18 @@ export default function CmiEventDetail() {
           </Button>
         </div>
       </div>
+    );
+  }
+
+  if (isCheckinActivityEvent) {
+    return (
+      <WildChiangMaiEventHome
+        event={event}
+        posterUrl={posterUrl}
+        recapImages={recapImages}
+        recapsLoading={recapsLoading}
+        onOpenRecapComposer={handleOpenRecapComposer}
+      />
     );
   }
 

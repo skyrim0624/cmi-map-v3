@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  getEventRecapLeaderboard,
   getEventRecapImages,
   getEventRecapRecommendations,
   type EventRecapRecommendation,
@@ -79,6 +80,36 @@ test('活动返图图片会保留来源地点、作者和清理后的正文', ()
       userName: '林可',
       reason: '演出结束后大家还在聊天',
       createdAt: '2026-06-01T10:00:00+07:00',
+    },
+  ]);
+});
+
+test('活动排行榜按用户捕获图片数排序', () => {
+  const images = getEventRecapImages([
+    createRecommendation({
+      id: 'rec-1',
+      user_name: '林可',
+      images: ['/a.jpg', '/b.jpg'],
+      created_at: '2026-06-01T10:00:00+07:00',
+    }),
+    createRecommendation({
+      id: 'rec-2',
+      user_name: '子场',
+      images: ['/c.jpg'],
+      created_at: '2026-06-01T12:00:00+07:00',
+    }),
+  ]);
+
+  assert.deepEqual(getEventRecapLeaderboard(images), [
+    {
+      userName: '林可',
+      captureCount: 2,
+      latestCaptureAt: '2026-06-01T10:00:00+07:00',
+    },
+    {
+      userName: '子场',
+      captureCount: 1,
+      latestCaptureAt: '2026-06-01T12:00:00+07:00',
     },
   ]);
 });
