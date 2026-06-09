@@ -36,6 +36,20 @@
 
 ## 执行记录
 
+### 2026-06-09 14:45 +07 动态页顶部精选帖按信息流对齐
+
+- 背景：用户进一步指出顶部精选帖外侧仍有一圈绿色，和下面普通帖子没有排列整齐。
+- 本轮实现：
+  - 绿色只保留在动态页标题区。
+  - 顶部精选帖改成和普通信息流一致的整行白底：铺满列表宽度、取消圆角内缩、图片区使用同样的 96px 列宽。
+  - 不新增页面结构、按钮或交互逻辑。
+- 验证结果：
+  - `node --test --experimental-strip-types src/pages/CmiMapV3Prototype.test.ts` 通过。
+  - `pnpm exec biome lint src/pages/CmiMapV3Prototype.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 应用内浏览器复查 `http://127.0.0.1:5178/?screen=feed&verify=featured-align-local`：554x699 视口下顶部精选帖和第一条普通帖子左边、宽度、图片区左边与图片区宽度一致，二者间距为 0；点击精选帖进入对应活动详情页，无框架错误遮罩和控制台警告。
+
 ### 2026-06-09 14:25 +07 动态页顶部精选帖恢复白底
 
 - 背景：用户指出动态页顶部精选帖仍显得和白底帖子不一致，需要改掉这条帖子的特殊底色。

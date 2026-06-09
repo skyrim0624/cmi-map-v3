@@ -43,7 +43,7 @@ test('动态页底色使用神奇动物活动主页绿色且帖子保持白底',
   );
   assert.match(
     styles,
-    /\.cmi-v3-feed-center \{[\s\S]*?background: #07934d;[\s\S]*?\}/,
+    /\.cmi-v3-feed-center \{[\s\S]*?background: #07934d;[\s\S]*?padding: 18px 14px 0;[\s\S]*?\}/,
   );
   assert.match(
     styles,
@@ -51,7 +51,7 @@ test('动态页底色使用神奇动物活动主页绿色且帖子保持白底',
   );
   assert.match(
     styles,
-    /\.cmi-v3-feed-featured \{[\s\S]*?background: #fff;[\s\S]*?\}/,
+    /\.cmi-v3-feed-featured \{[\s\S]*?grid-template-columns: 96px minmax\(0, 1fr\);[\s\S]*?margin-right: -14px;[\s\S]*?margin-left: -14px;[\s\S]*?border-radius: 0;[\s\S]*?background: #fff;[\s\S]*?\}/,
   );
   assert.match(
     styles,
