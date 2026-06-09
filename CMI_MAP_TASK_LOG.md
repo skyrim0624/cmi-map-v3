@@ -49,6 +49,9 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 应用内浏览器复查 `http://127.0.0.1:5178/?screen=feed&verify=featured-align-local`：554x699 视口下顶部精选帖和第一条普通帖子左边、宽度、图片区左边与图片区宽度一致，二者间距为 0；点击精选帖进入对应活动详情页，无框架错误遮罩和控制台警告。
+  - 已部署当前提交 `d46604a`：v3 预览 `https://c66e9191.cmi-map-v3.pages.dev`，正式站预览 `https://d62fbed9.cmi-map.pages.dev`。
+  - 正式域名 `https://cmimap.com/?screen=feed&verify=featured-align-d46604a` 已确认加载新资源：入口引用 `assets/index-D-EzTdjT.js`，懒加载包引用 `CmiMapV3Prototype-rOGJ-UGO.js` 和 `CmiMapV3Prototype-zJemYATv.css`。
+  - 线上应用内浏览器复查 554x699 视口：顶部精选帖和第一条普通帖子左边、宽度、图片区左边与图片区宽度一致，二者间距为 0；点击精选帖进入对应活动详情页，无框架错误遮罩和控制台警告。
 
 ### 2026-06-09 14:25 +07 动态页顶部精选帖恢复白底
 
