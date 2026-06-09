@@ -1948,3 +1948,14 @@
   - `npx tailwindcss -i ./src/index.css -o /dev/null` CSS 检查通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地浏览器检查 `http://127.0.0.1:5188/`：整图贴片数量为 0，真实主题图层合并后为 46 条 SVG 路径，地图拖动后主题图层继续跟随移动。
+
+### 2026-06-09 09:58:29 +07 删除旧版意图首页
+
+- 本轮实现：
+  - 删除截图中的旧版意图首页 `SceneHome`。
+  - 移除 `/legacy-home` 路由，不再跳转到该页面。
+  - 删除旧首页专用的区块组件、直接意图输入组件和首页 section 数据。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `node --test --experimental-strip-types src/routes.test.ts src/pages/CmiMapV3Prototype.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts` 通过。
+  - `npx tailwindcss -i ./src/index.css -o /dev/null` CSS 检查通过。

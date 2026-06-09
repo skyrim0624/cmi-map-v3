@@ -22,6 +22,13 @@ test('社区统一入口和 Swap 栏目为公开路由', () => {
   assert.match(source, /name: 'CMI Swap'/);
 });
 
+test('旧版意图首页不再提供路由', () => {
+  assert.doesNotMatch(source, /const SceneHome = lazy/);
+  assert.doesNotMatch(source, /path: '\/legacy-home'/);
+  assert.doesNotMatch(source, /element: <SceneHome \/>/);
+  assert.doesNotMatch(source, /name: '旧版意图首页'/);
+});
+
 test('主题地图不再提供独立主题页路由', () => {
   assert.doesNotMatch(source, /const CmiThemeDetail = lazy/);
   assert.doesNotMatch(source, /path: '\/themes\/:themeSlug'/);

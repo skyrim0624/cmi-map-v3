@@ -3,7 +3,6 @@ import { Navigate } from 'react-router-dom';
 import { getCmiFeedPath, getSceneMapPath } from '@/lib/paths';
 
 const MapView = lazy(() => import('./pages/MapView'));
-const SceneHome = lazy(() => import('./pages/SceneHome'));
 const ListView = lazy(() => import('./pages/ListView'));
 const PlaceDetail = lazy(() => import('./pages/PlaceDetail'));
 const AddTrace = lazy(() => import('./pages/AddTrace'));
@@ -54,12 +53,6 @@ export const routes: RouteConfig[] = [
     name: 'CMI Swap',
     path: '/swap',
     element: <CmiSwapPage />,
-    public: true,
-  },
-  {
-    name: '旧版意图首页',
-    path: '/legacy-home',
-    element: <SceneHome />,
     public: true,
   },
   {
