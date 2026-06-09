@@ -48,11 +48,10 @@ export function WildChiangMaiEventHome({
           </div>
         </section>
 
-        <section className="relative bg-[#07934d] px-6 pb-11 pt-10">
-          <div className="absolute left-0 top-0 h-10 w-full bg-[#f8f1df] [clip-path:polygon(0_0,100%_0,100%_34%,82%_62%,58%_44%,35%_68%,0_42%)]" />
-          <div className="absolute inset-x-0 top-8 h-5 bg-[#066d42]" />
-          <div className="pointer-events-none absolute left-4 top-20 h-10 w-10 rotate-[-18deg] bg-[#ff8bb9] opacity-90 [clip-path:polygon(50%_0,61%_34%,98%_35%,68%_57%,79%_91%,50%_70%,21%_91%,32%_57%,2%_35%,39%_34%)]" />
-          <div className="pointer-events-none absolute right-5 top-28 h-5 w-16 rotate-[12deg] rounded-full bg-[#ffe733]" />
+        <section className="relative -mt-px bg-[#07934d] px-6 pb-11 pt-6">
+          <div className="absolute inset-x-0 top-0 h-7 bg-[#066d42] [clip-path:polygon(0_0,100%_0,100%_64%,78%_88%,55%_68%,31%_91%,0_70%)]" />
+          <div className="pointer-events-none absolute left-4 top-14 h-10 w-10 rotate-[-18deg] bg-[#ff8bb9] opacity-90 [clip-path:polygon(50%_0,61%_34%,98%_35%,68%_57%,79%_91%,50%_70%,21%_91%,32%_57%,2%_35%,39%_34%)]" />
+          <div className="pointer-events-none absolute right-5 top-24 h-5 w-16 rotate-[12deg] rounded-full bg-[#ffe733]" />
 
           <section className="relative rotate-[-1deg] bg-[#fff7dc] px-5 py-6 shadow-[9px_10px_0_rgba(4,62,34,0.32)] [clip-path:polygon(0_4%,18%_2%,36%_4%,54%_1%,74%_3%,100%_0,98%_92%,84%_96%,64%_94%,47%_99%,28%_95%,3%_98%)]">
             <div className="absolute -right-3 -top-3 h-12 w-20 rotate-[10deg] bg-[#ff8bb9]/80" />
