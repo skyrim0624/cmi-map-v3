@@ -36,6 +36,20 @@
 
 ## 执行记录
 
+### 2026-06-09 13:30 +07 动态页底色改为神奇动物活动绿
+
+- 背景：用户在正式站动态页评论要求把动态页面底色换成主题活动页面的绿色。
+- 本轮实现：
+  - 动态页外层、滚动容器、顶部精选区、列表容器和动态列表行统一使用活动主页绿色 `#07934d`。
+  - 动态列表文字和操作图标改为深色，避免绿底上小字变淡。
+  - 不新增页面结构、按钮或交互逻辑。
+- 验证结果：
+  - `node --test --experimental-strip-types src/pages/CmiMapV3Prototype.test.ts` 通过。
+  - `pnpm exec biome lint src/pages/CmiMapV3Prototype.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 应用内浏览器复查 `http://127.0.0.1:5178/?screen=feed&verify=feed-green-bg-final`：554x699 视口下页面非空、无框架错误、无控制台警告；动态页容器、顶部精选区、列表和动态行背景均为 `rgb(7, 147, 77)`，底部导航从地图切回动态后仍保持绿底。
+
 ### 2026-06-09 13:00 +07 底部拍照按钮改用圆形图鉴放大镜
 
 - 背景：用户在正式站评论要求把底部“打卡拍照”的简化放大镜替换成参考图里的绿色圆形图鉴放大镜。

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const source = readFileSync(new URL('./CmiMapV3Prototype.tsx', import.meta.url), 'utf8');
+const styles = readFileSync(new URL('./cmi-map-v3-prototype.css', import.meta.url), 'utf8');
 
 test('V3 原型不再保留内部活动详情屏', () => {
   assert.doesNotMatch(source, /eventDetail/);
@@ -33,4 +34,23 @@ test('底部拍照入口使用神奇动物主题放大镜而不是加号', () =>
   assert.match(source, /<WildMagnifierIcon \/>/);
   assert.match(source, /function WildMagnifierIcon\(\)/);
   assert.doesNotMatch(source, /<Plus size=\{36\}/);
+});
+
+test('动态页底色使用神奇动物活动主页绿色', () => {
+  assert.match(
+    styles,
+    /\.cmi-v3-screen--feed \.cmi-v3-comic-page,\n\.cmi-v3-screen--feed \.cmi-v3-comic-scroll \{\n  background: #07934d;\n\}/,
+  );
+  assert.match(
+    styles,
+    /\.cmi-v3-feed-center \{[\s\S]*?background: #07934d;[\s\S]*?\}/,
+  );
+  assert.match(
+    styles,
+    /\.cmi-v3-feed-stream \{[\s\S]*?background: #07934d;[\s\S]*?\}/,
+  );
+  assert.match(
+    styles,
+    /\.cmi-v3-feed-stream \.cmi-v3-feed-card,[\s\S]*?background: #07934d;[\s\S]*?box-shadow: none;/,
+  );
 });

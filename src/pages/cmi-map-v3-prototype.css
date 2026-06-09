@@ -2134,7 +2134,7 @@
 
 .cmi-v3-screen--feed .cmi-v3-comic-page,
 .cmi-v3-screen--feed .cmi-v3-comic-scroll {
-  background: #fbfcfb;
+  background: #07934d;
 }
 
 .cmi-v3-screen--feed .cmi-v3-comic-scroll {
@@ -2148,7 +2148,7 @@
 
 .cmi-v3-feed-center {
   border-bottom: 1px solid rgba(22, 22, 22, 0.1);
-  background: #fbfcfb;
+  background: #07934d;
   padding: 18px 14px 14px;
 }
 
@@ -2277,7 +2277,7 @@
 .cmi-v3-feed-stream {
   overflow: hidden;
   border-top: 1px solid rgba(22, 22, 22, 0.08);
-  background: #fbfcfb;
+  background: #07934d;
 }
 
 .cmi-v3-feed-center + .cmi-v3-feed-stream {
@@ -2293,7 +2293,7 @@
   border: 0;
   border-bottom: 1px solid rgba(22, 22, 22, 0.09);
   border-radius: 0;
-  background: #fff;
+  background: #07934d;
   box-shadow: none;
 }
 
@@ -2366,7 +2366,7 @@
 
 .cmi-v3-feed-stream .cmi-v3-feed-head strong,
 .cmi-v3-forum-post-head strong {
-  color: #344256;
+  color: var(--cmi-v3-ink);
   font-size: 14px;
   line-height: 1.12;
 }
@@ -2374,7 +2374,7 @@
 .cmi-v3-feed-stream .cmi-v3-feed-head > div > span,
 .cmi-v3-forum-post-head > div > span {
   margin-top: 2px;
-  color: rgba(22, 22, 22, 0.48);
+  color: var(--cmi-v3-ink);
   font-size: 12px;
   font-weight: 850;
 }
@@ -2386,7 +2386,7 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   margin: 8px 0 0;
-  color: #303030;
+  color: var(--cmi-v3-ink);
   font-size: 19px;
   line-height: 1.22;
   font-weight: 900;
@@ -2400,7 +2400,7 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   margin-top: 7px;
-  color: rgba(22, 22, 22, 0.72);
+  color: var(--cmi-v3-ink);
   font-size: 14px;
   line-height: 1.48;
   font-weight: 760;
@@ -2484,7 +2484,7 @@
   gap: 16px;
   margin-top: 10px;
   padding-top: 0;
-  color: rgba(22, 22, 22, 0.56);
+  color: var(--cmi-v3-ink);
 }
 
 .cmi-v3-feed-stream .cmi-v3-recommendation-actions button {
