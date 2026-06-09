@@ -30,35 +30,15 @@ export function WildChiangMaiEventHome({
   return (
     <div className="min-h-[100dvh] bg-white text-[#111827]">
       <main className="mx-auto min-h-[100dvh] max-w-[520px] overflow-hidden bg-[#f8f1df]">
-        <section className="relative min-h-[46rem] overflow-hidden px-6 pb-10 pt-[calc(env(safe-area-inset-top)+28px)]">
-          <div className="grid grid-cols-3 text-[10px] font-black uppercase tracking-normal text-[#111827]/80">
-            <span>CMI MAP</span>
-            <span className="text-center">清迈</span>
-            <span className="text-right">2026</span>
-          </div>
+        <section className="relative overflow-hidden bg-[#f8f1df]">
+          <img
+            src={posterUrl}
+            alt={`${event.title}主视觉`}
+            className="block h-auto w-full"
+            loading="eager"
+          />
 
-          <h1 className="relative z-20 mt-8 text-[3.85rem] font-black leading-[0.96] tracking-normal text-[#050505]">
-            清迈神奇
-            <br />
-            动物在哪里
-          </h1>
-
-          <div className="absolute left-0 right-0 top-[15.6rem] h-[31rem] overflow-hidden">
-            <img
-              src={posterUrl}
-              alt=""
-              className="h-full w-full object-cover object-[50%_68%]"
-              loading="eager"
-              aria-hidden="true"
-            />
-            <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#f8f1df] to-[#f8f1df]/0" />
-          </div>
-
-          <div className="absolute left-7 top-[15.6rem] z-20 -rotate-3 bg-[#0b8d45] px-4 py-2 text-sm font-black text-white shadow-[4px_5px_0_rgba(17,24,39,0.18)]">
-            在清迈发现城市里的生命痕迹
-          </div>
-
-          <div className="absolute bottom-12 left-6 right-6 z-20 flex justify-end">
+          <div className="absolute bottom-10 left-6 right-6 z-20 flex justify-end">
             <button
               type="button"
               className="rotate-2 border-[3px] border-[#111827] bg-[#ff5a4d] px-3 py-2 text-sm font-black text-white shadow-[3px_4px_0_rgba(17,24,39,0.2)]"
@@ -66,17 +46,15 @@ export function WildChiangMaiEventHome({
               活动介绍
             </button>
           </div>
-
-          <div className="absolute right-9 top-[13rem] h-10 w-10 rotate-12 bg-[#ff8bb9] [clip-path:polygon(50%_0,61%_34%,98%_35%,68%_57%,79%_91%,50%_70%,21%_91%,32%_57%,2%_35%,39%_34%)]" />
-          <div className="absolute right-8 top-[25rem] z-20 text-[3.2rem] font-black leading-none text-[#1297d8]">↘</div>
         </section>
 
-        <section className="relative bg-[#5fc4e8] px-6 pb-10 pt-12">
-          <div className="absolute left-0 top-0 h-8 w-full bg-[#f8f1df] [clip-path:polygon(0_0,100%_0,100%_45%,72%_72%,42%_45%,0_80%)]" />
+        <section className="relative bg-[#0b8d45] px-6 pb-10 pt-10">
+          <div className="absolute left-0 top-0 h-9 w-full bg-[#f8f1df] [clip-path:polygon(0_0,100%_0,100%_36%,82%_60%,58%_44%,36%_66%,0_42%)]" />
+          <div className="absolute inset-x-0 top-8 h-5 bg-[#0a6f50]" />
 
-          <section className="relative rotate-[-1deg] border-[3px] border-[#111827] bg-white p-5 shadow-[6px_7px_0_rgba(17,24,39,0.18)]">
-            <div className="mb-4 flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-[#1297d8]" strokeWidth={2.6} />
+          <section className="relative rotate-[-1deg] bg-[#f8f1df] px-5 py-5 shadow-[7px_8px_0_rgba(17,24,39,0.2)] [clip-path:polygon(0_3%,100%_0,98%_94%,76%_98%,54%_95%,28%_100%,2%_96%)]">
+            <div className="mb-4 inline-flex -rotate-2 items-center gap-2 bg-[#ffe733] px-4 py-2 text-[#111827] shadow-[4px_5px_0_rgba(17,24,39,0.16)]">
+              <Trophy className="h-5 w-5" strokeWidth={2.8} />
               <h2 className="text-[1.45rem] font-black leading-tight">排行榜</h2>
             </div>
             {leaderboard.length > 0 ? (
@@ -97,16 +75,29 @@ export function WildChiangMaiEventHome({
                 ))}
               </ol>
             ) : (
-              <p className="text-sm font-bold text-[#56616f]">暂无捕获记录</p>
+              <div className="grid grid-cols-[2rem_minmax(0,1fr)_4rem] items-center gap-x-3 gap-y-4">
+                {[1, 2, 3].map(rank => (
+                  <div key={rank} className="contents">
+                    <span
+                      className={cn(
+                        'flex h-8 w-8 items-center justify-center rounded-full text-sm font-black text-white',
+                        rank === 1 ? 'bg-[#ff5a4d]' : 'bg-[#0b8d45]'
+                      )}
+                    >
+                      {rank}
+                    </span>
+                    <span className="h-3 rounded-full bg-[#0b8d45]" />
+                    <span className="text-right text-xs font-black text-[#111827]">待捕获</span>
+                  </div>
+                ))}
+              </div>
             )}
           </section>
 
-          <section className="relative mt-12">
-            <div className="mb-4 flex items-end justify-between gap-3">
-              <h2 className="max-w-[13rem] text-[2.1rem] font-black leading-[0.95] tracking-normal text-white [text-shadow:3px_3px_0_#111827]">
-                大家捕获的
-                <br />
-                神奇动物
+          <section className="relative mt-11 bg-[#f8f1df] px-4 pb-5 pt-6 [clip-path:polygon(0_0,100%_2%,98%_98%,73%_96%,48%_100%,21%_96%,0_99%)]">
+            <div className="mb-5 flex items-end justify-between gap-3">
+              <h2 className="inline-block -rotate-2 bg-[#ff8bb9] px-3 py-2 text-[1.7rem] font-black leading-tight tracking-normal text-[#111827]">
+                大家捕获的神奇动物
               </h2>
               <Button
                 className="h-10 rounded-none border-[3px] border-[#111827] bg-[#ffe733] px-3 text-xs font-black text-[#111827] shadow-[3px_4px_0_rgba(17,24,39,0.2)]"
@@ -153,16 +144,29 @@ export function WildChiangMaiEventHome({
                 ))}
               </div>
             ) : (
-              <div className="border-[3px] border-dashed border-[#111827] bg-white p-6 text-center shadow-[4px_5px_0_rgba(17,24,39,0.12)]">
-                <p className="text-sm font-black text-[#56616f]">还没有人捕获神奇动物</p>
+              <div className="space-y-4">
+                {[0, 1, 2].map(index => (
+                  <div
+                    key={index}
+                    className={cn(
+                      'grid grid-cols-[5.6rem_minmax(0,1fr)] gap-3 border-[2px] border-[#111827] bg-white p-3 shadow-[3px_4px_0_rgba(17,24,39,0.12)]',
+                      index % 2 === 0 ? 'rotate-[0.8deg]' : 'rotate-[-0.8deg]'
+                    )}
+                  >
+                    <div className="aspect-square border-[2px] border-[#111827] bg-[linear-gradient(135deg,#dbeed0_0%,#dbeed0_48%,#f8f1df_49%,#f8f1df_100%)]" />
+                    <div className="min-w-0 py-1">
+                      <p className="inline-block bg-[#0b8d45] px-2 py-1 text-sm font-black text-white">等待捕获</p>
+                      <p className="mt-2 text-xs font-black text-[#111827]/60">清迈 · 神奇动物在哪里</p>
+                      <p className="mt-2 text-sm font-semibold leading-snug text-[#384252]">还没有人捕获神奇动物</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </section>
 
-          <div className="mt-12 border-[3px] border-[#111827] bg-[#f8f1df] p-5 shadow-[6px_7px_0_rgba(17,24,39,0.18)]">
-            <p className="text-[2.2rem] font-black leading-none text-[#1297d8] [text-shadow:2px_2px_0_#ffffff,4px_4px_0_#111827]">
-              CMI MAP
-            </p>
+          <div className="mt-10 bg-[#ffe733] px-5 py-4 text-center text-xl font-black text-[#111827] shadow-[5px_6px_0_rgba(17,24,39,0.18)]">
+            一起去发现更多神奇动物吧
           </div>
         </section>
       </main>
