@@ -47,6 +47,7 @@ export default defineConfig({
     }),
     VitePWA({
       registerType: "autoUpdate",
+      selfDestroying: true,
       includeAssets: CORE_PRECACHE_ASSETS,
       workbox: {
         cleanupOutdatedCaches: true,

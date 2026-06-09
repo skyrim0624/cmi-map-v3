@@ -2,9 +2,8 @@
 
 这个目录是给并行开发用的功能边界。规则很简单：
 
-- `home/sections/*`：首页每个区块单独一个文件；新增首页模块时先加 section 文件，再在 `home/sections/index.ts` 接入。
-- `home/direct-intent/*`：只负责“我现在想做什么”的首页输入和跳转。
-- `home/survival-kit/*`：只负责“清迈生存包”的首页输入和跳转。
+- `home/blackboard/*`：负责社区动态、黑板帖子模型和黑板页面组件。
+- `home/survival-kit/survival-guide-library.tsx`：负责清迈生存指南内容展示。
 - `check-ins/*`：负责打卡、补一句、图片上传后的推荐创建流程。
 - `interactions/*`：负责点赞、想去、盖戳这类人与内容之间的互动。
 - `achievements/*`：负责成就计算、解锁状态和本地已读记录。

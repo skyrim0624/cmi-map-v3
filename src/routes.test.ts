@@ -11,6 +11,13 @@ test('旧清迈客栈页不再渲染独立页面，改为动态页入口', () =>
   assert.doesNotMatch(source, /element: <CmiHome \/>/);
 });
 
+test('旧意图首页彻底移出正式路由', () => {
+  assert.doesNotMatch(source, /const SceneHome = lazy/);
+  assert.doesNotMatch(source, /path: '\/legacy-home'/);
+  assert.doesNotMatch(source, /element: <SceneHome \/>/);
+  assert.doesNotMatch(source, /name: '旧版意图首页'/);
+});
+
 test('社区统一入口和 Swap 栏目为公开路由', () => {
   assert.match(source, /const CmiCommunityEntrance = lazy/);
   assert.match(source, /const CmiSwapPage = lazy/);
