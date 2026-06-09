@@ -227,7 +227,7 @@ export default function CmiCommunityEntrance() {
         </section>
 
         <nav className="cmi-main-entry-list" aria-label="CMI 主入口">
-          <a className="cmi-main-entry-button" href="https://cmimap.com" aria-label="CMI MAP">
+          <a className="cmi-main-entry-button" href="https://www.cmimap.com" aria-label="CMI MAP">
             <MapIcon aria-hidden="true" />
             <span>CMI MAP</span>
             <ChevronRight aria-hidden="true" />
