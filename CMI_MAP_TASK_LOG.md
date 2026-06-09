@@ -49,6 +49,10 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 应用内浏览器复查 `http://127.0.0.1:5178/?screen=map&verify=custom-magnifier`：按钮显示圆形图鉴放大镜 SVG，页面非空，无框架错误；点击“打卡拍照”进入未登录前置流程。
+  - 已提交并推送 `e85e4bd`，本轮只纳入图标、样式、测试和任务日志。
+  - 已部署 v3 项目 `https://c41125fa.cmi-map-v3.pages.dev` / `https://codex-cmimapv3-1.cmi-map-v3.pages.dev`，并部署正式站 `https://b4aa0f9d.cmi-map.pages.dev`。
+  - 正式域名 `https://cmimap.com/?verify=custom-magnifier-e85e4bd` 已确认加载新资源：入口引用 `assets/index-DA4LRjKY.js`，懒加载包引用 `CmiMapV3Prototype-CvGOvWQ1.js` 和 `CmiMapV3Prototype-B3wbZS9H.css`。
+  - 线上应用内浏览器复查 554x699 视口：页面标题为 `CMI Map`，页面非空，无框架错误和控制台警告；底部“打卡拍照”按钮显示绿色圆形图鉴放大镜，SVG 包含黄色星点、粉色星号和绿色叶片。
 
 ### 2026-06-09 12:40 +07 神奇动物在哪里主地图轻皮肤
 
