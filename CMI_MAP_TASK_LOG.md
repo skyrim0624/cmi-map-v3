@@ -36,6 +36,20 @@
 
 ## 执行记录
 
+### 2026-06-09 14:25 +07 动态页顶部精选帖恢复白底
+
+- 背景：用户指出动态页顶部精选帖仍显得和白底帖子不一致，需要改掉这条帖子的特殊底色。
+- 本轮实现：
+  - 保留动态页外层和顶部区域的活动主页绿色 `#07934d`。
+  - 将顶部精选帖 `.cmi-v3-feed-featured` 从半透明白底改为纯白底。
+  - 不新增页面结构、按钮或交互逻辑。
+- 验证结果：
+  - `node --test --experimental-strip-types src/pages/CmiMapV3Prototype.test.ts` 通过。
+  - `pnpm exec biome lint src/pages/CmiMapV3Prototype.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 应用内浏览器复查 `http://127.0.0.1:5178/?screen=feed&verify=featured-white-local`：554x699 视口下顶部精选帖背景为 `rgb(255, 255, 255)`，普通帖子背景为 `rgb(255, 255, 255)`，动态页外层和顶部区域背景为 `rgb(7, 147, 77)`；点击精选帖进入对应活动详情页，无框架错误遮罩和控制台警告。
+
 ### 2026-06-09 13:55 +07 动态页帖子卡片恢复白底
 
 - 背景：用户指出动态页应该是绿色背景，但帖子内部保持白色，不应把帖子卡片也染成绿色。

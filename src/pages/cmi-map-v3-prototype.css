@@ -2175,7 +2175,7 @@
   margin-top: 13px;
   border: 1px solid rgba(22, 22, 22, 0.1);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.92);
+  background: #fff;
   padding: 10px;
   cursor: pointer;
 }

@@ -51,6 +51,10 @@ test('动态页底色使用神奇动物活动主页绿色且帖子保持白底',
   );
   assert.match(
     styles,
+    /\.cmi-v3-feed-featured \{[\s\S]*?background: #fff;[\s\S]*?\}/,
+  );
+  assert.match(
+    styles,
     /\.cmi-v3-feed-stream \.cmi-v3-feed-card,[\s\S]*?background: #fff;[\s\S]*?box-shadow: none;/,
   );
 });
