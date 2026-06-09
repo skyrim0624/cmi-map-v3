@@ -49,6 +49,10 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 应用内浏览器复查 `http://127.0.0.1:5178/?screen=feed&verify=feed-green-bg-final`：554x699 视口下页面非空、无框架错误、无控制台警告；动态页容器、顶部精选区、列表和动态行背景均为 `rgb(7, 147, 77)`，底部导航从地图切回动态后仍保持绿底。
+  - 已部署 v3 项目 `https://8a80016a.cmi-map-v3.pages.dev` / `https://codex-cmimapv3-1.cmi-map-v3.pages.dev`，并部署正式站 `https://e5a1e913.cmi-map.pages.dev`。
+  - 正式域名 `https://cmimap.com/?screen=feed&verify=feed-green-5e4eb61c` 已确认加载新资源：入口引用 `assets/index-BjeTzVZC.js`，懒加载包引用 `CmiMapV3Prototype-CexCwO1d.js` 和 `CmiMapV3Prototype-Ceg3jNpd.css`。
+  - 线上应用内浏览器复查 554x699 视口：页面标题为 `CMI Map`，页面非空，无框架错误和控制台警告；动态页容器、顶部精选区、列表和动态行背景均为 `rgb(7, 147, 77)`；底部导航从地图切回动态后仍保持绿底。
+- 踩坑：第一次干净 worktree 部署没有带本地前端环境文件，生产包里 Supabase 配置为空导致线上只显示空白壳；已用同一提交、补齐本地前端环境文件后重新构建并覆盖部署，最终线上复查通过。
 
 ### 2026-06-09 13:00 +07 底部拍照按钮改用圆形图鉴放大镜
 
