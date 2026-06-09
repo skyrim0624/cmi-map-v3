@@ -192,10 +192,10 @@
 .cmi-reference-arrow {
   position: absolute;
   z-index: 14;
-  top: 29.35%;
+  top: 33%;
   display: grid;
-  width: 11.6%;
-  height: 7%;
+  width: 10%;
+  height: 7.4%;
   place-items: center;
   border: 0;
   border-radius: 999px;
@@ -207,21 +207,9 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.cmi-reference-arrow::before {
-  position: absolute;
-  inset: 12%;
-  border: clamp(2px, 0.5vw, 3px) solid rgba(32, 34, 35, 0.62);
-  border-radius: 999px;
-  background: rgba(255, 249, 231, 0.74);
-  box-shadow:
-    0 clamp(2px, 0.45vw, 3px) 0 rgba(32, 34, 35, 0.28),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.38);
-  content: "";
-}
-
-.cmi-reference-arrow::after {
-  width: 27%;
-  height: 27%;
+.cmi-reference-screen.is-visible ~ .cmi-reference-arrow::after {
+  width: 31%;
+  height: 31%;
   border-color: currentColor;
   border-style: solid;
   border-width: 0 clamp(4px, 0.95vw, 5px) clamp(4px, 0.95vw, 5px) 0;
@@ -233,7 +221,7 @@
 }
 
 .cmi-reference-arrow--previous {
-  left: 4.2%;
+  left: 2.2%;
 }
 
 .cmi-reference-arrow--previous::after {
@@ -241,7 +229,7 @@
 }
 
 .cmi-reference-arrow--next {
-  right: 4.2%;
+  right: 1.9%;
 }
 
 .cmi-reference-arrow--next::after {

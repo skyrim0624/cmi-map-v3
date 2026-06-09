@@ -2274,3 +2274,16 @@
   - `pnpm exec tsgo -p tsconfig.check.json` 通过。
   - 本地浏览器 390×844 手机视口验证：箭头触控区约 45×49px，点击右箭头可切到 `02/05`，横向左滑可切到 `03/05`。
   - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
+
+### 2026-06-09 社区入口使用底图原生箭头
+
+- 背景：用户指出参考图里已经有左右箭头，不需要额外叠加圆形箭头按钮。
+- 本轮实现：
+  - `01/05` 默认态不再绘制任何额外箭头视觉，只保留透明点击热区覆盖底图原生箭头。
+  - 将点击热区位置对齐到底图原生箭头中心，避免视觉和可点区域错位。
+  - `02/05` 及之后的动态内容层会盖住底图，因此只补一个同款纯黑小箭头，不加圆底、不加阴影。
+- 验证结果：
+  - `node --test --experimental-strip-types src/pages/CmiCommunityEntrance.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - 本地浏览器 390×844 手机视口验证：`01/05` 无额外按钮视觉，点击底图箭头可切到 `02/05`，横向左滑可切到 `03/05`。
+  - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
