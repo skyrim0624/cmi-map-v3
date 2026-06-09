@@ -36,7 +36,7 @@ test('底部拍照入口使用神奇动物主题放大镜而不是加号', () =>
   assert.doesNotMatch(source, /<Plus size=\{36\}/);
 });
 
-test('动态页底色使用神奇动物活动主页绿色', () => {
+test('动态页底色使用神奇动物活动主页绿色且帖子保持白底', () => {
   assert.match(
     styles,
     /\.cmi-v3-screen--feed \.cmi-v3-comic-page,\n\.cmi-v3-screen--feed \.cmi-v3-comic-scroll \{\n  background: #07934d;\n\}/,
@@ -51,6 +51,6 @@ test('动态页底色使用神奇动物活动主页绿色', () => {
   );
   assert.match(
     styles,
-    /\.cmi-v3-feed-stream \.cmi-v3-feed-card,[\s\S]*?background: #07934d;[\s\S]*?box-shadow: none;/,
+    /\.cmi-v3-feed-stream \.cmi-v3-feed-card,[\s\S]*?background: #fff;[\s\S]*?box-shadow: none;/,
   );
 });

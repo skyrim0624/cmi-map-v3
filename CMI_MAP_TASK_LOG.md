@@ -36,6 +36,20 @@
 
 ## 执行记录
 
+### 2026-06-09 13:55 +07 动态页帖子卡片恢复白底
+
+- 背景：用户指出动态页应该是绿色背景，但帖子内部保持白色，不应把帖子卡片也染成绿色。
+- 本轮实现：
+  - 保留动态页外层、滚动容器、顶部精选区和列表容器的活动主页绿色 `#07934d`。
+  - 将动态列表帖子卡片背景恢复为白色。
+  - 不新增页面结构、按钮或交互逻辑。
+- 验证结果：
+  - `node --test --experimental-strip-types src/pages/CmiMapV3Prototype.test.ts` 通过。
+  - `pnpm exec biome lint src/pages/CmiMapV3Prototype.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 应用内浏览器复查 `http://127.0.0.1:5178/?screen=feed&verify=feed-white-posts`：554x699 视口下页面非空、无框架错误、无控制台警告；动态页容器和列表容器背景为 `rgb(7, 147, 77)`，帖子卡片背景为 `rgb(255, 255, 255)`。
+
 ### 2026-06-09 13:30 +07 动态页底色改为神奇动物活动绿
 
 - 背景：用户在正式站动态页评论要求把动态页面底色换成主题活动页面的绿色。
