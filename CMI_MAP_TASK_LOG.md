@@ -36,6 +36,20 @@
 
 ## 执行记录
 
+### 2026-06-09 13:00 +07 底部拍照按钮改用圆形图鉴放大镜
+
+- 背景：用户在正式站评论要求把底部“打卡拍照”的简化放大镜替换成参考图里的绿色圆形图鉴放大镜。
+- 本轮实现：
+  - 底部“打卡拍照”按钮保留原入口和尺寸，内部图标改为专用 `WildMagnifierIcon` SVG。
+  - 图标包含绿色圆形底、深绿色描边、白色放大镜、叶片、黄色星点、粉色星号和左上短线装饰。
+  - 移除原来围绕 lucide 放大镜的伪元素装饰，避免参考图元素重复叠加。
+- 验证结果：
+  - `node --test --experimental-strip-types src/pages/CmiMapV3Prototype.test.ts` 通过。
+  - `pnpm exec biome lint src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 应用内浏览器复查 `http://127.0.0.1:5178/?screen=map&verify=custom-magnifier`：按钮显示圆形图鉴放大镜 SVG，页面非空，无框架错误；点击“打卡拍照”进入未登录前置流程。
+
 ### 2026-06-09 12:40 +07 神奇动物在哪里主地图轻皮肤
 
 - 背景：用户要求在 CMI Map 现有按钮和图标上加一点 `神奇动物在哪里` 主题皮肤，并把底部“打卡拍照”的加号换成绿色底放大镜。

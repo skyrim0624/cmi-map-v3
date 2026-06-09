@@ -1627,43 +1627,25 @@
   position: relative;
   width: var(--cmi-v3-map-bottom-add-size);
   height: var(--cmi-v3-map-bottom-add-size);
-  border: 2px solid rgba(14, 84, 48, 0.9);
+  border: 0;
   border-radius: 50%;
-  background: var(--cmi-v3-wild-green);
+  background: transparent;
   color: #fff;
   box-shadow: 4px 6px 0 rgba(14, 84, 48, 0.26);
   display: grid;
   place-items: center;
+  overflow: visible;
 }
 
-.cmi-v3-map-bottom-add-icon::before,
-.cmi-v3-map-bottom-add-icon::after {
-  content: "";
-  position: absolute;
-  pointer-events: none;
-}
-
-.cmi-v3-map-bottom-add-icon::before {
-  right: 8px;
-  top: 6px;
-  width: 12px;
-  height: 12px;
-  background: var(--cmi-v3-wild-spark);
-  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
-}
-
-.cmi-v3-map-bottom-add-icon::after {
-  left: 12px;
-  bottom: 8px;
-  width: 17px;
-  height: 10px;
-  border-radius: 999px 999px 999px 2px;
-  background: var(--cmi-v3-wild-leaf);
-  transform: rotate(28deg);
+.cmi-v3-wild-magnifier-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
 
 .cmi-v3-map-bottom-add-button.is-active .cmi-v3-map-bottom-add-icon {
-  background: var(--cmi-v3-wild-green);
+  background: transparent;
   box-shadow:
     4px 6px 0 rgba(14, 84, 48, 0.26),
     0 0 0 5px rgba(31, 159, 88, 0.26);

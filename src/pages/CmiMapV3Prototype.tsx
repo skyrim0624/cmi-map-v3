@@ -3116,11 +3116,41 @@ function CmiV3BottomNav({
         aria-label={addAriaLabel}
       >
         <span className="cmi-v3-map-bottom-add-icon">
-          <Search size={34} strokeWidth={3.25} />
+          <WildMagnifierIcon />
         </span>
         打卡拍照
       </button>
     </footer>
+  );
+}
+
+function WildMagnifierIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="cmi-v3-wild-magnifier-svg"
+      focusable="false"
+      viewBox="0 0 64 64"
+    >
+      <defs>
+        <radialGradient id="cmi-v3-wild-magnifier-fill" cx="34%" cy="28%" r="78%">
+          <stop offset="0%" stopColor="#a6dd45" />
+          <stop offset="70%" stopColor="#4fae35" />
+          <stop offset="100%" stopColor="#169457" />
+        </radialGradient>
+      </defs>
+      <circle cx="32" cy="32" r="29.5" fill="url(#cmi-v3-wild-magnifier-fill)" stroke="#0e7d43" strokeWidth="3" />
+      <path d="M14 13.5 9.7 9.1M18.8 10.4 17.2 4.7M10.6 18.4 4.9 16.6" stroke="#63b83a" strokeLinecap="round" strokeWidth="4" />
+      <path d="M15.7 43.8c3.6-8.4 8.5-13.1 15.1-15.9M17.1 43.1c-.7-6.5 1.1-10 5.8-11.8 1.4 5.2-.2 9.2-5.8 11.8ZM24.9 36.4c.1-5.7 2.4-8.8 7.1-9.9.6 5-1.6 8.4-7.1 9.9Z" fill="none" stroke="#0e7d43" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.6" />
+      <path d="M48.2 19.6c2.6-4.3 5.6-5.9 9.7-5.4-1.4 4.6-4.5 6.7-9.7 5.4ZM42.4 17.7c1.2-4.8 3.8-7.2 7.7-7.6-.1 4.7-2.6 7.4-7.7 7.6Z" fill="#0e7d43" />
+      <path d="M48.4 35.3 51 41l5.7 2.6L51 46.2l-2.6 5.7-2.6-5.7-5.7-2.6 5.7-2.6Z" fill="#ffd83f" />
+      <path d="M25.3 48.1 33 55.8M33 48.1l-7.7 7.7M29.1 46.4v11.2" stroke="#d36cc5" strokeLinecap="round" strokeWidth="3.8" />
+      <circle cx="31" cy="30.5" r="12.4" fill="none" stroke="#fff" strokeWidth="5.8" />
+      <path d="M39.5 39 51.5 51" stroke="#fff" strokeLinecap="round" strokeWidth="7.2" />
+      <path d="M45.5 45 48.2 47.7" stroke="#0e7d43" strokeLinecap="round" strokeWidth="2.7" />
+      <path d="M28.4 20.4c3.6-.9 6.5-.1 8.7 2.4M38.8 26.9l1.6 1.2" fill="none" stroke="#8ed0ff" strokeLinecap="round" strokeWidth="2.8" />
+      <path d="M12 24c10-17 34-19 44-1" fill="none" opacity="0.18" stroke="#fff" strokeLinecap="round" strokeWidth="4" />
+    </svg>
   );
 }
 

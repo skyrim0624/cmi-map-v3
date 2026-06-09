@@ -29,7 +29,8 @@ test('主地图固定活动入口打开活动说明页而不是相机', () => {
   assert.doesNotMatch(source, /getMarkPlacePath\(\{ eventId: primaryActivityEvent\.id \}\)/);
 });
 
-test('底部拍照入口使用放大镜主题按钮而不是加号', () => {
-  assert.match(source, /<Search size=\{34\} strokeWidth=\{3\.25\} \/>/);
+test('底部拍照入口使用神奇动物主题放大镜而不是加号', () => {
+  assert.match(source, /<WildMagnifierIcon \/>/);
+  assert.match(source, /function WildMagnifierIcon\(\)/);
   assert.doesNotMatch(source, /<Plus size=\{36\}/);
 });
