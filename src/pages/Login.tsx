@@ -562,7 +562,7 @@ export default function Login() {
                   className={cn(
                     'flex-1 h-11 px-4 text-sm font-black transition-all rounded-xl border-2 border-foreground active:scale-95 touch-manipulation',
                     mode === nextMode
-                      ? 'bg-primary text-primary-foreground shadow-[3px_3px_0_#000] -translate-y-0.5'
+                      ? 'bg-[#1f9f58] text-white shadow-[3px_3px_0_#000] -translate-y-0.5'
                       : 'bg-white text-[#777771] hover:text-foreground shadow-[1px_1px_0_#000]'
                   )}
                   onClick={() => switchMode(nextMode)}
@@ -618,7 +618,7 @@ export default function Login() {
 
               <Button
                 type="submit"
-                className="h-12 w-full rounded-xl border-2 border-foreground text-base font-black bg-primary text-primary-foreground shadow-[3px_3px_0_#000] hover:translate-y-[-1px] hover:shadow-[4px_4px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] transition-all touch-manipulation"
+                className="h-12 w-full rounded-xl border-2 border-foreground bg-[#1f9f58] text-base font-black text-white shadow-[3px_3px_0_#000] transition-all hover:translate-y-[-1px] hover:bg-[#18884d] hover:shadow-[4px_4px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] touch-manipulation"
                 disabled={loading}
               >
                 {loading ? '处理中...' : '更新密码'}
@@ -748,7 +748,7 @@ export default function Login() {
 
                   <Button
                     type="submit"
-                    className="h-12 w-full rounded-xl border-2 border-foreground text-base font-black bg-primary text-primary-foreground shadow-[3px_3px_0_#000] hover:translate-y-[-1px] hover:shadow-[4px_4px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] transition-all touch-manipulation"
+                    className="h-12 w-full rounded-xl border-2 border-foreground bg-[#1f9f58] text-base font-black text-white shadow-[3px_3px_0_#000] transition-all hover:translate-y-[-1px] hover:bg-[#18884d] hover:shadow-[4px_4px_0_#000] active:translate-y-[1px] active:shadow-[1px_1px_0_#000] touch-manipulation"
                     disabled={loading}
                   >
                     {loading
