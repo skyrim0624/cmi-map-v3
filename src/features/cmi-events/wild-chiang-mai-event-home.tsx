@@ -29,28 +29,49 @@ export function WildChiangMaiEventHome({
 
   return (
     <div className="min-h-[100dvh] bg-[#f6edd7] text-[#111827]">
-      <main className="mx-auto min-h-[100dvh] max-w-[520px] px-4 py-[calc(env(safe-area-inset-top)+16px)]">
-        <section className="overflow-hidden rounded-[1.5rem] border-[3px] border-[#111827] bg-[#fff8e8] shadow-[5px_6px_0_rgba(17,24,39,0.16)]">
-          <h1 className="px-4 pt-4 text-[1.85rem] font-black leading-tight tracking-normal">
+      <main className="relative mx-auto min-h-[100dvh] max-w-[520px] overflow-hidden px-4 py-[calc(env(safe-area-inset-top)+16px)]">
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-14 overflow-hidden opacity-20">
+          <img
+            src={posterUrl}
+            alt=""
+            className="h-full w-40 max-w-none object-cover object-left"
+            loading="eager"
+            aria-hidden="true"
+          />
+        </div>
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-14 overflow-hidden opacity-20">
+          <img
+            src={posterUrl}
+            alt=""
+            className="h-full w-40 max-w-none object-cover object-right"
+            loading="eager"
+            aria-hidden="true"
+          />
+        </div>
+
+        <section className="relative overflow-hidden rounded-[1.5rem] border-[3px] border-[#111827] bg-white p-4 shadow-[5px_6px_0_rgba(17,24,39,0.16)]">
+          <h1 className="relative z-10 text-[2.05rem] font-black leading-[1.05] tracking-normal">
             {event.title}
           </h1>
-          <div className="relative mt-3">
+          <div className="relative mt-5 h-52 overflow-hidden rounded-[1.15rem] border-[3px] border-[#111827] bg-[#fff8e8]">
             <img
               src={posterUrl}
-              alt={`${event.title}主视觉`}
-              className="block h-auto w-full"
+              alt=""
+              className="h-full w-full object-cover object-[50%_64%]"
               loading="eager"
+              aria-hidden="true"
             />
+            <div className="absolute inset-0 bg-white/8" />
             <button
               type="button"
-              className="absolute bottom-3 right-3 rounded-[0.85rem] border-[2px] border-[#111827] bg-[#fff8e8] px-3 py-2 text-sm font-black text-[#111827] shadow-[3px_4px_0_rgba(17,24,39,0.18)]"
+              className="absolute bottom-3 right-3 rounded-[0.85rem] border-[2px] border-[#111827] bg-white px-3 py-2 text-sm font-black text-[#111827] shadow-[3px_4px_0_rgba(17,24,39,0.18)]"
             >
               活动介绍
             </button>
           </div>
         </section>
 
-        <section className="mt-5 rounded-[1.4rem] border-[3px] border-[#111827] bg-white p-4 shadow-[4px_5px_0_rgba(17,24,39,0.12)]">
+        <section className="relative mt-5 rounded-[1.4rem] border-[3px] border-[#111827] bg-white p-4 shadow-[4px_5px_0_rgba(17,24,39,0.12)]">
           <div className="mb-4 flex items-center gap-2">
             <Trophy className="h-5 w-5 text-[#218f4f]" strokeWidth={2.6} />
             <h2 className="text-[1.25rem] font-black leading-tight">排行榜</h2>
@@ -77,7 +98,7 @@ export function WildChiangMaiEventHome({
           )}
         </section>
 
-        <section className="mt-5 pb-8">
+        <section className="relative mt-5 pb-8">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-[1.25rem] font-black leading-tight">大家捕获的神奇动物</h2>
             <Button
