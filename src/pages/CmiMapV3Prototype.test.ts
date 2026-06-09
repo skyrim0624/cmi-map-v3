@@ -28,3 +28,8 @@ test('主地图固定活动入口打开活动说明页而不是相机', () => {
   assert.match(source, /aria-label=\{`打开\$\{primaryActivityEvent\.title\}活动说明`\}/);
   assert.doesNotMatch(source, /getMarkPlacePath\(\{ eventId: primaryActivityEvent\.id \}\)/);
 });
+
+test('底部拍照入口使用放大镜主题按钮而不是加号', () => {
+  assert.match(source, /<Search size=\{34\} strokeWidth=\{3\.25\} \/>/);
+  assert.doesNotMatch(source, /<Plus size=\{36\}/);
+});

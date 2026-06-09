@@ -11,7 +11,6 @@ import {
   Menu,
   MessageCircle,
   Navigation,
-  Plus,
   Search,
   Share2,
   Sticker as StickerIcon,
@@ -3117,7 +3116,7 @@ function CmiV3BottomNav({
         aria-label={addAriaLabel}
       >
         <span className="cmi-v3-map-bottom-add-icon">
-          <Plus size={36} strokeWidth={3.2} />
+          <Search size={34} strokeWidth={3.25} />
         </span>
         打卡拍照
       </button>

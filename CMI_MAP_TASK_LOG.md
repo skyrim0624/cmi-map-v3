@@ -36,6 +36,21 @@
 
 ## 执行记录
 
+### 2026-06-09 12:40 +07 神奇动物在哪里主地图轻皮肤
+
+- 背景：用户要求在 CMI Map 现有按钮和图标上加一点 `神奇动物在哪里` 主题皮肤，并把底部“打卡拍照”的加号换成绿色底放大镜。
+- 本轮实现：
+  - 底部“打卡拍照”主按钮从紫色加号改为绿色圆形放大镜。
+  - 地图顶部筛选、活动入口、图层 / 定位按钮和底部导航加入轻量叶片与星点装饰。
+  - 不新增主题页、任务、奖励、按钮或额外发布逻辑，只改现有入口的视觉。
+- 验证结果：
+  - `node --test --experimental-strip-types src/pages/CmiMapV3Prototype.test.ts` 通过。
+  - `pnpm exec biome lint src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 应用内浏览器复查 `http://localhost:5174/?screen=map&verify=wild-skin-qa`：移动视口底部主按钮为绿色放大镜，页面非空，无框架错误；点击“打卡拍照”进入未登录前置流程。
+  - 应用内浏览器桌面视口复查 `http://localhost:5174/?screen=map&verify=wild-skin-desktop-clean`：页面保持 478px 容器，无横向溢出。
+
 ### 2026-06-09 11:58 +07 神奇动物分享图鉴卡编号口径
 
 - 本轮决策：
