@@ -208,11 +208,9 @@
 }
 
 .cmi-reference-screen.is-visible ~ .cmi-reference-arrow::after {
-  width: 31%;
-  height: 31%;
-  border-color: currentColor;
-  border-style: solid;
-  border-width: 0 clamp(4px, 0.95vw, 5px) clamp(4px, 0.95vw, 5px) 0;
+  width: 48%;
+  height: 48%;
+  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg width='28' height='36' viewBox='0 0 28 36' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 6L8 18L20 30' stroke='%23202223' stroke-width='5.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   content: "";
 }
 
@@ -225,7 +223,7 @@
 }
 
 .cmi-reference-arrow--previous::after {
-  transform: translateX(14%) rotate(135deg);
+  transform: translateX(10%);
 }
 
 .cmi-reference-arrow--next {
@@ -233,7 +231,7 @@
 }
 
 .cmi-reference-arrow--next::after {
-  transform: translateX(-14%) rotate(-45deg);
+  transform: translateX(-10%) scaleX(-1);
 }
 
 .cmi-reference-hotspot:focus-visible,

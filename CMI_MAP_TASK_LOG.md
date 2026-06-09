@@ -2287,3 +2287,15 @@
   - `pnpm exec tsgo -p tsconfig.check.json` 通过。
   - 本地浏览器 390×844 手机视口验证：`01/05` 无额外按钮视觉，点击底图箭头可切到 `02/05`，横向左滑可切到 `03/05`。
   - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
+
+### 2026-06-09 社区入口动态箭头形状调整
+
+- 背景：用户指出动态活动页上的补充箭头形状不好看。
+- 本轮实现：
+  - 将动态页补充箭头从 CSS 边框折角改为圆角 SVG 笔画箭头。
+  - 保持默认 `01/05` 仍只使用底图原生箭头，不叠加额外视觉。
+- 验证结果：
+  - `node --test --experimental-strip-types src/pages/CmiCommunityEntrance.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - 本地浏览器 390×844 手机视口验证：动态页箭头为圆角单线样式，点击右箭头可切到 `03/05`，横向左滑可切到 `04/05`。
+  - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
