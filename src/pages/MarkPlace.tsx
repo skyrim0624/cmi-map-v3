@@ -16,7 +16,7 @@ import {
   isCmiInnEvent,
 } from '@/data/cmi-events';
 import { getCmiInputCategoryOptionById, getCmiInputCategoryOptions } from '@/data/cmi-taxonomy';
-import { createRecommendation, getAllRecommendations, uploadImages } from '@/db/api';
+import { assignCmiEventCaptureNumber, createRecommendation, getAllRecommendations, uploadImages } from '@/db/api';
 import { getPublishedCmiEvents } from '@/db/cmi-events';
 import {
   DEFAULT_CAMERA_CAPTURE_QUALITY,
@@ -1197,6 +1197,10 @@ export default function MarkPlace() {
       const recommendation = await createRecommendation(recommendationInput);
 
       if (recommendation) {
+        if (linkedEvent && isCmiMapCheckinActivityEvent(linkedEvent)) {
+          await assignCmiEventCaptureNumber(recommendation.id);
+        }
+
         setTimeout(() => {
           toast.success(
             isCmiInnCheckIn

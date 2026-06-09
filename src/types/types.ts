@@ -46,6 +46,7 @@ export interface Recommendation {
   easter_icon_id?: string | null;
   linked_event_id?: string | null;
   linked_event_title?: string | null;
+  linked_event_capture_number?: number | null;
   created_at: string;
   upvotes?: { user_id: string }[];
   wishlists?: { user_id: string }[];

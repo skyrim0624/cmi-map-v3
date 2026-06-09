@@ -537,6 +537,21 @@ export const createRecommendation = async (
   return null;
 };
 
+export const assignCmiEventCaptureNumber = async (
+  recommendationId: string
+): Promise<number | null> => {
+  const { data, error } = await supabase.rpc('assign_cmi_event_capture_number', {
+    target_recommendation_id: recommendationId,
+  });
+
+  if (error) {
+    console.error('分配活动捕获编号失败:', error);
+    return null;
+  }
+
+  return typeof data === 'number' ? data : null;
+};
+
 /**
  * 删除推荐
  */
