@@ -48,6 +48,8 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       selfDestroying: true,
+      // NOTE: 保留 /sw.js 供已安装的旧 Service Worker 自毁，但新页面不再主动注册它。
+      injectRegister: false,
       includeAssets: CORE_PRECACHE_ASSETS,
       workbox: {
         cleanupOutdatedCaches: true,
