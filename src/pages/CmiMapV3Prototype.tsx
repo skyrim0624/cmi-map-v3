@@ -1488,8 +1488,7 @@ function MapMode({
           onClick={() => onOpenPath(getCmiEventPath(primaryActivityEvent.id))}
           aria-label={`打开${primaryActivityEvent.title}活动说明`}
         >
-          <Calendar size={17} strokeWidth={3} />
-          <span>活动</span>
+          <img src="/map-icons/cmi-flat-v2/wild-chiang-mai-activity-entry.png" alt="" />
         </button>
       )}
 
