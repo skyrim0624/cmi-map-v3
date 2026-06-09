@@ -49,6 +49,9 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 应用内浏览器复查 `http://127.0.0.1:5178/?screen=feed&verify=featured-white-local`：554x699 视口下顶部精选帖背景为 `rgb(255, 255, 255)`，普通帖子背景为 `rgb(255, 255, 255)`，动态页外层和顶部区域背景为 `rgb(7, 147, 77)`；点击精选帖进入对应活动详情页，无框架错误遮罩和控制台警告。
+  - 已部署当前提交 `31ecf09`：v3 预览 `https://2825aa46.cmi-map-v3.pages.dev`，正式站预览 `https://754605f8.cmi-map.pages.dev`。
+  - 正式域名 `https://cmimap.com/?screen=feed&verify=featured-white-31ecf09` 已确认加载新资源：入口引用 `assets/index-BWXmQzSV.js`，懒加载包引用 `CmiMapV3Prototype-x99otJpQ.js` 和 `CmiMapV3Prototype-CwkASUs0.css`。
+  - 线上应用内浏览器复查 554x699 视口：顶部精选帖背景为 `rgb(255, 255, 255)`，普通帖子背景为 `rgb(255, 255, 255)`，动态页外层和顶部区域背景为 `rgb(7, 147, 77)`；页面非空，无框架错误遮罩和控制台警告。
 
 ### 2026-06-09 13:55 +07 动态页帖子卡片恢复白底
 
