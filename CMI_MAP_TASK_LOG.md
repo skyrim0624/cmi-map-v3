@@ -2018,3 +2018,27 @@
   - `pnpm lint` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地浏览器检查 `http://localhost:5173/events/cmi-wild-chiang-mai-2026-06`：标题、KV、活动介绍入口、排行榜、捕获列表均显示。
+
+### 2026-06-09 神奇动物在哪里活动主页长图视觉调整
+
+- 本轮实现：
+  - 按用户给出的长图活动页参考和 Image Generate 出图方向，活动主页从白卡片 App UI 改为活动长图式落地页。
+  - 顶部改为奶油底、大黑字、清迈 KV 大面积插画背景、绿色标语条和红色活动介绍入口。
+  - 排行榜和捕获列表改为蓝色活动段落中的纸片式模块。
+  - 保留原有功能边界：不新增奖励、成就、玩法、额外按钮或独立主题系统。
+- 验证结果：
+  - `pnpm lint` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地浏览器截图检查 `http://localhost:5173/events/cmi-wild-chiang-mai-2026-06` 通过。
+
+### 2026-06-09 社区统一入口明亮玩具界面改版
+
+- 本轮实现：
+  - `/community` 从黑色霓虹街机视觉改为明亮黄色、规整的竖版移动端入口界面。
+  - 首屏使用真实 DOM 布局，不再依赖街机原型图底图和绝对定位热区。
+  - 近期活动屏幕直接读取 CMI Map 活动数据，展示真实活动信息和真实海报，点击进入对应活动详情页。
+  - 保留 CMI MAP / CMI SWAP 外链、发起活动入口、一键订房弹窗和相关合作弹窗。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
+  - 本地浏览器检查 `/community`：移动端首屏无白边，活动海报加载，按钮排列规整；矮屏可滚动到底部按钮；订房弹窗二维码正常。
