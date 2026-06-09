@@ -36,6 +36,20 @@
 
 ## 执行记录
 
+### 2026-06-09 15:55 +07 社区统一入口改为参考图母版复刻
+
+- 背景：用户明确要求不要再近似重画，必须按指定参考图 1:1 复刻视觉。
+- 本轮实现：
+  - 将用户指定概念图作为 `/community` 视觉母版，页面直接按母版原比例展示，避免 CSS 重画导致比例、字体、留白和按钮形态走样。
+  - 在母版上叠加透明点击热区：活动详情、CMI MAP、CMI SWAP、发起活动、一键订房、相关合作。
+  - 保留一键订房和相关合作二维码弹窗，不额外增加可见 UI。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - `node --test --experimental-strip-types src/pages/CmiCommunityEntrance.test.ts` 通过。
+  - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
+  - 本地应用内浏览器 477x846 视口复查 `/community?verify=reference-plate`：加载母版图片 `941x1672`，页面视觉与参考图一致。
+  - 已部署线上预览 `https://c8cb97ba.cmi-map-v3.pages.dev/community`；线上应用内浏览器复查确认母版图片加载完成，页面显示为参考图复刻版本。
+
 ### 2026-06-09 15:25 +07 社区统一入口按明亮参考图重做
 
 - 背景：上一版明亮入口仍与用户指定概念图差距明显，需要严格按黄色竖版掌机界面重排。
