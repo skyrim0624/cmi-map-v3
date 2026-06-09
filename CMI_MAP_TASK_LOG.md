@@ -1959,3 +1959,15 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `node --test --experimental-strip-types src/routes.test.ts src/pages/CmiMapV3Prototype.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts` 通过。
   - `npx tailwindcss -i ./src/index.css -o /dev/null` CSS 检查通过。
+
+### 2026-06-09 11:36:35 +07 回滚主题地图重绘
+
+- 本轮实现：
+  - 回滚 2026-06-08 的主题地图真实数据重绘。
+  - 删除主题地图 geometry 数据和纸张底纹资源。
+  - 地图恢复到主题重绘前的状态，只保留原有淡色底图、清迈边界、Ping River 与旧城护城河贴片。
+  - 保留删除旧版意图首页等后续无关修改。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `node --test --experimental-strip-types src/components/map/LeafletMap.test.ts src/routes.test.ts src/pages/CmiMapV3Prototype.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts` 通过。
+  - `npx tailwindcss -i ./src/index.css -o /dev/null` CSS 检查通过。
