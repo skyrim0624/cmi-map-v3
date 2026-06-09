@@ -36,6 +36,22 @@
 
 ## 执行记录
 
+### 2026-06-09 15:25 +07 社区统一入口按明亮参考图重做
+
+- 背景：上一版明亮入口仍与用户指定概念图差距明显，需要严格按黄色竖版掌机界面重排。
+- 本轮实现：
+  - `/community` 顶部改为大号 CMI 标识 + 右侧“社区统一入口”，移除多余胶囊和贴纸装饰。
+  - 活动屏幕按参考图做成大圆角 LCD 面板：左侧真实活动信息，右侧真实活动海报，左右箭头贴屏幕两侧，底部轮播圆点。
+  - 默认精选顺序优先显示 6.6 二手物品拍卖大会，并继续轮播真实 CMI 活动。
+  - CMI MAP / CMI SWAP 保留两条白色大按钮，底部保留发起活动、一键订房、相关合作三个圆形按钮。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - `node --test --experimental-strip-types src/pages/CmiCommunityEntrance.test.ts` 通过。
+  - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
+  - 本地应用内浏览器 393x852 视口复查 `/community?verify=match-reference-local-2`：页面为明亮黄色竖版，屏幕、入口按钮和三颗圆形按钮已按参考图比例重排。
+  - 已部署线上预览 `https://65d55f3b.cmi-map-v3.pages.dev/community`，并确认页面加载新包 `CmiCommunityEntrance-BMya4kf2.js` / `cmi-community-entrance-BM0hc1Hz.css`。
+  - 线上应用内浏览器 393x852 视口复查：页面非空，显示新版明亮黄色掌机界面。
+
 ### 2026-06-09 14:45 +07 动态页顶部精选帖按信息流对齐
 
 - 背景：用户进一步指出顶部精选帖外侧仍有一圈绿色，和下面普通帖子没有排列整齐。

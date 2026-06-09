@@ -26,21 +26,35 @@ import './cmi-community-entrance.css';
 const featuredEventLimit = 5;
 const minimumSwipeDistance = 44;
 const linkeQrImageUrl = '/cmi-home/qr-linke.jpg';
+const preferredFeaturedEventIds = [
+  'cmi-secondhand-auction-2026-06-06',
+  'cmi-talk-fathers-day-guests-2026-06-07',
+  'cmi-ai-3d-spaceship-workshop-2026-06-07',
+  'cmi-my-octopus-teacher-2026-06-06',
+];
 
 const getFeaturedEvents = (referenceDate = new Date()) => {
   const cmiInnEvents = CMI_EVENTS
     .filter(event => event.visibilityStatus !== 'draft')
     .filter(isCmiInnEvent);
 
+  const preferred = preferredFeaturedEventIds
+    .map(eventId => cmiInnEvents.find(event => event.id === eventId))
+    .filter(event => event !== undefined);
+  const preferredIds = new Set(preferred.map(event => event.id));
+
   const upcoming = cmiInnEvents
+    .filter(event => !preferredIds.has(event.id))
     .filter(event => !isCmiEventExpired(event, referenceDate))
     .sort((a, b) => getCmiEventSortTime(a, referenceDate) - getCmiEventSortTime(b, referenceDate));
 
-  if (upcoming.length > 0) return upcoming.slice(0, featuredEventLimit);
-
-  return cmiInnEvents
+  const recent = cmiInnEvents
+    .filter(event => !preferredIds.has(event.id))
+    .filter(event => isCmiEventExpired(event, referenceDate))
     .sort((a, b) => getCmiEventSortTime(b, referenceDate) - getCmiEventSortTime(a, referenceDate))
     .slice(0, featuredEventLimit);
+
+  return [...preferred, ...upcoming, ...recent].slice(0, featuredEventLimit);
 };
 
 const featuredEvents = getFeaturedEvents();
@@ -163,10 +177,7 @@ export default function CmiCommunityEntrance() {
       <main className="cmi-toy-entry" aria-label="CMI 社区统一入口">
         <header className="cmi-toy-header">
           <div className="cmi-toy-logo" aria-hidden="true">CMI</div>
-          <div className="cmi-toy-title">
-            <span>COMMUNITY</span>
-            <strong>社区统一入口</strong>
-          </div>
+          <strong className="cmi-toy-title">社区统一入口</strong>
         </header>
 
         <section className="cmi-lcd-panel" aria-label="近期活动 / 精选内容">
@@ -174,49 +185,51 @@ export default function CmiCommunityEntrance() {
             <span>近期活动 / 精选内容</span>
             <strong>{carouselCountLabel}</strong>
           </div>
-          <Link
-            className="cmi-featured-event-card"
-            to={getCmiEventPath(selectedFeaturedEvent.id)}
-            aria-label={`查看活动：${selectedFeaturedEvent.title}`}
-            onClick={handleEventCardClick}
-            onPointerCancel={resetEventSwipe}
-            onPointerDown={handleEventPointerDown}
-            onPointerUp={handleEventPointerUp}
-          >
-            <div className="cmi-featured-event-copy">
-              <span className="cmi-event-kicker">CMI EVENT</span>
-              <strong>{selectedFeaturedEvent.title}</strong>
-              <span className="cmi-event-meta">
-                <CalendarDays aria-hidden="true" />
-                {formatCmiEventTime(selectedFeaturedEvent)}
-              </span>
-              <span className="cmi-event-meta">
-                <MapPin aria-hidden="true" />
-                {selectedFeaturedEvent.venueName}
-              </span>
-              <span className="cmi-event-detail-button">查看详情</span>
-            </div>
-            <img
-              className="cmi-featured-event-poster"
-              src={selectedFeaturedPosterUrl}
-              alt={`${selectedFeaturedEvent.title} 海报`}
-              decoding="async"
-            />
-          </Link>
-          <div className="cmi-carousel-controls" aria-label="活动轮播控制">
-            <button type="button" aria-label="上一个活动" onClick={goPrevious} disabled={activeEventIndex === 0}>
-              <ChevronLeft aria-hidden="true" />
-            </button>
-            <div className="cmi-carousel-dots" aria-hidden="true">
-              {featuredEvents.map(event => (
-                <span
-                  key={event.id}
-                  className={event.id === selectedFeaturedEvent.id ? 'is-active' : undefined}
-                />
-              ))}
-            </div>
+          <div className="cmi-lcd-carousel">
             <button
               type="button"
+              className="cmi-lcd-arrow cmi-lcd-arrow--previous"
+              aria-label="上一个活动"
+              onClick={goPrevious}
+              disabled={activeEventIndex === 0}
+            >
+              <ChevronLeft aria-hidden="true" />
+            </button>
+            <Link
+              className="cmi-featured-event-card"
+              to={getCmiEventPath(selectedFeaturedEvent.id)}
+              aria-label={`查看活动：${selectedFeaturedEvent.title}`}
+              onClick={handleEventCardClick}
+              onPointerCancel={resetEventSwipe}
+              onPointerDown={handleEventPointerDown}
+              onPointerUp={handleEventPointerUp}
+            >
+              <div className="cmi-featured-event-copy">
+                <span className="cmi-event-kicker">CMI EVENT</span>
+                <strong>{selectedFeaturedEvent.title}</strong>
+                <span className="cmi-event-meta">
+                  <CalendarDays aria-hidden="true" />
+                  <span>{formatCmiEventTime(selectedFeaturedEvent)}</span>
+                </span>
+                <span className="cmi-event-meta">
+                  <MapPin aria-hidden="true" />
+                  <span>{selectedFeaturedEvent.venueName}</span>
+                </span>
+                <span className="cmi-event-detail-button">
+                  查看详情
+                  <ChevronRight aria-hidden="true" />
+                </span>
+              </div>
+              <img
+                className="cmi-featured-event-poster"
+                src={selectedFeaturedPosterUrl}
+                alt={`${selectedFeaturedEvent.title} 海报`}
+                decoding="async"
+              />
+            </Link>
+            <button
+              type="button"
+              className="cmi-lcd-arrow cmi-lcd-arrow--next"
               aria-label="下一个活动"
               onClick={goNext}
               disabled={activeEventIndex >= featuredEventCount - 1}
@@ -224,10 +237,18 @@ export default function CmiCommunityEntrance() {
               <ChevronRight aria-hidden="true" />
             </button>
           </div>
+          <div className="cmi-carousel-dots" aria-hidden="true">
+            {featuredEvents.map(event => (
+              <span
+                key={event.id}
+                className={event.id === selectedFeaturedEvent.id ? 'is-active' : undefined}
+              />
+            ))}
+          </div>
         </section>
 
         <nav className="cmi-main-entry-list" aria-label="CMI 主入口">
-          <a className="cmi-main-entry-button" href="https://www.cmimap.com" aria-label="CMI MAP">
+          <a className="cmi-main-entry-button" href="https://cmimap.com/map" aria-label="CMI MAP">
             <MapIcon aria-hidden="true" />
             <span>CMI MAP</span>
             <ChevronRight aria-hidden="true" />
@@ -242,11 +263,7 @@ export default function CmiCommunityEntrance() {
         <div className="cmi-action-row" aria-label="社区操作入口">
           <Link className="cmi-round-action cmi-round-action--event" to={getCmiEventCreatePath()}>
             <CalendarPlus aria-hidden="true" />
-            <span>
-              发起
-              <br />
-              活动
-            </span>
+            <span>发起活动</span>
           </Link>
           <button
             type="button"
@@ -254,11 +271,7 @@ export default function CmiCommunityEntrance() {
             onClick={() => setContactModalType('booking')}
           >
             <Home aria-hidden="true" />
-            <span>
-              一键
-              <br />
-              订房
-            </span>
+            <span>一键订房</span>
           </button>
           <button
             type="button"
@@ -266,11 +279,7 @@ export default function CmiCommunityEntrance() {
             onClick={() => setContactModalType('partner')}
           >
             <Handshake aria-hidden="true" />
-            <span>
-              相关
-              <br />
-              合作
-            </span>
+            <span>相关合作</span>
           </button>
         </div>
       </main>
