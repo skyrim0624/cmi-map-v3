@@ -15,7 +15,7 @@ test('动物识别先做主体检测再分类兜底', () => {
 });
 
 test('分类兜底低置信度不再硬猜', () => {
-  assert.match(source, /const MIN_CLASSIFICATION_SCORE = 0\.32/);
+  assert.match(source, /const MIN_CLASSIFICATION_SCORE = 0\.30/);
   assert.match(source, /score < MIN_CLASSIFICATION_SCORE/);
   assert.match(source, /status: candidates\.length > 0 \? 'ready' : 'no-match'/);
 });
@@ -74,5 +74,13 @@ test('网页截图类输入不再信任检测框硬猜动物', () => {
 });
 
 test('检测命中后不混入分类兜底候选', () => {
-  assert.match(source, /!shouldSuppressCoarseDetection && detectionResult\.candidates\.length > 0\s+\? detectionResult\.candidates/);
+  assert.match(source, /!shouldSuppressCoarseDetection && detectionResult\.candidates\.length > 0 && !preferClassificationCandidate\s+\? detectionResult\.candidates/);
+});
+
+test('猫狗检测与分类冲突时允许犬种证据纠偏', () => {
+  assert.match(source, /const MIN_CLASSIFICATION_DISAGREEMENT_SCORE = 0\.30/);
+  assert.match(source, /'whippet'/);
+  assert.match(source, /'greyhound'/);
+  assert.match(source, /const disagreementOverridePairs = new Set\(\['cat:dog', 'dog:cat'\]\)/);
+  assert.match(source, /shouldPreferClassificationCandidate\(detectionResult\.candidates, classificationResult\.candidates\)/);
 });

@@ -7,7 +7,8 @@ const SELF_HOSTED_SPECIES_MODEL_ID = 'self-hosted-species-model';
 const GEMINI_GENERATE_CONTENT_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_SPECIES_MODEL_ID}:generateContent`;
 const GBIF_SPECIES_MATCH_URL = 'https://api.gbif.org/v1/species/match';
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-const MIN_CLASSIFICATION_SCORE = 0.32;
+const MIN_CLASSIFICATION_SCORE = 0.30;
+const MIN_CLASSIFICATION_DISAGREEMENT_SCORE = 0.30;
 const MIN_DETECTION_SCORE = 0.25;
 const MIN_DETECTION_BOX_AREA_RATIO = 0.015;
 const MIN_DETECTION_BOX_SHORT_SIDE = 72;
@@ -97,7 +98,7 @@ const animalMatchers: Array<{
     scientificName: 'Canis lupus familiaris',
     taxonRank: TAXON_RANK_SUBSPECIES,
     iconId: 'egg-v2-05-dog-face',
-    keywords: ['dog', 'hound', 'terrier', 'retriever', 'poodle', 'chihuahua', 'spaniel', 'shepherd'],
+    keywords: ['dog', 'hound', 'terrier', 'retriever', 'poodle', 'chihuahua', 'spaniel', 'shepherd', 'whippet', 'greyhound'],
   },
   {
     id: 'bird',
@@ -361,6 +362,24 @@ const uniqueCandidates = (candidates: AnimalCandidate[]) => {
   }
 
   return [...bestById.values()].sort((left, right) => right.score - left.score).slice(0, 3);
+};
+
+const disagreementOverridePairs = new Set(['cat:dog', 'dog:cat']);
+
+// NOTE: DETR 偶尔会把小型犬识别成猫；只有分类模型给出明确猫狗反向证据时才纠偏。
+const shouldPreferClassificationCandidate = (
+  detectionCandidates: AnimalCandidate[],
+  classificationCandidates: AnimalCandidate[]
+) => {
+  const topDetection = detectionCandidates[0];
+  const topClassification = classificationCandidates[0];
+  if (!topDetection || !topClassification) return false;
+
+  const pairKey = `${topDetection.id}:${topClassification.id}`;
+  return (
+    disagreementOverridePairs.has(pairKey) &&
+    topClassification.score >= MIN_CLASSIFICATION_DISAGREEMENT_SCORE
+  );
 };
 
 const toPredictionList = (value: unknown): Array<Record<string, unknown>> => {
@@ -845,7 +864,8 @@ export const onRequestPost = async ({ request, env }: PagesContext) => {
   const isNonFieldPhoto = hasStrongNonFieldPhotoSignal(classificationResult.rawLabels);
   const hasSpeciesLevelDetection = Boolean(bestSpeciesLevelCandidate(detectionResult.candidates));
   const shouldSuppressCoarseDetection = isNonFieldPhoto && !hasSpeciesLevelDetection;
-  const coarseCandidates = !shouldSuppressCoarseDetection && detectionResult.candidates.length > 0
+  const preferClassificationCandidate = shouldPreferClassificationCandidate(detectionResult.candidates, classificationResult.candidates);
+  const coarseCandidates = !shouldSuppressCoarseDetection && detectionResult.candidates.length > 0 && !preferClassificationCandidate
     ? detectionResult.candidates
     : shouldSuppressCoarseDetection
       ? []

@@ -39,6 +39,19 @@
 
 ## 执行记录
 
+### 2026-06-10 20:08 +07 小白狗被误识别成猫的纠偏
+
+- 本轮实现：
+  - 线上复测用户狗照片时，主体检测返回 `Felis catus`，但分类结果包含 `WHIPPET / ITALIAN GREYHOUND` 犬种证据。
+  - 新增极窄纠偏：只在猫狗互相冲突、且分类模型给出犬种 / 猫种证据达到阈值时，用分类结果覆盖主体检测结果。
+  - 犬类关键词补充 `whippet`、`greyhound`，避免小型犬照片被猫狗粗分类带偏。
+- 验证结果：
+  - 已补充测试锁定猫狗冲突纠偏规则。
+  - `node --test --experimental-strip-types functions/api/animal-identify.test.ts src/services/animal-identification.test.ts src/pages/MarkPlace.test.ts src/lib/cmi-wild-animal-share-card.test.ts src/db/cmi-event-capture-numbers.test.ts` 通过，29 项测试全部通过。
+  - `pnpm exec biome lint functions/api/animal-identify.ts functions/api/animal-identify.test.ts src/services/animal-identification.ts src/services/animal-identification.test.ts src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts src/lib/cmi-wild-animal-share-card.ts src/lib/cmi-wild-animal-share-card.test.ts CMI_MAP_TASK_LOG.md` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过。
+
 ### 2026-06-10 19:57 +07 神奇动物候选与分享卡回归学名展示
 
 - 本轮实现：
