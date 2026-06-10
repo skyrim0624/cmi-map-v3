@@ -50,6 +50,8 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm build` 通过。
   - 本地 `http://127.0.0.1:5187/v3` 手机视口复查通过：页面加载、地图和“清迈客栈新动态”正常渲染，目标端口无新增 console error。
+  - 已部署到 Cloudflare Pages 正式项目 `cmi-map`：`https://15f7f8c2.cmi-map.pages.dev`。
+  - 正式域名 `https://cmimap.com` 已切到新入口包 `assets/index-LpCJFGxN.js`，线上包内确认包含清迈客栈标准坐标 `18.7932, 98.9874` 与相关别名修正。
 
 ### 2026-06-10 19:05 +07 神奇动物打卡分享卡闭环第一版
 
