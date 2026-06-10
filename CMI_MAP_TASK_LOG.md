@@ -39,6 +39,18 @@
 
 ## 执行记录
 
+### 2026-06-10 19:57 +07 神奇动物候选与分享卡回归学名展示
+
+- 本轮实现：
+  - 动物识别候选按钮、自动描述和分享卡主名称统一直接展示学名，不再使用“家犬 / 家猫 / 大壁虎”等中文别名。
+  - 分享卡文件名也使用学名，保持导出结果和卡片展示一致。
+- 验证结果：
+  - 已补充测试锁定 `formatAnimalCandidateLabel` 和分享卡主名称均使用 `getAnimalScientificName`。
+  - `node --test --experimental-strip-types functions/api/animal-identify.test.ts src/services/animal-identification.test.ts src/pages/MarkPlace.test.ts src/lib/cmi-wild-animal-share-card.test.ts src/db/cmi-event-capture-numbers.test.ts` 通过，28 项测试全部通过。
+  - `pnpm exec biome lint src/services/animal-identification.ts src/services/animal-identification.test.ts src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts src/lib/cmi-wild-animal-share-card.ts src/lib/cmi-wild-animal-share-card.test.ts CMI_MAP_TASK_LOG.md` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过。
+
 ### 2026-06-10 19:48 +07 神奇动物分享卡对齐与主动分享
 
 - 本轮实现：
