@@ -261,7 +261,7 @@ export const createCmiWildAnimalShareCard = async ({
   context.fillText(scientificName, 84, 1112);
 
   const rows = [
-    ['识别', `${candidate.nameZh} · ${candidate.rawLabel || candidate.nameEn}`],
+    ['识别', candidate.rawLabel || candidate.nameEn || scientificName],
     ['时间', formatDateTime(recommendation.created_at)],
     ['地点', recommendation.place_name],
   ] as const;
