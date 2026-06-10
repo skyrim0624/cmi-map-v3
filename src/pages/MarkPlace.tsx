@@ -1597,10 +1597,10 @@ export default function MarkPlace() {
                       ) : (
                         <p className="mt-1 text-xs font-semibold leading-relaxed text-stone-500">
                           {animalIdentificationStatus === 'running'
-                            ? '拍照后会先给出可能候选。'
+                            ? '正在识别动物主体。'
                             : animalIdentificationStatus === 'idle'
                               ? '拍下动物后会自动识别。'
-                              : '这张暂时没识别准，可以直接手写。'}
+                              : '这张没识别清楚，换张近一点的照片或直接写名称。'}
                         </p>
                       )}
                     </div>

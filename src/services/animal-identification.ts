@@ -7,6 +7,7 @@ export interface AnimalIdentificationCandidate {
   scientificName?: string;
   score: number;
   rawLabel: string;
+  source?: 'detection' | 'classification';
   iconId?: string;
 }
 
@@ -28,8 +29,8 @@ export const formatAnimalCandidateLabel = (candidate: AnimalIdentificationCandid
 
 export const buildAnimalCandidateDescription = (candidate: AnimalIdentificationCandidate) => (
   candidate.scientificName
-    ? `可能是${candidate.nameZh}（${candidate.scientificName}）。`
-    : `可能是${candidate.nameZh}。`
+    ? `这是${candidate.nameZh}（${candidate.scientificName}）。`
+    : `这是${candidate.nameZh}。`
 );
 
 export const identifyAnimalPhoto = async (file: File): Promise<AnimalIdentificationResult> => {

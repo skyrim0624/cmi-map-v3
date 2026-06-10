@@ -1,6 +1,6 @@
 # CMI Map 优化任务日志
 
-更新时间：2026-06-09 +07
+更新时间：2026-06-10 +07
 
 ## 目标
 
@@ -33,8 +33,29 @@
 18. [完成] 主题地图最短链路第一版：主题页、主题 tag 打卡、投稿回流、主题分享卡
 19. [完成] 神奇动物在哪里拍照识别第一版：Cloudflare Workers AI API + `/mark` 候选确认
 20. [完成] `/mark` 相机页补充可见“识别动物”入口
+21. [完成] 动物识别修正：主体检测优先、低置信度不硬猜、去掉“可能是”文案
 
 ## 执行记录
+
+### 2026-06-10 18:45 +07 动物识别主体检测修正
+
+- 背景：用户实测短脸猫照片时，旧 ResNet 整图分类把候选排成“狗、猫”，并自动填入“可能是狗。”，体验不可接受。
+- 本轮实现：
+  - `/api/animal-identify` 改为 Cloudflare Workers AI `@cf/facebook/detr-resnet-50` 主体检测优先，`@cf/microsoft/resnet-50` 分类只做无检测结果时的兜底。
+  - 分类兜底增加置信度阈值，低分候选不再硬猜。
+  - 检测框增加主体尺寸过滤，避免整张 UI 截图里的小横条被误判成动物。
+  - 关键词匹配改为单词边界匹配，避免 `potted plant` 因包含 `ant` 被误判成昆虫。
+  - 自动填入文案从“可能是...”改为“这是...”；识别不清楚时不自动乱填，提示换近一点的照片或手写名称。
+- 验证结果：
+  - 用户提供的整张截图本地接口返回 `no-match`，不再输出“狗”。
+  - 从同图裁出的照片区域返回 `猫`，耗时约 `1.40s`。
+  - 从同图裁出的动物主体区域返回 `猫`，耗时约 `1.53s`。
+  - 旧猫图返回 `猫`，耗时约 `1.21s`。
+  - 旧壁虎图返回 `大壁虎 / Gekko gecko`，耗时约 `1.22s`。
+  - `node --test --experimental-strip-types functions/api/animal-identify.test.ts src/services/animal-identification.test.ts src/pages/MarkPlace.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/services/animal-identification.ts src/services/animal-identification.test.ts src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts` 通过。
+  - `npx wrangler pages functions build --outfile /tmp/cmi-map-animal-worker.js` 通过。
 
 ### 2026-06-09 16:20 +07 社区统一入口显示屏加入活动切换
 

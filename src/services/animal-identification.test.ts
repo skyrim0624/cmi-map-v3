@@ -14,3 +14,8 @@ test('动物识别通过同源 Pages Function 调用', () => {
   assert.match(source, /const ANIMAL_IDENTIFICATION_ENDPOINT = '\/api\/animal-identify'/);
   assert.match(source, /formData\.append\('image'/);
 });
+
+test('动物识别文案不再输出可能式猜测', () => {
+  assert.match(source, /`这是\$\{candidate\.nameZh\}/);
+  assert.doesNotMatch(source, /可能是/);
+});
