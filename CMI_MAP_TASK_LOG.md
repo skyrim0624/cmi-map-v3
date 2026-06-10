@@ -52,6 +52,9 @@
   - 从同图裁出的动物主体区域返回 `猫`，耗时约 `1.53s`。
   - 旧猫图返回 `猫`，耗时约 `1.21s`。
   - 旧壁虎图返回 `大壁虎 / Gekko gecko`，耗时约 `1.22s`。
+  - 已部署到 Cloudflare Pages 项目 `cmi-map` 的 Production，预览地址 `https://16859b9d.cmi-map.pages.dev`，正式域名 `https://cmimap.com/mark?verify=b914562` 返回 `HTTP 200`。
+  - 正式域名 `/api/animal-identify` 复测：用户截图返回 `no-match`，不再输出“狗”；照片区域裁剪返回 `猫`，接口总耗时约 `1.51s`；旧壁虎图返回 `大壁虎 / Gekko gecko`，接口总耗时约 `1.26s`。
+  - 正式域名前端包已包含“这是 / 正在识别动物主体 / 这张没识别清楚”，不再包含“可能是 / 拍照后会先给出可能候选”。
   - `node --test --experimental-strip-types functions/api/animal-identify.test.ts src/services/animal-identification.test.ts src/pages/MarkPlace.test.ts` 通过。
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm exec biome lint src/services/animal-identification.ts src/services/animal-identification.test.ts src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts` 通过。
