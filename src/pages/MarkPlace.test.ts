@@ -97,6 +97,8 @@ test('神奇动物打卡会调用动物识别并预选彩蛋', () => {
   assert.match(source, /setSelectedInputCategoryId\(easterOption\.id\)/);
   assert.match(source, /setSelectedEasterIconId\(candidate\.iconId\)/);
   assert.match(source, /assignCmiEventCaptureNumber\(recommendation\.id\)/);
+  assert.match(source, /createCmiWildAnimalShareCard/);
+  assert.match(source, /shareOrDownloadCmiWildAnimalShareCard/);
   assert.match(source, /识别动物/);
   assert.match(source, /动物识别/);
   assert.match(source, /正在识别动物主体。/);

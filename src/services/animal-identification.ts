@@ -7,7 +7,8 @@ export interface AnimalIdentificationCandidate {
   scientificName?: string;
   score: number;
   rawLabel: string;
-  source?: 'detection' | 'classification';
+  source?: 'detection' | 'classification' | 'vision';
+  taxonRank?: string;
   iconId?: string;
 }
 
@@ -27,11 +28,32 @@ export const formatAnimalCandidateLabel = (candidate: AnimalIdentificationCandid
     : candidate.nameZh
 );
 
-export const buildAnimalCandidateDescription = (candidate: AnimalIdentificationCandidate) => (
-  candidate.scientificName
-    ? `这是${candidate.nameZh}（${candidate.scientificName}）。`
-    : `这是${candidate.nameZh}。`
-);
+const fallbackScientificNames: Record<string, string> = {
+  dog: 'Canis lupus familiaris',
+  cat: 'Felis catus',
+  'tokay-gecko': 'Gekko gecko',
+  bird: 'Aves',
+  butterfly: 'Lepidoptera',
+  fish: 'Actinopterygii',
+  snake: 'Serpentes',
+  frog: 'Anura',
+  insect: 'Insecta',
+  squirrel: 'Sciuridae',
+};
+
+export const getAnimalScientificName = (candidate: AnimalIdentificationCandidate) =>
+  candidate.scientificName?.trim() || fallbackScientificNames[candidate.id] || candidate.nameEn || candidate.rawLabel;
+
+const isSpeciesLevelRank = (rank: string | undefined) => rank === 'SPECIES' || rank === 'SUBSPECIES';
+
+export const buildAnimalCandidateDescription = (candidate: AnimalIdentificationCandidate) => {
+  const scientificName = getAnimalScientificName(candidate);
+  if (isSpeciesLevelRank(candidate.taxonRank) || candidate.source === 'vision') {
+    return `这是${candidate.nameZh}（${scientificName}）。`;
+  }
+
+  return `识别到${candidate.nameZh}（${scientificName}），需要更近照片才能定到具体物种。`;
+};
 
 export const identifyAnimalPhoto = async (file: File): Promise<AnimalIdentificationResult> => {
   const uploadFile = await compressImage(file, {

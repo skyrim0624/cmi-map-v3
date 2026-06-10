@@ -37,6 +37,19 @@
 
 ## 执行记录
 
+### 2026-06-10 19:05 +07 神奇动物打卡分享卡闭环第一版
+
+- 本轮实现：
+  - 动物识别候选补充学名字段，分享卡不再使用“清迈小狗 / 清迈街猫 / 清迈大壁虎”这类本地化命名。
+  - 将 Image Gen 生成的固定模板母版加入公开素材：`/cmi-home/share-card-templates/wild-chiang-mai-template-v1.png`。
+  - 新增神奇动物分享卡 Canvas 导出：使用模板母版叠加用户原照片、学名、识别标签、时间、地点、习性介绍、活动主页二维码和活动捕获编号。
+  - `/mark` 关联 `神奇动物在哪里` 发布成功后，自动生成并分享 / 下载图鉴卡；普通打卡不受影响。
+- 验证结果：
+  - `node --test --experimental-strip-types functions/api/animal-identify.test.ts src/services/animal-identification.test.ts src/pages/MarkPlace.test.ts src/lib/cmi-wild-animal-share-card.test.ts src/db/cmi-event-capture-numbers.test.ts` 通过。
+  - `pnpm exec biome lint functions/api/animal-identify.ts functions/api/animal-identify.test.ts src/services/animal-identification.ts src/services/animal-identification.test.ts src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts src/lib/cmi-wild-animal-share-card.ts src/lib/cmi-wild-animal-share-card.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过。
+
 ### 2026-06-10 18:45 +07 动物识别主体检测修正
 
 - 背景：用户实测短脸猫照片时，旧 ResNet 整图分类把候选排成“狗、猫”，并自动填入“可能是狗。”，体验不可接受。

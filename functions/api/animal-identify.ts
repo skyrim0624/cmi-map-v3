@@ -1,15 +1,22 @@
 const CLASSIFICATION_MODEL_ID = '@cf/microsoft/resnet-50';
 const DETECTION_MODEL_ID = '@cf/facebook/detr-resnet-50';
+const VISION_SPECIES_MODEL_ID = '@cf/meta/llama-3.2-11b-vision-instruct';
+const VISION_SPECIES_FALLBACK_MODEL_ID = '@cf/llava-hf/llava-1.5-7b-hf';
+const GBIF_SPECIES_MATCH_URL = 'https://api.gbif.org/v1/species/match';
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const MIN_CLASSIFICATION_SCORE = 0.32;
 const MIN_DETECTION_SCORE = 0.25;
 const MIN_DETECTION_BOX_AREA_RATIO = 0.015;
 const MIN_DETECTION_BOX_SHORT_SIDE = 72;
+const MIN_VISION_SPECIES_CONFIDENCE = 0.68;
+const MIN_GBIF_SPECIES_CONFIDENCE = 82;
+const TAXON_RANK_SPECIES = 'SPECIES';
+const TAXON_RANK_SUBSPECIES = 'SUBSPECIES';
 
 type AiBinding = {
   run: (
     model: string,
-    input: { image: number[] }
+    input: Record<string, unknown>
   ) => Promise<unknown>;
 };
 
@@ -27,7 +34,8 @@ interface AnimalCandidate {
   scientificName?: string;
   score: number;
   rawLabel: string;
-  source: 'detection' | 'classification';
+  source: 'detection' | 'classification' | 'vision';
+  taxonRank?: string;
   iconId?: string;
 }
 
@@ -52,6 +60,7 @@ const animalMatchers: Array<{
   nameZh: string;
   nameEn: string;
   scientificName?: string;
+  taxonRank?: string;
   iconId?: string;
   keywords: string[];
 }> = [
@@ -60,6 +69,7 @@ const animalMatchers: Array<{
     nameZh: '大壁虎',
     nameEn: 'Tokay gecko',
     scientificName: 'Gekko gecko',
+    taxonRank: TAXON_RANK_SPECIES,
     iconId: 'egg-v2-37-gecko',
     keywords: ['gecko', 'lizard', 'agama', 'iguana', 'chameleon'],
   },
@@ -67,6 +77,8 @@ const animalMatchers: Array<{
     id: 'cat',
     nameZh: '猫',
     nameEn: 'Cat',
+    scientificName: 'Felis catus',
+    taxonRank: TAXON_RANK_SPECIES,
     iconId: 'egg-v2-03-cat-face',
     keywords: ['cat', 'tabby', 'tiger cat', 'egyptian cat', 'persian cat', 'siamese'],
   },
@@ -74,6 +86,8 @@ const animalMatchers: Array<{
     id: 'dog',
     nameZh: '狗',
     nameEn: 'Dog',
+    scientificName: 'Canis lupus familiaris',
+    taxonRank: TAXON_RANK_SUBSPECIES,
     iconId: 'egg-v2-05-dog-face',
     keywords: ['dog', 'hound', 'terrier', 'retriever', 'poodle', 'chihuahua', 'spaniel', 'shepherd'],
   },
@@ -81,6 +95,8 @@ const animalMatchers: Array<{
     id: 'bird',
     nameZh: '鸟',
     nameEn: 'Bird',
+    scientificName: 'Aves',
+    taxonRank: 'CLASS',
     iconId: 'egg-v2-38-bird',
     keywords: ['bird', 'bulbul', 'sparrow', 'parrot', 'kingfisher', 'hornbill', 'drongo', 'myna', 'jay'],
   },
@@ -88,6 +104,8 @@ const animalMatchers: Array<{
     id: 'butterfly',
     nameZh: '蝴蝶',
     nameEn: 'Butterfly',
+    scientificName: 'Lepidoptera',
+    taxonRank: 'ORDER',
     iconId: 'egg-v2-36-butterfly',
     keywords: ['butterfly', 'monarch', 'sulphur butterfly', 'ringlet'],
   },
@@ -95,6 +113,8 @@ const animalMatchers: Array<{
     id: 'fish',
     nameZh: '鱼',
     nameEn: 'Fish',
+    scientificName: 'Actinopterygii',
+    taxonRank: 'CLASS',
     iconId: 'egg-v2-39-fish',
     keywords: ['fish', 'goldfish', 'tench', 'eel', 'ray'],
   },
@@ -102,24 +122,32 @@ const animalMatchers: Array<{
     id: 'snake',
     nameZh: '蛇',
     nameEn: 'Snake',
+    scientificName: 'Serpentes',
+    taxonRank: 'SUBORDER',
     keywords: ['snake', 'cobra', 'viper', 'python', 'boa'],
   },
   {
     id: 'frog',
     nameZh: '蛙',
     nameEn: 'Frog',
+    scientificName: 'Anura',
+    taxonRank: 'ORDER',
     keywords: ['frog', 'toad', 'tree frog', 'bullfrog'],
   },
   {
     id: 'insect',
     nameZh: '昆虫',
     nameEn: 'Insect',
+    scientificName: 'Insecta',
+    taxonRank: 'CLASS',
     keywords: ['bee', 'ant', 'beetle', 'grasshopper', 'cricket', 'mantis', 'dragonfly', 'damselfly', 'fly'],
   },
   {
     id: 'squirrel',
     nameZh: '松鼠',
     nameEn: 'Squirrel',
+    scientificName: 'Sciuridae',
+    taxonRank: 'FAMILY',
     keywords: ['squirrel'],
   },
 ];
@@ -259,6 +287,7 @@ const toClassificationCandidate = (prediction: ImageClassificationPrediction): A
     score,
     rawLabel: label,
     source: 'classification',
+    taxonRank: match.taxonRank,
     iconId: match.iconId,
   };
 };
@@ -280,6 +309,7 @@ const toDetectionCandidate = (prediction: ObjectDetectionPrediction, dimensions:
     score: detectionScore(prediction),
     rawLabel: label,
     source: 'detection',
+    taxonRank: match.taxonRank,
     iconId: match.iconId,
   };
 };
@@ -349,6 +379,209 @@ const classifyAnimalCandidates = async (ai: AiBinding, imageBytes: number[]) => 
   }
 };
 
+type VisionSpeciesResult = {
+  animalPresent?: boolean;
+  commonNameZh?: string;
+  commonNameEn?: string;
+  scientificName?: string;
+  taxonRank?: string;
+  confidence?: number;
+};
+
+type GbifSpeciesMatch = {
+  canonicalName?: string;
+  scientificName?: string;
+  rank?: string;
+  status?: string;
+  confidence?: number;
+  matchType?: string;
+  kingdom?: string;
+};
+
+const isSpeciesLevelRank = (rank: string | undefined) => (
+  rank === TAXON_RANK_SPECIES || rank === TAXON_RANK_SUBSPECIES
+);
+
+const bestSpeciesLevelCandidate = (candidates: AnimalCandidate[]) =>
+  candidates.find(candidate => isSpeciesLevelRank(candidate.taxonRank) && Boolean(candidate.scientificName));
+
+const needsVisionSpeciesLookup = (candidates: AnimalCandidate[]) => (
+  candidates.length === 0 || !bestSpeciesLevelCandidate(candidates)
+);
+
+const getAiResponseText = (value: unknown) => {
+  if (typeof value === 'string') return value;
+  if (!value || typeof value !== 'object') return '';
+
+  const record = value as Record<string, unknown>;
+  for (const key of ['response', 'description', 'result', 'text']) {
+    if (typeof record[key] === 'string') return record[key];
+  }
+
+  return '';
+};
+
+const extractJsonObject = (text: string) => {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start < 0 || end <= start) return null;
+
+  try {
+    return JSON.parse(text.slice(start, end + 1)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+};
+
+const normalizeScientificName = (value: unknown) => (
+  typeof value === 'string'
+    ? value
+      .replace(/[`*_]/g, '')
+      .replace(/\s+/g, ' ')
+      .replace(/[。.,;:]+$/g, '')
+      .trim()
+    : ''
+);
+
+const toConfidence = (value: unknown) => {
+  const confidence = Number(value);
+  if (!Number.isFinite(confidence)) return 0;
+  return confidence > 1 ? confidence / 100 : confidence;
+};
+
+const toVisionSpeciesResult = (text: string): VisionSpeciesResult | null => {
+  const parsed = extractJsonObject(text);
+  if (!parsed) return null;
+
+  const scientificName = normalizeScientificName(parsed.scientificName);
+  const confidence = toConfidence(parsed.confidence);
+
+  return {
+    animalPresent: parsed.animalPresent === true,
+    commonNameZh: typeof parsed.commonNameZh === 'string' ? parsed.commonNameZh.trim() : '',
+    commonNameEn: typeof parsed.commonNameEn === 'string' ? parsed.commonNameEn.trim() : '',
+    scientificName,
+    taxonRank: typeof parsed.taxonRank === 'string' ? parsed.taxonRank.trim().toUpperCase() : '',
+    confidence,
+  };
+};
+
+const buildSpeciesPrompt = (coarseCandidates: AnimalCandidate[]) => {
+  const coarseLabels = coarseCandidates
+    .map(candidate => `${candidate.nameEn}${candidate.scientificName ? ` / ${candidate.scientificName}` : ''}`)
+    .join(', ') || 'none';
+
+  return [
+    'Identify the primary visible animal in this user photo.',
+    'The user wants a taxonomic scientific name for a field observation in Chiang Mai, Thailand.',
+    `Coarse detector candidates: ${coarseLabels}.`,
+    'Return only strict JSON with this exact shape:',
+    '{"animalPresent":true,"commonNameZh":"","commonNameEn":"","scientificName":"","taxonRank":"SPECIES","confidence":0.0}',
+    'Rules:',
+    '- Use a species or subspecies scientific name only when the animal is visually clear enough.',
+    '- For domestic cat use Felis catus. For domestic dog use Canis lupus familiaris.',
+    '- If the photo does not contain a clear animal, set animalPresent to false and leave names empty.',
+    '- If you can only identify a broad group, use that taxon name and set taxonRank to CLASS, ORDER, FAMILY, or GENUS with confidence below 0.68.',
+    '- Do not include explanations, markdown, or any words outside JSON.',
+  ].join('\n');
+};
+
+const runVisionSpeciesModel = async (ai: AiBinding, modelId: string, imageBytes: number[], coarseCandidates: AnimalCandidate[]) => {
+  const result = await ai.run(modelId, {
+    image: imageBytes,
+    prompt: buildSpeciesPrompt(coarseCandidates),
+    max_tokens: 220,
+    temperature: 0,
+  });
+
+  return toVisionSpeciesResult(getAiResponseText(result));
+};
+
+const validateScientificNameWithGbif = async (scientificName: string): Promise<GbifSpeciesMatch | null> => {
+  const url = new URL(GBIF_SPECIES_MATCH_URL);
+  url.searchParams.set('name', scientificName);
+  url.searchParams.set('kingdom', 'Animalia');
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'accept': 'application/json',
+        'user-agent': 'CMI Map animal identification (https://cmimap.com)',
+      },
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (!data || typeof data !== 'object') return null;
+    return data as GbifSpeciesMatch;
+  } catch (error) {
+    console.warn('GBIF 学名校验失败:', error);
+    return null;
+  }
+};
+
+const toGbifCanonicalScientificName = (match: GbifSpeciesMatch) =>
+  normalizeScientificName(match.canonicalName ?? match.scientificName);
+
+const toVisionSpeciesCandidate = (
+  vision: VisionSpeciesResult,
+  gbif: GbifSpeciesMatch,
+  modelId: string
+): AnimalCandidate | null => {
+  const gbifConfidence = typeof gbif.confidence === 'number' ? gbif.confidence : 0;
+  const taxonRank = (gbif.rank || vision.taxonRank || '').toUpperCase();
+  const scientificName = toGbifCanonicalScientificName(gbif);
+
+  if (
+    !vision.animalPresent ||
+    vision.confidence === undefined ||
+    vision.confidence < MIN_VISION_SPECIES_CONFIDENCE ||
+    gbifConfidence < MIN_GBIF_SPECIES_CONFIDENCE ||
+    gbif.kingdom !== 'Animalia' ||
+    !scientificName ||
+    !isSpeciesLevelRank(taxonRank)
+  ) {
+    return null;
+  }
+
+  const commonNameZh = vision.commonNameZh || vision.commonNameEn || scientificName;
+  const commonNameEn = vision.commonNameEn || scientificName;
+
+  return {
+    id: `species-${scientificName.toLocaleLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    nameZh: commonNameZh,
+    nameEn: commonNameEn,
+    scientificName,
+    score: Math.min(0.99, vision.confidence * 0.82 + (gbifConfidence / 100) * 0.18),
+    rawLabel: `${modelId}: ${vision.scientificName}`,
+    source: 'vision',
+    taxonRank,
+  };
+};
+
+const identifySpeciesCandidate = async (
+  ai: AiBinding,
+  imageBytes: number[],
+  coarseCandidates: AnimalCandidate[]
+): Promise<AnimalCandidate | null> => {
+  for (const modelId of [VISION_SPECIES_MODEL_ID, VISION_SPECIES_FALLBACK_MODEL_ID]) {
+    try {
+      const vision = await runVisionSpeciesModel(ai, modelId, imageBytes, coarseCandidates);
+      if (!vision?.scientificName) continue;
+
+      const gbif = await validateScientificNameWithGbif(vision.scientificName);
+      if (!gbif) continue;
+
+      const candidate = toVisionSpeciesCandidate(vision, gbif, modelId);
+      if (candidate) return candidate;
+    } catch (error) {
+      console.warn('动物物种视觉识别失败:', modelId, error);
+    }
+  }
+
+  return null;
+};
+
 export const onRequestPost = async ({ request, env }: PagesContext) => {
   const startedAt = Date.now();
 
@@ -379,15 +612,24 @@ export const onRequestPost = async ({ request, env }: PagesContext) => {
     detectAnimalCandidates(env.AI, bytes, dimensions),
     classifyAnimalCandidates(env.AI, bytes),
   ]);
-  const candidates = detectionResult.candidates.length > 0
+  const coarseCandidates = detectionResult.candidates.length > 0
     ? detectionResult.candidates
     : classificationResult.candidates;
+  const speciesCandidate = needsVisionSpeciesLookup(coarseCandidates)
+    ? await identifySpeciesCandidate(env.AI, bytes, coarseCandidates)
+    : bestSpeciesLevelCandidate(coarseCandidates) ?? null;
+  const candidates = speciesCandidate
+    ? uniqueCandidates([speciesCandidate, ...coarseCandidates])
+    : coarseCandidates;
+  const providerModels = [
+    ...(detectionResult.detectionAvailable ? [DETECTION_MODEL_ID] : []),
+    CLASSIFICATION_MODEL_ID,
+    ...(needsVisionSpeciesLookup(coarseCandidates) ? [VISION_SPECIES_MODEL_ID] : []),
+  ];
 
   return jsonResponse({
     status: candidates.length > 0 ? 'ready' : 'no-match',
-    provider: detectionResult.detectionAvailable
-      ? `${DETECTION_MODEL_ID}+${CLASSIFICATION_MODEL_ID}`
-      : CLASSIFICATION_MODEL_ID,
+    provider: providerModels.join('+'),
     elapsedMs: Date.now() - startedAt,
     candidates,
     rawDetections: detectionResult.rawDetections,

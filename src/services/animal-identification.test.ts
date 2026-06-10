@@ -17,5 +17,8 @@ test('动物识别通过同源 Pages Function 调用', () => {
 
 test('动物识别文案不再输出可能式猜测', () => {
   assert.match(source, /`这是\$\{candidate\.nameZh\}/);
+  assert.match(source, /getAnimalScientificName\(candidate\)/);
+  assert.match(source, /isSpeciesLevelRank\(candidate\.taxonRank\)/);
+  assert.match(source, /需要更近照片才能定到具体物种/);
   assert.doesNotMatch(source, /可能是/);
 });

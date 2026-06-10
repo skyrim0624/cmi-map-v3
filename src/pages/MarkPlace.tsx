@@ -35,6 +35,10 @@ import {
 import { searchExternalPlaceCandidates } from '@/features/places/external-place-search';
 import { useDebounce } from '@/hooks/use-debounce';
 import {
+  createCmiWildAnimalShareCard,
+  shareOrDownloadCmiWildAnimalShareCard,
+} from '@/lib/cmi-wild-animal-share-card';
+import {
   CMI_EASTER_ICON_OPTIONS,
   DEFAULT_CMI_EASTER_ICON_ID,
   getCmiEasterIconById,
@@ -1198,7 +1202,23 @@ export default function MarkPlace() {
 
       if (recommendation) {
         if (linkedEvent && isCmiMapCheckinActivityEvent(linkedEvent)) {
-          await assignCmiEventCaptureNumber(recommendation.id);
+          const captureNumber = await assignCmiEventCaptureNumber(recommendation.id);
+
+          if (images[0] && selectedAnimalCandidate) {
+            try {
+              const shareCard = await createCmiWildAnimalShareCard({
+                photoFile: images[0],
+                candidate: selectedAnimalCandidate,
+                recommendation,
+                captureNumber,
+                userName,
+              });
+              await shareOrDownloadCmiWildAnimalShareCard(shareCard);
+            } catch (error) {
+              console.error('动物分享卡生成失败:', error);
+              toast.error('分享卡片暂时没生成，动态已经发布');
+            }
+          }
         }
 
         setTimeout(() => {
