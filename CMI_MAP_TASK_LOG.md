@@ -2252,6 +2252,17 @@
   - 本地 `http://127.0.0.1:5187/cmi-home/event-guides/cmi-wild-chiang-mai-2026-06-guide.png` 返回 `HTTP 200`。
   - Playwright CLI 截图检查 `/events/cmi-wild-chiang-mai-2026-06/about`：页面仅显示生成长图，无额外说明模块。
 
+### 2026-06-10 神奇动物在哪里活动说明长图优化
+
+- 本轮实现：
+  - 按用户反馈重新生成活动说明长图，减少随机白色碎片、白色高光和白色边缘残留。
+  - 将说明图放大替换为 `1728x3642` 版本，提升手机端显示清晰度。
+- 验证结果：
+  - `pnpm lint` 通过。
+  - `pnpm build` 通过。
+  - 本地图片资源返回 `HTTP 200`。
+  - Playwright CLI 截图检查 `/events/cmi-wild-chiang-mai-2026-06/about`：首屏已显示优化后的长图。
+
 ### 2026-06-09 社区统一入口明亮玩具界面改版
 
 - 本轮实现：
