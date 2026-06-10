@@ -64,6 +64,15 @@ VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
+## 神奇动物物种识别
+
+`/api/animal-identify` 支持外接自托管专业物种模型。服务实现放在 [services/species-model](services/species-model)，默认使用 BioCLIP 2.5 + BioCLIP 2 + 清迈常见动物候选库，返回中文名和拉丁学名。部署后在 Cloudflare Pages 配置：
+
+```env
+CMI_MAP_SPECIES_MODEL_URL=https://你的模型服务域名/identify
+CMI_MAP_SPECIES_MODEL_TOKEN=模型服务密钥
+```
+
 数据库迁移放在 `supabase/migrations/`。新环境需要应用这些迁移来创建 `profiles`、`recommendations`、`upvotes`、`wishlists` 和贴纸相关表。当前权限策略允许公开浏览地点，登录用户只能写入自己的资料、推荐、点赞和收藏，管理员角色通过 `profiles.role = 'admin'` 控制。
 
 ## 项目结构

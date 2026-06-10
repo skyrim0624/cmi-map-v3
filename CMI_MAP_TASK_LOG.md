@@ -36,8 +36,21 @@
 21. [完成] 动物识别修正：主体检测优先、低置信度不硬猜、去掉“可能是”文案
 22. [完成] 神奇动物打卡候选、描述和分享卡统一使用学名展示
 23. [完成] 神奇动物分享卡对齐修正，并改为用户主动分享
+24. [本地完成] 自托管专业物种模型服务：BioCLIP 2.5 + BioCLIP 2 + 清迈动物候选库
 
 ## 执行记录
+
+### 2026-06-10 20:35 +07 自托管专业物种模型服务
+
+- 本轮实现：
+  - 新增 `services/species-model` 独立 FastAPI 服务，接口为 `POST /identify`，返回 CMI Map 已支持的中文名、英文名、拉丁学名、分类等级和置信度字段。
+  - 主模型接 `hf-hub:imageomics/bioclip-2.5-vith14`，兜底模型接 `hf-hub:imageomics/bioclip-2`；默认 BioCLIP 2.5 先判定，模糊时调用 BioCLIP 2 复核。
+  - 新增清迈常见动物候选库，覆盖猫狗、鸟、壁虎/蜥蜴、蛇、蛙、常见昆虫、蜘蛛和鱼类；已包含用户实测鸟图对应的 `蓝翡翠 / Halcyon pileata`。
+  - 新增 Dockerfile、运行说明和 Cloudflare Pages 环境变量接入说明，沿用既有 `CMI_MAP_SPECIES_MODEL_URL` / `CMI_MAP_SPECIES_MODEL_TOKEN`。
+- 待部署：
+  - 需要把 `services/species-model` 部署到一台可常驻模型的机器，再把 `/identify` 地址配置到 Cloudflare Pages。
+- 验证结果：
+  - 已补充不下载模型的候选库与置信度合并测试。
 
 ### 2026-06-10 20:08 +07 小白狗被误识别成猫的纠偏
 

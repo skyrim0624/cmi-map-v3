@@ -1,0 +1,542 @@
+[
+  {
+    "scientificName": "Canis lupus familiaris",
+    "commonNameZh": "家犬",
+    "commonNameEn": "Domestic dog",
+    "taxonRank": "SUBSPECIES",
+    "groups": ["mammal", "dog"],
+    "priority": 100,
+    "aliases": ["dog", "puppy", "poodle", "terrier", "hound"]
+  },
+  {
+    "scientificName": "Felis catus",
+    "commonNameZh": "家猫",
+    "commonNameEn": "Domestic cat",
+    "taxonRank": "SPECIES",
+    "groups": ["mammal", "cat"],
+    "priority": 100,
+    "aliases": ["cat", "kitten", "tabby", "siamese cat"]
+  },
+  {
+    "scientificName": "Callosciurus finlaysonii",
+    "commonNameZh": "芬氏松鼠",
+    "commonNameEn": "Finlayson's squirrel",
+    "taxonRank": "SPECIES",
+    "groups": ["mammal"],
+    "priority": 72,
+    "aliases": ["squirrel"]
+  },
+  {
+    "scientificName": "Tupaia belangeri",
+    "commonNameZh": "北树鼩",
+    "commonNameEn": "Northern treeshrew",
+    "taxonRank": "SPECIES",
+    "groups": ["mammal"],
+    "priority": 55,
+    "aliases": ["treeshrew"]
+  },
+  {
+    "scientificName": "Macaca fascicularis",
+    "commonNameZh": "长尾猕猴",
+    "commonNameEn": "Long-tailed macaque",
+    "taxonRank": "SPECIES",
+    "groups": ["mammal"],
+    "priority": 62,
+    "aliases": ["macaque", "monkey"]
+  },
+  {
+    "scientificName": "Cynopterus sphinx",
+    "commonNameZh": "短鼻果蝠",
+    "commonNameEn": "Greater short-nosed fruit bat",
+    "taxonRank": "SPECIES",
+    "groups": ["mammal"],
+    "priority": 48,
+    "aliases": ["bat", "fruit bat"]
+  },
+  {
+    "scientificName": "Halcyon pileata",
+    "commonNameZh": "蓝翡翠",
+    "commonNameEn": "Black-capped kingfisher",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 96,
+    "aliases": ["black-capped kingfisher", "kingfisher"]
+  },
+  {
+    "scientificName": "Alcedo atthis",
+    "commonNameZh": "普通翠鸟",
+    "commonNameEn": "Common kingfisher",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 82,
+    "aliases": ["common kingfisher", "kingfisher"]
+  },
+  {
+    "scientificName": "Todiramphus chloris",
+    "commonNameZh": "白领翡翠",
+    "commonNameEn": "Collared kingfisher",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 72,
+    "aliases": ["collared kingfisher", "kingfisher"]
+  },
+  {
+    "scientificName": "Acridotheres tristis",
+    "commonNameZh": "家八哥",
+    "commonNameEn": "Common myna",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 95,
+    "aliases": ["myna", "common myna"]
+  },
+  {
+    "scientificName": "Acridotheres grandis",
+    "commonNameZh": "大八哥",
+    "commonNameEn": "Great myna",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 86,
+    "aliases": ["myna", "great myna"]
+  },
+  {
+    "scientificName": "Gracupica nigricollis",
+    "commonNameZh": "黑领椋鸟",
+    "commonNameEn": "Black-collared starling",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 76,
+    "aliases": ["starling"]
+  },
+  {
+    "scientificName": "Passer montanus",
+    "commonNameZh": "树麻雀",
+    "commonNameEn": "Eurasian tree sparrow",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 95,
+    "aliases": ["sparrow", "tree sparrow"]
+  },
+  {
+    "scientificName": "Pycnonotus jocosus",
+    "commonNameZh": "红耳鹎",
+    "commonNameEn": "Red-whiskered bulbul",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 92,
+    "aliases": ["bulbul", "red-whiskered bulbul"]
+  },
+  {
+    "scientificName": "Pycnonotus goiavier",
+    "commonNameZh": "黄臀鹎",
+    "commonNameEn": "Yellow-vented bulbul",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 78,
+    "aliases": ["bulbul", "yellow-vented bulbul"]
+  },
+  {
+    "scientificName": "Spilopelia chinensis",
+    "commonNameZh": "珠颈斑鸠",
+    "commonNameEn": "Spotted dove",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 94,
+    "aliases": ["dove", "spotted dove"]
+  },
+  {
+    "scientificName": "Geopelia striata",
+    "commonNameZh": "斑姬地鸠",
+    "commonNameEn": "Zebra dove",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 74,
+    "aliases": ["dove", "zebra dove"]
+  },
+  {
+    "scientificName": "Copsychus saularis",
+    "commonNameZh": "鹊鸲",
+    "commonNameEn": "Oriental magpie-robin",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 88,
+    "aliases": ["magpie-robin", "robin"]
+  },
+  {
+    "scientificName": "Orthotomus sutorius",
+    "commonNameZh": "长尾缝叶莺",
+    "commonNameEn": "Common tailorbird",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 82,
+    "aliases": ["tailorbird"]
+  },
+  {
+    "scientificName": "Dicrurus macrocercus",
+    "commonNameZh": "黑卷尾",
+    "commonNameEn": "Black drongo",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 82,
+    "aliases": ["drongo"]
+  },
+  {
+    "scientificName": "Merops orientalis",
+    "commonNameZh": "绿喉蜂虎",
+    "commonNameEn": "Asian green bee-eater",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 68,
+    "aliases": ["bee-eater"]
+  },
+  {
+    "scientificName": "Eudynamys scolopaceus",
+    "commonNameZh": "亚洲噪鹃",
+    "commonNameEn": "Asian koel",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 72,
+    "aliases": ["koel", "cuckoo"]
+  },
+  {
+    "scientificName": "Amaurornis phoenicurus",
+    "commonNameZh": "白胸苦恶鸟",
+    "commonNameEn": "White-breasted waterhen",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 66,
+    "aliases": ["waterhen"]
+  },
+  {
+    "scientificName": "Bubulcus coromandus",
+    "commonNameZh": "东牛背鹭",
+    "commonNameEn": "Eastern cattle egret",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 62,
+    "aliases": ["egret", "cattle egret"]
+  },
+  {
+    "scientificName": "Ardeola speciosa",
+    "commonNameZh": "爪哇池鹭",
+    "commonNameEn": "Javan pond heron",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 55,
+    "aliases": ["pond heron", "heron"]
+  },
+  {
+    "scientificName": "Milvus migrans",
+    "commonNameZh": "黑鸢",
+    "commonNameEn": "Black kite",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 60,
+    "aliases": ["kite", "raptor"]
+  },
+  {
+    "scientificName": "Cinnyris jugularis",
+    "commonNameZh": "黄腹花蜜鸟",
+    "commonNameEn": "Olive-backed sunbird",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 76,
+    "aliases": ["sunbird"]
+  },
+  {
+    "scientificName": "Dicaeum cruentatum",
+    "commonNameZh": "朱背啄花鸟",
+    "commonNameEn": "Scarlet-backed flowerpecker",
+    "taxonRank": "SPECIES",
+    "groups": ["bird"],
+    "priority": 58,
+    "aliases": ["flowerpecker"]
+  },
+  {
+    "scientificName": "Gekko gecko",
+    "commonNameZh": "大壁虎",
+    "commonNameEn": "Tokay gecko",
+    "taxonRank": "SPECIES",
+    "groups": ["reptile", "gecko", "lizard"],
+    "priority": 95,
+    "aliases": ["tokay gecko", "gecko"]
+  },
+  {
+    "scientificName": "Hemidactylus frenatus",
+    "commonNameZh": "疣尾蜥虎",
+    "commonNameEn": "Common house gecko",
+    "taxonRank": "SPECIES",
+    "groups": ["reptile", "gecko", "lizard"],
+    "priority": 92,
+    "aliases": ["house gecko", "gecko"]
+  },
+  {
+    "scientificName": "Hemidactylus platyurus",
+    "commonNameZh": "扁尾蜥虎",
+    "commonNameEn": "Flat-tailed house gecko",
+    "taxonRank": "SPECIES",
+    "groups": ["reptile", "gecko", "lizard"],
+    "priority": 74,
+    "aliases": ["house gecko", "gecko"]
+  },
+  {
+    "scientificName": "Calotes versicolor",
+    "commonNameZh": "变色树蜥",
+    "commonNameEn": "Oriental garden lizard",
+    "taxonRank": "SPECIES",
+    "groups": ["reptile", "lizard"],
+    "priority": 86,
+    "aliases": ["garden lizard", "lizard", "agama"]
+  },
+  {
+    "scientificName": "Varanus salvator",
+    "commonNameZh": "水巨蜥",
+    "commonNameEn": "Asian water monitor",
+    "taxonRank": "SPECIES",
+    "groups": ["reptile", "lizard"],
+    "priority": 72,
+    "aliases": ["monitor lizard", "water monitor"]
+  },
+  {
+    "scientificName": "Naja kaouthia",
+    "commonNameZh": "单眼镜蛇",
+    "commonNameEn": "Monocled cobra",
+    "taxonRank": "SPECIES",
+    "groups": ["reptile", "snake"],
+    "priority": 76,
+    "aliases": ["cobra", "snake"]
+  },
+  {
+    "scientificName": "Ptyas korros",
+    "commonNameZh": "灰鼠蛇",
+    "commonNameEn": "Indochinese rat snake",
+    "taxonRank": "SPECIES",
+    "groups": ["reptile", "snake"],
+    "priority": 72,
+    "aliases": ["rat snake", "snake"]
+  },
+  {
+    "scientificName": "Boiga cyanea",
+    "commonNameZh": "绿瘦蛇",
+    "commonNameEn": "Green cat snake",
+    "taxonRank": "SPECIES",
+    "groups": ["reptile", "snake"],
+    "priority": 58,
+    "aliases": ["cat snake", "snake"]
+  },
+  {
+    "scientificName": "Trimeresurus albolabris",
+    "commonNameZh": "白唇竹叶青",
+    "commonNameEn": "White-lipped pit viper",
+    "taxonRank": "SPECIES",
+    "groups": ["reptile", "snake"],
+    "priority": 62,
+    "aliases": ["pit viper", "viper", "snake"]
+  },
+  {
+    "scientificName": "Python bivittatus",
+    "commonNameZh": "缅甸蟒",
+    "commonNameEn": "Burmese python",
+    "taxonRank": "SPECIES",
+    "groups": ["reptile", "snake"],
+    "priority": 48,
+    "aliases": ["python", "snake"]
+  },
+  {
+    "scientificName": "Duttaphrynus melanostictus",
+    "commonNameZh": "黑眶蟾蜍",
+    "commonNameEn": "Asian common toad",
+    "taxonRank": "SPECIES",
+    "groups": ["amphibian", "frog"],
+    "priority": 90,
+    "aliases": ["toad", "frog"]
+  },
+  {
+    "scientificName": "Kaloula pulchra",
+    "commonNameZh": "花狭口蛙",
+    "commonNameEn": "Banded bullfrog",
+    "taxonRank": "SPECIES",
+    "groups": ["amphibian", "frog"],
+    "priority": 78,
+    "aliases": ["bullfrog", "frog"]
+  },
+  {
+    "scientificName": "Fejervarya limnocharis",
+    "commonNameZh": "泽陆蛙",
+    "commonNameEn": "Rice field frog",
+    "taxonRank": "SPECIES",
+    "groups": ["amphibian", "frog"],
+    "priority": 72,
+    "aliases": ["rice field frog", "frog"]
+  },
+  {
+    "scientificName": "Hylarana erythraea",
+    "commonNameZh": "绿背蛙",
+    "commonNameEn": "Green paddy frog",
+    "taxonRank": "SPECIES",
+    "groups": ["amphibian", "frog"],
+    "priority": 68,
+    "aliases": ["paddy frog", "frog"]
+  },
+  {
+    "scientificName": "Polypedates leucomystax",
+    "commonNameZh": "斑腿泛树蛙",
+    "commonNameEn": "Common tree frog",
+    "taxonRank": "SPECIES",
+    "groups": ["amphibian", "frog"],
+    "priority": 68,
+    "aliases": ["tree frog", "frog"]
+  },
+  {
+    "scientificName": "Papilio polytes",
+    "commonNameZh": "玉带凤蝶",
+    "commonNameEn": "Common mormon",
+    "taxonRank": "SPECIES",
+    "groups": ["insect", "butterfly"],
+    "priority": 84,
+    "aliases": ["butterfly", "swallowtail"]
+  },
+  {
+    "scientificName": "Papilio demoleus",
+    "commonNameZh": "达摩凤蝶",
+    "commonNameEn": "Lime butterfly",
+    "taxonRank": "SPECIES",
+    "groups": ["insect", "butterfly"],
+    "priority": 82,
+    "aliases": ["butterfly", "swallowtail"]
+  },
+  {
+    "scientificName": "Junonia almana",
+    "commonNameZh": "眼蛱蝶",
+    "commonNameEn": "Peacock pansy",
+    "taxonRank": "SPECIES",
+    "groups": ["insect", "butterfly"],
+    "priority": 76,
+    "aliases": ["butterfly", "pansy"]
+  },
+  {
+    "scientificName": "Danaus chrysippus",
+    "commonNameZh": "金斑蝶",
+    "commonNameEn": "Plain tiger",
+    "taxonRank": "SPECIES",
+    "groups": ["insect", "butterfly"],
+    "priority": 70,
+    "aliases": ["butterfly", "plain tiger"]
+  },
+  {
+    "scientificName": "Pachliopta aristolochiae",
+    "commonNameZh": "红珠凤蝶",
+    "commonNameEn": "Common rose",
+    "taxonRank": "SPECIES",
+    "groups": ["insect", "butterfly"],
+    "priority": 66,
+    "aliases": ["butterfly", "swallowtail"]
+  },
+  {
+    "scientificName": "Catopsilia pomona",
+    "commonNameZh": "迁粉蝶",
+    "commonNameEn": "Lemon emigrant",
+    "taxonRank": "SPECIES",
+    "groups": ["insect", "butterfly"],
+    "priority": 60,
+    "aliases": ["butterfly"]
+  },
+  {
+    "scientificName": "Orthetrum sabina",
+    "commonNameZh": "狭腹灰蜻",
+    "commonNameEn": "Slender skimmer",
+    "taxonRank": "SPECIES",
+    "groups": ["insect", "dragonfly"],
+    "priority": 70,
+    "aliases": ["dragonfly", "skimmer"]
+  },
+  {
+    "scientificName": "Pantala flavescens",
+    "commonNameZh": "黄蜻",
+    "commonNameEn": "Wandering glider",
+    "taxonRank": "SPECIES",
+    "groups": ["insect", "dragonfly"],
+    "priority": 62,
+    "aliases": ["dragonfly", "glider"]
+  },
+  {
+    "scientificName": "Crocothemis servilia",
+    "commonNameZh": "红蜻",
+    "commonNameEn": "Ruddy marsh skimmer",
+    "taxonRank": "SPECIES",
+    "groups": ["insect", "dragonfly"],
+    "priority": 60,
+    "aliases": ["dragonfly", "skimmer"]
+  },
+  {
+    "scientificName": "Hierodula patellifera",
+    "commonNameZh": "广斧螳",
+    "commonNameEn": "Giant Asian mantis",
+    "taxonRank": "SPECIES",
+    "groups": ["insect"],
+    "priority": 58,
+    "aliases": ["mantis", "praying mantis"]
+  },
+  {
+    "scientificName": "Vespa affinis",
+    "commonNameZh": "小黄腰胡蜂",
+    "commonNameEn": "Lesser banded hornet",
+    "taxonRank": "SPECIES",
+    "groups": ["insect"],
+    "priority": 56,
+    "aliases": ["hornet", "wasp"]
+  },
+  {
+    "scientificName": "Apis cerana",
+    "commonNameZh": "东方蜜蜂",
+    "commonNameEn": "Eastern honey bee",
+    "taxonRank": "SPECIES",
+    "groups": ["insect"],
+    "priority": 58,
+    "aliases": ["bee", "honey bee"]
+  },
+  {
+    "scientificName": "Oecophylla smaragdina",
+    "commonNameZh": "黄猄蚁",
+    "commonNameEn": "Weaver ant",
+    "taxonRank": "SPECIES",
+    "groups": ["insect"],
+    "priority": 56,
+    "aliases": ["ant", "weaver ant"]
+  },
+  {
+    "scientificName": "Trichonephila pilipes",
+    "commonNameZh": "斑络新妇",
+    "commonNameEn": "Giant golden orb-weaver",
+    "taxonRank": "SPECIES",
+    "groups": ["spider"],
+    "priority": 66,
+    "aliases": ["spider", "orb-weaver"]
+  },
+  {
+    "scientificName": "Argiope aemula",
+    "commonNameZh": "金蛛",
+    "commonNameEn": "Oval St. Andrew's cross spider",
+    "taxonRank": "SPECIES",
+    "groups": ["spider"],
+    "priority": 56,
+    "aliases": ["spider", "argiope"]
+  },
+  {
+    "scientificName": "Channa striata",
+    "commonNameZh": "线鳢",
+    "commonNameEn": "Striped snakehead",
+    "taxonRank": "SPECIES",
+    "groups": ["fish"],
+    "priority": 54,
+    "aliases": ["fish", "snakehead"]
+  },
+  {
+    "scientificName": "Oreochromis niloticus",
+    "commonNameZh": "尼罗罗非鱼",
+    "commonNameEn": "Nile tilapia",
+    "taxonRank": "SPECIES",
+    "groups": ["fish"],
+    "priority": 46,
+    "aliases": ["fish", "tilapia"]
+  }
+]

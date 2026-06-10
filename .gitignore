@@ -17,6 +17,9 @@ backups/
 !.env.example
 *.local
 package-lock.json
+__pycache__/
+*.py[cod]
+services/species-model/.venv/
 
 # Editor directories and files
 .vscode/*
