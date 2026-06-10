@@ -60,6 +60,7 @@ import {
 } from '@/features/cmi-events/event-rsvp-utils';
 import { type CmiEventShareCardResult, createCmiEventShareCard } from '@/lib/cmi-event-share-card';
 import {
+  getCmiEventAboutPath,
   getCmiEventManagePath,
   getCmiFeedPath,
   getMarkPlacePath,
@@ -646,6 +647,7 @@ export default function CmiEventDetail() {
         posterUrl={posterUrl}
         recapImages={recapImages}
         recapsLoading={recapsLoading}
+        onOpenGuide={() => navigate(getCmiEventAboutPath(event.id))}
         onOpenRecapComposer={handleOpenRecapComposer}
       />
     );

@@ -13,6 +13,7 @@ interface WildChiangMaiEventHomeProps {
   posterUrl: string;
   recapImages: EventRecapImage[];
   recapsLoading: boolean;
+  onOpenGuide: () => void;
   onOpenRecapComposer: () => void;
 }
 
@@ -23,6 +24,7 @@ export function WildChiangMaiEventHome({
   posterUrl,
   recapImages,
   recapsLoading,
+  onOpenGuide,
   onOpenRecapComposer,
 }: WildChiangMaiEventHomeProps) {
   const leaderboard = useMemo(() => getEventRecapLeaderboard(recapImages), [recapImages]);
@@ -41,6 +43,7 @@ export function WildChiangMaiEventHome({
           <div className="absolute bottom-10 left-6 right-6 z-20 flex justify-end">
             <button
               type="button"
+              onClick={onOpenGuide}
               className="rotate-2 border-[3px] border-[#111827] bg-[#ff5a4d] px-3 py-2 text-sm font-black text-white shadow-[3px_4px_0_rgba(17,24,39,0.2)]"
             >
               活动介绍

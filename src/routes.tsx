@@ -7,6 +7,7 @@ const ListView = lazy(() => import('./pages/ListView'));
 const PlaceDetail = lazy(() => import('./pages/PlaceDetail'));
 const AddTrace = lazy(() => import('./pages/AddTrace'));
 const CmiEventDetail = lazy(() => import('./pages/CmiEventDetail'));
+const CmiWildChiangMaiEventGuide = lazy(() => import('./pages/CmiWildChiangMaiEventGuide'));
 const CmiEventCreate = lazy(() => import('./pages/CmiEventCreate'));
 const CmiEventManage = lazy(() => import('./pages/CmiEventManage'));
 const AdminAgentTokens = lazy(() => import('./pages/AdminAgentTokens'));
@@ -100,6 +101,12 @@ export const routes: RouteConfig[] = [
     name: '活动详情',
     path: '/events/:eventId',
     element: <CmiEventDetail />,
+    public: true,
+  },
+  {
+    name: '神奇动物活动说明',
+    path: '/events/:eventId/about',
+    element: <CmiWildChiangMaiEventGuide />,
     public: true,
   },
   {

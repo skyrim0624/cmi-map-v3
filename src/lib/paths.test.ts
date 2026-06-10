@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   getCmiBlackboardPath,
+  getCmiEventAboutPath,
   getCmiEventsPath,
   getCmiFeedPath,
   getMarkPlacePath,
@@ -13,6 +14,13 @@ test('活动分享链接指向生产站活动详情页', () => {
   assert.equal(
     getPublicCmiEventUrl('cmi-mindfulness-hour-2026-05-28'),
     'https://cmimap.com/events/cmi-mindfulness-hour-2026-05-28'
+  );
+});
+
+test('活动说明页路径保留活动编号', () => {
+  assert.equal(
+    getCmiEventAboutPath('cmi-wild-chiang-mai-2026-06'),
+    '/events/cmi-wild-chiang-mai-2026-06/about'
   );
 });
 

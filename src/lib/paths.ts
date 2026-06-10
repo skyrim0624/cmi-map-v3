@@ -43,6 +43,9 @@ export const getMarkPlacePath = (input?: {
 export const getCmiEventPath = (eventId: string) =>
   `/events/${encodeURIComponent(eventId)}`;
 
+export const getCmiEventAboutPath = (eventId: string) =>
+  `/events/${encodeURIComponent(eventId)}/about`;
+
 const CMI_MAP_PUBLIC_ORIGIN = 'https://cmimap.com';
 
 export const getPublicCmiEventUrl = (eventId: string) =>
