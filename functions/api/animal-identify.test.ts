@@ -8,6 +8,7 @@ test('动物识别先做主体检测再分类兜底', () => {
   assert.match(source, /const DETECTION_MODEL_ID = '@cf\/facebook\/detr-resnet-50'/);
   assert.match(source, /const CLASSIFICATION_MODEL_ID = '@cf\/microsoft\/resnet-50'/);
   assert.match(source, /const VISION_SPECIES_MODEL_ID = '@cf\/meta\/llama-3\.2-11b-vision-instruct'/);
+  assert.match(source, /const GEMINI_SPECIES_MODEL_ID = 'gemini-2\.5-flash'/);
   assert.match(source, /detectAnimalCandidates\(env\.AI, bytes, dimensions\)/);
   assert.match(source, /classifyAnimalCandidates\(env\.AI, bytes\)/);
 });
@@ -28,7 +29,9 @@ test('常见动物候选包含学名', () => {
 
 test('物种学名通过视觉模型和 GBIF 校验后才返回', () => {
   assert.match(source, /const GBIF_SPECIES_MATCH_URL = 'https:\/\/api\.gbif\.org\/v1\/species\/match'/);
-  assert.match(source, /identifySpeciesCandidate\(env\.AI, bytes, coarseCandidates\)/);
+  assert.match(source, /identifySpeciesCandidate\(env, bytes, image\.type \|\| 'image\/jpeg', coarseCandidates\)/);
+  assert.match(source, /GOOGLE_AI_STUDIO_API_KEY/);
+  assert.match(source, /CMI_MAP_ENABLE_META_VISION_SPECIES/);
   assert.match(source, /validateScientificNameWithGbif/);
   assert.match(source, /MIN_GBIF_SPECIES_CONFIDENCE/);
   assert.match(source, /gbif\.kingdom !== 'Animalia'/);

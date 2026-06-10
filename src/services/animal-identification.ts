@@ -22,12 +22,6 @@ export interface AnimalIdentificationResult {
 
 const ANIMAL_IDENTIFICATION_ENDPOINT = '/api/animal-identify';
 
-export const formatAnimalCandidateLabel = (candidate: AnimalIdentificationCandidate) => (
-  candidate.scientificName
-    ? `${candidate.nameZh} / ${candidate.nameEn}`
-    : candidate.nameZh
-);
-
 const fallbackScientificNames: Record<string, string> = {
   dog: 'Canis lupus familiaris',
   cat: 'Felis catus',
@@ -44,15 +38,18 @@ const fallbackScientificNames: Record<string, string> = {
 export const getAnimalScientificName = (candidate: AnimalIdentificationCandidate) =>
   candidate.scientificName?.trim() || fallbackScientificNames[candidate.id] || candidate.nameEn || candidate.rawLabel;
 
+export const formatAnimalCandidateLabel = (candidate: AnimalIdentificationCandidate) =>
+  getAnimalScientificName(candidate);
+
 const isSpeciesLevelRank = (rank: string | undefined) => rank === 'SPECIES' || rank === 'SUBSPECIES';
 
 export const buildAnimalCandidateDescription = (candidate: AnimalIdentificationCandidate) => {
   const scientificName = getAnimalScientificName(candidate);
   if (isSpeciesLevelRank(candidate.taxonRank) || candidate.source === 'vision') {
-    return `这是${candidate.nameZh}（${scientificName}）。`;
+    return `这是 ${scientificName}。`;
   }
 
-  return `识别到${candidate.nameZh}（${scientificName}），需要更近照片才能定到具体物种。`;
+  return `识别到 ${scientificName}，需要更近照片才能定到具体物种。`;
 };
 
 export const identifyAnimalPhoto = async (file: File): Promise<AnimalIdentificationResult> => {

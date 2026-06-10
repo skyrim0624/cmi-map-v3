@@ -2,6 +2,8 @@ const CLASSIFICATION_MODEL_ID = '@cf/microsoft/resnet-50';
 const DETECTION_MODEL_ID = '@cf/facebook/detr-resnet-50';
 const VISION_SPECIES_MODEL_ID = '@cf/meta/llama-3.2-11b-vision-instruct';
 const VISION_SPECIES_FALLBACK_MODEL_ID = '@cf/llava-hf/llava-1.5-7b-hf';
+const GEMINI_SPECIES_MODEL_ID = 'gemini-2.5-flash';
+const GEMINI_GENERATE_CONTENT_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_SPECIES_MODEL_ID}:generateContent`;
 const GBIF_SPECIES_MATCH_URL = 'https://api.gbif.org/v1/species/match';
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const MIN_CLASSIFICATION_SCORE = 0.32;
@@ -24,6 +26,8 @@ type PagesContext = {
   request: Request;
   env: {
     AI?: AiBinding;
+    CMI_MAP_ENABLE_META_VISION_SPECIES?: string;
+    GOOGLE_AI_STUDIO_API_KEY?: string;
   };
 };
 
@@ -416,6 +420,7 @@ const getAiResponseText = (value: unknown) => {
   const record = value as Record<string, unknown>;
   for (const key of ['response', 'description', 'result', 'text']) {
     if (typeof record[key] === 'string') return record[key];
+    if (record[key] && typeof record[key] === 'object') return JSON.stringify(record[key]);
   }
 
   return '';
@@ -486,15 +491,30 @@ const buildSpeciesPrompt = (coarseCandidates: AnimalCandidate[]) => {
   ].join('\n');
 };
 
+const toBase64 = (imageBytes: number[]) => {
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let index = 0; index < imageBytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...imageBytes.slice(index, index + chunkSize));
+  }
+
+  return btoa(binary);
+};
+
+const toBase64Image = (imageBytes: number[]) => {
+  return `data:image/jpeg;base64,${toBase64(imageBytes)}`;
+};
+
 const runVisionSpeciesModel = async (ai: AiBinding, modelId: string, imageBytes: number[], coarseCandidates: AnimalCandidate[]) => {
   const result = await ai.run(modelId, {
-    image: imageBytes,
+    image: modelId === VISION_SPECIES_FALLBACK_MODEL_ID ? imageBytes : toBase64Image(imageBytes),
     prompt: buildSpeciesPrompt(coarseCandidates),
     max_tokens: 220,
     temperature: 0,
   });
 
-  return toVisionSpeciesResult(getAiResponseText(result));
+  const responseText = getAiResponseText(result);
+  return toVisionSpeciesResult(responseText);
 };
 
 const validateScientificNameWithGbif = async (scientificName: string): Promise<GbifSpeciesMatch | null> => {
@@ -559,27 +579,110 @@ const toVisionSpeciesCandidate = (
   };
 };
 
-const identifySpeciesCandidate = async (
-  ai: AiBinding,
+const getGeminiResponseText = (value: unknown) => {
+  if (!value || typeof value !== 'object') return '';
+  const record = value as Record<string, unknown>;
+  const candidates = Array.isArray(record.candidates) ? record.candidates : [];
+  const firstCandidate = candidates[0];
+  if (!firstCandidate || typeof firstCandidate !== 'object') return '';
+
+  const content = (firstCandidate as Record<string, unknown>).content;
+  if (!content || typeof content !== 'object') return '';
+
+  const parts = (content as Record<string, unknown>).parts;
+  if (!Array.isArray(parts)) return '';
+
+  return parts
+    .map(part => (part && typeof part === 'object' ? (part as Record<string, unknown>).text : ''))
+    .filter((text): text is string => typeof text === 'string')
+    .join('\n');
+};
+
+const runGeminiSpeciesModel = async (
+  apiKey: string,
   imageBytes: number[],
+  mimeType: string,
   coarseCandidates: AnimalCandidate[]
-): Promise<AnimalCandidate | null> => {
+) => {
+  const response = await fetch(GEMINI_GENERATE_CONTENT_URL, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          {
+            inline_data: {
+              mime_type: mimeType || 'image/jpeg',
+              data: toBase64(imageBytes),
+            },
+          },
+          { text: buildSpeciesPrompt(coarseCandidates) },
+        ],
+      }],
+      generationConfig: {
+        response_mime_type: 'application/json',
+        temperature: 0,
+        maxOutputTokens: 220,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    console.warn('Gemini 物种识别失败:', response.status, errorText.slice(0, 240));
+    return null;
+  }
+
+  const data = await response.json().catch(() => null);
+  return toVisionSpeciesResult(getGeminiResponseText(data));
+};
+
+type SpeciesIdentificationResult = {
+  candidate: AnimalCandidate | null;
+  provider?: string;
+};
+
+const identifySpeciesCandidate = async (
+  env: PagesContext['env'],
+  imageBytes: number[],
+  mimeType: string,
+  coarseCandidates: AnimalCandidate[]
+): Promise<SpeciesIdentificationResult> => {
+  if (env.GOOGLE_AI_STUDIO_API_KEY) {
+    try {
+      const vision = await runGeminiSpeciesModel(env.GOOGLE_AI_STUDIO_API_KEY, imageBytes, mimeType, coarseCandidates);
+      if (vision?.scientificName) {
+        const gbif = await validateScientificNameWithGbif(vision.scientificName);
+        const candidate = gbif ? toVisionSpeciesCandidate(vision, gbif, GEMINI_SPECIES_MODEL_ID) : null;
+        if (candidate) return { candidate, provider: GEMINI_SPECIES_MODEL_ID };
+      }
+    } catch (error) {
+      console.warn('Gemini 动物物种识别失败:', error);
+    }
+  }
+
+  if (env.CMI_MAP_ENABLE_META_VISION_SPECIES !== '1' || !env.AI) {
+    return { candidate: null };
+  }
+
   for (const modelId of [VISION_SPECIES_MODEL_ID, VISION_SPECIES_FALLBACK_MODEL_ID]) {
     try {
-      const vision = await runVisionSpeciesModel(ai, modelId, imageBytes, coarseCandidates);
+      const vision = await runVisionSpeciesModel(env.AI, modelId, imageBytes, coarseCandidates);
       if (!vision?.scientificName) continue;
 
       const gbif = await validateScientificNameWithGbif(vision.scientificName);
       if (!gbif) continue;
-
       const candidate = toVisionSpeciesCandidate(vision, gbif, modelId);
-      if (candidate) return candidate;
+      if (candidate) return { candidate, provider: modelId };
     } catch (error) {
       console.warn('动物物种视觉识别失败:', modelId, error);
     }
   }
 
-  return null;
+  return { candidate: null, provider: VISION_SPECIES_MODEL_ID };
 };
 
 export const onRequestPost = async ({ request, env }: PagesContext) => {
@@ -615,16 +718,18 @@ export const onRequestPost = async ({ request, env }: PagesContext) => {
   const coarseCandidates = detectionResult.candidates.length > 0
     ? detectionResult.candidates
     : classificationResult.candidates;
-  const speciesCandidate = needsVisionSpeciesLookup(coarseCandidates)
-    ? await identifySpeciesCandidate(env.AI, bytes, coarseCandidates)
-    : bestSpeciesLevelCandidate(coarseCandidates) ?? null;
+  const speciesLookupNeeded = needsVisionSpeciesLookup(coarseCandidates);
+  const speciesResult = speciesLookupNeeded
+    ? await identifySpeciesCandidate(env, bytes, image.type || 'image/jpeg', coarseCandidates)
+    : { candidate: bestSpeciesLevelCandidate(coarseCandidates) ?? null };
+  const speciesCandidate = speciesResult.candidate;
   const candidates = speciesCandidate
     ? uniqueCandidates([speciesCandidate, ...coarseCandidates])
     : coarseCandidates;
   const providerModels = [
     ...(detectionResult.detectionAvailable ? [DETECTION_MODEL_ID] : []),
     CLASSIFICATION_MODEL_ID,
-    ...(needsVisionSpeciesLookup(coarseCandidates) ? [VISION_SPECIES_MODEL_ID] : []),
+    ...(speciesLookupNeeded && speciesResult.provider ? [speciesResult.provider] : []),
   ];
 
   return jsonResponse({
