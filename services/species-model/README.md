@@ -13,11 +13,14 @@
 ## 本地启动
 
 ```bash
-cd services/species-model
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-SPECIES_MODEL_TOKEN=dev-token uvicorn cmi_species_model.app:app --host 0.0.0.0 --port 8000
+services/species-model/scripts/bootstrap-local.sh
+SPECIES_MODEL_TOKEN=dev-token services/species-model/scripts/start-local.sh
+```
+
+本地脚本默认会在启动时预加载 BioCLIP 2.5，并默认关闭 BioCLIP 2 兜底模型。这样启动会慢一些，但用户第一次识别不用等冷启动。需要双模型复核时再手动开启：
+
+```bash
+SPECIES_MODEL_TOKEN=dev-token BIOCLIP_FALLBACK_MODE=auto services/species-model/scripts/start-local.sh
 ```
 
 健康检查：
@@ -34,6 +37,14 @@ curl -X POST http://127.0.0.1:8000/identify \
   -F 'image=@/path/to/photo.jpg' \
   -F 'coarseCandidates=[{"nameZh":"鸟类","nameEn":"Bird","scientificName":"Aves","taxonRank":"CLASS","score":0.8}]'
 ```
+
+临时接到线上 CMI Map：
+
+```bash
+services/species-model/scripts/start-tunnel.sh
+```
+
+复制输出里的 `https://*.trycloudflare.com`，在末尾加 `/identify` 后填入 `CMI_MAP_SPECIES_MODEL_URL`。
 
 返回格式：
 
@@ -82,7 +93,7 @@ CMI Map 主站已经会优先调用这个服务；没有配置时继续走现有
 | `BIOCLIP_FALLBACK_MODEL` | `hf-hub:imageomics/bioclip-2` | 兜底模型 |
 | `BIOCLIP_FALLBACK_MODE` | `auto` | `auto` / `always` / `never` |
 | `BIOCLIP_DEVICE` | `auto` | `auto` / `cuda` / `mps` / `cpu` |
-| `BIOCLIP_PRELOAD` | `0` | `1` 表示启动时预加载模型 |
+| `BIOCLIP_PRELOAD` | `0` | `1` 表示启动时预加载模型；本地脚本默认设为 `1` |
 | `SPECIES_MIN_CONFIDENCE` | `0.68` | 低于这个值不返回物种 |
 | `SPECIES_MIN_MARGIN` | `0.06` | 前两名差距太小不返回物种 |
 | `SPECIES_MAX_CANDIDATES` | `180` | 单次参与比对的最大候选数 |

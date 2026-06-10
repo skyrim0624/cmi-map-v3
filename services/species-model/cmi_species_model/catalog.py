@@ -52,6 +52,7 @@ class SpeciesCandidate:
     groups: tuple[str, ...]
     priority: int
     aliases: tuple[str, ...]
+    visual_hints: tuple[str, ...]
 
     @property
     def prompt(self) -> str:
@@ -90,6 +91,7 @@ def load_species_catalog(path: str | Path | None = None) -> list[SpeciesCandidat
                 groups=tuple(str(group).strip().lower() for group in item.get("groups", [])),
                 priority=int(item.get("priority") or 0),
                 aliases=tuple(str(alias).strip() for alias in item.get("aliases", [])),
+                visual_hints=tuple(str(hint).strip() for hint in item.get("visualHints", [])),
             )
         )
     return sorted(candidates, key=lambda candidate: candidate.priority, reverse=True)

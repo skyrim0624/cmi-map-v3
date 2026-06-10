@@ -60,7 +60,8 @@
     "taxonRank": "SPECIES",
     "groups": ["bird"],
     "priority": 96,
-    "aliases": ["black-capped kingfisher", "kingfisher"]
+    "aliases": ["black-capped kingfisher", "kingfisher"],
+    "visualHints": ["black head", "white throat", "bright blue wings", "red bill", "red legs"]
   },
   {
     "scientificName": "Alcedo atthis",
@@ -69,7 +70,8 @@
     "taxonRank": "SPECIES",
     "groups": ["bird"],
     "priority": 82,
-    "aliases": ["common kingfisher", "kingfisher"]
+    "aliases": ["common kingfisher", "kingfisher"],
+    "visualHints": ["blue back", "orange belly", "long bill", "small kingfisher"]
   },
   {
     "scientificName": "Todiramphus chloris",
@@ -78,7 +80,8 @@
     "taxonRank": "SPECIES",
     "groups": ["bird"],
     "priority": 72,
-    "aliases": ["collared kingfisher", "kingfisher"]
+    "aliases": ["collared kingfisher", "kingfisher"],
+    "visualHints": ["blue back", "white collar", "large bill", "kingfisher"]
   },
   {
     "scientificName": "Acridotheres tristis",
@@ -87,7 +90,8 @@
     "taxonRank": "SPECIES",
     "groups": ["bird"],
     "priority": 95,
-    "aliases": ["myna", "common myna"]
+    "aliases": ["myna", "common myna"],
+    "visualHints": ["brown body", "black head", "yellow eye patch", "yellow bill", "yellow legs"]
   },
   {
     "scientificName": "Acridotheres grandis",

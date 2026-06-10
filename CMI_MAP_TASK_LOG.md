@@ -51,6 +51,9 @@
   - 需要把 `services/species-model` 部署到一台可常驻模型的机器，再把 `/identify` 地址配置到 Cloudflare Pages。
 - 验证结果：
   - 已补充不下载模型的候选库与置信度合并测试。
+  - 已在 Andreas 的 MacBook Air M4 / 16GB 上完成本地安装与服务启动：Python 3.12 + PyTorch + OpenCLIP + BioCLIP 2.5。
+  - 用户提供的鸟图本地复测：冷启动约 28 秒；模型热启动后约 4 秒；正常返回 `蓝翡翠 / Halcyon pileata`。
+  - 本地脚本改为启动时预加载模型、默认只跑 BioCLIP 2.5；BioCLIP 2 兜底仍保留，可通过 `BIOCLIP_FALLBACK_MODE=auto` 手动开启。
 
 ### 2026-06-10 20:08 +07 小白狗被误识别成猫的纠偏
 

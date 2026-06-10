@@ -64,8 +64,12 @@ class BioClipModel:
         return "cpu"
 
     def predict(self, image: Image.Image, candidates: list[SpeciesCandidate]) -> ModelPrediction | None:
+        predictions = self.predict_top(image, candidates, top_k=1)
+        return predictions[0] if predictions else None
+
+    def predict_top(self, image: Image.Image, candidates: list[SpeciesCandidate], *, top_k: int = 5) -> list[ModelPrediction]:
         if not candidates:
-            return None
+            return []
         self.load()
         assert self._model is not None
         assert self._preprocess is not None
@@ -84,14 +88,18 @@ class BioClipModel:
             probabilities = logits.softmax(dim=-1)[0].detach().cpu().tolist()
 
         ranked = sorted(enumerate(probabilities), key=lambda item: item[1], reverse=True)
-        top_index, top_probability = ranked[0]
-        second_probability = ranked[1][1] if len(ranked) > 1 else 0.0
-        return ModelPrediction(
-            model_id=self.settings.model_id,
-            candidate=candidates[top_index],
-            probability=float(top_probability),
-            margin=float(top_probability - second_probability),
-        )
+        predictions: list[ModelPrediction] = []
+        for rank, (candidate_index, probability) in enumerate(ranked[:top_k]):
+            next_probability = ranked[rank + 1][1] if rank + 1 < len(ranked) else 0.0
+            predictions.append(
+                ModelPrediction(
+                    model_id=self.settings.model_id,
+                    candidate=candidates[candidate_index],
+                    probability=float(probability),
+                    margin=float(probability - next_probability),
+                )
+            )
+        return predictions
 
     def _text_features(self, prompts: tuple[str, ...]) -> Any:
         cached = self._text_cache.get(prompts)

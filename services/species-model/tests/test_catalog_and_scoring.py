@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from cmi_species_model.catalog import coarse_candidate_groups, load_species_catalog, select_species_pool
+from cmi_species_model.app import visual_adjustment
 from cmi_species_model.scoring import ModelPrediction, choose_species_decision
 
 
@@ -60,6 +61,26 @@ class SpeciesScoringTest(unittest.TestCase):
 
         self.assertFalse(decision.accepted)
         self.assertLess(decision.confidence, 0.68)
+
+    def test_blue_bird_rerank_boosts_kingfisher_not_myna(self) -> None:
+        myna = next(candidate for candidate in load_species_catalog() if candidate.scientific_name == "Acridotheres tristis")
+        signals = {
+            "blueRatio": 0.023,
+            "blueSaturatedRatio": 0.028,
+            "maxBlueTileRatio": 0.63,
+        }
+
+        kingfisher_adjustment = visual_adjustment(
+            ModelPrediction("bioclip-2.5", self.kingfisher, probability=0.24, margin=0.01),
+            signals,
+        )
+        myna_adjustment = visual_adjustment(
+            ModelPrediction("bioclip-2.5", myna, probability=0.70, margin=0.01),
+            signals,
+        )
+
+        self.assertGreater(kingfisher_adjustment, 0.5)
+        self.assertLess(myna_adjustment, 0)
 
 
 if __name__ == "__main__":
