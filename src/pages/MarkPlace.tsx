@@ -35,8 +35,9 @@ import {
 import { searchExternalPlaceCandidates } from '@/features/places/external-place-search';
 import { useDebounce } from '@/hooks/use-debounce';
 import {
+  type CmiWildAnimalShareCardResult,
   createCmiWildAnimalShareCard,
-  shareOrDownloadCmiWildAnimalShareCard,
+  downloadCmiWildAnimalShareCard,
 } from '@/lib/cmi-wild-animal-share-card';
 import {
   CMI_EASTER_ICON_OPTIONS,
@@ -344,6 +345,8 @@ export default function MarkPlace() {
   const [animalIdentification, setAnimalIdentification] = useState<AnimalIdentificationResult | null>(null);
   const [animalIdentificationStatus, setAnimalIdentificationStatus] = useState<AnimalIdentificationStatus>('idle');
   const [selectedAnimalCandidateId, setSelectedAnimalCandidateId] = useState<string>('');
+  const [wildAnimalShareCard, setWildAnimalShareCard] = useState<CmiWildAnimalShareCardResult | null>(null);
+  const [isWildAnimalSharePanelOpen, setIsWildAnimalSharePanelOpen] = useState(false);
 
   const [sourceType, setSourceType] = useState<'live' | 'exif' | null>(null);
 
@@ -855,6 +858,7 @@ export default function MarkPlace() {
             const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
             const url = URL.createObjectURL(file);
             resetAnimalIdentification();
+            resetWildAnimalShareCard();
             setScanned(false);
             setImages([file]);
             setFlash(true);
@@ -936,6 +940,7 @@ export default function MarkPlace() {
       });
       const url = URL.createObjectURL(file);
       resetAnimalIdentification();
+      resetWildAnimalShareCard();
       setScanned(false);
       setImages([file]);
       setFlash(true);
@@ -961,6 +966,7 @@ export default function MarkPlace() {
     setSourceType(null);
     setDescription('');
     resetAnimalIdentification();
+    resetWildAnimalShareCard();
     setScanned(false);
     updateInterimTranscript('');
     setIsListening(false);
@@ -1018,6 +1024,11 @@ export default function MarkPlace() {
     setAnimalIdentification(null);
     setAnimalIdentificationStatus('idle');
     setSelectedAnimalCandidateId('');
+  };
+
+  const resetWildAnimalShareCard = () => {
+    setWildAnimalShareCard(null);
+    setIsWildAnimalSharePanelOpen(false);
   };
 
   const applyAnimalCandidate = (candidate: AnimalIdentificationCandidate) => {
@@ -1124,6 +1135,21 @@ export default function MarkPlace() {
     }
   };
 
+  const handleWildAnimalShareAction = (target: 'save' | 'wechat' | 'xiaohongshu') => {
+    if (!wildAnimalShareCard) return;
+
+    downloadCmiWildAnimalShareCard(wildAnimalShareCard);
+    if (target === 'wechat') {
+      toast.success('图鉴卡已保存，打开微信发朋友圈');
+      return;
+    }
+    if (target === 'xiaohongshu') {
+      toast.success('图鉴卡已保存，打开小红书发布');
+      return;
+    }
+    toast.success('图鉴卡已保存');
+  };
+
   // 4. 用户提交逻辑
   const handleSubmitFinal = async (selectedCategory: Category) => {
     if (!description.trim()) {
@@ -1132,8 +1158,10 @@ export default function MarkPlace() {
     }
     setStage('done');
     setUploading(true);
+    resetWildAnimalShareCard();
 
     try {
+      let generatedWildAnimalShareCard: CmiWildAnimalShareCardResult | null = null;
       let imageUrls: string[] = [];
       if (images.length > 0) {
         imageUrls = await uploadImages(images);
@@ -1213,7 +1241,8 @@ export default function MarkPlace() {
                 captureNumber,
                 userName,
               });
-              await shareOrDownloadCmiWildAnimalShareCard(shareCard);
+              generatedWildAnimalShareCard = shareCard;
+              setWildAnimalShareCard(shareCard);
             } catch (error) {
               console.error('动物分享卡生成失败:', error);
               toast.error('分享卡片暂时没生成，动态已经发布');
@@ -1228,6 +1257,8 @@ export default function MarkPlace() {
               : '你的这一笔清迈痕迹已经留下了 🎉'
           );
           const defaultDestinationPath = isCmiInnCheckIn ? getCmiFeedPath() : getPlacePath(recommendation.place_name);
+          if (generatedWildAnimalShareCard) return;
+
           navigate(defaultDestinationPath, {
             replace: true,
             state: { newTraceId: recommendation.id },
@@ -1487,6 +1518,51 @@ export default function MarkPlace() {
               <div className="flex flex-col items-center justify-center gap-4 text-center">
                 <MarkPlaceSuccessBadge />
                 <p className="text-sm font-semibold text-stone-500">正在把你的清迈痕迹收进手账...</p>
+              </div>
+            )}
+
+            {photoURL && stage === 'done' && (
+              <div className="flex w-full max-w-[22rem] flex-col items-center gap-3 text-center">
+                {uploading ? (
+                  <p className="text-sm font-semibold text-stone-500">正在把你的清迈痕迹收进手账...</p>
+                ) : wildAnimalShareCard ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setIsWildAnimalSharePanelOpen(current => !current)}
+                      className="w-full rounded-full bg-[#0b3d24] px-5 py-3 text-sm font-black text-[#fff4d8] shadow-[0_10px_24px_rgba(11,61,36,0.22)] active:scale-[0.98]"
+                    >
+                      分享图鉴卡
+                    </button>
+                    {isWildAnimalSharePanelOpen && (
+                      <div className="grid w-full grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleWildAnimalShareAction('save')}
+                          className="rounded-2xl border border-stone-200 bg-white px-3 py-3 text-xs font-black text-stone-800 shadow-sm active:scale-[0.98]"
+                        >
+                          保存图片
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleWildAnimalShareAction('wechat')}
+                          className="rounded-2xl border border-stone-200 bg-white px-3 py-3 text-xs font-black text-stone-800 shadow-sm active:scale-[0.98]"
+                        >
+                          微信
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleWildAnimalShareAction('xiaohongshu')}
+                          className="rounded-2xl border border-stone-200 bg-white px-3 py-3 text-xs font-black text-stone-800 shadow-sm active:scale-[0.98]"
+                        >
+                          小红书
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm font-semibold text-stone-500">正在把你的清迈痕迹收进手账...</p>
+                )}
               </div>
             )}
             

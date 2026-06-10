@@ -35,8 +35,19 @@
 20. [完成] `/mark` 相机页补充可见“识别动物”入口
 21. [完成] 动物识别修正：主体检测优先、低置信度不硬猜、去掉“可能是”文案
 22. [完成] 神奇动物打卡候选、描述和分享卡统一使用学名展示
+23. [完成] 神奇动物分享卡对齐修正，并改为用户主动分享
 
 ## 执行记录
+
+### 2026-06-10 19:48 +07 神奇动物分享卡对齐与主动分享
+
+- 本轮实现：
+  - 分享卡动物学名写入模板白色胶囊位，底部信息行按模板虚线重新对齐。
+  - 二维码缩小并移入右下角白色二维码框内侧。
+  - 发布成功后不再自动弹出系统分享面板；生成卡片后只显示“分享图鉴卡”按钮，点开后提供保存图片、微信、小红书三个动作。
+  - 微信 / 小红书按钮不调用浏览器系统分享，只先保存卡片图片并提示去对应 App 发布。
+- 验证结果：
+  - 已补充测试锁定分享卡主展示学名、禁止系统分享函数、发布后显示主动分享按钮。
 
 ### 2026-06-10 19:25 +07 神奇动物识别学名展示上线
 
@@ -2399,3 +2410,19 @@
   - `pnpm exec tsgo -p tsconfig.check.json` 通过。
   - 本地浏览器 390×844 手机视口验证：动态页箭头为圆角单线样式，点击右箭头可切到 `03/05`，横向左滑可切到 `04/05`。
   - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
+
+### 2026-06-10 神奇动物识别中文展示与专业模型入口
+
+- 背景：用户反馈识别结果直接显示 `Canis lupus familiaris` 这类拉丁名，体验像英文代码；同时要求后续尽量不要依赖付费大语言模型 API。
+- 本轮实现：
+  - 动物识别主展示改为中文名：家犬、家猫、大壁虎、鸟类、鱼类等；发布文案不再把拉丁学名作为主句。
+  - 分享卡标题和识别行改为中文名，不再写入英文原始标签。
+  - 后端新增自托管专业物种模型入口 `CMI_MAP_SPECIES_MODEL_URL` / `CMI_MAP_SPECIES_MODEL_TOKEN`，优先于 Gemini / Meta Vision；返回结果仍通过 GBIF 校验后才进入前端。
+  - 补充清迈常见动物中文名映射，用于专业模型只返回拉丁学名时的中文展示。
+- 验证结果：
+  - `node --test functions/api/animal-identify.test.ts src/services/animal-identification.test.ts src/lib/cmi-wild-animal-share-card.test.ts src/pages/MarkPlace.test.ts` 通过，26 项测试通过。
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
+  - 已部署到 Cloudflare Pages production：`https://3690a2de.cmi-map.pages.dev`，正式域名 `https://cmimap.com` 已同步。
+  - 线上接口验证：用户提供的整张 App 截图返回 `no-match`，不再误报成鸟；裁剪后的照片区域返回 `家犬 / Canis lupus familiaris`，接口内部耗时约 0.9-1.2 秒。
+  - 线上 `/mark?event=cmi-wild-chiang-mai-2026-06` 浏览器检查：页面可见 `动物识别已开启`；测试环境未授予相机权限，控制台仅有相机权限拒绝警告。

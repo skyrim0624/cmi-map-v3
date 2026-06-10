@@ -3,6 +3,7 @@ import { CMI_MAP_WILD_CHIANG_MAI_EVENT_ID } from '@/data/cmi-events';
 import { getPublicCmiEventUrl } from '@/lib/paths';
 import {
   type AnimalIdentificationCandidate,
+  getAnimalChineseName,
   getAnimalScientificName,
 } from '@/services/animal-identification';
 import type { Recommendation } from '@/types/types';
@@ -23,25 +24,11 @@ export interface CmiWildAnimalShareCardResult {
   fileName: string;
 }
 
-type FileShareData = {
-  files: File[];
-  title: string;
-  text: string;
-};
-
-type NavigatorWithFileShare = Navigator & {
-  canShare?: (data: FileShareData) => boolean;
-  share?: (data: FileShareData) => Promise<void>;
-};
-
 const TEMPLATE_URL = '/cmi-home/share-card-templates/wild-chiang-mai-template-v1.png';
 const CARD_WIDTH = 1024;
 const CARD_HEIGHT = 1536;
 const FONT_FAMILY = '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif';
-const TITLE_FONT = `900 48px ${FONT_FAMILY}`;
 const BODY_FONT = `800 27px ${FONT_FAMILY}`;
-const SMALL_FONT = `800 22px ${FONT_FAMILY}`;
-const INTRO_FONT = `700 24px ${FONT_FAMILY}`;
 const NUMBER_FONT = `900 30px ${FONT_FAMILY}`;
 const DEEP_GREEN = '#0B3D24';
 const CREAM = '#FFF4D8';
@@ -50,7 +37,12 @@ const WHITE = '#FFFFFF';
 const BLACK = '#050505';
 const PHOTO_BOX = { x: 58, y: 374, width: 908, height: 622, radius: 28 };
 const NUMBER_BOX = { x: 724, y: 48, width: 226, height: 58 };
-const QR_BOX = { x: 842, y: 1362, size: 112 };
+const SPECIES_NAME_BOX = { x: 82, y: 1098, width: 365, height: 54 };
+const INFO_TEXT_X = 126;
+const INFO_VALUE_X = 222;
+const INFO_MAX_WIDTH = 390;
+const INFO_ROW_BASELINES = [1195, 1253, 1307, 1363] as const;
+const QR_BOX = { x: 846, y: 1384, size: 104 };
 
 const speciesIntroById: Record<string, string> = {
   dog: '家犬与人类共同生活时间很长，常在院子、街角和店门口活动，是城市日常里最容易遇见的伙伴。',
@@ -135,38 +127,6 @@ const drawImageCover = (
   context.restore();
 };
 
-const wrapText = (
-  context: CanvasRenderingContext2D,
-  text: string,
-  maxWidth: number,
-  maxLines: number
-) => {
-  const lines: string[] = [];
-  let currentLine = '';
-
-  for (const character of Array.from(text.replace(/\s+/g, ' ').trim())) {
-    const nextLine = currentLine + character;
-    if (context.measureText(nextLine).width > maxWidth && currentLine) {
-      lines.push(currentLine);
-      currentLine = character;
-      if (lines.length >= maxLines) break;
-      continue;
-    }
-    currentLine = nextLine;
-  }
-
-  if (currentLine && lines.length < maxLines) lines.push(currentLine);
-  if (lines.length === maxLines && lines.join('').length < text.length) {
-    let lastLine = lines[maxLines - 1];
-    while (lastLine && context.measureText(`${lastLine}…`).width > maxWidth) {
-      lastLine = lastLine.slice(0, -1);
-    }
-    lines[maxLines - 1] = `${lastLine}…`;
-  }
-
-  return lines;
-};
-
 const canvasToBlob = (canvas: HTMLCanvasElement) =>
   new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {
@@ -210,6 +170,61 @@ const drawCenteredText = (
   context.restore();
 };
 
+const drawFittedText = (
+  context: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  width: number,
+  maxFontSize: number,
+  minFontSize: number,
+  color: string
+) => {
+  let fontSize = maxFontSize;
+  context.save();
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillStyle = color;
+
+  while (fontSize > minFontSize) {
+    context.font = `900 ${fontSize}px ${FONT_FAMILY}`;
+    if (context.measureText(text).width <= width) break;
+    fontSize -= 1;
+  }
+
+  context.font = `900 ${fontSize}px ${FONT_FAMILY}`;
+  context.fillText(text, x + width / 2, y);
+  context.restore();
+};
+
+const truncateText = (
+  context: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number
+) => {
+  if (context.measureText(text).width <= maxWidth) return text;
+
+  let result = text;
+  while (result.length > 0 && context.measureText(`${result}…`).width > maxWidth) {
+    result = result.slice(0, -1);
+  }
+
+  return `${result}…`;
+};
+
+const drawInfoRow = (
+  context: CanvasRenderingContext2D,
+  label: string,
+  value: string,
+  baselineY: number,
+  maxWidth = INFO_MAX_WIDTH
+) => {
+  context.fillStyle = YELLOW;
+  context.fillText(`${label}：`, INFO_TEXT_X, baselineY);
+  context.fillStyle = CREAM;
+  context.fillText(truncateText(context, value, maxWidth), INFO_VALUE_X, baselineY);
+};
+
 const getIntro = (candidate: AnimalIdentificationCandidate) =>
   speciesIntroById[candidate.id] ?? '这是一条来自本次图像识别的动物记录。可以结合照片、地点和观察描述继续补充。';
 
@@ -235,6 +250,7 @@ export const createCmiWildAnimalShareCard = async ({
     }).then(loadImage),
   ]);
   const scientificName = getAnimalScientificName(candidate);
+  const chineseName = getAnimalChineseName(candidate);
   const captureNumberLabel = captureNumber ? `CMI No.${captureNumber}` : 'CMI No.';
   const collectionProgress = `${String(collectedIndex).padStart(2, '0')}/${String(collectedTotal).padStart(2, '0')}`;
 
@@ -256,34 +272,22 @@ export const createCmiWildAnimalShareCard = async ({
   drawCenteredText(context, captureNumberLabel, NUMBER_BOX.x, NUMBER_BOX.y, NUMBER_BOX.width, NUMBER_BOX.height, NUMBER_FONT, BLACK);
   drawCenteredText(context, collectionProgress, 630, 1432, 160, 44, NUMBER_FONT, BLACK);
 
-  context.fillStyle = CREAM;
-  context.font = TITLE_FONT;
-  context.fillText(scientificName, 84, 1112);
-
-  const rows = [
-    ['识别', candidate.rawLabel || candidate.nameEn || scientificName],
-    ['时间', formatDateTime(recommendation.created_at)],
-    ['地点', recommendation.place_name],
-  ] as const;
+  drawFittedText(
+    context,
+    chineseName,
+    SPECIES_NAME_BOX.x,
+    SPECIES_NAME_BOX.y + SPECIES_NAME_BOX.height / 2 + 1,
+    SPECIES_NAME_BOX.width - 28,
+    34,
+    22,
+    DEEP_GREEN
+  );
 
   context.font = BODY_FONT;
-  rows.forEach(([label, value], index) => {
-    const y = 1184 + index * 54;
-    context.fillStyle = YELLOW;
-    context.fillText(`${label}：`, 90, y);
-    context.fillStyle = CREAM;
-    context.fillText(value, 174, y);
-  });
-
-  context.fillStyle = CREAM;
-  context.font = SMALL_FONT;
-  context.fillText(`发现者：${userName}`, 84, 1060);
-
-  context.font = INTRO_FONT;
-  context.fillStyle = '#E0F0D2';
-  wrapText(context, `习性：${getIntro(candidate)}`, 570, 2).forEach((line, index) => {
-    context.fillText(line, 90, 1332 + index * 34);
-  });
+  drawInfoRow(context, '发现者', userName, INFO_ROW_BASELINES[0]);
+  drawInfoRow(context, '时间', formatDateTime(recommendation.created_at), INFO_ROW_BASELINES[1]);
+  drawInfoRow(context, '地点', recommendation.place_name, INFO_ROW_BASELINES[2]);
+  drawInfoRow(context, '介绍', getIntro(candidate), INFO_ROW_BASELINES[3], 500);
 
   context.drawImage(qrImage, QR_BOX.x, QR_BOX.y, QR_BOX.size, QR_BOX.size);
 
@@ -292,7 +296,7 @@ export const createCmiWildAnimalShareCard = async ({
   return {
     blob,
     dataUrl: canvas.toDataURL('image/png'),
-    fileName: `cmi-map-${sanitizeFileName(scientificName)}-${captureNumber || Date.now()}.png`,
+    fileName: `cmi-map-${sanitizeFileName(chineseName || scientificName)}-${captureNumber || Date.now()}.png`,
   };
 };
 
@@ -305,25 +309,4 @@ export const downloadCmiWildAnimalShareCard = (card: CmiWildAnimalShareCardResul
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(downloadUrl);
-};
-
-export const shareOrDownloadCmiWildAnimalShareCard = async (card: CmiWildAnimalShareCardResult) => {
-  const file = new File([card.blob], card.fileName, { type: 'image/png' });
-  const shareData = {
-    files: [file],
-    title: '神奇动物在哪里',
-    text: '我的 CMI MAP 动物图鉴卡',
-  };
-  const navigatorWithShare = navigator as NavigatorWithFileShare;
-
-  if (navigatorWithShare.canShare?.(shareData) && navigatorWithShare.share) {
-    try {
-      await navigatorWithShare.share(shareData);
-      return;
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') return;
-    }
-  }
-
-  downloadCmiWildAnimalShareCard(card);
 };

@@ -35,21 +35,37 @@ const fallbackScientificNames: Record<string, string> = {
   squirrel: 'Sciuridae',
 };
 
+const fallbackChineseNames: Record<string, string> = {
+  dog: '家犬',
+  cat: '家猫',
+  'tokay-gecko': '大壁虎',
+  bird: '鸟类',
+  butterfly: '蝴蝶',
+  fish: '鱼类',
+  snake: '蛇类',
+  frog: '蛙类',
+  insect: '昆虫',
+  squirrel: '松鼠',
+};
+
 export const getAnimalScientificName = (candidate: AnimalIdentificationCandidate) =>
   candidate.scientificName?.trim() || fallbackScientificNames[candidate.id] || candidate.nameEn || candidate.rawLabel;
 
+export const getAnimalChineseName = (candidate: AnimalIdentificationCandidate) =>
+  candidate.nameZh?.trim() || fallbackChineseNames[candidate.id] || candidate.scientificName?.trim() || candidate.nameEn || candidate.rawLabel;
+
 export const formatAnimalCandidateLabel = (candidate: AnimalIdentificationCandidate) =>
-  getAnimalScientificName(candidate);
+  getAnimalChineseName(candidate);
 
 const isSpeciesLevelRank = (rank: string | undefined) => rank === 'SPECIES' || rank === 'SUBSPECIES';
 
 export const buildAnimalCandidateDescription = (candidate: AnimalIdentificationCandidate) => {
-  const scientificName = getAnimalScientificName(candidate);
+  const chineseName = getAnimalChineseName(candidate);
   if (isSpeciesLevelRank(candidate.taxonRank) || candidate.source === 'vision') {
-    return `这是 ${scientificName}。`;
+    return `这是${chineseName}。`;
   }
 
-  return `识别到 ${scientificName}，需要更近照片才能定到具体物种。`;
+  return `识别到${chineseName}，需要更近照片才能定到具体物种。`;
 };
 
 export const identifyAnimalPhoto = async (file: File): Promise<AnimalIdentificationResult> => {
