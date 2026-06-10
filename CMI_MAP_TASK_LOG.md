@@ -37,6 +37,20 @@
 
 ## 执行记录
 
+### 2026-06-10 18:51 +07 清迈客栈动态坐标归一修复
+
+- 背景：V3 地图“清迈客栈新动态”里，用户动态头像 marker 会沿用推荐表中保存的漂移 GPS 坐标，导致本应在清迈客栈的动态显示到古城东侧。
+- 本轮实现：
+  - `src/data/cmi-place-corrections.ts` 将“清迈客栈 / 清迈客栈 CMI / CMI Inn / Chiang Mai Inn”相关地点统一归一到标准坐标 `18.7932, 98.9874`。
+  - 对已归类为“清迈客栈”的推荐增加读取层兜底，即使历史数据保存了漂移坐标，地图读取后也会回到清迈客栈标准坐标。
+- 验证结果：
+  - 新增 `src/data/cmi-place-corrections.test.ts`，先复现旧漂移坐标未被校正，再验证修复后通过。
+  - `npx tsx --test src/data/cmi-place-corrections.test.ts src/pages/CmiMapV3Prototype.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts` 通过。
+  - `pnpm exec biome lint src/data/cmi-place-corrections.ts src/data/cmi-place-corrections.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过。
+  - 本地 `http://127.0.0.1:5187/v3` 手机视口复查通过：页面加载、地图和“清迈客栈新动态”正常渲染，目标端口无新增 console error。
+
 ### 2026-06-10 19:05 +07 神奇动物打卡分享卡闭环第一版
 
 - 本轮实现：

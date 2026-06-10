@@ -1,4 +1,10 @@
-import { type Category, CMI_INN_CATEGORY, normalizeCategory, type Recommendation } from '@/types/types';
+import {
+  type Category,
+  CMI_INN_CATEGORY,
+  CMI_INN_COORDINATES,
+  normalizeCategory,
+  type Recommendation,
+} from '@/types/types';
 
 type PlaceCorrection = {
   category?: Category;
@@ -12,6 +18,12 @@ const normalizePlaceCorrectionKey = (value: string) =>
     .trim()
     .replace(/\s+/g, ' ')
     .toLocaleLowerCase();
+
+const CMI_INN_PLACE_CORRECTION: PlaceCorrection = {
+  category: CMI_INN_CATEGORY,
+  latitude: CMI_INN_COORDINATES.latitude,
+  longitude: CMI_INN_COORDINATES.longitude,
+};
 
 const PLACE_CORRECTION_ENTRIES: Array<[string, PlaceCorrection]> = [
     [
@@ -192,9 +204,23 @@ const PLACE_CORRECTION_ENTRIES: Array<[string, PlaceCorrection]> = [
     ],
     [
       '清迈客栈',
-      {
-        category: CMI_INN_CATEGORY,
-      },
+      CMI_INN_PLACE_CORRECTION,
+    ],
+    [
+      '清迈客栈 CMI',
+      CMI_INN_PLACE_CORRECTION,
+    ],
+    [
+      '清迈客栈CMI',
+      CMI_INN_PLACE_CORRECTION,
+    ],
+    [
+      'CMI Inn',
+      CMI_INN_PLACE_CORRECTION,
+    ],
+    [
+      'Chiang Mai Inn',
+      CMI_INN_PLACE_CORRECTION,
     ],
     [
       'cool小猫路过',
@@ -215,12 +241,15 @@ const PLACE_CORRECTIONS = new Map<string, PlaceCorrection>(
 );
 
 export const applyRecommendationCorrections = (recommendation: Recommendation): Recommendation => {
-  const correction = PLACE_CORRECTIONS.get(normalizePlaceCorrectionKey(recommendation.place_name));
+  const isCmiInnCategory = normalizeCategory(recommendation.category) === CMI_INN_CATEGORY;
+  const correction =
+    PLACE_CORRECTIONS.get(normalizePlaceCorrectionKey(recommendation.place_name)) ??
+    (isCmiInnCategory ? CMI_INN_PLACE_CORRECTION : undefined);
   if (!correction) return recommendation;
 
   return {
     ...recommendation,
-    category: normalizeCategory(recommendation.category) === CMI_INN_CATEGORY
+    category: isCmiInnCategory
       ? recommendation.category
       : correction.category ?? recommendation.category,
     latitude: correction.latitude ?? recommendation.latitude,
