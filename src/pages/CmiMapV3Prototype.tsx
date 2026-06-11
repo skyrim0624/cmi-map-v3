@@ -2064,7 +2064,6 @@ function FeedMode({
               activeStickerId={activeStickerId}
               authorProfile={getRecommendationAuthorProfile(feedItem.recommendation, profilesByAuthorKey)}
               isWishlisted={localWishlists[feedItem.recommendation.id] ?? false}
-              linkedEventBadge={getRecommendationEventBadge(feedItem.recommendation, events)}
               placedStickers={placedStickers[feedItem.recommendation.id] ?? []}
               recommendation={feedItem.recommendation}
               onComment={() => onOpenPath(getAddTracePath(feedItem.recommendation.place_name))}
@@ -2486,19 +2485,13 @@ function FeedCenterPanel({
       const authorProfile = getBlackboardPostAuthorProfile(post, profilesByAuthorKey);
       const authorName = post.author_name || authorProfile?.user_name || 'CMI 朋友';
       const targetPath = getBlackboardPostTargetPath(post);
-      const linkedEvent = post.linked_event_id
-        ? events.find(event => event.id === post.linked_event_id)
-        : null;
 
       return {
         authorName,
         body: post.body,
         imageUrl: getBlackboardPostImageUrl(post, events),
-        label: post.is_featured ? '社区精选' : '正在发生',
         meta: formatBlackboardCreatedLabel(post.created_at),
         targetPath,
-        title: post.title,
-        reference: post.linked_event_title || linkedEvent?.title || '',
       };
     }
 
@@ -2511,11 +2504,8 @@ function FeedCenterPanel({
       authorName,
       body: getRecommendationSummary(recommendation),
       imageUrl: recommendation.images[0] || categoryConfig.iconUrl,
-      label: '社区精选',
-      meta: `${normalizeCategory(recommendation.category)} · ${formatTraceTime(recommendation.created_at)}`,
+      meta: formatTraceTime(recommendation.created_at),
       targetPath: getPlacePath(recommendation.place_name),
-      title: recommendation.place_name,
-      reference: '',
     };
   }, [events, item, profilesByAuthorKey]);
 
@@ -2555,13 +2545,6 @@ function FeedCenterPanel({
               <strong>{content.authorName}</strong>
               <span>{content.meta}</span>
             </div>
-            {content.reference && (
-              <div className="cmi-v3-feed-featured-reference">
-                <Megaphone size={14} strokeWidth={2.8} />
-                <span>{content.reference}</span>
-              </div>
-            )}
-            <h2>{content.title}</h2>
             <p>{content.body}</p>
           </div>
         </article>
@@ -2585,13 +2568,6 @@ function BlackboardFeedCard({
   const avatarUrl = authorProfile?.avatar_url?.trim() || getFallbackAvatarUrl(authorName);
   const imageUrl = getBlackboardPostImageUrl(post, events);
   const targetPath = getBlackboardPostTargetPath(post);
-  const linkedEvent = post.linked_event_id
-    ? events.find(event => event.id === post.linked_event_id)
-    : null;
-  const linkedEventTitle = post.linked_event_title || linkedEvent?.title || '';
-  const metaItems = [post.time_label, post.location_label, post.people_label]
-    .map(item => item?.trim())
-    .filter(Boolean);
 
   const openTarget = () => {
     if (targetPath) onOpenPath(targetPath);
@@ -2632,21 +2608,7 @@ function BlackboardFeedCard({
           </div>
         </div>
 
-        {linkedEventTitle && (
-          <div className="cmi-v3-feed-reference">
-            <Megaphone size={15} strokeWidth={2.8} />
-            <span>{`引用活动：${linkedEventTitle}`}</span>
-          </div>
-        )}
-
-        <h2>{post.title}</h2>
         <p>{post.body}</p>
-
-        {metaItems.length > 0 && (
-          <div className="cmi-v3-feed-meta-line" aria-label="动态补充信息">
-            {metaItems.slice(0, 3).map(item => <span key={item}>{item}</span>)}
-          </div>
-        )}
       </div>
     </article>
   );
@@ -2658,7 +2620,6 @@ function RecommendationFeedCard({
   activeStickerId,
   authorProfile,
   isWishlisted,
-  linkedEventBadge,
   placedStickers,
   onComment,
   onPlaceStamp,
@@ -2671,7 +2632,6 @@ function RecommendationFeedCard({
   activeStickerId: string | null;
   authorProfile: PublicProfile | null;
   isWishlisted: boolean;
-  linkedEventBadge: RecommendationEventBadge | null;
   placedStickers: PlacedSticker[];
   onComment: () => void;
   onPlaceStamp: (event: ReactMouseEvent<HTMLElement>, recommendationId: string) => void;
@@ -2681,7 +2641,6 @@ function RecommendationFeedCard({
 }) {
   const categoryConfig = getCategoryConfig(recommendation.category);
   const imageUrl = recommendation.images[0] || categoryConfig.iconUrl;
-  const categoryLabel = normalizeCategory(recommendation.category);
   const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
   const authorAvatarUrl = authorProfile?.avatar_url?.trim() ?? '';
   const isStampTargetActive = activeStickerId && activeRecIdForSticker === recommendation.id;
@@ -2702,17 +2661,15 @@ function RecommendationFeedCard({
       <PlacedStickerLayer placements={placedStickers} variant="feed" />
       <img className="cmi-v3-feed-post-image" src={imageUrl} alt={recommendation.place_name} />
       <div className="cmi-v3-feed-post-content">
-        <EventPosterWatermark badge={linkedEventBadge} variant="feed" />
         <div className="cmi-v3-feed-head">
           <span className="cmi-v3-avatar cmi-v3-feed-user-avatar" aria-hidden="true">
             {authorAvatarUrl ? <img src={authorAvatarUrl} alt="" /> : getUserInitial(authorName)}
           </span>
           <div>
             <strong>{authorName}</strong>
-            <span>{`${categoryLabel} · ${formatTraceTime(recommendation.created_at)}`}</span>
+            <span>{formatTraceTime(recommendation.created_at)}</span>
           </div>
         </div>
-        <h2>{recommendation.place_name}</h2>
         <p>{getRecommendationSummary(recommendation)}</p>
         <RecommendationActionButtons
           isWishlisted={isWishlisted}

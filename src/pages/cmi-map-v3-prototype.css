@@ -1896,6 +1896,10 @@
   gap: 10px;
 }
 
+.cmi-v3-feed-head > div {
+  min-width: 0;
+}
+
 .cmi-v3-feed-post-card .cmi-v3-feed-head {
   grid-template-columns: 42px minmax(0, 1fr);
   gap: 10px;
@@ -2207,10 +2211,9 @@
 }
 
 .cmi-v3-feed-featured-meta {
-  display: flex;
+  display: grid;
   min-width: 0;
-  align-items: baseline;
-  gap: 8px;
+  gap: 3px;
 }
 
 .cmi-v3-feed-featured-meta strong {
@@ -2224,7 +2227,7 @@
 }
 
 .cmi-v3-feed-featured-meta span {
-  flex: 0 0 auto;
+  min-width: 0;
   color: rgba(22, 22, 22, 0.48);
   font-size: 12px;
   font-weight: 850;
@@ -2267,10 +2270,10 @@
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  margin: 6px 0 0;
-  color: rgba(22, 22, 22, 0.68);
-  font-size: 13px;
+  -webkit-line-clamp: 4;
+  margin: 8px 0 0;
+  color: var(--cmi-v3-ink);
+  font-size: 15px;
   font-weight: 760;
   line-height: 1.42;
 }
@@ -2354,6 +2357,7 @@
 .cmi-v3-feed-stream .cmi-v3-feed-head,
 .cmi-v3-forum-post-head {
   grid-template-columns: 34px minmax(0, 1fr);
+  align-items: start;
   gap: 9px;
 }
 
@@ -2399,11 +2403,11 @@
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  margin-top: 7px;
+  -webkit-line-clamp: 4;
+  margin-top: 8px;
   color: var(--cmi-v3-ink);
-  font-size: 14px;
-  line-height: 1.48;
+  font-size: 15px;
+  line-height: 1.42;
   font-weight: 760;
 }
 
