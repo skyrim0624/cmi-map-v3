@@ -59,7 +59,7 @@ test('动态页底色使用神奇动物活动主页绿色且帖子保持白底',
   );
 });
 
-test('动态流帖子使用正文优先排版且不显示活动或分类标签', () => {
+test('动态流帖子使用正文优先排版并显示右上角关联标签', () => {
   const feedModeSource = source.slice(source.indexOf('function FeedMode'), source.indexOf('function FeedCenterPanel'));
   const featuredCardSource = source.slice(
     source.indexOf('function FeedCenterPanel'),
@@ -75,19 +75,34 @@ test('动态流帖子使用正文优先排版且不显示活动或分类标签',
   );
 
   assert.doesNotMatch(feedModeSource, /linkedEventBadge=\{getRecommendationEventBadge\(feedItem\.recommendation, events\)\}/);
+  assert.match(feedModeSource, /associationTag=\{getRecommendationAssociationTag\(feedItem\.recommendation, events\)\}/);
+  assert.match(source, /function getRecommendationAssociationTag/);
+  assert.match(source, /function getBlackboardAssociationTag/);
   assert.doesNotMatch(featuredCardSource, /normalizeCategory\(recommendation\.category\)/);
   assert.doesNotMatch(featuredCardSource, /<h2>\{content\.title\}<\/h2>/);
   assert.doesNotMatch(featuredCardSource, /cmi-v3-feed-featured-reference/);
+  assert.match(featuredCardSource, /<FeedAssociationTag tag=\{content\.associationTag\} \/>/);
   assert.doesNotMatch(forumCardSource, /<h2>\{post\.title\}<\/h2>/);
   assert.doesNotMatch(forumCardSource, /引用活动：/);
   assert.doesNotMatch(forumCardSource, /className="cmi-v3-feed-meta-line"/);
+  assert.match(forumCardSource, /<FeedAssociationTag tag=\{getBlackboardAssociationTag\(post, events\)\} \/>/);
   assert.doesNotMatch(recommendationCardSource, /<EventPosterWatermark badge=\{linkedEventBadge\} variant="feed" \/>/);
   assert.doesNotMatch(recommendationCardSource, /const categoryLabel = normalizeCategory\(recommendation\.category\)/);
   assert.doesNotMatch(recommendationCardSource, /\{`\$\{categoryLabel\} · \$\{formatTraceTime\(recommendation\.created_at\)\}`\}/);
   assert.doesNotMatch(recommendationCardSource, /<h2>\{recommendation\.place_name\}<\/h2>/);
   assert.match(recommendationCardSource, /<span>\{formatTraceTime\(recommendation\.created_at\)\}<\/span>/);
+  assert.match(recommendationCardSource, /<FeedAssociationTag tag=\{associationTag\} \/>/);
+  assert.match(recommendationCardSource, /<p>\{getRecommendationSummary\(recommendation\)\}<\/p>\s*<\/div>\s*<RecommendationActionButtons/);
   assert.match(
     styles,
     /\.cmi-v3-feed-stream \.cmi-v3-feed-card p,[\s\S]*?\.cmi-v3-forum-post-card p \{[\s\S]*?-webkit-line-clamp: 4;[\s\S]*?font-size: 15px;/,
+  );
+  assert.match(
+    styles,
+    /\.cmi-v3-feed-association-tag \{[\s\S]*?position: absolute;[\s\S]*?top: 13px;[\s\S]*?right: 14px;/,
+  );
+  assert.match(
+    styles,
+    /\.cmi-v3-feed-stream \.cmi-v3-recommendation-actions \{[\s\S]*?position: absolute;[\s\S]*?right: 14px;[\s\S]*?bottom: 12px;/,
   );
 });

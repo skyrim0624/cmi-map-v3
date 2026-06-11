@@ -147,6 +147,11 @@ interface RecommendationEventBadge {
   posterUrl?: string;
 }
 
+interface FeedAssociationTagData {
+  kind: 'event' | 'place';
+  label: string;
+}
+
 type CmiV3FeedItem =
   | {
       id: string;
@@ -352,6 +357,22 @@ function getRecommendationEventBadge(
   };
 }
 
+function getRecommendationAssociationTag(
+  recommendation: Recommendation,
+  events: CmiEvent[]
+): FeedAssociationTagData | null {
+  const linkedEvent = getRecommendationEventBadge(recommendation, events);
+  if (linkedEvent) {
+    return {
+      kind: 'event',
+      label: linkedEvent.title,
+    };
+  }
+
+  const placeName = recommendation.place_name.trim();
+  return placeName ? { kind: 'place', label: placeName } : null;
+}
+
 function getBlackboardPostAuthorProfile(post: BlackboardPostRecord, profiles: ProfileLookup) {
   return profiles[getProfileLookupKey(post.author_id)]
     ?? profiles[getProfileLookupKey(post.author_name)]
@@ -372,6 +393,22 @@ function getBlackboardPostTargetPath(post: BlackboardPostRecord) {
   if (post.linked_event_id) return getCmiEventPath(post.linked_event_id);
   if (post.linked_place_name) return getPlacePath(post.linked_place_name);
   return '';
+}
+
+function getBlackboardAssociationTag(
+  post: BlackboardPostRecord,
+  events: CmiEvent[]
+): FeedAssociationTagData | null {
+  if (post.linked_event_id) {
+    const linkedEvent = events.find(event => event.id === post.linked_event_id);
+    return {
+      kind: 'event',
+      label: post.linked_event_title?.trim() || linkedEvent?.title || '活动现场',
+    };
+  }
+
+  const placeName = post.linked_place_name?.trim();
+  return placeName ? { kind: 'place', label: placeName } : null;
 }
 
 function getFeedItemSortTime(value: string) {
@@ -2062,6 +2099,7 @@ function FeedMode({
               key={feedItem.id}
               activeRecIdForSticker={activeRecIdForSticker}
               activeStickerId={activeStickerId}
+              associationTag={getRecommendationAssociationTag(feedItem.recommendation, events)}
               authorProfile={getRecommendationAuthorProfile(feedItem.recommendation, profilesByAuthorKey)}
               isWishlisted={localWishlists[feedItem.recommendation.id] ?? false}
               placedStickers={placedStickers[feedItem.recommendation.id] ?? []}
@@ -2487,6 +2525,7 @@ function FeedCenterPanel({
       const targetPath = getBlackboardPostTargetPath(post);
 
       return {
+        associationTag: getBlackboardAssociationTag(post, events),
         authorName,
         body: post.body,
         imageUrl: getBlackboardPostImageUrl(post, events),
@@ -2501,6 +2540,7 @@ function FeedCenterPanel({
     const categoryConfig = getCategoryConfig(recommendation.category);
 
     return {
+      associationTag: getRecommendationAssociationTag(recommendation, events),
       authorName,
       body: getRecommendationSummary(recommendation),
       imageUrl: recommendation.images[0] || categoryConfig.iconUrl,
@@ -2540,6 +2580,7 @@ function FeedCenterPanel({
               <Megaphone size={26} strokeWidth={2.7} />
             )}
           </div>
+          <FeedAssociationTag tag={content.associationTag} />
           <div className="cmi-v3-feed-featured-copy">
             <div className="cmi-v3-feed-featured-meta">
               <strong>{content.authorName}</strong>
@@ -2596,6 +2637,7 @@ function BlackboardFeedCard({
           </span>
         )}
       </div>
+      <FeedAssociationTag tag={getBlackboardAssociationTag(post, events)} />
 
       <div className="cmi-v3-forum-post-content">
         <div className="cmi-v3-feed-head cmi-v3-forum-post-head">
@@ -2618,6 +2660,7 @@ function RecommendationFeedCard({
   recommendation,
   activeRecIdForSticker,
   activeStickerId,
+  associationTag,
   authorProfile,
   isWishlisted,
   placedStickers,
@@ -2630,6 +2673,7 @@ function RecommendationFeedCard({
   recommendation: Recommendation;
   activeRecIdForSticker: string | null;
   activeStickerId: string | null;
+  associationTag: FeedAssociationTagData | null;
   authorProfile: PublicProfile | null;
   isWishlisted: boolean;
   placedStickers: PlacedSticker[];
@@ -2660,6 +2704,7 @@ function RecommendationFeedCard({
     >
       <PlacedStickerLayer placements={placedStickers} variant="feed" />
       <img className="cmi-v3-feed-post-image" src={imageUrl} alt={recommendation.place_name} />
+      <FeedAssociationTag tag={associationTag} />
       <div className="cmi-v3-feed-post-content">
         <div className="cmi-v3-feed-head">
           <span className="cmi-v3-avatar cmi-v3-feed-user-avatar" aria-hidden="true">
@@ -2671,15 +2716,29 @@ function RecommendationFeedCard({
           </div>
         </div>
         <p>{getRecommendationSummary(recommendation)}</p>
-        <RecommendationActionButtons
-          isWishlisted={isWishlisted}
-          onComment={onComment}
-          onStamp={onStartStamp}
-          onWishlist={onToggleWishlist}
-          variant="feed"
-        />
       </div>
+      <RecommendationActionButtons
+        isWishlisted={isWishlisted}
+        onComment={onComment}
+        onStamp={onStartStamp}
+        onWishlist={onToggleWishlist}
+        variant="feed"
+      />
     </article>
+  );
+}
+
+function FeedAssociationTag({ tag }: { tag: FeedAssociationTagData | null }) {
+  if (!tag) return null;
+
+  return (
+    <span
+      className={`cmi-v3-feed-association-tag cmi-v3-feed-association-tag--${tag.kind}`}
+      aria-label={`${tag.kind === 'event' ? '关联活动' : '关联地点'}：${tag.label}`}
+      title={tag.label}
+    >
+      {tag.label}
+    </span>
   );
 }
 
