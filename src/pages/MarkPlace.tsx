@@ -191,6 +191,160 @@ const appendTranscript = (currentText: string, nextText: string) => {
   return `${current} ${next}`;
 };
 
+type CapturedCoordinates = {
+  latitude: number;
+  longitude: number;
+};
+
+const formatCoordinatePlaceName = (coordinates: CapturedCoordinates) => (
+  `地图坐标 · ${coordinates.latitude.toFixed(5)}, ${coordinates.longitude.toFixed(5)}`
+);
+
+const readExifAscii = (
+  view: DataView,
+  tiffStart: number,
+  entryOffset: number,
+  byteCount: number,
+  littleEndian: boolean
+) => {
+  const valueOffset = byteCount <= 4
+    ? entryOffset + 8
+    : tiffStart + view.getUint32(entryOffset + 8, littleEndian);
+  if (valueOffset < 0 || valueOffset + byteCount > view.byteLength) return '';
+
+  let value = '';
+  for (let index = 0; index < byteCount; index += 1) {
+    const charCode = view.getUint8(valueOffset + index);
+    if (charCode === 0) break;
+    value += String.fromCharCode(charCode);
+  }
+
+  return value;
+};
+
+const readExifRational = (view: DataView, offset: number, littleEndian: boolean) => {
+  if (offset < 0 || offset + 8 > view.byteLength) return null;
+
+  const numerator = view.getUint32(offset, littleEndian);
+  const denominator = view.getUint32(offset + 4, littleEndian);
+  if (denominator === 0) return null;
+
+  return numerator / denominator;
+};
+
+const readGpsCoordinate = (
+  view: DataView,
+  tiffStart: number,
+  entryOffset: number,
+  littleEndian: boolean
+) => {
+  const rationalOffset = tiffStart + view.getUint32(entryOffset + 8, littleEndian);
+  const degrees = readExifRational(view, rationalOffset, littleEndian);
+  const minutes = readExifRational(view, rationalOffset + 8, littleEndian);
+  const seconds = readExifRational(view, rationalOffset + 16, littleEndian);
+
+  if (degrees === null || minutes === null || seconds === null) return null;
+
+  return degrees + minutes / 60 + seconds / 3600;
+};
+
+const findExifEntryOffset = (
+  view: DataView,
+  ifdOffset: number,
+  targetTag: number,
+  littleEndian: boolean
+) => {
+  if (ifdOffset < 0 || ifdOffset + 2 > view.byteLength) return null;
+
+  const entryCount = view.getUint16(ifdOffset, littleEndian);
+  const entriesStart = ifdOffset + 2;
+
+  for (let index = 0; index < entryCount; index += 1) {
+    const entryOffset = entriesStart + index * 12;
+    if (entryOffset + 12 > view.byteLength) return null;
+
+    if (view.getUint16(entryOffset, littleEndian) === targetTag) {
+      return entryOffset;
+    }
+  }
+
+  return null;
+};
+
+const extractGpsCoordinatesFromExifView = (view: DataView, tiffStart: number): CapturedCoordinates | null => {
+  const byteOrder = String.fromCharCode(view.getUint8(tiffStart), view.getUint8(tiffStart + 1));
+  const littleEndian = byteOrder === 'II';
+  if (!littleEndian && byteOrder !== 'MM') return null;
+  if (view.getUint16(tiffStart + 2, littleEndian) !== 42) return null;
+
+  const firstIfdOffset = tiffStart + view.getUint32(tiffStart + 4, littleEndian);
+  const gpsIfdEntryOffset = findExifEntryOffset(view, firstIfdOffset, 0x8825, littleEndian);
+  if (gpsIfdEntryOffset === null) return null;
+
+  const gpsIfdOffset = tiffStart + view.getUint32(gpsIfdEntryOffset + 8, littleEndian);
+  const latitudeRefEntry = findExifEntryOffset(view, gpsIfdOffset, 0x0001, littleEndian);
+  const latitudeEntry = findExifEntryOffset(view, gpsIfdOffset, 0x0002, littleEndian);
+  const longitudeRefEntry = findExifEntryOffset(view, gpsIfdOffset, 0x0003, littleEndian);
+  const longitudeEntry = findExifEntryOffset(view, gpsIfdOffset, 0x0004, littleEndian);
+
+  if (
+    latitudeRefEntry === null ||
+    latitudeEntry === null ||
+    longitudeRefEntry === null ||
+    longitudeEntry === null
+  ) {
+    return null;
+  }
+
+  const latitudeRef = readExifAscii(view, tiffStart, latitudeRefEntry, 2, littleEndian);
+  const longitudeRef = readExifAscii(view, tiffStart, longitudeRefEntry, 2, littleEndian);
+  const latitude = readGpsCoordinate(view, tiffStart, latitudeEntry, littleEndian);
+  const longitude = readGpsCoordinate(view, tiffStart, longitudeEntry, littleEndian);
+
+  if (latitude === null || longitude === null) return null;
+
+  return {
+    latitude: latitudeRef === 'S' ? -latitude : latitude,
+    longitude: longitudeRef === 'W' ? -longitude : longitude,
+  };
+};
+
+const extractGpsCoordinatesFromImageFile = async (file: File): Promise<CapturedCoordinates | null> => {
+  if (!file.type.includes('jpeg') && !file.name.toLowerCase().match(/\.(jpe?g)$/)) return null;
+
+  const view = new DataView(await file.arrayBuffer());
+  if (view.byteLength < 4 || view.getUint16(0) !== 0xffd8) return null;
+
+  let offset = 2;
+  while (offset + 4 <= view.byteLength) {
+    if (view.getUint8(offset) !== 0xff) return null;
+
+    const marker = view.getUint8(offset + 1);
+    const segmentLength = view.getUint16(offset + 2);
+    const segmentStart = offset + 4;
+    const segmentEnd = offset + 2 + segmentLength;
+    if (segmentEnd > view.byteLength) return null;
+
+    const isExifSegment =
+      marker === 0xe1 &&
+      segmentLength >= 8 &&
+      String.fromCharCode(
+        view.getUint8(segmentStart),
+        view.getUint8(segmentStart + 1),
+        view.getUint8(segmentStart + 2),
+        view.getUint8(segmentStart + 3)
+      ) === 'Exif';
+
+    if (isExifSegment) {
+      return extractGpsCoordinatesFromExifView(view, segmentStart + 6);
+    }
+
+    offset = segmentEnd;
+  }
+
+  return null;
+};
+
 const getWildAnimalShareCopy = (target: WildAnimalShareTarget) => {
   if (target === 'wechat') {
     return {
@@ -384,6 +538,9 @@ export default function MarkPlace() {
   const [locationName, setLocationName] = useState<string>(() =>
     hasInitialPickedPlace ? `已选：${initialPlaceName}` : ''
   );
+  const [locationCaptureStatus, setLocationCaptureStatus] = useState<LocationCaptureStatus>(() =>
+    hasInitialPickedPlace ? 'ready' : 'pending'
+  );
   const [center, setCenter] = useState(initialCenter);
   const [mapDefaultCenter, setMapDefaultCenter] = useState(initialCenter);
   const [pickedPlaceName, setPickedPlaceName] = useState(initialPlaceName);
@@ -412,7 +569,6 @@ export default function MarkPlace() {
   const [selectedCat, setSelectedCat] = useState<Category | ''>('');
   const [selectedInputCategoryId, setSelectedInputCategoryId] = useState<string>('');
   const [selectedEasterIconId, setSelectedEasterIconId] = useState(DEFAULT_CMI_EASTER_ICON_ID);
-  const [easterIconQuery, setEasterIconQuery] = useState('');
   const [selectedEventId, setSelectedEventId] = useState(initialEventId);
   const [eventOptions, setEventOptions] = useState<CmiEvent[]>(() => {
     const initialEvent = getCmiEventById(initialEventId);
@@ -426,7 +582,6 @@ export default function MarkPlace() {
   const [isLoadingExternalPlaces, setIsLoadingExternalPlaces] = useState(false);
   const [externalPlaceSearchError, setExternalPlaceSearchError] = useState<string | null>(null);
   const inputCategoryOptions = getCmiInputCategoryOptions();
-  const selectedEasterIcon = getCmiEasterIconById(selectedEasterIconId);
   const selectedEvent = selectedEventId
     ? eventOptions.find(event => event.id === selectedEventId) ?? getCmiEventById(selectedEventId)
     : null;
@@ -434,24 +589,8 @@ export default function MarkPlace() {
   const selectedPlaceLabel = pickedPlaceName;
   const animalCandidates = animalIdentification?.candidates ?? [];
   const selectedAnimalCandidate = animalCandidates.find(candidate => candidate.id === selectedAnimalCandidateId) ?? animalCandidates[0];
-  const publishCategoryOptions = useMemo(() => {
-    const priorityCategoryIds = new Set(['cmi-inn', 'easter']);
-    const priorityOptions = inputCategoryOptions.filter(option => priorityCategoryIds.has(option.id));
-    const regularOptions = inputCategoryOptions.filter(option => !priorityCategoryIds.has(option.id));
-    return [...priorityOptions, ...regularOptions];
-  }, [inputCategoryOptions]);
   const debouncedPlaceSearchQuery = useDebounce(placeSearchQuery, 480);
   const cameraDateLabel = `${new Date().getMonth() + 1} / ${new Date().getDate()}`;
-  const filteredEasterIcons = useMemo(() => {
-    const query = easterIconQuery.trim().toLocaleLowerCase();
-    if (!query) return CMI_EASTER_ICON_OPTIONS;
-
-    return CMI_EASTER_ICON_OPTIONS.filter(icon =>
-      icon.id.includes(query) ||
-      icon.slug.includes(query) ||
-      icon.label.toLocaleLowerCase().includes(query)
-    );
-  }, [easterIconQuery]);
   const trimmedPlaceSearchQuery = placeSearchQuery.trim();
   const searchedPlaceCandidates = useMemo(
     () => searchEventPlaceCandidates(placeCandidates, placeSearchQuery, trimmedPlaceSearchQuery ? 5 : 3),
@@ -483,13 +622,10 @@ export default function MarkPlace() {
   const cameraPinchRef = useRef<CameraPinchState | null>(null);
   const cameraZoomFeedbackTimeoutRef = useRef<number | null>(null);
   const isPhotoDoneStage = stage === 'done' && Boolean(photoURL);
-  const isPublishPreparationStage = stage === 'category' && Boolean(photoURL);
   const isMapFallbackStage = stage === 'map_fallback';
-  const photoAreaHeight = isPublishPreparationStage
-    ? 'clamp(10.5rem, 28dvh, 13rem)'
-    : isPhotoDoneStage
-      ? 'min(100vw, calc(100dvh - 13.5rem))'
-      : 'min(100vw, 55dvh)';
+  const photoAreaHeight = isPhotoDoneStage
+    ? 'min(100vw, calc(100dvh - 13.5rem))'
+    : 'min(100vw, 55dvh)';
   const voiceButtonDisabled = !speechSupported || speechPermission === 'checking';
   const cameraButtonDisabled = cameraStatus !== 'ready';
   const cameraDigitalZoom = cameraZoomRange.isHardwareSupported ? 1 : cameraZoom;
@@ -964,27 +1100,41 @@ export default function MarkPlace() {
     }
   }, [authLoading, user, navigate]);
 
+  const applyCapturedCoordinates = (coordinates: CapturedCoordinates, label: string) => {
+    const nextCenter = {
+      lat: coordinates.latitude,
+      lng: coordinates.longitude,
+    };
+    setCenter(nextCenter);
+    setMapDefaultCenter(nextCenter);
+    setLocationName(label);
+    setLocationCaptureStatus('ready');
+  };
+
+  const markLocationCaptureFailed = (label: string) => {
+    setLocationName(label);
+    setLocationCaptureStatus('failed');
+  };
+
   // 获取地理位置
   const fetchCurrentLocation = () => {
+    setLocationCaptureStatus('pending');
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const nextCenter = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
-          setCenter(nextCenter);
-          setMapDefaultCenter(nextCenter);
-          setLocationName('实时坐标 (GPS)');
+          applyCapturedCoordinates({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          }, '拍摄坐标 (GPS)');
         },
         (error) => {
           console.error("GPS 获取失败", error);
-          setLocationName('未知坐标 (定位失败)');
+          markLocationCaptureFailed('定位失败，发布前需手动定点');
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     } else {
-      setLocationName('浏览器不支持定位');
+      markLocationCaptureFailed('浏览器不支持定位，发布前需手动定点');
     }
   };
 
@@ -993,6 +1143,13 @@ export default function MarkPlace() {
     const sourceFile = e.target.files?.[0];
     if (sourceFile) {
       e.target.value = '';
+      setLocationCaptureStatus('pending');
+      const exifCoordinates = source === 'exif'
+        ? await extractGpsCoordinatesFromImageFile(sourceFile).catch((error) => {
+          console.warn('照片 EXIF 坐标读取失败:', error);
+          return null;
+        })
+        : null;
       const file = await normalizeImageFile(sourceFile).catch((error) => {
         console.error('照片方向修正失败，使用原图继续:', error);
         return sourceFile;
@@ -1006,8 +1163,10 @@ export default function MarkPlace() {
       
       if (source === 'live') {
         fetchCurrentLocation();
+      } else if (exifCoordinates) {
+        applyCapturedCoordinates(exifCoordinates, '照片坐标 (EXIF)');
       } else {
-        setLocationName('相册照片 (默认坐标)');
+        markLocationCaptureFailed('照片没有定位，发布前需手动定点');
       }
 
       setTimeout(() => {
@@ -1031,6 +1190,7 @@ export default function MarkPlace() {
     setIsListening(false);
     speechStartingRef.current = false;
     setLocationName('手动选点');
+    setLocationCaptureStatus('failed');
     setPickedPlaceName('');
     setPlaceSearchQuery('');
     setStage('map_fallback');
@@ -1045,6 +1205,7 @@ export default function MarkPlace() {
     setPickedPlaceName(candidate.placeName);
     setPlaceSearchQuery(candidate.placeName);
     setLocationName(`已选：${candidate.placeName}`);
+    setLocationCaptureStatus('ready');
     setCenter(nextCenter);
     setMapDefaultCenter(nextCenter);
 
@@ -1058,23 +1219,7 @@ export default function MarkPlace() {
     if (pickedPlaceName && pickedPlaceName !== value.trim()) {
       setPickedPlaceName('');
       setLocationName('手动选点');
-    }
-  };
-
-  const handleCategoryOptionSelect = (option: (typeof inputCategoryOptions)[number]) => {
-    setSelectedInputCategoryId(option.id);
-    setSelectedCat(option.storedCategory);
-
-    if (option.storedCategory === CMI_INN_CATEGORY) {
-      const nextCenter = {
-        lat: CMI_INN_COORDINATES.latitude,
-        lng: CMI_INN_COORDINATES.longitude,
-      };
-      setPickedPlaceName(CMI_INN_PLACE_NAME);
-      setPlaceSearchQuery(CMI_INN_PLACE_NAME);
-      setLocationName(`已选：${CMI_INN_PLACE_NAME}`);
-      setCenter(nextCenter);
-      setMapDefaultCenter(nextCenter);
+      setLocationCaptureStatus('failed');
     }
   };
 
@@ -1100,6 +1245,32 @@ export default function MarkPlace() {
     }
     if (candidate.iconId) setSelectedEasterIconId(candidate.iconId);
     setDescription(current => current.trim() || buildAnimalCandidateDescription(candidate));
+  };
+
+  const getAutomaticPublishCategory = (): Category => {
+    if (selectedCat) return selectedCat;
+    if (isWildAnimalCheckin) return '彩蛋';
+    if (pickedPlaceName.trim() === CMI_INN_PLACE_NAME || (selectedEvent && isCmiInnEvent(selectedEvent))) {
+      return CMI_INN_CATEGORY;
+    }
+
+    return DEFAULT_MARK_PLACE_CATEGORY;
+  };
+
+  const handleVoiceConfirm = () => {
+    if (!description.trim() || isListening || uploading) return;
+
+    if (locationCaptureStatus === 'pending' && photoURL) {
+      toast('正在获取定位，稍等一下');
+      return;
+    }
+
+    if (locationCaptureStatus === 'failed') {
+      setStage('map_fallback');
+      return;
+    }
+
+    void handleSubmitFinal(getAutomaticPublishCategory());
   };
 
   // 2. 定位分析动画
@@ -1230,7 +1401,7 @@ export default function MarkPlace() {
         if (imageUrls.length === 0) {
           toast.error('相片冲洗失败，请重写！');
           setUploading(false);
-          setStage('category');
+          setStage('voice');
           return;
         }
       }
@@ -1248,17 +1419,8 @@ export default function MarkPlace() {
 
         if (normalizedPickedPlaceName) {
           placeName = normalizedPickedPlaceName;
-          reason = text;
         } else {
-          const punctuationIndex = text.search(/[，。！？、,\.!?\n]/);
-
-          if (punctuationIndex > 0 && punctuationIndex < 30) {
-            placeName = text.substring(0, punctuationIndex);
-            reason = text.substring(punctuationIndex + 1).trim() || text;
-          } else {
-            placeName = text.substring(0, Math.min(30, text.length));
-            reason = text;
-          }
+          placeName = formatCoordinatePlaceName(targetCoordinates);
         }
       }
 
@@ -1332,7 +1494,7 @@ export default function MarkPlace() {
     } catch (error) {
       console.error(error);
       toast.error('这条痕迹没有留下来，请再试一次');
-      setStage('category');
+      setStage('voice');
     } finally {
       setUploading(false);
     }
@@ -1340,10 +1502,16 @@ export default function MarkPlace() {
 
   const handleMapConfirm = () => {
     if (!pickedPlaceName.trim()) {
-      setLocationName(`地图选点 · ${center.lat.toFixed(5)}, ${center.lng.toFixed(5)}`);
+      setLocationName(`地图坐标 · ${center.lat.toFixed(5)}, ${center.lng.toFixed(5)}`);
     }
 
-    setStage(description.trim() ? 'category' : 'voice');
+    setLocationCaptureStatus('ready');
+    if (description.trim()) {
+      void handleSubmitFinal(getAutomaticPublishCategory());
+      return;
+    }
+
+    setStage('voice');
   };
 
   if (authLoading || !user) {
@@ -1556,8 +1724,13 @@ export default function MarkPlace() {
                     {locationName || '...'}
                   </span>
                 </div>
-                <button onClick={() => setStage('map_fallback')} className="shrink-0 p-1.5 rounded-full text-white/60 hover:text-white hover:bg-white/20 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+                <button
+                  type="button"
+                  onClick={() => setStage('map_fallback')}
+                  aria-label="修改位置"
+                  className="shrink-0 rounded-full bg-white/15 px-2.5 py-1.5 text-xs font-black text-white/80 transition-colors hover:bg-white/20 hover:text-white"
+                >
+                  位置不对？修改
                 </button>
               </div>
 
@@ -1572,9 +1745,7 @@ export default function MarkPlace() {
           <div className={
             isMapFallbackStage
               ? 'relative flex-1 overflow-hidden bg-stone-50'
-              : stage === 'category'
-                ? 'min-h-0 flex-1 flex flex-col items-center bg-stone-50 px-6 pb-safe relative overflow-hidden overscroll-none'
-                : `min-h-0 flex-1 flex flex-col items-center px-6 pb-safe bg-stone-50 relative overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] ${isPhotoDoneStage ? 'justify-start pt-4' : 'justify-center'}`
+              : `min-h-0 flex-1 flex flex-col items-center px-6 pb-safe bg-stone-50 relative overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] ${isPhotoDoneStage ? 'justify-start pt-4' : 'justify-center'}`
           }>
             {!photoURL && stage === 'done' && (
               <div className="flex flex-col items-center justify-center gap-4 text-center">
@@ -1815,201 +1986,12 @@ export default function MarkPlace() {
                     )}
                   </button>
                   <button
-                    onClick={() => setStage(selectedPlaceLabel ? 'category' : 'map_fallback')}
+                    onClick={handleVoiceConfirm}
                     disabled={!description.trim() || isListening}
                     className="w-16 h-16 rounded-full bg-white text-primary flex items-center justify-center shadow-md transition-all hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-300 disabled:shadow-sm disabled:hover:scale-100"
-                    aria-label={selectedPlaceLabel ? '进入分类发布' : '先关联地点'}
+                    aria-label={locationCaptureStatus === 'failed' ? '去手动定点' : '发布动态'}
                   >
                     <Check className="w-7 h-7" strokeWidth={3} />
-                  </button>
-                </div>
-              </div>
-            )}
-
-                {stage === 'category' && (
-                  <div className="flex min-h-0 w-full flex-1 flex-col items-center animate-in slide-in-from-bottom-10 fade-in">
-                    <div className="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain pb-4 pt-4 [-webkit-overflow-scrolling:touch]">
-                      <div className="flex w-full flex-col items-center gap-3">
-                        <div className="w-full max-w-sm rounded-3xl border border-stone-200 bg-white/90 p-3 shadow-sm">
-                      <div className="mb-2 flex items-start justify-between gap-3 text-left">
-                      <div>
-                        <p className="text-sm font-black text-stone-800">选择发布标签</p>
-                        <p className="mt-0.5 text-xs font-semibold leading-relaxed text-stone-500">
-                          清迈客栈、彩蛋和普通地点动态都在这里选。
-                        </p>
-                      </div>
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={2.8} />
-                    </div>
-                    <div className="flex flex-wrap gap-2.5">
-                      {publishCategoryOptions.map((option) => (
-                        <button
-                          key={option.id}
-                          type="button"
-                          onClick={() => handleCategoryOptionSelect(option)}
-                          disabled={uploading}
-                          title={option.description}
-                          className={`flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-black shadow-sm transition-all disabled:opacity-50 ${
-                            selectedInputCategoryId === option.id
-                              ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20'
-                              : 'border-stone-200 bg-white text-stone-700 hover:border-primary/40 active:scale-95'
-                          }`}
-                        >
-                          {option.storedCategory === '彩蛋' ? (
-                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#ffe06f] p-0.5 shadow-[inset_0_0_0_2px_rgba(255,255,255,0.7),0_3px_8px_rgba(136,101,17,0.14)]">
-                              <img src={selectedEasterIcon.url} alt="" className="h-6 w-6 object-contain" />
-                            </span>
-                          ) : option.storedCategory === CMI_INN_CATEGORY ? (
-                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white p-0.5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08),0_3px_8px_rgba(0,0,0,0.12)]">
-                              <img src={option.iconUrl ?? getCategoryIconUrl(option.storedCategory)} alt="" className="h-full w-full object-contain" />
-                            </span>
-                          ) : (
-                            <img src={option.iconUrl ?? getCategoryIconUrl(option.storedCategory)} alt="" className="h-5 w-5 object-contain" />
-                          )}
-                          <span>{option.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  {(isLoadingEventOptions || eventOptions.length > 0 || selectedEvent) && (
-                    <div className="mt-2 w-full max-w-sm rounded-3xl border border-stone-200 bg-white/85 p-3 shadow-sm">
-                      <div className="mb-2 flex items-start justify-between gap-3 text-left">
-                        <div>
-                          <p className="text-sm font-black text-stone-800">关联活动（可不选）</p>
-                          <p className="mt-0.5 text-xs font-semibold leading-relaxed text-stone-500">
-                            返图、现场照可以挂到一场活动下面。
-                          </p>
-                        </div>
-                        <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={2.8} />
-                      </div>
-                      {isLoadingEventOptions && eventOptions.length === 0 ? (
-                        <div className="flex items-center gap-2 rounded-2xl bg-stone-50 px-3 py-2 text-xs font-bold text-stone-500">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                          正在加载近期活动
-                        </div>
-                      ) : (
-                        <div className="-mx-1 flex gap-2 overflow-x-auto overscroll-x-contain px-1 pb-1 [-webkit-overflow-scrolling:touch]">
-                          {eventOptions.map(event => {
-                            const isSelectedEvent = selectedEventId === event.id;
-
-                            return (
-                              <button
-                                key={event.id}
-                                type="button"
-                                onClick={() => setSelectedEventId(isSelectedEvent ? '' : event.id)}
-                                disabled={uploading}
-                                aria-pressed={isSelectedEvent}
-                                className={`grid min-w-[156px] max-w-[170px] grid-cols-[44px_minmax(0,1fr)] items-center gap-2 rounded-2xl border p-2 text-left transition-all active:scale-[0.98] disabled:opacity-50 ${
-                                  isSelectedEvent
-                                    ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
-                                    : 'border-stone-200 bg-stone-50 hover:border-primary/40'
-                                }`}
-                              >
-                                <img
-                                  src={getCmiEventCardImageUrl(event)}
-                                  alt=""
-                                  className="h-11 w-11 rounded-xl object-cover shadow-sm"
-                                />
-                                <span className="min-w-0">
-                                  <span className="block truncate text-[10px] font-black text-primary/80">
-                                    {formatCmiEventTime(event)}
-                                  </span>
-                                  <strong className="mt-0.5 block line-clamp-2 text-xs font-black leading-tight text-stone-800">
-                                    {event.title}
-                                  </strong>
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                      <div className="mt-2 flex items-center justify-between gap-2 text-xs font-bold text-stone-500">
-                        <span className="min-w-0 truncate">
-                          {selectedEvent ? `已关联：${selectedEvent.title}` : '不关联活动也可以直接发布。'}
-                        </span>
-                        {selectedEvent && (
-                          <button
-                            type="button"
-                            onClick={() => setSelectedEventId('')}
-                            disabled={uploading}
-                            className="shrink-0 rounded-full bg-stone-100 px-3 py-1 text-stone-600 active:scale-95 disabled:opacity-50"
-                          >
-                            不关联
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {selectedCat === '彩蛋' && (
-                    <div className="mt-2 w-full max-w-sm rounded-3xl border border-primary/25 bg-primary/5 p-3 shadow-inner animate-in slide-in-from-top-2 fade-in">
-                      <div className="mb-2 flex items-start justify-between gap-3 text-left">
-                        <div>
-                          <p className="text-sm font-black text-foreground">选择一个彩蛋图标</p>
-                          <p className="mt-0.5 text-xs font-semibold text-muted-foreground">50 个都可以用，选一个最像这条记忆的。</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const nextIcon = CMI_EASTER_ICON_OPTIONS[Math.floor(Math.random() * CMI_EASTER_ICON_OPTIONS.length)];
-                            setSelectedEasterIconId(nextIcon.id);
-                          }}
-                          disabled={uploading}
-                          className="flex h-9 shrink-0 items-center gap-1 rounded-2xl border border-border bg-background px-3 text-xs font-black text-primary shadow-sm active:scale-95 disabled:opacity-50"
-                        >
-                          <Shuffle className="h-3.5 w-3.5" strokeWidth={2.8} />
-                          随机
-                        </button>
-                      </div>
-                      <input
-                        value={easterIconQuery}
-                        onChange={(event) => setEasterIconQuery(event.target.value)}
-                        disabled={uploading}
-                        placeholder="搜猫、花、雨伞、纸飞机"
-                        className="mb-2 h-10 w-full rounded-2xl border border-border bg-background px-3 text-sm font-semibold outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-50"
-                      />
-                      <div className="max-h-52 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
-                        <div className="grid grid-cols-5 gap-2">
-                          {filteredEasterIcons.map((icon) => (
-                            <button
-                              key={icon.id}
-                              type="button"
-                              onClick={() => setSelectedEasterIconId(icon.id)}
-                              disabled={uploading}
-                              title={icon.label}
-                              aria-label={`选择彩蛋图标：${icon.label}`}
-                              className={`relative flex h-12 items-center justify-center rounded-2xl border transition-all active:scale-95 disabled:opacity-50 ${
-                                selectedEasterIconId === icon.id
-                                  ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
-                                  : 'border-transparent bg-background hover:border-border'
-                              }`}
-                            >
-                              <img src={icon.url} alt="" className="h-8 w-8 object-contain drop-shadow-sm" />
-                              {selectedEasterIconId === icon.id && (
-                                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary" />
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="mt-3 flex items-center gap-2 rounded-2xl bg-background px-3 py-2 text-xs font-bold text-muted-foreground">
-                        <img src={selectedEasterIcon.url} alt="" className="h-7 w-7 object-contain" />
-                        <span>已选：{selectedEasterIcon.label}。地图上会显示这个小图标。</span>
-                      </div>
-                    </div>
-                  )}
-                  </div>
-                </div>
-                <div className="-mx-6 w-[calc(100%+3rem)] shrink-0 bg-gradient-to-t from-stone-50 via-stone-50/95 to-transparent px-6 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (selectedCat) void handleSubmitFinal(selectedCat);
-                    }}
-                    disabled={!selectedCat || uploading}
-                    aria-label={selectedCat ? '发布动态' : '先选择发布标签'}
-                    className="mx-auto flex h-14 w-full max-w-sm items-center justify-center gap-2 rounded-full bg-primary px-5 text-base font-black text-white shadow-lg shadow-primary/25 transition active:scale-95 disabled:bg-stone-300 disabled:shadow-none"
-                  >
-                    {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
-                    <span>{uploading ? '正在发布...' : selectedCat ? '发布' : '先选标签'}</span>
                   </button>
                 </div>
               </div>

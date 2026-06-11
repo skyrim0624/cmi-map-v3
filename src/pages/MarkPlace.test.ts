@@ -8,8 +8,10 @@ const cmiMapPrototypeCssSource = readFileSync(new URL('./cmi-map-v3-prototype.cs
 const leafletMapSource = readFileSync(new URL('../components/map/LeafletMap.tsx', import.meta.url), 'utf8');
 const playgroundMarkPlaceSource = readFileSync(new URL('./PlaygroundMarkPlace.tsx', import.meta.url), 'utf8');
 
-test('相册旧照先写体验，不直接跳到手动拖地图', () => {
-  assert.match(source, /相册旧照不再先逼用户拖地图/);
+test('相册旧照优先使用 EXIF 坐标，读不到才手动定点', () => {
+  assert.match(source, /extractGpsCoordinatesFromImageFile\(sourceFile\)/);
+  assert.match(source, /applyCapturedCoordinates\(exifCoordinates, '照片坐标 \(EXIF\)'\)/);
+  assert.match(source, /markLocationCaptureFailed\('照片没有定位，发布前需手动定点'\)/);
   assert.match(source, /const timer2 = setTimeout\(\(\) => \{\s+setStage\('voice'\);/);
   assert.doesNotMatch(source, /sourceType === 'exif' \? 'map_fallback' : 'voice'/);
 });
@@ -131,24 +133,31 @@ test('发布完成反馈使用鼓励徽章而不是红色罚单感大章', () =>
 
 test('发布不再强制进入标签选择页', () => {
   assert.match(source, /const DEFAULT_MARK_PLACE_CATEGORY: Category = '景点'/);
+  assert.match(source, /const getAutomaticPublishCategory = \(\): Category => \{/);
   assert.match(source, /const handleVoiceConfirm = \(\) => \{/);
-  assert.match(source, /void handleSubmitFinal\(selectedCat \|\| DEFAULT_MARK_PLACE_CATEGORY\)/);
+  assert.match(source, /void handleSubmitFinal\(getAutomaticPublishCategory\(\)\)/);
   assert.doesNotMatch(source, /type Stage = 'camera' \| 'analyzing' \| 'voice' \| 'category'/);
   assert.doesNotMatch(source, /stage === 'category'/);
   assert.doesNotMatch(source, /选择发布标签/);
   assert.doesNotMatch(source, /清迈客栈、彩蛋和普通地点动态都在这里选。/);
   assert.doesNotMatch(source, /先选标签/);
+  assert.doesNotMatch(source, /getCmiEasterIconById/);
+  assert.doesNotMatch(source, /CMI_EASTER_ICON_OPTIONS/);
+  assert.doesNotMatch(source, /getCategoryIconUrl/);
 });
 
 test('拍照定位成功后直接用坐标发布，手动选点只作为修改入口', () => {
   assert.match(source, /type LocationCaptureStatus = 'pending' \| 'ready' \| 'failed'/);
+  assert.match(source, /formatCoordinatePlaceName\(targetCoordinates\)/);
   assert.match(source, /setLocationCaptureStatus\('ready'\)/);
   assert.match(source, /setLocationCaptureStatus\('failed'\)/);
   assert.match(source, /if \(locationCaptureStatus === 'failed'\) \{/);
   assert.match(source, /setStage\('map_fallback'\)/);
-  assert.match(source, /void handleSubmitFinal\(selectedCat \|\| DEFAULT_MARK_PLACE_CATEGORY\)/);
+  assert.match(source, /void handleSubmitFinal\(getAutomaticPublishCategory\(\)\)/);
   assert.match(source, /aria-label="修改位置"/);
   assert.match(source, /位置不对？修改/);
+  assert.doesNotMatch(source, /punctuationIndex/);
+  assert.doesNotMatch(source, /text\.substring\(0, Math\.min\(30, text\.length\)\)/);
   assert.doesNotMatch(source, /aria-label=\{selectedPlaceLabel \? '进入分类发布' : '先关联地点'\}/);
   assert.doesNotMatch(source, /setStage\(selectedPlaceLabel \? 'category' : 'map_fallback'\)/);
 });
