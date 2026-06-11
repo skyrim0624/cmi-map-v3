@@ -55,6 +55,12 @@ test('已有物种级结果走快速路径', () => {
   assert.match(source, /bestSpeciesLevelCandidate\(coarseCandidates\)/);
 });
 
+test('专业模型物种级结果优先展示', () => {
+  assert.match(source, /const prioritizeSpeciesCandidate = \(speciesCandidate: AnimalCandidate, coarseCandidates: AnimalCandidate\[\]\)/);
+  assert.match(source, /speciesCandidate,\s+\.\.\.mergedCandidates\.filter\(candidate => candidate\.id !== speciesCandidate\.id\)/);
+  assert.match(source, /prioritizeSpeciesCandidate\(speciesCandidate, coarseCandidates\)/);
+});
+
 test('动物检测过滤过小主体框并避免关键词误伤', () => {
   assert.match(source, /const MIN_DETECTION_BOX_AREA_RATIO = 0\.015/);
   assert.match(source, /const MIN_DETECTION_BOX_SHORT_SIDE = 72/);

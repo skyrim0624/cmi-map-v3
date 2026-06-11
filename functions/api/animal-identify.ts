@@ -364,6 +364,14 @@ const uniqueCandidates = (candidates: AnimalCandidate[]) => {
   return [...bestById.values()].sort((left, right) => right.score - left.score).slice(0, 3);
 };
 
+const prioritizeSpeciesCandidate = (speciesCandidate: AnimalCandidate, coarseCandidates: AnimalCandidate[]) => {
+  const mergedCandidates = uniqueCandidates([speciesCandidate, ...coarseCandidates]);
+  return [
+    speciesCandidate,
+    ...mergedCandidates.filter(candidate => candidate.id !== speciesCandidate.id),
+  ].slice(0, 3);
+};
+
 const disagreementOverridePairs = new Set(['cat:dog', 'dog:cat']);
 
 // NOTE: DETR 偶尔会把小型犬识别成猫；只有分类模型给出明确猫狗反向证据时才纠偏。
@@ -876,7 +884,7 @@ export const onRequestPost = async ({ request, env }: PagesContext) => {
     : { candidate: bestSpeciesLevelCandidate(coarseCandidates) ?? null };
   const speciesCandidate = speciesResult.candidate;
   const candidates = speciesCandidate
-    ? uniqueCandidates([speciesCandidate, ...coarseCandidates])
+    ? prioritizeSpeciesCandidate(speciesCandidate, coarseCandidates)
     : coarseCandidates;
   const providerModels = [
     ...(detectionResult.detectionAvailable ? [DETECTION_MODEL_ID] : []),

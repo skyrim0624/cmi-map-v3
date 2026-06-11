@@ -11,6 +11,12 @@ if [ ! -d .venv ]; then
   exit 1
 fi
 
+if [ -f .env.local ]; then
+  set -a
+  source .env.local
+  set +a
+fi
+
 source .venv/bin/activate
 
 export SPECIES_MODEL_TOKEN="${SPECIES_MODEL_TOKEN:-dev-token}"
@@ -19,6 +25,5 @@ export BIOCLIP_FALLBACK_MODE="${BIOCLIP_FALLBACK_MODE:-never}"
 export BIOCLIP_PRELOAD="${BIOCLIP_PRELOAD:-1}"
 
 echo "物种模型服务启动中：http://127.0.0.1:$PORT"
-echo "本地测试 token：$SPECIES_MODEL_TOKEN"
 
 exec uvicorn cmi_species_model.app:app --host 0.0.0.0 --port "$PORT"
