@@ -100,9 +100,14 @@ test('神奇动物打卡会调用动物识别并预选彩蛋', () => {
   assert.match(source, /createCmiWildAnimalShareCard/);
   assert.match(source, /setWildAnimalShareCard\(shareCard\)/);
   assert.match(source, /分享图鉴卡/);
-  assert.match(source, /保存图片/);
+  assert.match(source, /保存到相册/);
   assert.match(source, /小红书/);
-  assert.doesNotMatch(source, /shareOrDownloadCmiWildAnimalShareCard/);
+  assert.match(source, /shareWildAnimalCardWithSystem/);
+  assert.match(source, /new File\(\[card\.blob\], card\.fileName/);
+  assert.match(source, /navigatorWithFileShare\.share/);
+  assert.match(source, /navigatorWithFileShare\.canShare/);
+  assert.match(source, /wild-magnifier-checkin\.png/);
+  assert.doesNotMatch(source, /downloadCmiWildAnimalShareCard\(wildAnimalShareCard\)/);
   assert.match(source, /识别动物/);
   assert.match(source, /动物识别/);
   assert.match(source, /正在识别动物主体。/);
@@ -120,18 +125,26 @@ test('发布完成反馈使用鼓励徽章而不是红色罚单感大章', () =>
   assert.doesNotMatch(source, /#da2222/);
 });
 
-test('发布前分类页独立滚动并保留特殊标签和发布按钮', () => {
-  assert.match(source, /const priorityCategoryIds = new Set\(\['cmi-inn', 'easter'\]\)/);
-  assert.match(source, /const isPublishPreparationStage = stage === 'category' && Boolean\(photoURL\)/);
-  assert.match(source, /clamp\(10\.5rem, 28dvh, 13rem\)/);
-  assert.match(source, /清迈客栈、彩蛋和普通地点动态都在这里选。/);
-  assert.match(source, /routeRootRef\.current\?\.closest\('main'\)/);
-  assert.match(source, /scrollContainer\.style\.overflowY = 'hidden'/);
-  assert.match(source, /overflow-y-auto overscroll-contain pb-4 pt-4 \[-webkit-overflow-scrolling:touch\]/);
-  assert.match(source, /shrink-0 bg-gradient-to-t from-stone-50/);
-  assert.match(source, /mx-auto flex h-14 w-full max-w-sm/);
-  assert.match(source, /uploading \? '正在发布\.\.\.' : selectedCat \? '发布' : '先选标签'/);
-  assert.doesNotMatch(source, /publishSummaryLabel/);
-  assert.doesNotMatch(source, /publishSummaryDetail/);
-  assert.doesNotMatch(source, /publishButtonLabel/);
+test('发布不再强制进入标签选择页', () => {
+  assert.match(source, /const DEFAULT_MARK_PLACE_CATEGORY: Category = '景点'/);
+  assert.match(source, /const handleVoiceConfirm = \(\) => \{/);
+  assert.match(source, /void handleSubmitFinal\(selectedCat \|\| DEFAULT_MARK_PLACE_CATEGORY\)/);
+  assert.doesNotMatch(source, /type Stage = 'camera' \| 'analyzing' \| 'voice' \| 'category'/);
+  assert.doesNotMatch(source, /stage === 'category'/);
+  assert.doesNotMatch(source, /选择发布标签/);
+  assert.doesNotMatch(source, /清迈客栈、彩蛋和普通地点动态都在这里选。/);
+  assert.doesNotMatch(source, /先选标签/);
+});
+
+test('拍照定位成功后直接用坐标发布，手动选点只作为修改入口', () => {
+  assert.match(source, /type LocationCaptureStatus = 'pending' \| 'ready' \| 'failed'/);
+  assert.match(source, /setLocationCaptureStatus\('ready'\)/);
+  assert.match(source, /setLocationCaptureStatus\('failed'\)/);
+  assert.match(source, /if \(locationCaptureStatus === 'failed'\) \{/);
+  assert.match(source, /setStage\('map_fallback'\)/);
+  assert.match(source, /void handleSubmitFinal\(selectedCat \|\| DEFAULT_MARK_PLACE_CATEGORY\)/);
+  assert.match(source, /aria-label="修改位置"/);
+  assert.match(source, /位置不对？修改/);
+  assert.doesNotMatch(source, /aria-label=\{selectedPlaceLabel \? '进入分类发布' : '先关联地点'\}/);
+  assert.doesNotMatch(source, /setStage\(selectedPlaceLabel \? 'category' : 'map_fallback'\)/);
 });

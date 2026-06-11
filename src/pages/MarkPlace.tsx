@@ -1,4 +1,4 @@
-import { ArrowLeft, Calendar, Check, Image as ImageIcon, Loader2, MapPin, Mic, MicOff, PawPrint, PencilLine, Search, Shuffle, ThumbsUp, X } from 'lucide-react';
+import { ArrowLeft, Check, Image as ImageIcon, Loader2, MapPin, Mic, MicOff, PawPrint, PencilLine, Search, Send, Share2, ThumbsUp, X } from 'lucide-react';
 import { type TouchEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -37,12 +37,9 @@ import { useDebounce } from '@/hooks/use-debounce';
 import {
   type CmiWildAnimalShareCardResult,
   createCmiWildAnimalShareCard,
-  downloadCmiWildAnimalShareCard,
 } from '@/lib/cmi-wild-animal-share-card';
 import {
-  CMI_EASTER_ICON_OPTIONS,
   DEFAULT_CMI_EASTER_ICON_ID,
-  getCmiEasterIconById,
 } from '@/lib/easter-icons';
 import { getCmiFeedPath, getPlacePath } from '@/lib/paths';
 import {
@@ -57,12 +54,11 @@ import {
   CMI_INN_CATEGORY,
   CMI_INN_COORDINATES,
   CMI_INN_PLACE_NAME,
-  getCategoryIconUrl,
   isPublicMapRecommendation,
 } from '@/types/types';
 import { normalizeImageFile } from '@/utils/imageCompression';
 
-type Stage = 'camera' | 'analyzing' | 'voice' | 'category' | 'done' | 'map_fallback';
+type Stage = 'camera' | 'analyzing' | 'voice' | 'done' | 'map_fallback';
 type SpeechRecognitionConstructor = new () => {
   lang: string;
   continuous: boolean;
@@ -92,12 +88,24 @@ type SpeechRecognitionErrorEventLike = {
 type SpeechPermissionStatus = 'unknown' | 'prompt' | 'granted' | 'denied' | 'checking';
 type CameraStatus = 'starting' | 'ready' | 'blocked' | 'unsupported' | 'error';
 type AnimalIdentificationStatus = 'idle' | 'running' | 'done' | 'no-match' | 'unavailable' | 'error';
+type LocationCaptureStatus = 'pending' | 'ready' | 'failed';
 type MediaTrackConstraintSetWithZoom = MediaTrackConstraintSet & { zoom?: number };
 type CameraPinchState = {
   distance: number;
   zoom: number;
 };
 type CameraTouchList = TouchEvent<HTMLDivElement>['touches'];
+type FileShareData = {
+  files?: File[];
+  title?: string;
+  text?: string;
+};
+type NavigatorWithFileShare = Navigator & {
+  canShare?: (data: FileShareData) => boolean;
+  share?: (data: FileShareData) => Promise<void>;
+};
+type WildAnimalShareTarget = 'album' | 'wechat' | 'xiaohongshu';
+type WildAnimalShareResult = 'shared' | 'unsupported' | 'cancelled' | 'failed';
 
 const MARK_PLACE_VIDEO_CONSTRAINTS: MediaTrackConstraints = {
   facingMode: { ideal: 'environment' },
@@ -106,6 +114,7 @@ const MARK_PLACE_VIDEO_CONSTRAINTS: MediaTrackConstraints = {
   frameRate: { ideal: 30, max: 30 },
 };
 const DEFAULT_MARK_PLACE_CENTER = { lat: 18.7883, lng: 98.9853 } as const;
+const DEFAULT_MARK_PLACE_CATEGORY: Category = '景点';
 const MARK_PLACE_EVENT_PAST_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
 const MARK_PLACE_EVENT_FUTURE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 const CAMERA_ZOOM_FEEDBACK_TIMEOUT_MS = 900;
@@ -180,6 +189,56 @@ const appendTranscript = (currentText: string, nextText: string) => {
   if (current.endsWith(next)) return current;
 
   return `${current} ${next}`;
+};
+
+const getWildAnimalShareCopy = (target: WildAnimalShareTarget) => {
+  if (target === 'wechat') {
+    return {
+      title: 'CMI Map 清迈奇妙生物图鉴',
+      text: '把这张图鉴卡发到微信。',
+    };
+  }
+  if (target === 'xiaohongshu') {
+    return {
+      title: 'CMI Map 清迈奇妙生物图鉴',
+      text: '把这张图鉴卡发到小红书。',
+    };
+  }
+
+  return {
+    title: 'CMI Map 清迈奇妙生物图鉴',
+    text: '把这张图鉴卡保存到相册。',
+  };
+};
+
+const shareWildAnimalCardWithSystem = async (
+  card: CmiWildAnimalShareCardResult,
+  target: WildAnimalShareTarget
+): Promise<WildAnimalShareResult> => {
+  const navigatorWithFileShare = navigator as NavigatorWithFileShare;
+  if (!navigatorWithFileShare.share) return 'unsupported';
+
+  const file = new File([card.blob], card.fileName, { type: 'image/png' });
+  const copy = getWildAnimalShareCopy(target);
+  const shareDataOptions: FileShareData[] = [
+    { files: [file], title: copy.title, text: copy.text },
+    { files: [file], title: copy.title },
+    { files: [file] },
+  ];
+  const shareData = shareDataOptions.find(data =>
+    !navigatorWithFileShare.canShare || navigatorWithFileShare.canShare(data)
+  );
+
+  if (!shareData) return 'unsupported';
+
+  try {
+    await navigatorWithFileShare.share(shareData);
+    return 'shared';
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled';
+    console.error('Failed to share CMI wild animal card:', error);
+    return 'failed';
+  }
 };
 
 const queryMicrophonePermission = async (): Promise<SpeechPermissionStatus> => {
@@ -1135,19 +1194,22 @@ export default function MarkPlace() {
     }
   };
 
-  const handleWildAnimalShareAction = (target: 'save' | 'wechat' | 'xiaohongshu') => {
+  const handleWildAnimalShareAction = async (target: WildAnimalShareTarget) => {
     if (!wildAnimalShareCard) return;
 
-    downloadCmiWildAnimalShareCard(wildAnimalShareCard);
-    if (target === 'wechat') {
-      toast.success('图鉴卡已保存，打开微信发朋友圈');
+    const result = await shareWildAnimalCardWithSystem(wildAnimalShareCard, target);
+    if (result === 'cancelled') return;
+    if (result === 'shared') {
+      toast.success(target === 'album' ? '已打开系统保存菜单' : '已打开系统分享菜单');
       return;
     }
-    if (target === 'xiaohongshu') {
-      toast.success('图鉴卡已保存，打开小红书发布');
+
+    if (result === 'unsupported') {
+      toast.error('这个浏览器不能直接存相册，换 Safari/微信内打开再试');
       return;
     }
-    toast.success('图鉴卡已保存');
+
+    toast.error('系统分享没有打开，请再试一次');
   };
 
   // 4. 用户提交逻辑
@@ -1530,31 +1592,43 @@ export default function MarkPlace() {
                     <button
                       type="button"
                       onClick={() => setIsWildAnimalSharePanelOpen(current => !current)}
-                      className="w-full rounded-full bg-[#0b3d24] px-5 py-3 text-sm font-black text-[#fff4d8] shadow-[0_10px_24px_rgba(11,61,36,0.22)] active:scale-[0.98]"
+                      className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full border-2 border-[#082617] bg-[#0b3d24] px-5 py-3 text-sm font-black text-[#fff4d8] shadow-[0_10px_0_#082617,0_18px_26px_rgba(11,61,36,0.22)] active:translate-y-1 active:shadow-[0_6px_0_#082617,0_12px_18px_rgba(11,61,36,0.2)]"
                     >
+                      <span className="absolute -left-2 top-1/2 h-10 w-10 -translate-y-1/2 rounded-full bg-[#f6c445]" />
+                      <PawPrint className="relative h-4 w-4 text-[#f6c445]" strokeWidth={3} />
                       分享图鉴卡
+                      <Share2 className="relative h-4 w-4 text-[#fff4d8]/85" strokeWidth={3} />
                     </button>
                     {isWildAnimalSharePanelOpen && (
-                      <div className="grid w-full grid-cols-3 gap-2">
+                      <div className="relative grid w-full grid-cols-3 gap-2 rounded-[1.4rem] border-2 border-[#0b1724] bg-[#fff4d8] p-2 shadow-[7px_7px_0_rgba(11,23,36,0.18)]">
+                        <img
+                          src="/map-icons/cmi-flat-v2/wild-magnifier-checkin.png"
+                          alt=""
+                          aria-hidden="true"
+                          className="pointer-events-none absolute -right-3 -top-4 h-12 w-12 rotate-[8deg] object-contain drop-shadow-[0_5px_0_rgba(11,23,36,0.16)]"
+                        />
                         <button
                           type="button"
-                          onClick={() => handleWildAnimalShareAction('save')}
-                          className="rounded-2xl border border-stone-200 bg-white px-3 py-3 text-xs font-black text-stone-800 shadow-sm active:scale-[0.98]"
+                          onClick={() => void handleWildAnimalShareAction('album')}
+                          className="relative flex min-h-16 flex-col items-center justify-center gap-1 rounded-[1.1rem] border-2 border-[#0b1724] bg-[#f6c445] px-2 py-2 text-[11px] font-black leading-tight text-[#0b3d24] shadow-[3px_3px_0_rgba(11,23,36,0.22)] active:translate-y-0.5 active:shadow-[1px_1px_0_rgba(11,23,36,0.2)]"
                         >
-                          保存图片
+                          <ImageIcon className="h-4 w-4" strokeWidth={3} />
+                          保存到相册
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleWildAnimalShareAction('wechat')}
-                          className="rounded-2xl border border-stone-200 bg-white px-3 py-3 text-xs font-black text-stone-800 shadow-sm active:scale-[0.98]"
+                          onClick={() => void handleWildAnimalShareAction('wechat')}
+                          className="relative flex min-h-16 flex-col items-center justify-center gap-1 rounded-[1.1rem] border-2 border-[#0b1724] bg-[#7bd36a] px-2 py-2 text-[11px] font-black leading-tight text-[#0b3d24] shadow-[3px_3px_0_rgba(11,23,36,0.22)] active:translate-y-0.5 active:shadow-[1px_1px_0_rgba(11,23,36,0.2)]"
                         >
+                          <Share2 className="h-4 w-4" strokeWidth={3} />
                           微信
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleWildAnimalShareAction('xiaohongshu')}
-                          className="rounded-2xl border border-stone-200 bg-white px-3 py-3 text-xs font-black text-stone-800 shadow-sm active:scale-[0.98]"
+                          onClick={() => void handleWildAnimalShareAction('xiaohongshu')}
+                          className="relative flex min-h-16 flex-col items-center justify-center gap-1 rounded-[1.1rem] border-2 border-[#0b1724] bg-[#f780b6] px-2 py-2 text-[11px] font-black leading-tight text-[#0b1724] shadow-[3px_3px_0_rgba(11,23,36,0.22)] active:translate-y-0.5 active:shadow-[1px_1px_0_rgba(11,23,36,0.2)]"
                         >
+                          <Send className="h-4 w-4" strokeWidth={3} />
                           小红书
                         </button>
                       </div>
