@@ -58,6 +58,7 @@
   - 本地脚本改为启动时预加载模型、默认只跑 BioCLIP 2.5；BioCLIP 2 兜底仍保留，可通过 `BIOCLIP_FALLBACK_MODE=auto` 手动开启。
   - 已创建稳定 Cloudflare named tunnel `cmi-map-species-local`，固定域名为 `https://species.cmimap.com`，并把 Pages production secret 设置为 `CMI_MAP_SPECIES_MODEL_URL=https://species.cmimap.com/identify`。
   - 正式域名 `https://cmimap.com/api/animal-identify` 已验证会调用 `self-hosted-species-model`；首次线上返回里 `蓝翡翠 / Halcyon pileata` 在候选列表第二位，因此追加“物种级结果优先展示”修正，避免粗粒度 `鸟类 / Aves` 抢默认选中。
+  - 前端候选按钮、自动描述和神奇动物分享卡主标题改为中文名优先；拉丁学名保留在接口数据里用于校验，不再作为用户主展示。
 
 ### 2026-06-10 20:08 +07 小白狗被误识别成猫的纠偏
 

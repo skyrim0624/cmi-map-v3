@@ -13,9 +13,10 @@ test('神奇动物分享卡使用 Image Gen 模板母版和真实照片叠加', 
   assert.doesNotMatch(source, /清迈大壁虎/);
 });
 
-test('神奇动物分享卡主展示学名和真实活动二维码', () => {
-  assert.match(source, /getAnimalScientificName\(candidate\)/);
-  assert.match(source, /drawFittedText\(\s+context,\s+scientificName,/);
+test('神奇动物分享卡主展示中文名和真实活动二维码', () => {
+  assert.match(source, /getAnimalChineseName\(candidate\)/);
+  assert.match(source, /drawFittedText\(\s+context,\s+chineseName,/);
+  assert.doesNotMatch(source, /getAnimalScientificName\(candidate\)/);
   assert.doesNotMatch(source, /candidate\.rawLabel \|\| candidate\.nameEn/);
   assert.match(source, /getPublicCmiEventUrl\(CMI_MAP_WILD_CHIANG_MAI_EVENT_ID\)/);
   assert.match(source, /CMI No\.\$\{captureNumber\}/);

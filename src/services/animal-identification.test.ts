@@ -16,15 +16,16 @@ test('动物识别通过同源 Pages Function 调用', () => {
 });
 
 test('动物识别文案不再输出可能式猜测', () => {
-  assert.match(source, /`这是 \$\{scientificName\}。`/);
-  assert.match(source, /getAnimalScientificName\(candidate\)/);
+  assert.match(source, /`这是\$\{chineseName\}。`/);
+  assert.match(source, /getAnimalChineseName\(candidate\)/);
   assert.match(source, /isSpeciesLevelRank\(candidate\.taxonRank\)/);
   assert.match(source, /需要更近照片才能定到具体物种/);
   assert.doesNotMatch(source, /可能是/);
 });
 
-test('动物候选展示名直接使用学名', () => {
-  assert.match(source, /export const formatAnimalCandidateLabel = \(candidate: AnimalIdentificationCandidate\) =>\s+getAnimalScientificName\(candidate\)/);
-  assert.doesNotMatch(source, /getAnimalChineseName/);
+test('动物候选展示名优先使用中文名', () => {
+  assert.match(source, /const fallbackChineseNames: Record<string, string>/);
+  assert.match(source, /export const getAnimalChineseName = \(candidate: AnimalIdentificationCandidate\) =>/);
+  assert.match(source, /export const formatAnimalCandidateLabel = \(candidate: AnimalIdentificationCandidate\) =>\s+getAnimalChineseName\(candidate\)/);
   assert.doesNotMatch(source, /清迈小狗|清迈街猫|清迈大壁虎/);
 });

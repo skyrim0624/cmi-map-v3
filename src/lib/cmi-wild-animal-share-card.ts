@@ -3,7 +3,7 @@ import { CMI_MAP_WILD_CHIANG_MAI_EVENT_ID } from '@/data/cmi-events';
 import { getPublicCmiEventUrl } from '@/lib/paths';
 import {
   type AnimalIdentificationCandidate,
-  getAnimalScientificName,
+  getAnimalChineseName,
 } from '@/services/animal-identification';
 import type { Recommendation } from '@/types/types';
 
@@ -248,7 +248,7 @@ export const createCmiWildAnimalShareCard = async ({
       },
     }).then(loadImage),
   ]);
-  const scientificName = getAnimalScientificName(candidate);
+  const chineseName = getAnimalChineseName(candidate);
   const captureNumberLabel = captureNumber ? `CMI No.${captureNumber}` : 'CMI No.';
   const collectionProgress = `${String(collectedIndex).padStart(2, '0')}/${String(collectedTotal).padStart(2, '0')}`;
 
@@ -272,7 +272,7 @@ export const createCmiWildAnimalShareCard = async ({
 
   drawFittedText(
     context,
-    scientificName,
+    chineseName,
     SPECIES_NAME_BOX.x,
     SPECIES_NAME_BOX.y + SPECIES_NAME_BOX.height / 2 + 1,
     SPECIES_NAME_BOX.width - 28,
@@ -294,7 +294,7 @@ export const createCmiWildAnimalShareCard = async ({
   return {
     blob,
     dataUrl: canvas.toDataURL('image/png'),
-    fileName: `cmi-map-${sanitizeFileName(scientificName)}-${captureNumber || Date.now()}.png`,
+    fileName: `cmi-map-${sanitizeFileName(chineseName)}-${captureNumber || Date.now()}.png`,
   };
 };
 
