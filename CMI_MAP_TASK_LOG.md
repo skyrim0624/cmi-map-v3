@@ -2474,3 +2474,16 @@
   - 已部署到 Cloudflare Pages production：`https://3690a2de.cmi-map.pages.dev`，正式域名 `https://cmimap.com` 已同步。
   - 线上接口验证：用户提供的整张 App 截图返回 `no-match`，不再误报成鸟；裁剪后的照片区域返回 `家犬 / Canis lupus familiaris`，接口内部耗时约 0.9-1.2 秒。
   - 线上 `/mark?event=cmi-wild-chiang-mai-2026-06` 浏览器检查：页面可见 `动物识别已开启`；测试环境未授予相机权限，控制台仅有相机权限拒绝警告。
+
+### 2026-06-11 cmimap.com 白屏修复
+
+- 背景：用户反馈 `cmimap.com` 在手机 Safari 只显示白屏。
+- 排查结果：
+  - 线上 HTML 和入口 JS 都能正常返回，但浏览器控制台报错 `supabaseUrl is required`。
+  - 根因是上次使用干净临时目录构建部署时没有带入 `.env`，导致前端 Supabase URL / publishable key 被编译为空值。
+- 本轮实现：
+  - 在生产构建配置中加入环境变量防呆：缺少 `VITE_SUPABASE_URL` 或 `VITE_SUPABASE_ANON_KEY` 时直接中断构建，不再产出白屏包。
+- 验证结果：
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过。
+  - 本地生产预览 `http://127.0.0.1:4173/` 手机视口验证：根节点有内容，首屏显示地图入口和底部导航，控制台不再出现 Supabase URL 错误。
