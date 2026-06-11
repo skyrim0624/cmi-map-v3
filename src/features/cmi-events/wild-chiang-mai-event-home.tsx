@@ -1,20 +1,35 @@
-import { Camera, Trophy } from 'lucide-react';
-import { useMemo } from 'react';
+import { Bookmark, Camera, MessageCircle, Sticker as StickerIcon, Trophy } from 'lucide-react';
+import { type MouseEvent as ReactMouseEvent, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import type { CmiEvent } from '@/data/cmi-events';
 import {
   getEventRecapLeaderboard,
   type EventRecapImage,
 } from '@/features/cmi-events/event-recaps';
+import type { PlacedStickerMap, WishlistStateMap } from '@/features/interactions/recommendation-card-interactions';
 import { cn } from '@/lib/utils';
+import type { PlacedSticker, Recommendation, Sticker } from '@/types/types';
 
 interface WildChiangMaiEventHomeProps {
   event: CmiEvent;
   posterUrl: string;
   recapImages: EventRecapImage[];
+  recapRecommendations: Recommendation[];
   recapsLoading: boolean;
+  activeRecIdForSticker: string | null;
+  activeStickerId: string | null;
+  availableStickers: Sticker[];
+  placedStickers: PlacedStickerMap;
+  showStickerDrawer: boolean;
+  wishlistStateByRecommendationId: WishlistStateMap;
+  onCloseStickerDrawer: () => void;
+  onOpenComment: (recommendation: Recommendation) => void;
   onOpenGuide: () => void;
+  onPlaceStamp: (event: ReactMouseEvent<HTMLElement>, recommendationId: string) => void;
   onOpenRecapComposer: () => void;
+  onSelectSticker: (stickerId: string) => void;
+  onStartStamp: (recommendationId: string) => void;
+  onToggleWishlist: (recommendation: Recommendation) => void;
 }
 
 const formatCaptureCount = (count: number) => `${count} 次捕获`;
@@ -23,14 +38,31 @@ export function WildChiangMaiEventHome({
   event,
   posterUrl,
   recapImages,
+  recapRecommendations,
   recapsLoading,
+  activeRecIdForSticker,
+  activeStickerId,
+  availableStickers,
+  placedStickers,
+  showStickerDrawer,
+  wishlistStateByRecommendationId,
+  onCloseStickerDrawer,
+  onOpenComment,
   onOpenGuide,
+  onPlaceStamp,
   onOpenRecapComposer,
+  onSelectSticker,
+  onStartStamp,
+  onToggleWishlist,
 }: WildChiangMaiEventHomeProps) {
   const leaderboard = useMemo(() => getEventRecapLeaderboard(recapImages), [recapImages]);
+  const recommendationsById = useMemo(
+    () => new Map(recapRecommendations.map(recommendation => [recommendation.id, recommendation])),
+    [recapRecommendations]
+  );
 
   return (
-    <div className="min-h-[100dvh] bg-white text-[#111827]">
+    <div className="relative min-h-[100dvh] bg-white text-[#111827]">
       <main className="mx-auto min-h-[100dvh] max-w-[520px] overflow-hidden bg-[#f8f1df]">
         <section className="relative overflow-hidden bg-[#f8f1df]">
           <img
@@ -123,32 +155,55 @@ export function WildChiangMaiEventHome({
               </div>
             ) : recapImages.length > 0 ? (
               <div className="space-y-4">
-                {recapImages.map((image, index) => (
-                  <article
-                    key={image.id}
-                    className={cn(
-                      'grid grid-cols-[5.6rem_minmax(0,1fr)] gap-3 border-[2px] border-[#111827] bg-white p-3 shadow-[4px_5px_0_rgba(17,24,39,0.16)]',
-                      index % 2 === 0 ? 'rotate-[1deg]' : 'rotate-[-1deg]'
-                    )}
-                  >
-                    <img
-                      src={image.imageUrl}
-                      alt={`${image.userName} 捕获的神奇动物`}
-                      className="aspect-square w-full border-[2px] border-[#111827] object-cover"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                    <div className="min-w-0 py-1">
-                      <p className="inline-block max-w-full truncate bg-[#111827] px-2 py-1 text-sm font-black text-white">
-                        {image.userName}
-                      </p>
-                      <p className="mt-2 text-xs font-black text-[#1297d8]">{image.placeName}</p>
-                      <p className="mt-2 line-clamp-2 text-sm font-semibold leading-snug text-[#384252]">
-                        {image.reason || '发现了一只神奇动物'}
-                      </p>
-                    </div>
-                  </article>
-                ))}
+                {recapImages.map((image, index) => {
+                  const recommendation = recommendationsById.get(image.recommendationId);
+                  const isStampTargetActive = Boolean(
+                    recommendation && activeStickerId && activeRecIdForSticker === recommendation.id
+                  );
+
+                  return (
+                    <article
+                      key={image.id}
+                      className={cn(
+                        'relative grid grid-cols-[5.6rem_minmax(0,1fr)] gap-3 overflow-hidden border-[2px] border-[#111827] bg-white p-3 shadow-[4px_5px_0_rgba(17,24,39,0.16)]',
+                        index % 2 === 0 ? 'rotate-[1deg]' : 'rotate-[-1deg]',
+                        isStampTargetActive && 'cursor-crosshair outline outline-[3px] outline-offset-2 outline-[#ff8bb9]'
+                      )}
+                      onClick={(event) => {
+                        if (!recommendation || !isStampTargetActive) return;
+                        onPlaceStamp(event, recommendation.id);
+                      }}
+                    >
+                      {recommendation && (
+                        <WildPlacedStickerLayer placements={placedStickers[recommendation.id]} />
+                      )}
+                      <img
+                        src={image.imageUrl}
+                        alt={`${image.userName} 捕获的神奇动物`}
+                        className="relative z-0 aspect-square w-full border-[2px] border-[#111827] object-cover"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                      <div className="relative z-20 min-w-0 py-1">
+                        <p className="inline-block max-w-full truncate bg-[#111827] px-2 py-1 text-sm font-black text-white">
+                          {image.userName}
+                        </p>
+                        <p className="mt-2 text-xs font-black text-[#1297d8]">{image.placeName}</p>
+                        <p className="mt-2 line-clamp-2 text-sm font-semibold leading-snug text-[#384252]">
+                          {image.reason || '发现了一只神奇动物'}
+                        </p>
+                        {recommendation && (
+                          <WildCaptureActions
+                            isWishlisted={wishlistStateByRecommendationId[recommendation.id] ?? false}
+                            onComment={() => onOpenComment(recommendation)}
+                            onStamp={() => onStartStamp(recommendation.id)}
+                            onWishlist={() => onToggleWishlist(recommendation)}
+                          />
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             ) : (
               <div className="space-y-4">
@@ -178,6 +233,144 @@ export function WildChiangMaiEventHome({
           </div>
         </section>
       </main>
+      <WildStickerDrawer
+        availableStickers={availableStickers}
+        isOpen={showStickerDrawer}
+        onClose={onCloseStickerDrawer}
+        onSelectSticker={onSelectSticker}
+      />
+    </div>
+  );
+}
+
+function WildPlacedStickerLayer({ placements = [] }: { placements?: PlacedSticker[] }) {
+  if (placements.length === 0) return null;
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-10" aria-hidden="true">
+      {placements.map(placement => {
+        if (!placement.sticker?.icon_url) return null;
+
+        return (
+          <span
+            key={placement.id}
+            className="absolute block h-14 w-14 mix-blend-multiply drop-shadow-sm"
+            style={{
+              left: `${placement.x_ratio}%`,
+              top: `${placement.y_ratio}%`,
+              transform: `translate(-50%, -50%) rotate(${placement.rotation}deg)`,
+            }}
+          >
+            <img
+              src={placement.sticker.icon_url}
+              alt=""
+              className="h-full w-full object-contain saturate-[0.84] contrast-[1.08]"
+            />
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function WildCaptureActions({
+  isWishlisted,
+  onComment,
+  onStamp,
+  onWishlist,
+}: {
+  isWishlisted: boolean;
+  onComment: () => void;
+  onStamp: () => void;
+  onWishlist: () => void;
+}) {
+  const handleActionClick = (event: ReactMouseEvent<HTMLButtonElement>, action: () => void) => {
+    event.stopPropagation();
+    action();
+  };
+
+  return (
+    <div className="mt-3 flex items-center gap-3 text-[#111827]" aria-label="神奇动物互动">
+      <button
+        type="button"
+        className="grid h-8 w-8 place-items-center rounded-full border-[2px] border-[#111827] bg-[#fff7dc] shadow-[2px_3px_0_rgba(17,24,39,0.14)] transition active:scale-95"
+        onClick={(event) => handleActionClick(event, onStamp)}
+        aria-label="盖戳"
+        title="盖戳"
+      >
+        <StickerIcon className="h-4 w-4" strokeWidth={3} />
+      </button>
+      <button
+        type="button"
+        className={cn(
+          'grid h-8 w-8 place-items-center rounded-full border-[2px] border-[#111827] bg-[#fff7dc] shadow-[2px_3px_0_rgba(17,24,39,0.14)] transition active:scale-95',
+          isWishlisted && 'text-[#ff5a4d]'
+        )}
+        onClick={(event) => handleActionClick(event, onWishlist)}
+        aria-label={isWishlisted ? '取消收藏' : '收藏'}
+        aria-pressed={isWishlisted}
+        title="收藏"
+      >
+        <Bookmark className={cn('h-4 w-4', isWishlisted && 'fill-current')} strokeWidth={3} />
+      </button>
+      <button
+        type="button"
+        className="grid h-8 w-8 place-items-center rounded-full border-[2px] border-[#111827] bg-[#fff7dc] shadow-[2px_3px_0_rgba(17,24,39,0.14)] transition active:scale-95"
+        onClick={(event) => handleActionClick(event, onComment)}
+        aria-label="评论"
+        title="评论"
+      >
+        <MessageCircle className="h-4 w-4" strokeWidth={3} />
+      </button>
+    </div>
+  );
+}
+
+function WildStickerDrawer({
+  availableStickers,
+  isOpen,
+  onClose,
+  onSelectSticker,
+}: {
+  availableStickers: Sticker[];
+  isOpen: boolean;
+  onClose: () => void;
+  onSelectSticker: (stickerId: string) => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[90] flex items-end justify-center" role="dialog" aria-modal="true" aria-label="选择盖戳图章">
+      <button type="button" className="absolute inset-0 bg-black/40 backdrop-blur-[4px]" onClick={onClose} aria-label="关闭盖戳选择" />
+      <div className="relative w-full max-w-[520px] rounded-t-[1.6rem] border-[2px] border-b-0 border-[#111827] bg-[#fff7dc] px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-4 shadow-[0_-18px_50px_rgba(0,0,0,0.28)]">
+        <div className="mb-4 flex items-center justify-center gap-2 text-[1.05rem] font-black text-[#111827]">
+          <StickerIcon className="h-5 w-5" strokeWidth={3} />
+          <strong>选择一个图章</strong>
+        </div>
+        {availableStickers.length > 0 ? (
+          <div className="grid grid-cols-4 gap-3">
+            {availableStickers.map(sticker => (
+              <button
+                key={sticker.id}
+                type="button"
+                className="grid min-w-0 justify-items-center gap-1.5 bg-transparent p-0 text-[#111827]"
+                onClick={() => onSelectSticker(sticker.id)}
+              >
+                <span className="grid h-16 w-16 place-items-center rounded-[1.1rem] border border-[#111827]/20 bg-white/70">
+                  <img
+                    src={sticker.icon_url}
+                    alt=""
+                    className="h-12 w-12 object-contain mix-blend-multiply saturate-[0.84] contrast-[1.08]"
+                  />
+                </span>
+                <strong className="max-w-full truncate text-[0.68rem] font-black text-[#111827]/70">{sticker.name}</strong>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="my-5 text-center text-sm font-black text-[#111827]/65">正在准备图章</p>
+        )}
+      </div>
     </div>
   );
 }

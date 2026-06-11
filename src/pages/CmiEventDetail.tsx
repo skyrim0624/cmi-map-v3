@@ -14,7 +14,7 @@ import {
   Ticket,
   UsersRound,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -49,6 +49,23 @@ import {
   getEventRecapImages,
   getEventRecapRecommendations,
 } from '@/features/cmi-events/event-recaps';
+import {
+  appendStickerPlacement,
+  applyWishlistState,
+  createOptimisticStickerPlacement,
+  getRecommendationStickerPlacements,
+  mergeStickerPlacementMaps,
+  removeStickerPlacement,
+  replaceStickerPlacement,
+  type PlacedStickerMap,
+  type WishlistStateMap,
+} from '@/features/interactions/recommendation-card-interactions';
+import {
+  loadAvailableStickers,
+  loadRecommendationStickerPlacements,
+  placeRecommendationSticker,
+  toggleRecommendationWishlist,
+} from '@/features/interactions/interaction-service';
 import { WildChiangMaiEventHome } from '@/features/cmi-events/wild-chiang-mai-event-home';
 import { getCmiEventNavigationTarget } from '@/features/cmi-events/event-navigation';
 import { isCapacityFullRegistrationError } from '@/features/cmi-events/event-list-registration-state';
@@ -60,6 +77,7 @@ import {
 } from '@/features/cmi-events/event-rsvp-utils';
 import { type CmiEventShareCardResult, createCmiEventShareCard } from '@/lib/cmi-event-share-card';
 import {
+  getAddTracePath,
   getCmiEventAboutPath,
   getCmiEventManagePath,
   getCmiFeedPath,
@@ -68,7 +86,7 @@ import {
   getPublicCmiEventUrl,
 } from '@/lib/paths';
 import { cn } from '@/lib/utils';
-import type { Recommendation } from '@/types/types';
+import type { Recommendation, Sticker } from '@/types/types';
 
 type FileShareData = {
   files: File[];
@@ -115,6 +133,13 @@ const getExternalRegistrationClipboardValue = (registrationLabel: string) => {
   const wechatMatch = registrationLabel.match(/微信\s*([A-Za-z0-9_-]{4,})/);
   return wechatMatch?.[1] ?? registrationLabel.trim();
 };
+
+const isWishlistedByUser = (recommendation: Recommendation, userId: string | null | undefined) => {
+  if (!userId) return false;
+  return recommendation.wishlists?.some(wishlist => wishlist.user_id === userId) ?? false;
+};
+
+const clampStickerRatio = (value: number) => Math.min(100, Math.max(0, value));
 
 const EVENT_POST_HEADING_MARKERS = ['❓', '🌊', '📻', '⏱️', '💿'];
 
@@ -226,6 +251,12 @@ export default function CmiEventDetail() {
   const [sharingEvent, setSharingEvent] = useState(false);
   const [recapRecommendations, setRecapRecommendations] = useState<Recommendation[]>([]);
   const [recapsLoading, setRecapsLoading] = useState(false);
+  const [localWishlists, setLocalWishlists] = useState<WishlistStateMap>({});
+  const [placedStickers, setPlacedStickers] = useState<PlacedStickerMap>({});
+  const [availableStickers, setAvailableStickers] = useState<Sticker[]>([]);
+  const [showStickerDrawer, setShowStickerDrawer] = useState(false);
+  const [activeRecIdForSticker, setActiveRecIdForSticker] = useState<string | null>(null);
+  const [activeStickerId, setActiveStickerId] = useState<string | null>(null);
 
   const detailContent = getCmiEventDetailContent(eventId);
   const posterUrl =
@@ -283,6 +314,14 @@ export default function CmiEventDetail() {
     () => getEventRecapImages(recapRecommendations),
     [recapRecommendations]
   );
+  const wishlistStateByRecommendationId = useMemo(
+    () => recapRecommendations.reduce<WishlistStateMap>((state, recommendation) => {
+      state[recommendation.id] =
+        localWishlists[recommendation.id] ?? isWishlistedByUser(recommendation, user?.id);
+      return state;
+    }, {}),
+    [localWishlists, recapRecommendations, user?.id]
+  );
 
   const registrationInfoValue = event?.registrationEnabled
     ? registrationSummary.capacity
@@ -304,6 +343,11 @@ export default function CmiEventDetail() {
     setManagedRegistrations([]);
     setPublicRegistrations([]);
     setRegistrationMarkedFull(false);
+    setLocalWishlists({});
+    setPlacedStickers({});
+    setShowStickerDrawer(false);
+    setActiveRecIdForSticker(null);
+    setActiveStickerId(null);
 
     getPublishedCmiEvents()
       .then(events => {
@@ -421,7 +465,9 @@ export default function CmiEventDetail() {
     getAllRecommendations({ throwOnError: true })
       .then(recommendations => {
         if (!isMounted) return;
-        setRecapRecommendations(getEventRecapRecommendations(eventId, recommendations));
+        const nextRecapRecommendations = getEventRecapRecommendations(eventId, recommendations);
+        setRecapRecommendations(nextRecapRecommendations);
+        setPlacedStickers(getRecommendationStickerPlacements(nextRecapRecommendations));
       })
       .catch(error => {
         console.error('获取活动返图失败:', error);
@@ -435,6 +481,53 @@ export default function CmiEventDetail() {
       isMounted = false;
     };
   }, [eventId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (recapRecommendations.length === 0) {
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    loadRecommendationStickerPlacements(recapRecommendations)
+      .then(nextPlacedStickers => {
+        if (isMounted) {
+          setPlacedStickers(current => mergeStickerPlacementMaps(current, nextPlacedStickers));
+        }
+      })
+      .catch(error => {
+        console.error('活动返图盖戳数据加载失败:', error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [recapRecommendations]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!showStickerDrawer || availableStickers.length > 0) {
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    loadAvailableStickers()
+      .then(stickers => {
+        if (isMounted) setAvailableStickers(stickers);
+      })
+      .catch(error => {
+        console.error('活动返图图章库加载失败:', error);
+        if (isMounted) setAvailableStickers([]);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [availableStickers.length, showStickerDrawer]);
 
   const refreshRegistrationSummary = async (targetEventId: string) => {
     const [nextPublicRegistrations, nextManagedRegistrations] = await Promise.all([
@@ -610,6 +703,98 @@ export default function CmiEventDetail() {
     navigate(markPlacePath);
   };
 
+  const requireLoggedInUser = useCallback((actionLabel: string) => {
+    if (user?.id) return true;
+
+    toast(`登录后才能${actionLabel}`, { description: '注册只需要一个邮箱。' });
+    navigate('/login', { state: { from: `${location.pathname}${location.search}` } });
+    return false;
+  }, [location.pathname, location.search, navigate, user?.id]);
+
+  const handleStartStamp = useCallback((recommendationId: string) => {
+    if (!requireLoggedInUser('盖戳')) return;
+
+    setActiveRecIdForSticker(recommendationId);
+    setShowStickerDrawer(true);
+  }, [requireLoggedInUser]);
+
+  const handleSelectSticker = useCallback((stickerId: string) => {
+    setActiveStickerId(stickerId);
+    setShowStickerDrawer(false);
+    toast.success('图章已沾墨水', { description: '现在点击这张神奇动物卡片，把它盖上去。', duration: 4000 });
+  }, []);
+
+  const handleToggleWishlist = useCallback(async (recommendation: Recommendation) => {
+    if (!requireLoggedInUser('收藏') || !user?.id) return;
+
+    let previousValue = false;
+    setLocalWishlists(current => {
+      previousValue = current[recommendation.id] ?? isWishlistedByUser(recommendation, user.id);
+      return applyWishlistState(current, recommendation.id, !previousValue);
+    });
+
+    try {
+      const nextValue = await toggleRecommendationWishlist(recommendation.id, user.id);
+      setLocalWishlists(current => applyWishlistState(current, recommendation.id, nextValue));
+      toast.success(nextValue ? '已收藏' : '已取消收藏');
+    } catch (error) {
+      console.error('活动返图收藏失败:', error);
+      setLocalWishlists(current => applyWishlistState(current, recommendation.id, previousValue));
+      toast.error('收藏失败，请稍后再试');
+    }
+  }, [requireLoggedInUser, user?.id]);
+
+  const handlePlaceStamp = useCallback(async (
+    stampEvent: ReactMouseEvent<HTMLElement>,
+    recommendationId: string
+  ) => {
+    if (!activeStickerId || activeRecIdForSticker !== recommendationId || !user?.id) return;
+
+    const selectedStickerId = activeStickerId;
+    const sticker = availableStickers.find(item => item.id === selectedStickerId);
+    if (!sticker) return;
+
+    const rect = stampEvent.currentTarget.getBoundingClientRect();
+    const xRatio = clampStickerRatio(((stampEvent.clientX - rect.left) / rect.width) * 100);
+    const yRatio = clampStickerRatio(((stampEvent.clientY - rect.top) / rect.height) * 100);
+    const rotation = Math.random() * 40 - 20;
+    const optimisticPlacement = createOptimisticStickerPlacement({
+      id: `preview-${recommendationId}-${Date.now()}`,
+      recommendationId,
+      userId: user.id,
+      sticker,
+      xRatio,
+      yRatio,
+      rotation,
+      createdAt: new Date().toISOString(),
+    });
+
+    setPlacedStickers(current => appendStickerPlacement(current, recommendationId, optimisticPlacement));
+    setActiveStickerId(null);
+    setActiveRecIdForSticker(null);
+
+    try {
+      const savedPlacement = await placeRecommendationSticker({
+        recommendation_id: recommendationId,
+        user_id: user.id,
+        sticker_id: selectedStickerId,
+        x_ratio: xRatio,
+        y_ratio: yRatio,
+        rotation,
+      });
+
+      if (!savedPlacement) throw new Error('盖戳没有保存到数据库');
+
+      setPlacedStickers(current =>
+        replaceStickerPlacement(current, recommendationId, optimisticPlacement.id, savedPlacement)
+      );
+    } catch (error) {
+      console.error('活动返图盖戳保存失败:', error);
+      setPlacedStickers(current => removeStickerPlacement(current, recommendationId, optimisticPlacement.id));
+      toast.error('盖戳没有保存成功，请稍后再试');
+    }
+  }, [activeRecIdForSticker, activeStickerId, availableStickers, user?.id]);
+
   if (loading && !event) {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-[#8b61ee] text-[#050505]">
@@ -646,9 +831,25 @@ export default function CmiEventDetail() {
         event={event}
         posterUrl={posterUrl}
         recapImages={recapImages}
+        recapRecommendations={recapRecommendations}
         recapsLoading={recapsLoading}
+        activeRecIdForSticker={activeRecIdForSticker}
+        activeStickerId={activeStickerId}
+        availableStickers={availableStickers}
+        placedStickers={placedStickers}
+        showStickerDrawer={showStickerDrawer}
+        wishlistStateByRecommendationId={wishlistStateByRecommendationId}
+        onCloseStickerDrawer={() => {
+          setShowStickerDrawer(false);
+          setActiveRecIdForSticker(null);
+        }}
+        onOpenComment={(recommendation) => navigate(getAddTracePath(recommendation.place_name))}
         onOpenGuide={() => navigate(getCmiEventAboutPath(event.id))}
+        onPlaceStamp={handlePlaceStamp}
         onOpenRecapComposer={handleOpenRecapComposer}
+        onSelectSticker={handleSelectSticker}
+        onStartStamp={handleStartStamp}
+        onToggleWishlist={handleToggleWishlist}
       />
     );
   }
