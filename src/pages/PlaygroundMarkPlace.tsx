@@ -335,7 +335,7 @@ export default function PlaygroundMarkPlace() {
 
                  <button 
                    onClick={handleMapConfirm}
-                   className="w-full h-14 bg-foreground text-background font-bold rounded-2xl flex items-center justify-center shadow-lg hover:scale-[1.02] transition-transform"
+                   className="w-full h-14 bg-[#0b3d24] text-[#fff7dc] font-bold rounded-2xl flex items-center justify-center shadow-lg shadow-[#0b3d24]/20 hover:scale-[1.02] transition-transform"
                  >
                    确认位置，去说故事
                  </button>
@@ -378,7 +378,7 @@ export default function PlaygroundMarkPlace() {
                <div className="w-full flex gap-3 pb-6 animate-in slide-in-from-bottom-10 fade-in">
                  <button 
                    onClick={() => navigate('/')}
-                   className="flex-1 h-14 bg-foreground text-background font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-foreground/20 hover:scale-[1.02] transition-transform"
+                   className="flex-1 h-14 bg-[#0b3d24] text-[#fff7dc] font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#0b3d24]/20 hover:scale-[1.02] transition-transform"
                  >
                    <Navigation className="w-5 h-5" /> 返回地图
                  </button>

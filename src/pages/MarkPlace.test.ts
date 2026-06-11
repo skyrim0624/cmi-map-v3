@@ -3,6 +3,10 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const source = readFileSync(new URL('./MarkPlace.tsx', import.meta.url), 'utf8');
+const indexCssSource = readFileSync(new URL('../index.css', import.meta.url), 'utf8');
+const cmiMapPrototypeCssSource = readFileSync(new URL('./cmi-map-v3-prototype.css', import.meta.url), 'utf8');
+const leafletMapSource = readFileSync(new URL('../components/map/LeafletMap.tsx', import.meta.url), 'utf8');
+const playgroundMarkPlaceSource = readFileSync(new URL('./PlaygroundMarkPlace.tsx', import.meta.url), 'utf8');
 
 test('相册旧照先写体验，不直接跳到手动拖地图', () => {
   assert.match(source, /相册旧照不再先逼用户拖地图/);
@@ -147,4 +151,31 @@ test('拍照定位成功后直接用坐标发布，手动选点只作为修改�
   assert.match(source, /位置不对？修改/);
   assert.doesNotMatch(source, /aria-label=\{selectedPlaceLabel \? '进入分类发布' : '先关联地点'\}/);
   assert.doesNotMatch(source, /setStage\(selectedPlaceLabel \? 'category' : 'map_fallback'\)/);
+});
+
+test('上传相关页面主题色统一为绿色', () => {
+  assert.match(indexCssSource, /--primary: 145 68% 31%/);
+  assert.match(indexCssSource, /--accent: 145 45% 92%/);
+  assert.match(indexCssSource, /--ring: 145 68% 31%/);
+  assert.match(cmiMapPrototypeCssSource, /--cmi-v3-purple: #0b8d45/);
+
+  assert.match(source, /bg-\[#063d27\]/);
+  assert.match(source, /bg-\[#0b3d24\]/);
+  assert.match(source, /bg-\[#28c76f\]/);
+  assert.match(source, /from-\[#41d97b\] via-\[#0f8f4d\] to-\[#075f36\]/);
+  assert.match(source, /bg-\[#0b3d24\] text-base font-black text-\[#fff7dc\]/);
+  assert.match(source, /bg-\[#dff5e7\]/);
+  assert.match(source, /bg-\[#2ea85f\]/);
+  assert.match(leafletMapSource, /text-\[#0b8d45\]/);
+  assert.match(leafletMapSource, /bg-\[#0b8d45\]/);
+  assert.match(playgroundMarkPlaceSource, /bg-\[#0b3d24\] text-\[#fff7dc\]/);
+
+  assert.doesNotMatch(indexCssSource, /--primary: 260/);
+  assert.doesNotMatch(indexCssSource, /薰衣草紫/);
+  assert.doesNotMatch(source, /bg-\[#191714\]/);
+  assert.doesNotMatch(source, /bg-\[#f97316\]/);
+  assert.doesNotMatch(source, /bg-\[#f780b6\]/);
+  assert.doesNotMatch(source, /bg-foreground text-base font-black text-background/);
+  assert.doesNotMatch(leafletMapSource, /text-\[#f97316\]/);
+  assert.doesNotMatch(leafletMapSource, /bg-\[#f97316\]/);
 });

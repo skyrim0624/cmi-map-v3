@@ -1038,12 +1038,12 @@ export const LeafletMap = ({
           style={{ top: `${markTargetYRatio * 100}%` }}
         >
           <div className="relative h-16 w-16">
-            <div className="absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-[92%] items-center justify-center rounded-2xl border border-foreground/10 bg-background/95 text-[#f97316] shadow-[0_10px_24px_rgba(0,0,0,0.2)] backdrop-blur">
+            <div className="absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-[92%] items-center justify-center rounded-2xl border border-foreground/10 bg-background/95 text-[#0b8d45] shadow-[0_10px_24px_rgba(0,0,0,0.2)] backdrop-blur">
               <MapPin className="h-6 w-6" strokeWidth={3} />
             </div>
             <span
               aria-label="定位准星"
-              className="absolute left-1/2 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#f97316] shadow-[0_0_0_4px_rgba(255,255,255,0.95),0_4px_10px_rgba(0,0,0,0.22)]"
+              className="absolute left-1/2 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0b8d45] shadow-[0_0_0_4px_rgba(255,255,255,0.95),0_4px_10px_rgba(0,0,0,0.22)]"
             />
           </div>
         </div>

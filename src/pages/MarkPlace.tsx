@@ -1373,22 +1373,22 @@ export default function MarkPlace() {
 
       {/* STAGE 1: 取景框 */}
       {stage === 'camera' && (
-        <div className="relative flex h-[100dvh] w-full flex-col bg-[#191714] text-stone-700">
+        <div className="relative flex h-[100dvh] w-full flex-col bg-[#063d27] text-stone-700">
           <div className="flex min-h-0 flex-1 items-center justify-center px-3 pb-3 pt-[calc(env(safe-area-inset-top)+4.5rem)]">
             <div
               className="relative"
               style={{ width: 'min(calc(100vw - 1.25rem), calc(100dvh - 14.25rem), 560px)' }}
             >
               <div className="absolute -inset-x-2 -top-9 -bottom-3 rounded-[2.25rem] bg-gradient-to-br from-[#fffaf0] via-[#ece3d6] to-[#cfc2ae] shadow-[0_22px_55px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.95)]" />
-              <div className="absolute -top-6 left-5 z-10 flex items-center gap-2 rounded-full border border-black/10 bg-[#211f1b] px-3 py-1 text-[10px] font-black tracking-[0.24em] text-[#f6eee4] shadow-inner">
+              <div className="absolute -top-6 left-5 z-10 flex items-center gap-2 rounded-full border border-black/10 bg-[#0b3d24] px-3 py-1 text-[10px] font-black tracking-[0.24em] text-[#f6eee4] shadow-inner">
                 CMI MAP
               </div>
               <div className="absolute -top-6 right-5 z-10 flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#f97316] shadow-[0_0_12px_rgba(249,115,22,0.9)]" />
-                <span className="h-4 w-10 rounded-full border border-black/10 bg-[#2b2925] shadow-inner" />
+                <span className="h-2.5 w-2.5 rounded-full bg-[#28c76f] shadow-[0_0_12px_rgba(40,199,111,0.78)]" />
+                <span className="h-4 w-10 rounded-full border border-black/10 bg-[#075233] shadow-inner" />
               </div>
               <div
-                className="touch-none relative aspect-square overflow-hidden rounded-[1.9rem] border-[7px] border-[#171411] bg-black shadow-[0_16px_38px_rgba(0,0,0,0.35),inset_0_0_0_1px_rgba(255,255,255,0.16),inset_0_18px_28px_rgba(255,255,255,0.08)] ring-[5px] ring-[#f7efe5] sm:rounded-[2.2rem] sm:border-[8px] sm:ring-[6px]"
+                className="touch-none relative aspect-square overflow-hidden rounded-[1.9rem] border-[7px] border-[#07351f] bg-[#061f16] shadow-[0_16px_38px_rgba(0,0,0,0.35),inset_0_0_0_1px_rgba(255,255,255,0.16),inset_0_18px_28px_rgba(255,255,255,0.08)] ring-[5px] ring-[#f7efe5] sm:rounded-[2.2rem] sm:border-[8px] sm:ring-[6px]"
                 onTouchStart={handleCameraTouchStart}
                 onTouchMove={handleCameraTouchMove}
                 onTouchEnd={handleCameraTouchEnd}
@@ -1411,7 +1411,7 @@ export default function MarkPlace() {
                 />
                 <canvas ref={canvasRef} className="hidden" />
                 {cameraStatus !== 'ready' && (
-                  <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#101010]/90 px-8 text-center text-white">
+                  <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#06251a]/92 px-8 text-center text-white">
                     {cameraStatus === 'starting' ? (
                       <Loader2 className="mb-3 h-7 w-7 animate-spin text-white/90" />
                     ) : (
@@ -1455,7 +1455,7 @@ export default function MarkPlace() {
           <div className="relative z-10 h-52 bg-gradient-to-b from-[#fffaf2] to-[#efe6d7] flex flex-col items-center justify-center shadow-[0_-18px_42px_-14px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.95)] pb-safe rounded-t-[2.35rem] border-t border-white/80 sm:h-56">
             <div className="absolute top-5 w-28 h-1.5 bg-stone-300/80 rounded-full shadow-inner" />
             <div className="absolute left-7 top-7 flex items-center gap-2 text-[10px] font-black tracking-[0.22em] text-stone-500">
-              <span className="h-2 w-2 rounded-full bg-[#f97316]" />
+              <span className="h-2 w-2 rounded-full bg-[#28c76f]" />
               LIVE
             </div>
             <div className="absolute right-7 top-7 rounded-full border border-stone-300/70 bg-white/55 px-2.5 py-1 text-[10px] font-black tracking-[0.18em] text-stone-500 shadow-inner">
@@ -1484,7 +1484,7 @@ export default function MarkPlace() {
                 <div className={`w-[76%] h-[76%] rounded-full transition-all flex items-center justify-center ${
                   cameraButtonDisabled
                     ? 'bg-stone-200 shadow-inner'
-                    : 'bg-gradient-to-br from-[#ff9a57] via-[#f97316] to-[#c2410c] shadow-[inset_0_-5px_10px_rgba(0,0,0,0.16),0_5px_14px_rgba(249,115,22,0.38)] group-active:shadow-[inset_0_4px_10px_rgba(0,0,0,0.22),0_2px_4px_rgba(249,115,22,0.2)]'
+                    : 'bg-gradient-to-br from-[#41d97b] via-[#0f8f4d] to-[#075f36] shadow-[inset_0_-5px_10px_rgba(0,0,0,0.16),0_5px_14px_rgba(15,143,77,0.34)] group-active:shadow-[inset_0_4px_10px_rgba(0,0,0,0.22),0_2px_4px_rgba(15,143,77,0.2)]'
                 }`}>
                   <div className="absolute top-4 left-6 w-5 h-5 bg-white/40 rounded-full blur-[2px]"></div>
                 </div>
@@ -1504,7 +1504,7 @@ export default function MarkPlace() {
               aria-pressed={isWildAnimalCheckin}
               className={`mt-3 inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-black shadow-sm active:scale-95 ${
                 isWildAnimalCheckin
-                  ? 'border-[#f97316]/45 bg-[#fff3e8] text-[#9a3412]'
+                  ? 'border-[#0b8d45]/45 bg-[#eaf8ef] text-[#0b5f37]'
                   : 'border-stone-300/75 bg-white/70 text-stone-700 hover:bg-white'
               }`}
             >
@@ -1610,7 +1610,7 @@ export default function MarkPlace() {
                         <button
                           type="button"
                           onClick={() => void handleWildAnimalShareAction('album')}
-                          className="relative flex min-h-16 flex-col items-center justify-center gap-1 rounded-[1.1rem] border-2 border-[#0b1724] bg-[#f6c445] px-2 py-2 text-[11px] font-black leading-tight text-[#0b3d24] shadow-[3px_3px_0_rgba(11,23,36,0.22)] active:translate-y-0.5 active:shadow-[1px_1px_0_rgba(11,23,36,0.2)]"
+                          className="relative flex min-h-16 flex-col items-center justify-center gap-1 rounded-[1.1rem] border-2 border-[#0b1724] bg-[#dff5e7] px-2 py-2 text-[11px] font-black leading-tight text-[#0b3d24] shadow-[3px_3px_0_rgba(11,23,36,0.22)] active:translate-y-0.5 active:shadow-[1px_1px_0_rgba(11,23,36,0.2)]"
                         >
                           <ImageIcon className="h-4 w-4" strokeWidth={3} />
                           保存到相册
@@ -1626,7 +1626,7 @@ export default function MarkPlace() {
                         <button
                           type="button"
                           onClick={() => void handleWildAnimalShareAction('xiaohongshu')}
-                          className="relative flex min-h-16 flex-col items-center justify-center gap-1 rounded-[1.1rem] border-2 border-[#0b1724] bg-[#f780b6] px-2 py-2 text-[11px] font-black leading-tight text-[#0b1724] shadow-[3px_3px_0_rgba(11,23,36,0.22)] active:translate-y-0.5 active:shadow-[1px_1px_0_rgba(11,23,36,0.2)]"
+                          className="relative flex min-h-16 flex-col items-center justify-center gap-1 rounded-[1.1rem] border-2 border-[#0b1724] bg-[#2ea85f] px-2 py-2 text-[11px] font-black leading-tight text-[#fff4d8] shadow-[3px_3px_0_rgba(11,23,36,0.22)] active:translate-y-0.5 active:shadow-[1px_1px_0_rgba(11,23,36,0.2)]"
                         >
                           <Send className="h-4 w-4" strokeWidth={3} />
                           小红书
@@ -1727,7 +1727,7 @@ export default function MarkPlace() {
                  </div>
                  <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1001] h-40 bg-gradient-to-t from-background via-background/88 to-transparent" />
                  <div className="absolute inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-[1002]">
-                   <button onClick={handleMapConfirm} className="flex h-14 w-full items-center justify-center rounded-3xl bg-foreground text-base font-black text-background shadow-[0_14px_34px_rgba(0,0,0,0.24)] active:scale-[0.98]">
+                   <button onClick={handleMapConfirm} className="flex h-14 w-full items-center justify-center rounded-3xl bg-[#0b3d24] text-base font-black text-[#fff7dc] shadow-[0_14px_34px_rgba(11,61,36,0.24)] active:scale-[0.98]">
                      {description.trim() ? '确认地点，继续发布' : '确认地点，去写体验'}
                    </button>
                  </div>
