@@ -44,6 +44,19 @@
 
 ## 执行记录
 
+### 2026-06-12 12:24 +07 神奇动物分享卡切到无装饰干净模板
+
+- 本轮实现：
+  - 重新用 Image Gen 生成 `wild-chiang-mai-template-v3.png`，去掉照片四周贴纸、底部 CMI MAP、小图标、动物 / 车辆 / 花叶装饰和额外圆角信息框。
+  - 分享卡改用新模板，照片区域放大，底部只叠加动物名、动物介绍、时间戳和活动二维码。
+  - 简介区删除图标干扰，时间戳移到无品牌字样的左下角区域，二维码固定在右下角白色留白内。
+- 验证结果：
+  - `node --test --experimental-strip-types src/lib/cmi-wild-animal-share-card.test.ts src/db/cmi-event-capture-numbers.test.ts src/pages/MarkPlace.test.ts` 通过，19 项测试全部通过。
+  - `pnpm exec biome lint src/lib/cmi-wild-animal-share-card.ts src/lib/cmi-wild-animal-share-card.test.ts src/db/api.ts src/db/cmi-event-capture-numbers.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地用 `wild-chiang-mai-template-v3.png` 和小狗照片合成样卡，确认照片周围无贴纸白框，简介无图标重叠，时间戳不再压底部品牌字，二维码区独立。
+
 ### 2026-06-12 11:48 +07 神奇动物分享卡改用新版 Image Gen 模板
 
 - 本轮实现：

@@ -23,23 +23,24 @@ export interface CmiWildAnimalShareCardResult {
   fileName: string;
 }
 
-const TEMPLATE_URL = '/cmi-home/share-card-templates/wild-chiang-mai-template-v2.png';
+const TEMPLATE_URL = '/cmi-home/share-card-templates/wild-chiang-mai-template-v3.png';
 const CARD_WIDTH = 1024;
 const CARD_HEIGHT = 1536;
 const FONT_FAMILY = '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif';
-const INTRO_FONT = `800 27px ${FONT_FAMILY}`;
-const NUMBER_FONT = `900 30px ${FONT_FAMILY}`;
-const TIMESTAMP_FONT = `900 28px ${FONT_FAMILY}`;
+const INTRO_FONT = `800 29px ${FONT_FAMILY}`;
+const NUMBER_FONT = `900 38px ${FONT_FAMILY}`;
+const TIMESTAMP_FONT = `900 31px ${FONT_FAMILY}`;
 const DEEP_GREEN = '#0B3D24';
 const YELLOW = '#F6BE19';
 const WHITE = '#FFFFFF';
 const BLACK = '#050505';
-const PHOTO_BOX = { x: 66, y: 506, width: 892, height: 478, radius: 26 };
-const NUMBER_BOX = { x: 738, y: 54, width: 224, height: 76, radius: 38 };
-const SPECIES_NAME_BOX = { x: 230, y: 1130, width: 340, height: 54 };
-const INTRO_BOX = { x: 145, y: 1232, width: 470, lineHeight: 50, maxLines: 3 };
-const QR_BOX = { x: 734, y: 1196, size: 200 };
-const TIMESTAMP_BOX = { x: 164, y: 1432, width: 324, height: 72 };
+const PHOTO_BOX = { x: 61, y: 511, width: 902, height: 598, radius: 28 };
+const NUMBER_BOX = { x: 746, y: 47, width: 226, height: 84, radius: 42 };
+const SPECIES_NAME_BOX = { x: 70, y: 1160, width: 620, height: 58 };
+const INTRO_BOX = { x: 72, y: 1230, width: 612, lineHeight: 43, maxLines: 4 };
+const QR_BOX = { x: 760, y: 1221, size: 170 };
+const QR_BACKGROUND_BOX = { x: 739, y: 1199, size: 212, radius: 14 };
+const TIMESTAMP_BOX = { x: 62, y: 1396, width: 448, height: 54 };
 
 const speciesIntroById: Record<string, string> = {
   dog: '家犬与人类共同生活时间很长，常在院子、街角和店门口活动，是城市日常里最容易遇见的伙伴。',
@@ -308,7 +309,7 @@ export const createCmiWildAnimalShareCard = async ({
     SPECIES_NAME_BOX.x,
     SPECIES_NAME_BOX.y + SPECIES_NAME_BOX.height / 2 + 1,
     SPECIES_NAME_BOX.width - 28,
-    34,
+    43,
     22,
     DEEP_GREEN
   );
@@ -341,7 +342,15 @@ export const createCmiWildAnimalShareCard = async ({
   );
 
   context.fillStyle = WHITE;
-  context.fillRect(QR_BOX.x, QR_BOX.y, QR_BOX.size, QR_BOX.size);
+  drawRoundRect(
+    context,
+    QR_BACKGROUND_BOX.x,
+    QR_BACKGROUND_BOX.y,
+    QR_BACKGROUND_BOX.size,
+    QR_BACKGROUND_BOX.size,
+    QR_BACKGROUND_BOX.radius
+  );
+  context.fill();
   context.drawImage(qrImage, QR_BOX.x, QR_BOX.y, QR_BOX.size, QR_BOX.size);
 
   const blob = await canvasToBlob(canvas);
