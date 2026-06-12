@@ -549,7 +549,13 @@ export const assignCmiEventCaptureNumber = async (
     return null;
   }
 
-  return typeof data === 'number' ? data : null;
+  if (typeof data === 'number') return data;
+  if (typeof data === 'string') {
+    const parsedCaptureNumber = Number(data);
+    return Number.isInteger(parsedCaptureNumber) ? parsedCaptureNumber : null;
+  }
+
+  return null;
 };
 
 /**

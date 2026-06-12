@@ -19,5 +19,7 @@ test('活动捕获编号由数据库按活动全局递增分配', () => {
 test('前端发布后只调用 RPC 读取已写死的捕获编号', () => {
   assert.match(apiSource, /export const assignCmiEventCaptureNumber/);
   assert.match(apiSource, /supabase\.rpc\('assign_cmi_event_capture_number'/);
+  assert.match(apiSource, /typeof data === 'string'/);
+  assert.match(apiSource, /Number\.isInteger\(parsedCaptureNumber\)/);
   assert.doesNotMatch(apiSource, /linked_event_capture_number:\s*Math\.random/);
 });

@@ -19,23 +19,27 @@ test('神奇动物分享卡主展示中文名和真实活动二维码', () => {
   assert.doesNotMatch(source, /getAnimalScientificName\(candidate\)/);
   assert.doesNotMatch(source, /candidate\.rawLabel \|\| candidate\.nameEn/);
   assert.match(source, /getPublicCmiEventUrl\(CMI_MAP_WILD_CHIANG_MAI_EVENT_ID\)/);
-  assert.match(source, /CMI No\.\$\{captureNumber\}/);
+  assert.match(source, /NO\. \$\{String\(captureNumber\)\.padStart\(3, '0'\)\}/);
+  assert.doesNotMatch(source, /CMI No/);
 });
 
-test('神奇动物分享卡弱化右下角爪印并放大二维码', () => {
-  assert.match(source, /const PAW_STAMP_COVER = \{ x: 704, y: 1146, width: 226, height: 216, radius: 58 \}/);
-  assert.match(source, /const PAW_STAMP_ICON = \{ x: 816, y: 1237, radius: 34 \}/);
-  assert.match(source, /drawQuietStampPatch\(context\)/);
-  assert.match(source, /context\.globalAlpha = 0\.78/);
-  assert.match(source, /const QR_BOX = \{ x: 806, y: 1350, size: 150 \}/);
-  assert.match(source, /const QR_BACKING_BOX = \{ x: 794, y: 1338, size: 174, radius: 12 \}/);
+test('神奇动物分享卡右下角去掉爪印并改为二维码和口号', () => {
+  assert.match(source, /const PAW_STAMP_COVER = \{ x: 616, y: 1092, width: 360, height: 292, radius: 30 \}/);
+  assert.match(source, /drawPanelCover\(context\)/);
+  assert.match(source, /const QR_BOX = \{ x: 734, y: 1138, size: 198 \}/);
+  assert.match(source, /const QR_SLOGAN_TEXT = '扫码探索万物'/);
+  assert.match(source, /QR_SLOGAN_BOX/);
+  assert.doesNotMatch(source, /drawQuietPawMagnifier|drawQuietStampPatch|PAW_STAMP_ICON|context\.globalAlpha = 0\.52/);
 });
 
-test('神奇动物分享卡底部进度号使用独立胶囊对齐', () => {
-  assert.match(source, /const COLLECTION_PROGRESS_BOX = \{ x: 618, y: 1414, width: 178, height: 54, radius: 27 \}/);
-  assert.match(source, /COLLECTION_PROGRESS_FONT/);
-  assert.match(source, /drawCenteredText\(\s+context,\s+collectionProgress,\s+COLLECTION_PROGRESS_BOX\.x,/);
-  assert.doesNotMatch(source, /drawCenteredText\(context, collectionProgress, 630, 1432, 160, 44/);
+test('神奇动物分享卡底部只保留介绍、时间戳和装饰贴片', () => {
+  assert.match(source, /const INTRO_BOX = \{ x: 92, y: 1180, width: 492, lineHeight: 38, maxLines: 4 \}/);
+  assert.match(source, /drawWrappedText\(\s+context,\s+getIntro\(candidate\),/);
+  assert.match(source, /const BOTTOM_LEFT_COVER = \{ x: 104, y: 1400, width: 420, height: 62, radius: 18 \}/);
+  assert.match(source, /drawCenteredText\(\s+context,\s+timestamp,/);
+  assert.match(source, /drawTemplateDecorationPatches\(context, templateImage\)/);
+  assert.doesNotMatch(source, /drawInfoRow\(context, '发现者'|drawInfoRow\(context, '时间'|drawInfoRow\(context, '地点'|drawInfoRow\(context, '介绍'/);
+  assert.doesNotMatch(source, /COLLECTION_PROGRESS_BOX|collectionProgress|COLLECTION_PROGRESS_FONT/);
 });
 
 test('神奇动物分享卡不再调用系统分享面板', () => {

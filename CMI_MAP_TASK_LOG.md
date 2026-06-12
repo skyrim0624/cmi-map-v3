@@ -39,8 +39,39 @@
 24. [本地完成] 自托管专业物种模型服务：BioCLIP 2.5 + BioCLIP 2 + 清迈动物候选库
 25. [完成] 神奇动物分享面板主视觉化，并将保存动作改为系统图片分享
 26. [完成] 神奇动物图鉴卡右下角排版修正：弱化爪印、放大二维码、重排进度号
+27. [完成] `/mark` 发布 tag 前台步骤退后台，默认按拍摄 / 照片坐标直接发布
+28. [完成] 上传相关页面主题色统一为 CMI 绿色
 
 ## 执行记录
+
+### 2026-06-12 11:03 +07 神奇动物分享卡按标注图重排
+
+- 本轮实现：
+  - 右上角编号改为 `NO. 001` 格式，不再写 `CMI`；同时兼容 RPC 返回数字字符串，避免编号为空。
+  - 底部信息去掉发现者、时间、地点和“介绍”标题，只保留动物介绍正文。
+  - 右侧爪印区域改为活动二维码，并在二维码下方增加 `扫码探索万物`。
+  - 底部左侧原 `CMI MAP` 位置改为时间戳；底部进度号不再绘制。
+  - 照片绘制后补回蝴蝶、叶子、红车等模板装饰贴片，避免装饰被照片压住。
+- 验证结果：
+  - `node --test --experimental-strip-types src/lib/cmi-wild-animal-share-card.test.ts src/db/cmi-event-capture-numbers.test.ts src/pages/MarkPlace.test.ts` 通过，19 项测试全部通过。
+  - `pnpm exec biome lint src/lib/cmi-wild-animal-share-card.ts src/lib/cmi-wild-animal-share-card.test.ts src/db/api.ts src/db/cmi-event-capture-numbers.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+
+### 2026-06-11 12:56 +07 上传相关页面主题色统一为绿色
+
+- 本轮实现：
+  - 全局 `primary` / `accent` / `ring` 从薰衣草紫切到 CMI 绿色系，地图选点候选、表单聚焦和主按钮不再继承紫色。
+  - `/mark` 相机页黑 / 橙主视觉改成深绿 / 亮绿；手动选点确认按钮从黑色改为深绿。
+  - 共享地图准星从橙色改为绿色，旧 `/playground/mark` 上传原型的黑色主按钮也改成绿色。
+  - V3 原型里旧 `--cmi-v3-purple` 变量映射为绿色，避免旧紫色继续作为页面强调色出现。
+- 验证结果：
+  - `node src/pages/MarkPlace.test.ts` 通过，12 项测试全部通过。
+  - 旧色残留扫描通过，目标文件内未再命中旧紫色 primary、橙色上传按钮、粉色分享按钮和黑色确认按钮。
+  - `npx tsgo -p tsconfig.check.json` 通过。
+  - 目标 Biome lint 通过。
+  - `npm run build` 通过，PWA precache 检查通过。
+  - 本地应用内浏览器打开 `/v3`：全局 `primary/accent/ring` 和 V3 变量均为绿色，页面非空，无 console warn/error；真实 `/mark` 在本地按登录保护跳转 `/login`。
 
 ### 2026-06-11 12:47 +07 神奇动物图鉴卡右下角排版修正
 
@@ -54,6 +85,25 @@
   - 生产构建通过，PWA precache 检查通过。
   - 临时浏览器预览页已生成样卡并局部截图复查右下角：爪印弱化、二维码更大、`01/09` 胶囊与二维码处在同一底部区域。
   - 全量 `tsgo` 在干净远端基线上仍被 `/mark` 既有 Stage / 分类页类型错误阻断，非本轮图鉴卡改动引入。
+
+### 2026-06-11 12:41 +07 `/mark` 发布 tag 退后台与坐标发布
+
+- 产品决策：
+  - CMI Map 不再让普通用户在发布时承担攻略式 tag / 分类整理。
+  - tag 系统保留在后台整理和搜索层，例如餐厅等地点细分后续由系统 / 运营归类。
+  - 发布动态默认绑定拍摄坐标或照片 EXIF 坐标；地点搜索 / 手动定点只作为定位失败或用户主动修改位置时的兜底。
+- 本轮实现：
+  - 去掉 `/mark` 发布前“选择发布标签”整屏步骤。
+  - 实时拍照成功拿到 GPS 后，文字确认会直接发布；定位失败才进入手动定点页。
+  - 相册照片优先读取 EXIF GPS；没有坐标时提示发布前手动定点。
+  - 没有选中具体地点时，地点名改为 `地图坐标 · 经纬度`，不再从正文前 30 字切出伪地点名。
+  - 清迈客栈、神奇动物 / 彩蛋等特殊分类仍自动写入后台字段。
+- 验证结果：
+  - `node --test --experimental-strip-types src/pages/MarkPlace.test.ts` 通过，12 项测试全部通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts CMI_MAP_TASK_LOG.md` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地 `http://127.0.0.1:5187/mark?verify=tagless-location` 返回 HTTP 200；应用内浏览器打开后按登录保护跳转到 `/login`，页面非空，无框架错误遮罩和 console warn/error。
 
 ### 2026-06-11 12:35 +07 神奇动物分享面板与保存到相册
 

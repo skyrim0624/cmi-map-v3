@@ -27,27 +27,33 @@ const TEMPLATE_URL = '/cmi-home/share-card-templates/wild-chiang-mai-template-v1
 const CARD_WIDTH = 1024;
 const CARD_HEIGHT = 1536;
 const FONT_FAMILY = '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif';
-const BODY_FONT = `800 27px ${FONT_FAMILY}`;
+const INTRO_FONT = `800 29px ${FONT_FAMILY}`;
 const NUMBER_FONT = `900 30px ${FONT_FAMILY}`;
-const COLLECTION_PROGRESS_FONT = `900 32px ${FONT_FAMILY}`;
+const TIMESTAMP_FONT = `900 28px ${FONT_FAMILY}`;
+const SLOGAN_FONT = `900 27px ${FONT_FAMILY}`;
 const DEEP_GREEN = '#0B3D24';
 const QUIET_GREEN = 'rgba(11, 61, 36, 0.72)';
 const CREAM = '#FFF4D8';
-const YELLOW = '#F6B800';
 const WHITE = '#FFFFFF';
 const BLACK = '#050505';
-const PHOTO_BOX = { x: 58, y: 374, width: 908, height: 622, radius: 28 };
+const PHOTO_BOX = { x: 58, y: 374, width: 908, height: 648, radius: 28 };
+const PHOTO_DECORATION_PATCHES = [
+  { x: 782, y: 300, width: 190, height: 120 },
+  { x: 0, y: 840, width: 245, height: 220 },
+  { x: 652, y: 914, width: 314, height: 152 },
+  { x: 900, y: 828, width: 124, height: 158 },
+] as const;
 const NUMBER_BOX = { x: 724, y: 48, width: 226, height: 58 };
 const SPECIES_NAME_BOX = { x: 82, y: 1098, width: 365, height: 54 };
-const INFO_TEXT_X = 126;
-const INFO_VALUE_X = 222;
-const INFO_MAX_WIDTH = 390;
-const INFO_ROW_BASELINES = [1195, 1253, 1307, 1363] as const;
-const COLLECTION_PROGRESS_BOX = { x: 618, y: 1414, width: 178, height: 54, radius: 27 };
-const QR_BACKING_BOX = { x: 794, y: 1338, size: 174, radius: 12 };
-const QR_BOX = { x: 806, y: 1350, size: 150 };
-const PAW_STAMP_COVER = { x: 704, y: 1146, width: 226, height: 216, radius: 58 };
-const PAW_STAMP_ICON = { x: 816, y: 1237, radius: 34 };
+const INTRO_BOX = { x: 92, y: 1180, width: 492, lineHeight: 38, maxLines: 4 };
+const PAW_STAMP_COVER = { x: 616, y: 1092, width: 360, height: 292, radius: 30 };
+const QR_BACKING_BOX = { x: 714, y: 1118, size: 238, radius: 26 };
+const QR_BOX = { x: 734, y: 1138, size: 198 };
+const BOTTOM_LEFT_COVER = { x: 104, y: 1400, width: 420, height: 62, radius: 18 };
+const BOTTOM_CENTER_COVER = { x: 590, y: 1392, width: 228, height: 82, radius: 20 };
+const BOTTOM_RIGHT_COVER = { x: 812, y: 1362, width: 166, height: 146, radius: 22 };
+const QR_SLOGAN_BOX = { x: 708, y: 1404, width: 262, height: 44, radius: 18 };
+const QR_SLOGAN_TEXT = '扫码探索万物';
 
 const speciesIntroById: Record<string, string> = {
   dog: '家犬与人类共同生活时间很长，常在院子、街角和店门口活动，是城市日常里最容易遇见的伙伴。',
@@ -132,6 +138,25 @@ const drawImageCover = (
   context.restore();
 };
 
+const drawTemplateDecorationPatches = (
+  context: CanvasRenderingContext2D,
+  templateImage: HTMLImageElement
+) => {
+  for (const patch of PHOTO_DECORATION_PATCHES) {
+    context.drawImage(
+      templateImage,
+      patch.x,
+      patch.y,
+      patch.width,
+      patch.height,
+      patch.x,
+      patch.y,
+      patch.width,
+      patch.height
+    );
+  }
+};
+
 const canvasToBlob = (canvas: HTMLCanvasElement) =>
   new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {
@@ -175,45 +200,7 @@ const drawCenteredText = (
   context.restore();
 };
 
-const drawQuietPawMagnifier = (context: CanvasRenderingContext2D) => {
-  const { x, y, radius } = PAW_STAMP_ICON;
-
-  context.save();
-  context.globalAlpha = 0.78;
-  context.strokeStyle = DEEP_GREEN;
-  context.fillStyle = DEEP_GREEN;
-  context.lineWidth = 8;
-  context.lineCap = 'round';
-  context.lineJoin = 'round';
-
-  context.beginPath();
-  context.arc(x, y, radius, 0, Math.PI * 2);
-  context.stroke();
-
-  context.beginPath();
-  context.moveTo(x + radius * 0.64, y + radius * 0.64);
-  context.lineTo(x + radius * 1.25, y + radius * 1.25);
-  context.stroke();
-
-  const toeRadius = 6;
-  [
-    { x: x - 18, y: y - 5 },
-    { x: x - 6, y: y - 16 },
-    { x: x + 8, y: y - 16 },
-    { x: x + 20, y: y - 5 },
-  ].forEach(point => {
-    context.beginPath();
-    context.ellipse(point.x, point.y, toeRadius, toeRadius + 2, 0, 0, Math.PI * 2);
-    context.fill();
-  });
-
-  context.beginPath();
-  context.ellipse(x + 1, y + 12, 19, 16, 0, 0, Math.PI * 2);
-  context.fill();
-  context.restore();
-};
-
-const drawQuietStampPatch = (context: CanvasRenderingContext2D) => {
+const drawPanelCover = (context: CanvasRenderingContext2D) => {
   context.save();
   drawRoundRect(
     context,
@@ -223,15 +210,17 @@ const drawQuietStampPatch = (context: CanvasRenderingContext2D) => {
     PAW_STAMP_COVER.height,
     PAW_STAMP_COVER.radius
   );
-  context.fillStyle = 'rgba(255, 244, 216, 0.96)';
+  const gradient = context.createLinearGradient(
+    PAW_STAMP_COVER.x,
+    PAW_STAMP_COVER.y,
+    PAW_STAMP_COVER.x + PAW_STAMP_COVER.width,
+    PAW_STAMP_COVER.y + PAW_STAMP_COVER.height
+  );
+  gradient.addColorStop(0, '#004226');
+  gradient.addColorStop(1, '#006139');
+  context.fillStyle = gradient;
   context.fill();
-  context.setLineDash([12, 12]);
-  context.lineWidth = 3;
-  context.strokeStyle = 'rgba(11, 61, 36, 0.38)';
-  context.stroke();
   context.restore();
-
-  drawQuietPawMagnifier(context);
 };
 
 const drawFittedText = (
@@ -261,32 +250,43 @@ const drawFittedText = (
   context.restore();
 };
 
-const truncateText = (
+const drawWrappedText = (
   context: CanvasRenderingContext2D,
   text: string,
-  maxWidth: number
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+  maxLines: number
 ) => {
-  if (context.measureText(text).width <= maxWidth) return text;
+  const chars = [...text.trim()];
+  const lines: string[] = [];
+  let currentLine = '';
 
-  let result = text;
-  while (result.length > 0 && context.measureText(`${result}…`).width > maxWidth) {
-    result = result.slice(0, -1);
+  for (const char of chars) {
+    const nextLine = `${currentLine}${char}`;
+    if (context.measureText(nextLine).width <= maxWidth) {
+      currentLine = nextLine;
+      continue;
+    }
+
+    if (currentLine) lines.push(currentLine);
+    currentLine = char;
+    if (lines.length === maxLines) break;
   }
 
-  return `${result}…`;
-};
+  if (currentLine && lines.length < maxLines) lines.push(currentLine);
+  if (lines.length === maxLines && chars.join('').length > lines.join('').length) {
+    let lastLine = lines[maxLines - 1];
+    while (lastLine.length > 0 && context.measureText(`${lastLine}…`).width > maxWidth) {
+      lastLine = lastLine.slice(0, -1);
+    }
+    lines[maxLines - 1] = `${lastLine}…`;
+  }
 
-const drawInfoRow = (
-  context: CanvasRenderingContext2D,
-  label: string,
-  value: string,
-  baselineY: number,
-  maxWidth = INFO_MAX_WIDTH
-) => {
-  context.fillStyle = YELLOW;
-  context.fillText(`${label}：`, INFO_TEXT_X, baselineY);
-  context.fillStyle = CREAM;
-  context.fillText(truncateText(context, value, maxWidth), INFO_VALUE_X, baselineY);
+  lines.forEach((line, index) => {
+    context.fillText(line, x, y + index * lineHeight);
+  });
 };
 
 const getIntro = (candidate: AnimalIdentificationCandidate) =>
@@ -297,9 +297,6 @@ export const createCmiWildAnimalShareCard = async ({
   candidate,
   recommendation,
   captureNumber,
-  userName,
-  collectedIndex = 1,
-  collectedTotal = 9,
 }: CmiWildAnimalShareCardInput): Promise<CmiWildAnimalShareCardResult> => {
   const [templateImage, photoImage, qrImage] = await Promise.all([
     loadImage(TEMPLATE_URL),
@@ -314,8 +311,8 @@ export const createCmiWildAnimalShareCard = async ({
     }).then(loadImage),
   ]);
   const chineseName = getAnimalChineseName(candidate);
-  const captureNumberLabel = captureNumber ? `CMI No.${captureNumber}` : 'CMI No.';
-  const collectionProgress = `${String(collectedIndex).padStart(2, '0')}/${String(collectedTotal).padStart(2, '0')}`;
+  const captureNumberLabel = captureNumber ? `NO. ${String(captureNumber).padStart(3, '0')}` : 'NO. --';
+  const timestamp = formatDateTime(recommendation.created_at);
 
   const canvas = document.createElement('canvas');
   canvas.width = CARD_WIDTH;
@@ -326,37 +323,14 @@ export const createCmiWildAnimalShareCard = async ({
   context.imageSmoothingQuality = 'high';
 
   context.drawImage(templateImage, 0, 0, CARD_WIDTH, CARD_HEIGHT);
-  drawQuietStampPatch(context);
   drawImageCover(context, photoImage, PHOTO_BOX.x, PHOTO_BOX.y, PHOTO_BOX.width, PHOTO_BOX.height);
+  drawTemplateDecorationPatches(context, templateImage);
   context.lineWidth = 5;
   context.strokeStyle = BLACK;
   drawRoundRect(context, PHOTO_BOX.x, PHOTO_BOX.y, PHOTO_BOX.width, PHOTO_BOX.height, PHOTO_BOX.radius);
   context.stroke();
 
   drawCenteredText(context, captureNumberLabel, NUMBER_BOX.x, NUMBER_BOX.y, NUMBER_BOX.width, NUMBER_BOX.height, NUMBER_FONT, BLACK);
-  drawRoundRect(
-    context,
-    COLLECTION_PROGRESS_BOX.x,
-    COLLECTION_PROGRESS_BOX.y,
-    COLLECTION_PROGRESS_BOX.width,
-    COLLECTION_PROGRESS_BOX.height,
-    COLLECTION_PROGRESS_BOX.radius
-  );
-  context.fillStyle = CREAM;
-  context.fill();
-  context.lineWidth = 3;
-  context.strokeStyle = QUIET_GREEN;
-  context.stroke();
-  drawCenteredText(
-    context,
-    collectionProgress,
-    COLLECTION_PROGRESS_BOX.x,
-    COLLECTION_PROGRESS_BOX.y,
-    COLLECTION_PROGRESS_BOX.width,
-    COLLECTION_PROGRESS_BOX.height,
-    COLLECTION_PROGRESS_FONT,
-    BLACK
-  );
 
   drawFittedText(
     context,
@@ -369,11 +343,46 @@ export const createCmiWildAnimalShareCard = async ({
     DEEP_GREEN
   );
 
-  context.font = BODY_FONT;
-  drawInfoRow(context, '发现者', userName, INFO_ROW_BASELINES[0]);
-  drawInfoRow(context, '时间', formatDateTime(recommendation.created_at), INFO_ROW_BASELINES[1]);
-  drawInfoRow(context, '地点', recommendation.place_name, INFO_ROW_BASELINES[2]);
-  drawInfoRow(context, '介绍', getIntro(candidate), INFO_ROW_BASELINES[3], 500);
+  context.save();
+  context.font = INTRO_FONT;
+  context.fillStyle = CREAM;
+  context.textAlign = 'left';
+  context.textBaseline = 'top';
+  drawWrappedText(
+    context,
+    getIntro(candidate),
+    INTRO_BOX.x,
+    INTRO_BOX.y,
+    INTRO_BOX.width,
+    INTRO_BOX.lineHeight,
+    INTRO_BOX.maxLines
+  );
+  context.restore();
+
+  drawPanelCover(context);
+
+  [
+    BOTTOM_LEFT_COVER,
+    BOTTOM_CENTER_COVER,
+    BOTTOM_RIGHT_COVER,
+  ].forEach(box => {
+    context.save();
+    drawRoundRect(context, box.x, box.y, box.width, box.height, box.radius);
+    context.fillStyle = CREAM;
+    context.fill();
+    context.restore();
+  });
+
+  drawCenteredText(
+    context,
+    timestamp,
+    BOTTOM_LEFT_COVER.x,
+    BOTTOM_LEFT_COVER.y,
+    BOTTOM_LEFT_COVER.width,
+    BOTTOM_LEFT_COVER.height,
+    TIMESTAMP_FONT,
+    DEEP_GREEN
+  );
 
   drawRoundRect(
     context,
@@ -386,9 +395,33 @@ export const createCmiWildAnimalShareCard = async ({
   context.fillStyle = WHITE;
   context.fill();
   context.lineWidth = 3;
-  context.strokeStyle = 'rgba(5, 5, 5, 0.22)';
+  context.strokeStyle = QUIET_GREEN;
   context.stroke();
   context.drawImage(qrImage, QR_BOX.x, QR_BOX.y, QR_BOX.size, QR_BOX.size);
+
+  drawRoundRect(
+    context,
+    QR_SLOGAN_BOX.x,
+    QR_SLOGAN_BOX.y,
+    QR_SLOGAN_BOX.width,
+    QR_SLOGAN_BOX.height,
+    QR_SLOGAN_BOX.radius
+  );
+  context.fillStyle = CREAM;
+  context.fill();
+  context.lineWidth = 3;
+  context.strokeStyle = QUIET_GREEN;
+  context.stroke();
+  drawCenteredText(
+    context,
+    QR_SLOGAN_TEXT,
+    QR_SLOGAN_BOX.x,
+    QR_SLOGAN_BOX.y,
+    QR_SLOGAN_BOX.width,
+    QR_SLOGAN_BOX.height,
+    SLOGAN_FONT,
+    DEEP_GREEN
+  );
 
   const blob = await canvasToBlob(canvas);
 
