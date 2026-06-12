@@ -13,6 +13,8 @@ const MIN_DETECTION_SCORE = 0.25;
 const MIN_DETECTION_BOX_AREA_RATIO = 0.015;
 const MIN_DETECTION_BOX_SHORT_SIDE = 72;
 const MIN_NON_FIELD_PHOTO_SCORE = 0.55;
+const MIN_PERSON_DETECTION_SCORE = 0.70;
+const MIN_PERSON_BOX_AREA_RATIO = 0.08;
 const MIN_VISION_SPECIES_CONFIDENCE = 0.68;
 const MIN_GBIF_SPECIES_CONFIDENCE = 82;
 const TAXON_RANK_SPECIES = 'SPECIES';
@@ -421,6 +423,23 @@ const hasStrongNonFieldPhotoSignal = (rawLabels: Array<Record<string, unknown>>)
   const score = typeof topLabel.score === 'number' ? topLabel.score : 0;
   return score >= MIN_NON_FIELD_PHOTO_SCORE && nonFieldPhotoLabels.has(label);
 };
+
+const prominentPersonLabels = new Set(['person']);
+
+const hasProminentPersonSignal = (
+  rawDetections: Array<Record<string, unknown>>,
+  dimensions: ImageDimensions | null
+) => rawDetections.some(prediction => {
+  const label = typeof prediction.label === 'string' ? normalizeLabel(prediction.label) : '';
+  const score = typeof prediction.score === 'number' ? prediction.score : 0;
+  if (!prominentPersonLabels.has(label) || score < MIN_PERSON_DETECTION_SCORE) return false;
+
+  const rect = getDetectionBoxRect(prediction.box);
+  if (!rect || !dimensions) return true;
+
+  const imageArea = dimensions.width * dimensions.height;
+  return imageArea > 0 && rect.area / imageArea >= MIN_PERSON_BOX_AREA_RATIO;
+});
 
 const detectAnimalCandidates = async (ai: AiBinding, imageBytes: number[], dimensions: ImageDimensions | null) => {
   try {
@@ -870,15 +889,21 @@ export const onRequestPost = async ({ request, env }: PagesContext) => {
     classifyAnimalCandidates(env.AI, bytes),
   ]);
   const isNonFieldPhoto = hasStrongNonFieldPhotoSignal(classificationResult.rawLabels);
+  const hasProminentPerson = hasProminentPersonSignal(detectionResult.rawDetections, dimensions);
   const hasSpeciesLevelDetection = Boolean(bestSpeciesLevelCandidate(detectionResult.candidates));
   const shouldSuppressCoarseDetection = isNonFieldPhoto && !hasSpeciesLevelDetection;
+  const shouldSuppressSpeciesLookup = shouldSuppressCoarseDetection || (
+    hasProminentPerson &&
+    detectionResult.candidates.length === 0 &&
+    classificationResult.candidates.length === 0
+  );
   const preferClassificationCandidate = shouldPreferClassificationCandidate(detectionResult.candidates, classificationResult.candidates);
   const coarseCandidates = !shouldSuppressCoarseDetection && detectionResult.candidates.length > 0 && !preferClassificationCandidate
     ? detectionResult.candidates
     : shouldSuppressCoarseDetection
       ? []
       : classificationResult.candidates;
-  const speciesLookupNeeded = needsVisionSpeciesLookup(coarseCandidates);
+  const speciesLookupNeeded = !shouldSuppressSpeciesLookup && needsVisionSpeciesLookup(coarseCandidates);
   const speciesResult = speciesLookupNeeded
     ? await identifySpeciesCandidate(env, bytes, image.type || 'image/jpeg', coarseCandidates)
     : { candidate: bestSpeciesLevelCandidate(coarseCandidates) ?? null };

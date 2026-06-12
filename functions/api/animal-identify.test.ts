@@ -79,6 +79,16 @@ test('网页截图类输入不再信任检测框硬猜动物', () => {
   assert.match(source, /shouldSuppressCoarseDetection\s+\?\s+\[\]/);
 });
 
+test('大面积人物照片不会再交给物种模型硬猜', () => {
+  assert.match(source, /const MIN_PERSON_DETECTION_SCORE = 0\.70/);
+  assert.match(source, /const MIN_PERSON_BOX_AREA_RATIO = 0\.08/);
+  assert.match(source, /const prominentPersonLabels = new Set\(\['person'\]\)/);
+  assert.match(source, /hasProminentPersonSignal\(detectionResult\.rawDetections, dimensions\)/);
+  assert.match(source, /const shouldSuppressSpeciesLookup = shouldSuppressCoarseDetection \|\|/);
+  assert.match(source, /hasProminentPerson &&\s+detectionResult\.candidates\.length === 0 &&\s+classificationResult\.candidates\.length === 0/);
+  assert.match(source, /const speciesLookupNeeded = !shouldSuppressSpeciesLookup && needsVisionSpeciesLookup\(coarseCandidates\)/);
+});
+
 test('检测命中后不混入分类兜底候选', () => {
   assert.match(source, /!shouldSuppressCoarseDetection && detectionResult\.candidates\.length > 0 && !preferClassificationCandidate\s+\? detectionResult\.candidates/);
 });

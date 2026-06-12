@@ -16,11 +16,21 @@ test('动物识别通过同源 Pages Function 调用', () => {
 });
 
 test('动物识别文案不再输出可能式猜测', () => {
-  assert.match(source, /`这是\$\{chineseName\}。`/);
+  assert.match(source, /`这是\$\{chineseName\}。\$\{intro\}`/);
   assert.match(source, /getAnimalChineseName\(candidate\)/);
+  assert.match(source, /getAnimalIntro\(candidate\)/);
   assert.match(source, /isSpeciesLevelRank\(candidate\.taxonRank\)/);
   assert.match(source, /需要更近照片才能定到具体物种/);
   assert.doesNotMatch(source, /可能是/);
+});
+
+test('物种识别结果会生成基础介绍', () => {
+  assert.match(source, /export const getAnimalIntro = \(candidate: AnimalIdentificationCandidate\) =>/);
+  assert.match(source, /const animalIntroByScientificName: Record<string, string>/);
+  assert.match(source, /'Hemidactylus frenatus': '疣尾蜥虎是城市里很常见的小型壁虎/);
+  assert.match(source, /'Halcyon pileata': '蓝翡翠常见于水边/);
+  assert.match(source, /'Canis lupus familiaris': animalIntroById\.dog/);
+  assert.match(source, /return `这是\$\{chineseName\}。\$\{intro\}`/);
 });
 
 test('动物候选展示名优先使用中文名', () => {
