@@ -44,6 +44,19 @@
 
 ## 执行记录
 
+### 2026-06-12 11:48 +07 神奇动物分享卡改用新版 Image Gen 模板
+
+- 本轮实现：
+  - 采用用户确认的 Image Gen 模板，新增 `wild-chiang-mai-template-v2.png`，不覆盖旧模板。
+  - 分享卡生成改为基于新模板直接叠加照片、编号、动物名、简介、二维码和时间戳。
+  - 删除上一版贴片补装饰、底部白块覆盖、右侧面板覆盖和重复绘制 slogan 的逻辑，避免白圈、白块和文字压底图。
+  - 二维码只填入模板自带白色二维码区域，`扫码探索万物` 使用模板自身文字。
+- 验证结果：
+  - `node --test --experimental-strip-types src/lib/cmi-wild-animal-share-card.test.ts src/db/cmi-event-capture-numbers.test.ts src/pages/MarkPlace.test.ts` 通过，19 项测试全部通过。
+  - `pnpm exec biome lint src/lib/cmi-wild-animal-share-card.ts src/lib/cmi-wild-animal-share-card.test.ts src/db/api.ts src/db/cmi-event-capture-numbers.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+
 ### 2026-06-12 11:03 +07 神奇动物分享卡按标注图重排
 
 - 本轮实现：
