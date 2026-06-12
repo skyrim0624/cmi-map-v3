@@ -137,14 +137,28 @@ def coarse_candidate_groups(coarse_candidates: list[dict[str, Any]]) -> set[str]
     return groups
 
 
+def coarse_candidate_score(candidate: dict[str, Any]) -> float:
+    if "score" not in candidate:
+        return 1.0
+    try:
+        return float(candidate.get("score") or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def select_species_pool(
     catalog: list[SpeciesCandidate],
     coarse_candidates: list[dict[str, Any]] | None,
     *,
     max_candidates: int = 180,
     min_group_candidates: int = 8,
+    min_confident_coarse_score: float = 0.55,
 ) -> list[SpeciesCandidate]:
     if not coarse_candidates:
+        return catalog[:max_candidates]
+
+    # NOTE: 手机随手拍植物时，通用分类器可能把花蕊/苞片误判成昆虫；低分粗分类不能锁死候选池。
+    if max(coarse_candidate_score(candidate) for candidate in coarse_candidates) < min_confident_coarse_score:
         return catalog[:max_candidates]
 
     groups = coarse_candidate_groups(coarse_candidates)

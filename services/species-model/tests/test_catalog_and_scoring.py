@@ -33,13 +33,23 @@ class SpeciesCatalogTest(unittest.TestCase):
     def test_plant_coarse_candidate_narrows_pool(self) -> None:
         pool = select_species_pool(
             self.catalog,
-            [{"nameZh": "植物", "nameEn": "Plant", "scientificName": "Plantae", "taxonRank": "KINGDOM"}],
+            [{"nameZh": "植物", "nameEn": "Plant", "scientificName": "Plantae", "taxonRank": "KINGDOM", "score": 0.8}],
         )
 
         scientific_names = {candidate.scientific_name for candidate in pool}
         self.assertIn("Bougainvillea spectabilis", scientific_names)
         self.assertIn("Plumeria rubra", scientific_names)
         self.assertNotIn("Canis lupus familiaris", scientific_names)
+
+    def test_weak_coarse_candidate_does_not_lock_out_plants(self) -> None:
+        pool = select_species_pool(
+            self.catalog,
+            [{"nameZh": "昆虫", "nameEn": "Insect", "scientificName": "Insecta", "taxonRank": "CLASS", "score": 0.41}],
+        )
+
+        scientific_names = {candidate.scientific_name for candidate in pool}
+        self.assertIn("Bougainvillea spectabilis", scientific_names)
+        self.assertIn("Canis lupus familiaris", scientific_names)
 
     def test_coarse_candidate_groups_accept_scientific_taxon(self) -> None:
         groups = coarse_candidate_groups([{"scientificName": "Serpentes", "nameEn": "Snake"}])
