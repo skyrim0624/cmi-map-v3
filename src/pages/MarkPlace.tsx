@@ -1116,8 +1116,13 @@ export default function MarkPlace() {
     setLocationCaptureStatus('failed');
   };
 
+  const continueWithCurrentCoordinate = (label: string) => {
+    setLocationName(label);
+    setLocationCaptureStatus('ready');
+  };
+
   // 获取地理位置
-  const fetchCurrentLocation = () => {
+  const fetchCurrentLocation = (fallbackLabel = '定位暂时失败，已用当前地图坐标') => {
     setLocationCaptureStatus('pending');
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -1129,12 +1134,12 @@ export default function MarkPlace() {
         },
         (error) => {
           console.error("GPS 获取失败", error);
-          markLocationCaptureFailed('定位失败，发布前需手动定点');
+          continueWithCurrentCoordinate(fallbackLabel);
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     } else {
-      markLocationCaptureFailed('浏览器不支持定位，发布前需手动定点');
+      continueWithCurrentCoordinate(fallbackLabel);
     }
   };
 
@@ -1166,7 +1171,7 @@ export default function MarkPlace() {
       } else if (exifCoordinates) {
         applyCapturedCoordinates(exifCoordinates, '照片坐标 (EXIF)');
       } else {
-        markLocationCaptureFailed('照片没有定位，发布前需手动定点');
+        fetchCurrentLocation('照片没有定位，已用当前地图坐标');
       }
 
       setTimeout(() => {
@@ -1266,6 +1271,12 @@ export default function MarkPlace() {
     }
 
     if (locationCaptureStatus === 'failed') {
+      if (photoURL) {
+        setLocationCaptureStatus('ready');
+        void handleSubmitFinal(getAutomaticPublishCategory());
+        return;
+      }
+
       setStage('map_fallback');
       return;
     }
@@ -1989,7 +2000,7 @@ export default function MarkPlace() {
                     onClick={handleVoiceConfirm}
                     disabled={!description.trim() || isListening}
                     className="w-16 h-16 rounded-full bg-white text-primary flex items-center justify-center shadow-md transition-all hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-300 disabled:shadow-sm disabled:hover:scale-100"
-                    aria-label={locationCaptureStatus === 'failed' ? '去手动定点' : '发布动态'}
+                    aria-label={locationCaptureStatus === 'failed' && !photoURL ? '去手动定点' : '发布动态'}
                   >
                     <Check className="w-7 h-7" strokeWidth={3} />
                   </button>
