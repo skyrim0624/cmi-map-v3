@@ -4,7 +4,7 @@ import test from 'node:test';
 
 const source = readFileSync(new URL('./animal-identify.ts', import.meta.url), 'utf8');
 
-test('动物识别先做主体检测再分类兜底', () => {
+test('生物识别先做主体检测再分类兜底', () => {
   assert.match(source, /const DETECTION_MODEL_ID = '@cf\/facebook\/detr-resnet-50'/);
   assert.match(source, /const CLASSIFICATION_MODEL_ID = '@cf\/microsoft\/resnet-50'/);
   assert.match(source, /const VISION_SPECIES_MODEL_ID = '@cf\/meta\/llama-3\.2-11b-vision-instruct'/);
@@ -30,6 +30,17 @@ test('常见动物候选包含学名', () => {
   assert.match(source, /taxonRank: TAXON_RANK_SUBSPECIES/);
 });
 
+test('植物粗分类候选会进入物种模型', () => {
+  assert.match(source, /const TAXON_KINGDOM_PLANTAE = 'Plantae'/);
+  assert.match(source, /const ALLOWED_GBIF_KINGDOMS = new Set\(\[TAXON_KINGDOM_ANIMALIA, TAXON_KINGDOM_PLANTAE\]\)/);
+  assert.match(source, /id: 'plant'/);
+  assert.match(source, /scientificName: 'Plantae'/);
+  assert.match(source, /id: 'flower'/);
+  assert.match(source, /scientificName: 'Angiosperms'/);
+  assert.match(source, /id: 'orchid'/);
+  assert.match(source, /scientificName: 'Orchidaceae'/);
+});
+
 test('物种学名通过视觉模型和 GBIF 校验后才返回', () => {
   assert.match(source, /const GBIF_SPECIES_MATCH_URL = 'https:\/\/api\.gbif\.org\/v1\/species\/match'/);
   assert.match(source, /identifySpeciesCandidate\(env, bytes, image\.type \|\| 'image\/jpeg', coarseCandidates\)/);
@@ -39,8 +50,16 @@ test('物种学名通过视觉模型和 GBIF 校验后才返回', () => {
   assert.match(source, /runSelfHostedSpeciesModel/);
   assert.match(source, /validateScientificNameWithGbif/);
   assert.match(source, /MIN_GBIF_SPECIES_CONFIDENCE/);
-  assert.match(source, /gbif\.kingdom !== 'Animalia'/);
+  assert.match(source, /!ALLOWED_GBIF_KINGDOMS\.has\(gbif\.kingdom \|\| ''\)/);
   assert.match(source, /isSpeciesLevelRank\(taxonRank\)/);
+});
+
+test('视觉模型提示词允许动植物但拒绝无主体图片', () => {
+  assert.match(source, /Identify the primary visible animal or plant in this user photo/);
+  assert.match(source, /"organismPresent":true/);
+  assert.match(source, /parsed\.organismPresent === true \|\| parsed\.animalPresent === true/);
+  assert.match(source, /payload\.organismPresent !== false && payload\.animalPresent !== false/);
+  assert.match(source, /set organismPresent to false/);
 });
 
 test('自托管专业模型优先于付费视觉大模型', () => {

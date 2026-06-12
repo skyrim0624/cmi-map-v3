@@ -19,6 +19,9 @@ const MIN_VISION_SPECIES_CONFIDENCE = 0.68;
 const MIN_GBIF_SPECIES_CONFIDENCE = 82;
 const TAXON_RANK_SPECIES = 'SPECIES';
 const TAXON_RANK_SUBSPECIES = 'SUBSPECIES';
+const TAXON_KINGDOM_ANIMALIA = 'Animalia';
+const TAXON_KINGDOM_PLANTAE = 'Plantae';
+const ALLOWED_GBIF_KINGDOMS = new Set([TAXON_KINGDOM_ANIMALIA, TAXON_KINGDOM_PLANTAE]);
 
 type AiBinding = {
   run: (
@@ -43,6 +46,7 @@ interface AnimalCandidate {
   nameZh: string;
   nameEn: string;
   scientificName?: string;
+  kingdom?: string;
   score: number;
   rawLabel: string;
   source: 'detection' | 'classification' | 'vision';
@@ -71,6 +75,7 @@ const animalMatchers: Array<{
   nameZh: string;
   nameEn: string;
   scientificName?: string;
+  kingdom?: string;
   taxonRank?: string;
   iconId?: string;
   keywords: string[];
@@ -80,6 +85,7 @@ const animalMatchers: Array<{
     nameZh: '大壁虎',
     nameEn: 'Tokay gecko',
     scientificName: 'Gekko gecko',
+    kingdom: TAXON_KINGDOM_ANIMALIA,
     taxonRank: TAXON_RANK_SPECIES,
     iconId: 'egg-v2-37-gecko',
     keywords: ['gecko', 'lizard', 'agama', 'iguana', 'chameleon'],
@@ -89,6 +95,7 @@ const animalMatchers: Array<{
     nameZh: '家猫',
     nameEn: 'Cat',
     scientificName: 'Felis catus',
+    kingdom: TAXON_KINGDOM_ANIMALIA,
     taxonRank: TAXON_RANK_SPECIES,
     iconId: 'egg-v2-03-cat-face',
     keywords: ['cat', 'tabby', 'tiger cat', 'egyptian cat', 'persian cat', 'siamese'],
@@ -98,6 +105,7 @@ const animalMatchers: Array<{
     nameZh: '家犬',
     nameEn: 'Dog',
     scientificName: 'Canis lupus familiaris',
+    kingdom: TAXON_KINGDOM_ANIMALIA,
     taxonRank: TAXON_RANK_SUBSPECIES,
     iconId: 'egg-v2-05-dog-face',
     keywords: ['dog', 'hound', 'terrier', 'retriever', 'poodle', 'chihuahua', 'spaniel', 'shepherd', 'whippet', 'greyhound'],
@@ -107,6 +115,7 @@ const animalMatchers: Array<{
     nameZh: '鸟类',
     nameEn: 'Bird',
     scientificName: 'Aves',
+    kingdom: TAXON_KINGDOM_ANIMALIA,
     taxonRank: 'CLASS',
     iconId: 'egg-v2-38-bird',
     keywords: ['bird', 'bulbul', 'sparrow', 'parrot', 'kingfisher', 'hornbill', 'drongo', 'myna', 'jay'],
@@ -116,6 +125,7 @@ const animalMatchers: Array<{
     nameZh: '蝴蝶',
     nameEn: 'Butterfly',
     scientificName: 'Lepidoptera',
+    kingdom: TAXON_KINGDOM_ANIMALIA,
     taxonRank: 'ORDER',
     iconId: 'egg-v2-36-butterfly',
     keywords: ['butterfly', 'monarch', 'sulphur butterfly', 'ringlet'],
@@ -125,6 +135,7 @@ const animalMatchers: Array<{
     nameZh: '鱼类',
     nameEn: 'Fish',
     scientificName: 'Actinopterygii',
+    kingdom: TAXON_KINGDOM_ANIMALIA,
     taxonRank: 'CLASS',
     iconId: 'egg-v2-39-fish',
     keywords: ['fish', 'goldfish', 'tench', 'eel', 'ray'],
@@ -134,6 +145,7 @@ const animalMatchers: Array<{
     nameZh: '蛇类',
     nameEn: 'Snake',
     scientificName: 'Serpentes',
+    kingdom: TAXON_KINGDOM_ANIMALIA,
     taxonRank: 'SUBORDER',
     keywords: ['snake', 'cobra', 'viper', 'python', 'boa'],
   },
@@ -142,6 +154,7 @@ const animalMatchers: Array<{
     nameZh: '蛙类',
     nameEn: 'Frog',
     scientificName: 'Anura',
+    kingdom: TAXON_KINGDOM_ANIMALIA,
     taxonRank: 'ORDER',
     keywords: ['frog', 'toad', 'tree frog', 'bullfrog'],
   },
@@ -150,6 +163,7 @@ const animalMatchers: Array<{
     nameZh: '昆虫',
     nameEn: 'Insect',
     scientificName: 'Insecta',
+    kingdom: TAXON_KINGDOM_ANIMALIA,
     taxonRank: 'CLASS',
     keywords: ['bee', 'ant', 'beetle', 'grasshopper', 'cricket', 'mantis', 'dragonfly', 'damselfly', 'fly'],
   },
@@ -158,8 +172,45 @@ const animalMatchers: Array<{
     nameZh: '松鼠',
     nameEn: 'Squirrel',
     scientificName: 'Sciuridae',
+    kingdom: TAXON_KINGDOM_ANIMALIA,
     taxonRank: 'FAMILY',
     keywords: ['squirrel'],
+  },
+  {
+    id: 'plant',
+    nameZh: '植物',
+    nameEn: 'Plant',
+    scientificName: 'Plantae',
+    kingdom: TAXON_KINGDOM_PLANTAE,
+    taxonRank: 'KINGDOM',
+    keywords: ['plant', 'potted plant', 'houseplant', 'foliage', 'leaf', 'leaves', 'tree', 'shrub', 'herb'],
+  },
+  {
+    id: 'flower',
+    nameZh: '花卉植物',
+    nameEn: 'Flowering plant',
+    scientificName: 'Angiosperms',
+    kingdom: TAXON_KINGDOM_PLANTAE,
+    taxonRank: 'CLADE',
+    keywords: ['flower', 'flowers', 'blossom', 'bloom', 'daisy', 'rose', 'sunflower', 'hibiscus', 'lotus', 'lily'],
+  },
+  {
+    id: 'orchid',
+    nameZh: '兰科植物',
+    nameEn: 'Orchid',
+    scientificName: 'Orchidaceae',
+    kingdom: TAXON_KINGDOM_PLANTAE,
+    taxonRank: 'FAMILY',
+    keywords: ['orchid', 'orchids', 'lady slipper', "lady's slipper"],
+  },
+  {
+    id: 'palm',
+    nameZh: '棕榈类植物',
+    nameEn: 'Palm',
+    scientificName: 'Arecaceae',
+    kingdom: TAXON_KINGDOM_PLANTAE,
+    taxonRank: 'FAMILY',
+    keywords: ['palm', 'coconut', 'areca palm'],
   },
 ];
 
@@ -189,6 +240,28 @@ const chineseNameByScientificName = new Map<string, string>([
   ['Junonia almana', '眼蛱蝶'],
   ['Papilio polytes', '玉带凤蝶'],
   ['Papilio demoleus', '达摩凤蝶'],
+  ['Bougainvillea spectabilis', '叶子花'],
+  ['Plumeria rubra', '红鸡蛋花'],
+  ['Cassia fistula', '腊肠树'],
+  ['Delonix regia', '凤凰木'],
+  ['Hibiscus rosa-sinensis', '朱槿'],
+  ['Ixora coccinea', '龙船花'],
+  ['Nymphaea nouchali', '蓝睡莲'],
+  ['Nelumbo nucifera', '莲'],
+  ['Musa acuminata', '尖蕉'],
+  ['Cocos nucifera', '椰子'],
+  ['Mangifera indica', '杧果'],
+  ['Tamarindus indica', '酸豆'],
+  ['Samanea saman', '雨树'],
+  ['Ficus religiosa', '菩提树'],
+  ['Dendrobium anosmum', '石斛兰'],
+  ['Dendrobium crumenatum', '鸽子兰'],
+  ['Rhynchostylis gigantea', '狐尾兰'],
+  ['Etlingera elatior', '火炬姜'],
+  ['Strelitzia reginae', '鹤望兰'],
+  ['Jasminum sambac', '茉莉花'],
+  ['Heliconia psittacorum', '鹦鹉蕉'],
+  ['Canna indica', '美人蕉'],
 ]);
 
 const jsonResponse = (body: unknown, init: ResponseInit = {}) =>
@@ -323,6 +396,7 @@ const toClassificationCandidate = (prediction: ImageClassificationPrediction): A
     nameZh: match.nameZh,
     nameEn: match.nameEn,
     scientificName: match.scientificName,
+    kingdom: match.kingdom,
     score,
     rawLabel: label,
     source: 'classification',
@@ -345,6 +419,7 @@ const toDetectionCandidate = (prediction: ObjectDetectionPrediction, dimensions:
     nameZh: match.nameZh,
     nameEn: match.nameEn,
     scientificName: match.scientificName,
+    kingdom: match.kingdom,
     score: detectionScore(prediction),
     rawLabel: label,
     source: 'detection',
@@ -454,7 +529,7 @@ const detectAnimalCandidates = async (ai: AiBinding, imageBytes: number[], dimen
       detectionAvailable: true,
     };
   } catch (error) {
-    console.warn('动物主体检测失败，改用分类兜底:', error);
+    console.warn('生物主体检测失败，改用分类兜底:', error);
     return {
       candidates: [],
       rawDetections: [],
@@ -482,7 +557,7 @@ const classifyAnimalCandidates = async (ai: AiBinding, imageBytes: number[]) => 
 };
 
 type VisionSpeciesResult = {
-  animalPresent?: boolean;
+  organismPresent?: boolean;
   commonNameZh?: string;
   commonNameEn?: string;
   scientificName?: string;
@@ -560,7 +635,7 @@ const toVisionSpeciesResult = (text: string): VisionSpeciesResult | null => {
   const confidence = toConfidence(parsed.confidence);
 
   return {
-    animalPresent: parsed.animalPresent === true,
+    organismPresent: parsed.organismPresent === true || parsed.animalPresent === true,
     commonNameZh: typeof parsed.commonNameZh === 'string' ? parsed.commonNameZh.trim() : '',
     commonNameEn: typeof parsed.commonNameEn === 'string' ? parsed.commonNameEn.trim() : '',
     scientificName,
@@ -580,7 +655,7 @@ const toVisionSpeciesResultFromRecord = (value: unknown): VisionSpeciesResult | 
   if (!scientificName) return null;
 
   return {
-    animalPresent: payload.animalPresent !== false,
+    organismPresent: payload.organismPresent !== false && payload.animalPresent !== false,
     commonNameZh: typeof payload.commonNameZh === 'string' ? payload.commonNameZh.trim() : '',
     commonNameEn: typeof payload.commonNameEn === 'string' ? payload.commonNameEn.trim() : '',
     scientificName,
@@ -595,15 +670,15 @@ const buildSpeciesPrompt = (coarseCandidates: AnimalCandidate[]) => {
     .join(', ') || 'none';
 
   return [
-    'Identify the primary visible animal in this user photo.',
+    'Identify the primary visible animal or plant in this user photo.',
     'The user wants a taxonomic scientific name for a field observation in Chiang Mai, Thailand.',
     `Coarse detector candidates: ${coarseLabels}.`,
     'Return only strict JSON with this exact shape:',
-    '{"animalPresent":true,"commonNameZh":"","commonNameEn":"","scientificName":"","taxonRank":"SPECIES","confidence":0.0}',
+    '{"organismPresent":true,"commonNameZh":"","commonNameEn":"","scientificName":"","taxonRank":"SPECIES","confidence":0.0}',
     'Rules:',
-    '- Use a species or subspecies scientific name only when the animal is visually clear enough.',
+    '- Use a species or subspecies scientific name only when the animal or plant is visually clear enough.',
     '- For domestic cat use Felis catus. For domestic dog use Canis lupus familiaris.',
-    '- If the photo does not contain a clear animal, set animalPresent to false and leave names empty.',
+    '- If the photo does not contain a clear animal or plant, set organismPresent to false and leave names empty.',
     '- If you can only identify a broad group, use that taxon name and set taxonRank to CLASS, ORDER, FAMILY, or GENUS with confidence below 0.68.',
     '- Do not include explanations, markdown, or any words outside JSON.',
   ].join('\n');
@@ -638,13 +713,12 @@ const runVisionSpeciesModel = async (ai: AiBinding, modelId: string, imageBytes:
 const validateScientificNameWithGbif = async (scientificName: string): Promise<GbifSpeciesMatch | null> => {
   const url = new URL(GBIF_SPECIES_MATCH_URL);
   url.searchParams.set('name', scientificName);
-  url.searchParams.set('kingdom', 'Animalia');
 
   try {
     const response = await fetch(url, {
       headers: {
         'accept': 'application/json',
-        'user-agent': 'CMI Map animal identification (https://cmimap.com)',
+        'user-agent': 'CMI Map species identification (https://cmimap.com)',
       },
     });
 
@@ -671,11 +745,11 @@ const toVisionSpeciesCandidate = (
   const scientificName = toGbifCanonicalScientificName(gbif);
 
   if (
-    !vision.animalPresent ||
+    !vision.organismPresent ||
     vision.confidence === undefined ||
     vision.confidence < MIN_VISION_SPECIES_CONFIDENCE ||
     gbifConfidence < MIN_GBIF_SPECIES_CONFIDENCE ||
-    gbif.kingdom !== 'Animalia' ||
+    !ALLOWED_GBIF_KINGDOMS.has(gbif.kingdom || '') ||
     !scientificName ||
     !isSpeciesLevelRank(taxonRank)
   ) {
@@ -690,6 +764,7 @@ const toVisionSpeciesCandidate = (
     nameZh: commonNameZh,
     nameEn: commonNameEn,
     scientificName,
+    kingdom: gbif.kingdom,
     score: Math.min(0.99, vision.confidence * 0.82 + (gbifConfidence / 100) * 0.18),
     rawLabel: `${modelId}: ${vision.scientificName}`,
     source: 'vision',
@@ -774,6 +849,7 @@ const runSelfHostedSpeciesModel = async (
     nameZh: candidate.nameZh,
     nameEn: candidate.nameEn,
     scientificName: candidate.scientificName,
+    kingdom: candidate.kingdom,
     taxonRank: candidate.taxonRank,
     score: candidate.score,
   }))));
@@ -820,7 +896,7 @@ const identifySpeciesCandidate = async (
         if (candidate) return { candidate, provider: SELF_HOSTED_SPECIES_MODEL_ID };
       }
     } catch (error) {
-      console.warn('自托管动物物种模型失败:', error);
+      console.warn('自托管生物物种模型失败:', error);
     }
   }
 
@@ -833,7 +909,7 @@ const identifySpeciesCandidate = async (
         if (candidate) return { candidate, provider: GEMINI_SPECIES_MODEL_ID };
       }
     } catch (error) {
-      console.warn('Gemini 动物物种识别失败:', error);
+      console.warn('Gemini 生物物种识别失败:', error);
     }
   }
 
@@ -851,7 +927,7 @@ const identifySpeciesCandidate = async (
       const candidate = toVisionSpeciesCandidate(vision, gbif, modelId);
       if (candidate) return { candidate, provider: modelId };
     } catch (error) {
-      console.warn('动物物种视觉识别失败:', modelId, error);
+      console.warn('生物物种视觉识别失败:', modelId, error);
     }
   }
 

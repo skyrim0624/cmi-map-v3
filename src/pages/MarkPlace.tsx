@@ -1303,7 +1303,7 @@ export default function MarkPlace() {
           .catch(error => {
             if (animalIdentificationRequestRef.current !== requestId) return;
 
-            console.error('动物识别失败:', error);
+            console.error('生物识别失败:', error);
             setAnimalIdentificationStatus('error');
             setStage('voice');
           });
@@ -1677,7 +1677,7 @@ export default function MarkPlace() {
               }`}
             >
               <PawPrint className="h-4 w-4" />
-              {isWildAnimalCheckin ? '动物识别已开启' : '识别动物'}
+              {isWildAnimalCheckin ? '生物识别已开启' : '识别生物'}
             </button>
             <button
               onClick={startQuickTextFlow}
@@ -1911,7 +1911,7 @@ export default function MarkPlace() {
                   {isWildAnimalCheckin && (
                     <div className="mb-3 rounded-3xl border border-stone-200 bg-white/90 p-3 text-left shadow-sm">
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-black text-stone-800">动物识别</p>
+                        <p className="text-sm font-black text-stone-800">生物识别</p>
                         {animalIdentificationStatus === 'running' && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
                       </div>
                       {animalCandidates.length > 0 ? (
@@ -1938,9 +1938,9 @@ export default function MarkPlace() {
                       ) : (
                         <p className="mt-1 text-xs font-semibold leading-relaxed text-stone-500">
                           {animalIdentificationStatus === 'running'
-                            ? '正在识别动物主体。'
+                            ? '正在识别生物主体。'
                             : animalIdentificationStatus === 'idle'
-                              ? '拍下动物后会自动识别。'
+                              ? '拍下动植物后会自动识别。'
                               : '这张没识别清楚，换张近一点的照片或直接写名称。'}
                         </p>
                       )}

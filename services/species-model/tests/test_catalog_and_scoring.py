@@ -30,11 +30,28 @@ class SpeciesCatalogTest(unittest.TestCase):
         self.assertIn("Halcyon pileata", scientific_names)
         self.assertNotIn("Canis lupus familiaris", scientific_names)
 
+    def test_plant_coarse_candidate_narrows_pool(self) -> None:
+        pool = select_species_pool(
+            self.catalog,
+            [{"nameZh": "植物", "nameEn": "Plant", "scientificName": "Plantae", "taxonRank": "KINGDOM"}],
+        )
+
+        scientific_names = {candidate.scientific_name for candidate in pool}
+        self.assertIn("Bougainvillea spectabilis", scientific_names)
+        self.assertIn("Plumeria rubra", scientific_names)
+        self.assertNotIn("Canis lupus familiaris", scientific_names)
+
     def test_coarse_candidate_groups_accept_scientific_taxon(self) -> None:
         groups = coarse_candidate_groups([{"scientificName": "Serpentes", "nameEn": "Snake"}])
 
         self.assertIn("snake", groups)
         self.assertIn("reptile", groups)
+
+    def test_coarse_candidate_groups_accept_plant_taxon(self) -> None:
+        groups = coarse_candidate_groups([{"scientificName": "Orchidaceae", "nameEn": "Orchid"}])
+
+        self.assertIn("plant", groups)
+        self.assertIn("orchid", groups)
 
 
 class SpeciesScoringTest(unittest.TestCase):

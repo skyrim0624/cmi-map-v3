@@ -40,6 +40,25 @@ COARSE_TAXON_GROUPS: dict[str, set[str]] = {
     "dog": {"dog", "mammal"},
     "felis catus": {"cat", "mammal"},
     "cat": {"cat", "mammal"},
+    "plantae": {"plant"},
+    "plant": {"plant"},
+    "plants": {"plant"},
+    "potted plant": {"plant"},
+    "houseplant": {"plant"},
+    "tree": {"plant", "tree"},
+    "flower": {"plant", "flower"},
+    "flowers": {"plant", "flower"},
+    "flowering plant": {"plant", "flower"},
+    "angiosperms": {"plant", "flower"},
+    "orchid": {"plant", "flower", "orchid"},
+    "orchidaceae": {"plant", "flower", "orchid"},
+    "palm": {"plant", "tree", "palm"},
+    "arecaceae": {"plant", "tree", "palm"},
+    "lotus": {"plant", "flower", "aquatic-plant"},
+    "water lily": {"plant", "flower", "aquatic-plant"},
+    "banana": {"plant", "tree", "banana"},
+    "musa": {"plant", "tree", "banana"},
+    "mango": {"plant", "tree"},
 }
 
 
@@ -62,6 +81,7 @@ class SpeciesCandidate:
 
     def to_response(self, confidence: float) -> dict[str, Any]:
         return {
+            "organismPresent": True,
             "animalPresent": True,
             "commonNameZh": self.common_name_zh,
             "commonNameEn": self.common_name_en,

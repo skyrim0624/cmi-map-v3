@@ -236,6 +236,7 @@ async def identify_species(
     )
     if not decision.accepted:
         response = {
+            "organismPresent": False,
             "animalPresent": False,
             "commonNameZh": "",
             "commonNameEn": "",

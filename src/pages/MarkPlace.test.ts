@@ -94,7 +94,7 @@ test('打卡只保留活动关联，不再写主题投稿关系', () => {
   assert.doesNotMatch(source, /排行榜/);
 });
 
-test('神奇动物打卡会调用动物识别并预选彩蛋', () => {
+test('神奇动物打卡会调用生物识别并预选彩蛋', () => {
   assert.match(source, /CMI_MAP_WILD_CHIANG_MAI_EVENT_ID/);
   assert.match(source, /const enableWildAnimalIdentification = \(\) => \{/);
   assert.match(source, /setSelectedEventId\(CMI_MAP_WILD_CHIANG_MAI_EVENT_ID\)/);
@@ -114,9 +114,9 @@ test('神奇动物打卡会调用动物识别并预选彩蛋', () => {
   assert.match(source, /navigatorWithFileShare\.canShare/);
   assert.match(source, /wild-magnifier-checkin\.png/);
   assert.doesNotMatch(source, /downloadCmiWildAnimalShareCard\(wildAnimalShareCard\)/);
-  assert.match(source, /识别动物/);
-  assert.match(source, /动物识别/);
-  assert.match(source, /正在识别动物主体。/);
+  assert.match(source, /识别生物/);
+  assert.match(source, /生物识别/);
+  assert.match(source, /正在识别生物主体。/);
   assert.match(source, /这张没识别清楚，换张近一点的照片或直接写名称。/);
   assert.doesNotMatch(source, /拍照后会先给出可能候选。/);
   assert.doesNotMatch(source, /BioCLIP/);

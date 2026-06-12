@@ -5,6 +5,7 @@ export interface AnimalIdentificationCandidate {
   nameZh: string;
   nameEn: string;
   scientificName?: string;
+  kingdom?: string;
   score: number;
   rawLabel: string;
   source?: 'detection' | 'classification' | 'vision';
@@ -33,6 +34,10 @@ const fallbackScientificNames: Record<string, string> = {
   frog: 'Anura',
   insect: 'Insecta',
   squirrel: 'Sciuridae',
+  plant: 'Plantae',
+  flower: 'Angiosperms',
+  orchid: 'Orchidaceae',
+  palm: 'Arecaceae',
 };
 
 const fallbackChineseNames: Record<string, string> = {
@@ -46,6 +51,10 @@ const fallbackChineseNames: Record<string, string> = {
   frog: '蛙类',
   insect: '昆虫',
   squirrel: '松鼠',
+  plant: '植物',
+  flower: '花卉植物',
+  orchid: '兰科植物',
+  palm: '棕榈类植物',
 };
 
 const animalIntroById: Record<string, string> = {
@@ -59,6 +68,10 @@ const animalIntroById: Record<string, string> = {
   frog: '蛙类和潮湿环境关系密切，雨后或夜晚更常见，体型、背纹、趾端和叫声都有识别价值。',
   insect: '昆虫种类非常多，触角、翅膀、足和身体分节是关键特征；清晰近照会显著提高识别准确度。',
   squirrel: '松鼠常在树冠、电线和屋檐间移动，尾巴形态、体色和活动地点能帮助进一步区分物种。',
+  plant: '植物识别要看花、叶、果实、树皮和生长环境；清迈街边、寺庙和庭院里的常见种很多，近照会更准。',
+  flower: '花卉植物通常可以通过花型、花色、叶序和植株姿态进一步确认，最好拍到花和叶两部分。',
+  orchid: '兰科植物种类很多，花瓣形态、唇瓣、花序和附生环境是关键识别线索。',
+  palm: '棕榈类植物常见于庭院、街边和水边，叶片形态、树干纹理和果序可以帮助确认种类。',
 };
 
 const animalIntroByScientificName: Record<string, string> = {
@@ -84,6 +97,28 @@ const animalIntroByScientificName: Record<string, string> = {
   'Papilio polytes': '玉带凤蝶常在花丛附近访花，雌雄外观差异明显，后翅斑纹是识别重点。',
   'Papilio demoleus': '达摩凤蝶常见于柑橘类植物附近，黄黑斑纹清楚，飞行活跃。',
   'Junonia almana': '眼蛱蝶常在草地和低矮植物附近停栖，翅面眼状斑明显，适合用近距离照片确认。',
+  'Bougainvillea spectabilis': '叶子花在清迈街边和院墙上很常见，显眼的紫红色或橙色部分多是苞片，真正的花很小。',
+  'Plumeria rubra': '红鸡蛋花常见于寺庙、庭院和街边，花瓣厚实有香气，枝条肉质，落叶后枝形也很醒目。',
+  'Cassia fistula': '腊肠树开花时会垂下成串黄色花序，是泰国热季很醒目的行道树和庭院树。',
+  'Delonix regia': '凤凰木树冠宽大，盛花期有大片红橙色花，常见于校园、道路和开阔庭院。',
+  'Hibiscus rosa-sinensis': '朱槿常作庭院和绿篱植物，花朵大，花柱突出，红色、粉色和橙色都很常见。',
+  'Ixora coccinea': '龙船花常成簇开放，花序密集，叶片对生，常见于花坛、绿篱和寺庙庭院。',
+  'Nymphaea nouchali': '蓝睡莲常见于池塘和水景，叶片漂浮在水面，蓝紫色花从水面伸出。',
+  'Nelumbo nucifera': '莲常生长在池塘和湿地，叶片挺出水面，花托和莲蓬是很明确的识别线索。',
+  'Dendrobium anosmum': '石斛兰常附生或悬挂栽培，花序从节间开放，花色和唇瓣形态有助于确认。',
+  'Dendrobium crumenatum': '鸽子兰常见白色小花，雨后或气压变化后集中开放，附生在树干或庭院栽培中。',
+  'Rhynchostylis gigantea': '狐尾兰花序密集下垂，常作庭院兰花栽培，花色和斑点变化明显。',
+  'Etlingera elatior': '火炬姜花序像火炬一样从地面抽出，粉红或红色苞片很醒目，常见于热带庭院。',
+  'Strelitzia reginae': '鹤望兰花形像鸟头，橙色花被和蓝色花瓣非常醒目，常见于庭院和景观绿化。',
+  'Jasminum sambac': '茉莉花花朵洁白且香味明显，常作盆栽或庭院灌木，叶片和花型可帮助确认。',
+  'Heliconia psittacorum': '鹦鹉蕉有鲜艳橙红苞片，常见于热带庭院和酒店绿化，叶片像小型香蕉叶。',
+  'Canna indica': '美人蕉叶片宽大，花色鲜艳，常种在道路、庭院和水边景观带。',
+  'Musa acuminata': '尖蕉是常见香蕉类植物，巨大叶片和下垂花序很有辨识度，果实形态也能辅助确认。',
+  'Cocos nucifera': '椰子是典型棕榈类植物，羽状叶巨大，树干高直，果实成串长在树冠下方。',
+  'Mangifera indica': '杧果树冠浓密，革质叶片狭长，新叶常带红褐色，果实季节更容易确认。',
+  'Tamarindus indica': '酸豆树有细小复叶和长荚果，树冠宽大，常作为遮荫树出现在庭院和路边。',
+  'Samanea saman': '雨树树冠极宽，像伞一样展开，常作为大遮荫树，叶片会随光线变化开合。',
+  'Ficus religiosa': '菩提树叶片心形且叶尖细长，常见于寺庙和院落，气生根和树形也很有辨识度。',
 };
 
 export const getAnimalScientificName = (candidate: AnimalIdentificationCandidate) =>
@@ -95,7 +130,7 @@ export const getAnimalChineseName = (candidate: AnimalIdentificationCandidate) =
 export const getAnimalIntro = (candidate: AnimalIdentificationCandidate) =>
   animalIntroByScientificName[getAnimalScientificName(candidate)] ||
   animalIntroById[candidate.id] ||
-  '这次识别可以先作为观察线索，后续结合更近的照片、地点和行为描述继续确认。';
+  '这次识别可以先作为观察线索，后续结合更近的照片、地点、花叶果实或行为描述继续确认。';
 
 export const formatAnimalCandidateLabel = (candidate: AnimalIdentificationCandidate) =>
   getAnimalChineseName(candidate);

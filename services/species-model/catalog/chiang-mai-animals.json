@@ -542,5 +542,203 @@
     "groups": ["fish"],
     "priority": 46,
     "aliases": ["fish", "tilapia"]
+  },
+  {
+    "scientificName": "Bougainvillea spectabilis",
+    "commonNameZh": "叶子花",
+    "commonNameEn": "Great bougainvillea",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "flower"],
+    "priority": 96,
+    "aliases": ["bougainvillea", "paper flower", "magenta bracts", "purple bracts"]
+  },
+  {
+    "scientificName": "Plumeria rubra",
+    "commonNameZh": "红鸡蛋花",
+    "commonNameEn": "Frangipani",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "flower", "tree"],
+    "priority": 94,
+    "aliases": ["frangipani", "plumeria", "temple tree", "five petal flower"]
+  },
+  {
+    "scientificName": "Cassia fistula",
+    "commonNameZh": "腊肠树",
+    "commonNameEn": "Golden shower tree",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "flower", "tree"],
+    "priority": 92,
+    "aliases": ["golden shower tree", "yellow flower chains", "cassia"]
+  },
+  {
+    "scientificName": "Delonix regia",
+    "commonNameZh": "凤凰木",
+    "commonNameEn": "Royal poinciana",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "flower", "tree"],
+    "priority": 90,
+    "aliases": ["royal poinciana", "flame tree", "red orange flowers"]
+  },
+  {
+    "scientificName": "Hibiscus rosa-sinensis",
+    "commonNameZh": "朱槿",
+    "commonNameEn": "Chinese hibiscus",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "flower", "shrub"],
+    "priority": 88,
+    "aliases": ["hibiscus", "chinese hibiscus", "large red flower"]
+  },
+  {
+    "scientificName": "Ixora coccinea",
+    "commonNameZh": "龙船花",
+    "commonNameEn": "Jungle geranium",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "flower", "shrub"],
+    "priority": 86,
+    "aliases": ["ixora", "jungle geranium", "clustered small flowers"]
+  },
+  {
+    "scientificName": "Nymphaea nouchali",
+    "commonNameZh": "蓝睡莲",
+    "commonNameEn": "Blue water lily",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "flower", "aquatic-plant"],
+    "priority": 84,
+    "aliases": ["blue water lily", "water lily", "floating leaves"]
+  },
+  {
+    "scientificName": "Nelumbo nucifera",
+    "commonNameZh": "莲",
+    "commonNameEn": "Sacred lotus",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "flower", "aquatic-plant"],
+    "priority": 84,
+    "aliases": ["lotus", "sacred lotus", "round leaves", "pink lotus"]
+  },
+  {
+    "scientificName": "Dendrobium anosmum",
+    "commonNameZh": "石斛兰",
+    "commonNameEn": "Scented dendrobium",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "flower", "orchid"],
+    "priority": 82,
+    "aliases": ["dendrobium orchid", "scented dendrobium", "hanging orchid"]
+  },
+  {
+    "scientificName": "Dendrobium crumenatum",
+    "commonNameZh": "鸽子兰",
+    "commonNameEn": "Pigeon orchid",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "flower", "orchid"],
+    "priority": 78,
+    "aliases": ["pigeon orchid", "white dendrobium", "orchid"]
+  },
+  {
+    "scientificName": "Rhynchostylis gigantea",
+    "commonNameZh": "狐尾兰",
+    "commonNameEn": "Foxtail orchid",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "flower", "orchid"],
+    "priority": 76,
+    "aliases": ["foxtail orchid", "rhynchostylis", "clustered orchid flowers"]
+  },
+  {
+    "scientificName": "Etlingera elatior",
+    "commonNameZh": "火炬姜",
+    "commonNameEn": "Torch ginger",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "flower"],
+    "priority": 76,
+    "aliases": ["torch ginger", "pink torch flower", "ginger flower"]
+  },
+  {
+    "scientificName": "Strelitzia reginae",
+    "commonNameZh": "鹤望兰",
+    "commonNameEn": "Bird of paradise",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "flower"],
+    "priority": 74,
+    "aliases": ["bird of paradise", "orange blue flower", "strelitzia"]
+  },
+  {
+    "scientificName": "Jasminum sambac",
+    "commonNameZh": "茉莉花",
+    "commonNameEn": "Arabian jasmine",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "flower", "shrub"],
+    "priority": 74,
+    "aliases": ["jasmine", "arabian jasmine", "white fragrant flower"]
+  },
+  {
+    "scientificName": "Heliconia psittacorum",
+    "commonNameZh": "鹦鹉蕉",
+    "commonNameEn": "Parrot heliconia",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "flower"],
+    "priority": 72,
+    "aliases": ["heliconia", "parrot heliconia", "orange red bracts"]
+  },
+  {
+    "scientificName": "Canna indica",
+    "commonNameZh": "美人蕉",
+    "commonNameEn": "Indian shot",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "flower"],
+    "priority": 70,
+    "aliases": ["canna lily", "indian shot", "red orange flower"]
+  },
+  {
+    "scientificName": "Musa acuminata",
+    "commonNameZh": "尖蕉",
+    "commonNameEn": "Wild banana",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "tree", "banana"],
+    "priority": 82,
+    "aliases": ["banana plant", "banana leaves", "banana tree"]
+  },
+  {
+    "scientificName": "Cocos nucifera",
+    "commonNameZh": "椰子",
+    "commonNameEn": "Coconut palm",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "tree", "palm"],
+    "priority": 80,
+    "aliases": ["coconut palm", "coconut tree", "palm tree"]
+  },
+  {
+    "scientificName": "Mangifera indica",
+    "commonNameZh": "杧果",
+    "commonNameEn": "Mango",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "tree"],
+    "priority": 78,
+    "aliases": ["mango tree", "mango", "mango leaves"]
+  },
+  {
+    "scientificName": "Tamarindus indica",
+    "commonNameZh": "酸豆",
+    "commonNameEn": "Tamarind",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "tree"],
+    "priority": 72,
+    "aliases": ["tamarind", "tamarind tree", "brown seed pods"]
+  },
+  {
+    "scientificName": "Samanea saman",
+    "commonNameZh": "雨树",
+    "commonNameEn": "Rain tree",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "tree"],
+    "priority": 70,
+    "aliases": ["rain tree", "large spreading canopy", "monkeypod"]
+  },
+  {
+    "scientificName": "Ficus religiosa",
+    "commonNameZh": "菩提树",
+    "commonNameEn": "Sacred fig",
+    "taxonRank": "SPECIES",
+    "groups": ["plant", "tree"],
+    "priority": 70,
+    "aliases": ["sacred fig", "bodhi tree", "heart shaped leaves"]
   }
 ]

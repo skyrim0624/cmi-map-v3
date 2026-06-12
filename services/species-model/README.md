@@ -1,12 +1,12 @@
 # CMI Map 物种识别模型服务
 
-这是给 `/api/animal-identify` 调用的自托管专业物种识别后端。它不替代 CMI Map 主站，只负责接收照片，返回中文名、英文名、拉丁学名、分类等级和置信度。
+这是给 `/api/animal-identify` 调用的自托管专业物种识别后端。它不替代 CMI Map 主站，只负责接收照片，返回中文名、英文名、拉丁学名、分类等级和置信度。当前候选库覆盖清迈常见动物和植物。
 
 ## 模型组合
 
 - 主模型：`hf-hub:imageomics/bioclip-2.5-vith14`
 - 兜底模型：`hf-hub:imageomics/bioclip-2`
-- 候选库：`catalog/chiang-mai-animals.json`
+- 候选库：`catalog/chiang-mai-animals.json`，包含清迈常见动物、鸟、昆虫、爬行动物、两栖动物、鱼类和植物
 
 默认策略是 BioCLIP 2.5 先判定；如果置信度或前两名差距不够，调用 BioCLIP 2 复核。显存足够时可把 `BIOCLIP_FALLBACK_MODE=always`，每张图都跑双模型。
 
@@ -35,7 +35,7 @@ curl http://127.0.0.1:8000/health
 curl -X POST http://127.0.0.1:8000/identify \
   -H 'Authorization: Bearer dev-token' \
   -F 'image=@/path/to/photo.jpg' \
-  -F 'coarseCandidates=[{"nameZh":"鸟类","nameEn":"Bird","scientificName":"Aves","taxonRank":"CLASS","score":0.8}]'
+  -F 'coarseCandidates=[{"nameZh":"植物","nameEn":"Plant","scientificName":"Plantae","taxonRank":"KINGDOM","score":0.8}]'
 ```
 
 临时接到线上 CMI Map：
@@ -50,10 +50,11 @@ services/species-model/scripts/start-tunnel.sh
 
 ```json
 {
+  "organismPresent": true,
   "animalPresent": true,
-  "commonNameZh": "蓝翡翠",
-  "commonNameEn": "Black-capped kingfisher",
-  "scientificName": "Halcyon pileata",
+  "commonNameZh": "叶子花",
+  "commonNameEn": "Great bougainvillea",
+  "scientificName": "Bougainvillea spectabilis",
   "taxonRank": "SPECIES",
   "confidence": 0.91
 }
