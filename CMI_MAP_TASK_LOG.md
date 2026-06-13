@@ -1,6 +1,6 @@
 # CMI Map 优化任务日志
 
-更新时间：2026-06-13 +07
+更新时间：2026-06-14 +07
 
 ## 目标
 
@@ -42,8 +42,23 @@
 27. [完成] `/mark` 发布 tag 前台步骤退后台，默认按拍摄 / 照片坐标直接发布
 28. [完成] 上传相关页面主题色统一为 CMI 绿色
 29. [完成] 神奇动物贴纸改为优先使用自托管分割模型自动抠图
+30. [完成] 个人主页神奇生物图鉴改为主 KV 贴画收集册
 
 ## 执行记录
+
+### 2026-06-14 个人主页神奇生物图鉴贴画册
+
+- 本轮实现：
+  - 个人主页的“神奇生物图鉴”从三列卡片改成贴画收集册：每个识别过的动物以不规则贴纸形式铺在同一张画板上，点击后仍可逐张查看。
+  - 图鉴画板复用“清迈神奇动物在哪里”主 KV：奶油底、深绿边框、红色手绘圈、丛林叶片和主视觉底纹，避免变成另一套视觉。
+  - 旧数据里只有原始照片、没有贴纸 URL 的动物记录，会在图鉴页自动用照片生成临时贴纸预览，不需要人工重新抠图。
+  - 自动贴纸生成仍优先走 `/api/animal-segment` 的透明抠图；服务不可用时保留本地粗轮廓贴纸兜底，避免图鉴空白。
+- 验证结果：
+  - 本地用已有 6 条动物记录打开个人页，图鉴 tab 可见，贴纸数量正确，画板背景已加载主 KV。
+  - `node --test --experimental-strip-types src/components/AnimalStickerAlbum.test.ts src/lib/cmi-wild-animal-stickers.test.ts src/pages/Profile.test.ts src/pages/PersonMap.test.ts src/features/profiles/public-profile-page.test.ts src/pages/MarkPlace.test.ts` 通过，21 项测试全部通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 复查 Cloudflare Pages production secrets：当前只有 `GOOGLE_AI_STUDIO_API_KEY`，没有 `CMI_MAP_SEGMENT_MODEL_URL` / `CMI_MAP_SPECIES_MODEL_URL`；因此线上新照片如需稳定透明抠图，还需要重新挂上可用的自托管分割服务，前端已保留兜底生成。
 
 ### 2026-06-13 神奇动物贴纸自动抠图模型链路
 

@@ -23,3 +23,9 @@ test('透明抠图贴纸会重新加白边和阴影而不是直接上传原始 c
   assert.match(source, /canvasToBlob\(canvas, 'image\/webp', 0\.94\)/);
   assert.doesNotMatch(source, /imglyRemoveBackground|removeBackground|Image Gen/i);
 });
+
+test('图鉴旧照片条目标记为需要现场生成贴纸', () => {
+  assert.match(source, /needsStickerGeneration: !metadata\?\.stickerUrl/);
+  assert.match(source, /subjectBox: metadata\?\.subjectBox \|\| null/);
+  assert.match(source, /createAnimalStickerFromImageUrl/);
+});

@@ -26,6 +26,8 @@ export interface WildAnimalStickerEntry {
   id: string;
   stickerUrl: string;
   photoUrl?: string | null;
+  subjectBox?: AnimalSubjectBox | null;
+  needsStickerGeneration: boolean;
   commonName: string;
   scientificName?: string | null;
   placeName: string;
@@ -161,6 +163,8 @@ export const getWildAnimalStickerEntries = (recommendations: Recommendation[]): 
       id: recommendation.id,
       stickerUrl,
       photoUrl: fallbackPhotoUrl,
+      subjectBox: metadata?.subjectBox || null,
+      needsStickerGeneration: !metadata?.stickerUrl,
       commonName: metadata?.commonName || '神奇生物',
       scientificName: metadata?.scientificName || null,
       placeName: recommendation.place_name,
@@ -500,4 +504,21 @@ export const createAnimalStickerFromPhoto = async (
     console.warn('自动抠图失败，回退到粗轮廓贴纸:', error);
     return createFallbackPolygonStickerFromPhoto(photoFile, geometry);
   }
+};
+
+export const createAnimalStickerFromImageUrl = async (
+  photoUrl: string,
+  geometry: StickerGeometryInput
+): Promise<string> => {
+  const response = await fetch(photoUrl);
+  if (!response.ok) throw new Error('动物照片读取失败');
+
+  const sourceBlob = await response.blob();
+  const sourceFile = new File(
+    [sourceBlob],
+    'wild-animal-source.jpg',
+    { type: sourceBlob.type || 'image/jpeg' }
+  );
+  const stickerFile = await createAnimalStickerFromPhoto(sourceFile, geometry);
+  return URL.createObjectURL(stickerFile);
 };
