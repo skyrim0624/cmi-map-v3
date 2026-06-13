@@ -1,3 +1,4 @@
+import type { AnimalSubjectBox, AnimalSubjectPoint } from '@/lib/cmi-wild-animal-stickers';
 import { compressImage } from '@/utils/imageCompression';
 
 export interface AnimalIdentificationCandidate {
@@ -12,6 +13,8 @@ export interface AnimalIdentificationCandidate {
   source?: 'detection' | 'classification' | 'vision';
   taxonRank?: string;
   iconId?: string;
+  subjectBox?: AnimalSubjectBox;
+  subjectPolygon?: AnimalSubjectPoint[];
 }
 
 export interface AnimalIdentificationResult {

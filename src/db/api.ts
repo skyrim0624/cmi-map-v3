@@ -3,6 +3,7 @@ import { getCategoryFilterValues } from '@/types/types';
 import { compressImage } from '@/utils/imageCompression';
 import { encodeEasterIconMetadata } from '@/lib/easter-icons';
 import { encodeRecommendationEventMetadata } from '@/lib/cmi-recommendation-events';
+import { encodeWildAnimalStickerMetadata, type AnimalSubjectBox } from '@/lib/cmi-wild-animal-stickers';
 import {
   applyRecommendationCorrections,
   applyRecommendationsCorrections,
@@ -22,6 +23,7 @@ type RecommendationLinkedEventUpdate = {
 type UnsupportedRecommendationFields = {
   easterIcon: boolean;
   linkedEvent: boolean;
+  animalSticker: boolean;
 };
 
 export type PublicProfile = Pick<Profile, 'id' | 'handle' | 'user_name' | 'avatar_url'>;
@@ -67,6 +69,12 @@ const getUnsupportedRecommendationFields = (
   recommendation: Partial<RecommendationInsertInput>
 ): UnsupportedRecommendationFields => {
   const message = getErrorMessage(error);
+  const animalStickerFields: Array<keyof RecommendationInsertInput> = [
+    'animal_sticker_url',
+    'animal_common_name',
+    'animal_scientific_name',
+    'animal_subject_box',
+  ];
 
   return {
     easterIcon:
@@ -75,6 +83,9 @@ const getUnsupportedRecommendationFields = (
     linkedEvent:
       (hasOwnField(recommendation, 'linked_event_id') || hasOwnField(recommendation, 'linked_event_title')) &&
       (message.includes('linked_event_id') || message.includes('linked_event_title')),
+    animalSticker:
+      animalStickerFields.some(field => hasOwnField(recommendation, field)) &&
+      animalStickerFields.some(field => message.includes(field)),
   };
 };
 
@@ -84,16 +95,33 @@ const mergeUnsupportedRecommendationFields = (
 ): UnsupportedRecommendationFields => ({
   easterIcon: current.easterIcon || next.easterIcon,
   linkedEvent: current.linkedEvent || next.linkedEvent,
+  animalSticker: current.animalSticker || next.animalSticker,
 });
 
 const hasUnsupportedRecommendationFields = (fields: UnsupportedRecommendationFields) =>
-  fields.easterIcon || fields.linkedEvent;
+  fields.easterIcon || fields.linkedEvent || fields.animalSticker;
 
 const buildRecommendationInsertPayload = (
   recommendation: RecommendationInsertInput,
   unsupportedFields: UnsupportedRecommendationFields
 ) => {
   const payload: Partial<RecommendationInsertInput> = { ...recommendation };
+
+  if (unsupportedFields.animalSticker) {
+    if (payload.animal_sticker_url || payload.animal_common_name || payload.animal_scientific_name) {
+      payload.reason = encodeWildAnimalStickerMetadata(payload.reason ?? '', {
+        stickerUrl: payload.animal_sticker_url ?? '',
+        commonName: payload.animal_common_name ?? '',
+        scientificName: payload.animal_scientific_name ?? '',
+        subjectBox: payload.animal_subject_box as AnimalSubjectBox | null,
+      });
+    }
+
+    delete payload.animal_sticker_url;
+    delete payload.animal_common_name;
+    delete payload.animal_scientific_name;
+    delete payload.animal_subject_box;
+  }
 
   if (unsupportedFields.easterIcon) {
     if (payload.easter_icon_id) {
@@ -488,6 +516,37 @@ export const uploadImages = async (files: File[]): Promise<string[]> => {
   return results.filter((url): url is string => url !== null);
 };
 
+export const uploadAnimalSticker = async (file: File): Promise<string | null> => {
+  try {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 15);
+    const extension = file.type === 'image/png' ? 'png' : 'webp';
+    const fileName = `animal-stickers/${timestamp}_${random}.${extension}`;
+
+    const { data, error } = await supabase.storage
+      .from('place-images')
+      .upload(fileName, file, {
+        contentType: file.type || 'image/webp',
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (error) {
+      console.error('动物贴纸上传失败:', error);
+      return null;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('place-images')
+      .getPublicUrl(data.path);
+
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error('动物贴纸处理失败:', error);
+    return null;
+  }
+};
+
 /**
  * 创建推荐
  */
@@ -497,6 +556,7 @@ export const createRecommendation = async (
   let unsupportedFields: UnsupportedRecommendationFields = {
     easterIcon: false,
     linkedEvent: false,
+    animalSticker: false,
   };
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -597,6 +657,7 @@ export const updateRecommendationTrace = async (
   let unsupportedFields: UnsupportedRecommendationFields = {
     easterIcon: false,
     linkedEvent: false,
+    animalSticker: false,
   };
 
   for (let attempt = 0; attempt < 3; attempt += 1) {

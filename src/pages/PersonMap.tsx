@@ -2,6 +2,7 @@ import { ArrowLeft, Award, Check, MessageCircle, MapPin, UsersRound, X } from 'l
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import AnimalStickerAlbum from '@/components/AnimalStickerAlbum';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,6 +33,7 @@ import {
   type PublicProfileTabId,
 } from '@/features/profiles/public-profile-page';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
+import { getWildAnimalStickerEntries } from '@/lib/cmi-wild-animal-stickers';
 import { getCmiFeedPath, getPlacePath } from '@/lib/paths';
 import { cn } from '@/lib/utils';
 import type { Category, PlacedSticker, Recommendation, Sticker } from '@/types/types';
@@ -380,9 +382,17 @@ export default function PersonMap() {
   const filteredRecommendations = selectedCategory === 'all'
     ? recommendations
     : recommendations.filter(recommendation => categoryMatchesFilter(recommendation.category, selectedCategory));
+  const animalStickerEntries = useMemo(
+    () => getWildAnimalStickerEntries(recommendations),
+    [recommendations]
+  );
   const tabs = useMemo(
-    () => buildPublicProfileTabs({ recommendationCount: recommendations.length, postCount: posts.length }),
-    [posts.length, recommendations.length]
+    () => buildPublicProfileTabs({
+      recommendationCount: recommendations.length,
+      animalCount: animalStickerEntries.length,
+      postCount: posts.length,
+    }),
+    [animalStickerEntries.length, posts.length, recommendations.length]
   );
 
   const handleSelectAchievementTitle = async (titleId: BlackboardAchievementTitleId | null) => {
@@ -525,6 +535,15 @@ export default function PersonMap() {
                 <RecommendationCard key={recommendation.id} recommendation={recommendation} />
               ))
             )}
+          </div>
+        )}
+
+        {activeTab === 'animals' && (
+          <div className="pt-3">
+            <AnimalStickerAlbum
+              entries={animalStickerEntries}
+              emptyText="TA 还没有动物贴纸"
+            />
           </div>
         )}
 

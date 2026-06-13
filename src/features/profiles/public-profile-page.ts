@@ -1,6 +1,6 @@
 import type { PublicProfile } from '@/db/api';
 
-export type PublicProfileTabId = 'recommendations' | 'posts';
+export type PublicProfileTabId = 'recommendations' | 'animals' | 'posts';
 
 export interface PublicProfileTab {
   id: PublicProfileTabId;
@@ -10,12 +10,15 @@ export interface PublicProfileTab {
 
 export const buildPublicProfileTabs = ({
   recommendationCount,
+  animalCount,
   postCount,
 }: {
   recommendationCount: number;
+  animalCount: number;
   postCount: number;
 }): PublicProfileTab[] => [
   { id: 'recommendations', label: 'TA 的痕迹', count: recommendationCount },
+  { id: 'animals', label: 'TA 的图鉴', count: animalCount },
   { id: 'posts', label: 'TA 的动态', count: postCount },
 ];
 

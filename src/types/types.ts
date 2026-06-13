@@ -47,6 +47,10 @@ export interface Recommendation {
   linked_event_id?: string | null;
   linked_event_title?: string | null;
   linked_event_capture_number?: number | null;
+  animal_sticker_url?: string | null;
+  animal_common_name?: string | null;
+  animal_scientific_name?: string | null;
+  animal_subject_box?: unknown;
   created_at: string;
   upvotes?: { user_id: string }[];
   wishlists?: { user_id: string }[];

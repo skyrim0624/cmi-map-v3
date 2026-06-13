@@ -16,7 +16,7 @@ import {
   isCmiInnEvent,
 } from '@/data/cmi-events';
 import { getCmiInputCategoryOptionById, getCmiInputCategoryOptions } from '@/data/cmi-taxonomy';
-import { assignCmiEventCaptureNumber, createRecommendation, getAllRecommendations, uploadImages } from '@/db/api';
+import { assignCmiEventCaptureNumber, createRecommendation, getAllRecommendations, uploadAnimalSticker, uploadImages } from '@/db/api';
 import { getPublishedCmiEvents } from '@/db/cmi-events';
 import {
   DEFAULT_CAMERA_CAPTURE_QUALITY,
@@ -38,6 +38,7 @@ import {
   type CmiWildAnimalShareCardResult,
   createCmiWildAnimalShareCard,
 } from '@/lib/cmi-wild-animal-share-card';
+import { createAnimalStickerFromPhoto } from '@/lib/cmi-wild-animal-stickers';
 import {
   DEFAULT_CMI_EASTER_ICON_ID,
 } from '@/lib/easter-icons';
@@ -563,6 +564,8 @@ export default function MarkPlace() {
   const [selectedAnimalCandidateId, setSelectedAnimalCandidateId] = useState<string>('');
   const [wildAnimalShareCard, setWildAnimalShareCard] = useState<CmiWildAnimalShareCardResult | null>(null);
   const [isWildAnimalSharePanelOpen, setIsWildAnimalSharePanelOpen] = useState(false);
+  const [animalStickerFile, setAnimalStickerFile] = useState<File | null>(null);
+  const [animalStickerPreviewUrl, setAnimalStickerPreviewUrl] = useState<string | null>(null);
 
   const [sourceType, setSourceType] = useState<'live' | 'exif' | null>(null);
 
@@ -611,6 +614,7 @@ export default function MarkPlace() {
 
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const routeRootRef = useRef<HTMLDivElement>(null);
+  const animalStickerPreviewUrlRef = useRef<string | null>(null);
   const recognitionRef = useRef<InstanceType<SpeechRecognitionConstructor> | null>(null);
   const animalIdentificationRequestRef = useRef(0);
   const speechStartingRef = useRef(false);
@@ -649,6 +653,10 @@ export default function MarkPlace() {
       scrollContainer.style.overscrollBehavior = previousOverscrollBehavior;
     };
   }, [stage]);
+
+  useEffect(() => () => {
+    if (animalStickerPreviewUrlRef.current) URL.revokeObjectURL(animalStickerPreviewUrlRef.current);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -1233,6 +1241,10 @@ export default function MarkPlace() {
     setAnimalIdentification(null);
     setAnimalIdentificationStatus('idle');
     setSelectedAnimalCandidateId('');
+    setAnimalStickerFile(null);
+    if (animalStickerPreviewUrlRef.current) URL.revokeObjectURL(animalStickerPreviewUrlRef.current);
+    animalStickerPreviewUrlRef.current = null;
+    setAnimalStickerPreviewUrl(null);
   };
 
   const resetWildAnimalShareCard = () => {
@@ -1250,6 +1262,28 @@ export default function MarkPlace() {
     }
     if (candidate.iconId) setSelectedEasterIconId(candidate.iconId);
     setDescription(current => current.trim() || buildAnimalCandidateDescription(candidate));
+  };
+
+  const applyAnimalStickerFile = (stickerFile: File | null) => {
+    setAnimalStickerFile(stickerFile);
+    if (animalStickerPreviewUrlRef.current) URL.revokeObjectURL(animalStickerPreviewUrlRef.current);
+    const nextPreviewUrl = stickerFile ? URL.createObjectURL(stickerFile) : null;
+    animalStickerPreviewUrlRef.current = nextPreviewUrl;
+    setAnimalStickerPreviewUrl(nextPreviewUrl);
+  };
+
+  const createAnimalStickerPreview = async (
+    photoFile: File,
+    candidate: AnimalIdentificationCandidate
+  ) => {
+    try {
+      const stickerFile = await createAnimalStickerFromPhoto(photoFile, candidate);
+      applyAnimalStickerFile(stickerFile);
+      return stickerFile;
+    } catch (error) {
+      console.error('动物贴纸生成失败:', error);
+      return null;
+    }
   };
 
   const getAutomaticPublishCategory = (): Category => {
@@ -1308,7 +1342,10 @@ export default function MarkPlace() {
                     ? 'unavailable'
                     : 'error'
             );
-            if (result.candidates[0]) applyAnimalCandidate(result.candidates[0]);
+            if (result.candidates[0]) {
+              applyAnimalCandidate(result.candidates[0]);
+              void createAnimalStickerPreview(images[0], result.candidates[0]);
+            }
             setStage('voice');
           })
           .catch(error => {
@@ -1442,6 +1479,12 @@ export default function MarkPlace() {
       const linkedEvent = selectedEventId
         ? eventOptions.find(event => event.id === selectedEventId) ?? getCmiEventById(selectedEventId)
         : null;
+      let animalStickerUrl: string | null = null;
+
+      if (isWildAnimalCheckin && images[0] && selectedAnimalCandidate) {
+        const stickerFile = animalStickerFile ?? await createAnimalStickerPreview(images[0], selectedAnimalCandidate);
+        if (stickerFile) animalStickerUrl = await uploadAnimalSticker(stickerFile);
+      }
 
       const recommendationInput = {
         place_name: placeName,
@@ -1458,6 +1501,12 @@ export default function MarkPlace() {
         ...(linkedEvent ? {
           linked_event_id: linkedEvent.id,
           linked_event_title: linkedEvent.title,
+        } : {}),
+        ...(selectedAnimalCandidate && animalStickerUrl ? {
+          animal_sticker_url: animalStickerUrl,
+          animal_common_name: formatAnimalCandidateLabel(selectedAnimalCandidate),
+          animal_scientific_name: selectedAnimalCandidate.scientificName ?? null,
+          animal_subject_box: selectedAnimalCandidate.subjectBox,
         } : {}),
       };
 
@@ -1954,6 +2003,16 @@ export default function MarkPlace() {
                               ? '拍下动植物后会自动识别。'
                               : '这张没识别清楚，换张近一点的照片或直接写名称。'}
                         </p>
+                      )}
+                      {animalStickerPreviewUrl && (
+                        <div className="mt-3 flex items-center gap-3 rounded-2xl border border-[#0b3d24]/15 bg-[#fff7dc] px-3 py-2">
+                          <img
+                            src={animalStickerPreviewUrl}
+                            alt=""
+                            className="h-14 w-14 shrink-0 object-contain drop-shadow-[0_6px_0_rgba(11,61,36,0.12)]"
+                          />
+                          <p className="min-w-0 text-xs font-black text-[#0b3d24]">已剪成贴纸</p>
+                        </div>
                       )}
                     </div>
                   )}

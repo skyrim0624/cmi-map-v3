@@ -51,10 +51,13 @@ test('物种学名通过视觉模型和 GBIF 校验后才返回', () => {
 
 test('视觉模型提示词允许动植物但拒绝无主体图片', () => {
   assert.match(source, /Identify the primary visible animal or plant in this user photo/);
-  assert.match(source, /"organismPresent":true,"commonNameZh":"","commonNameEn":"","scientificName":"","taxonRank":"SPECIES","confidence":0\.0,"introZh":""/);
+  assert.match(source, /"subjectBox":\{"x":0,"y":0,"width":0,"height":0\}/);
+  assert.match(source, /"subjectPolygon":\[\{"x":0,"y":0\}\]/);
   assert.match(source, /introZh must be 2 concise Chinese sentences/);
   assert.match(source, /parsed\.organismPresent === true \|\| parsed\.animalPresent === true/);
   assert.match(source, /introZh: typeof parsed\.introZh === 'string' \? parsed\.introZh\.trim\(\) : ''/);
+  assert.match(source, /subjectBox: normalizeSubjectBox\(parsed\.subjectBox\)/);
+  assert.match(source, /subjectPolygon: normalizeSubjectPolygon\(parsed\.subjectPolygon\)/);
   assert.match(source, /set organismPresent to false/);
   assert.match(source, /If the primary visible subject is a human/);
 });

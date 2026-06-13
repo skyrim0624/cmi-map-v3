@@ -1,5 +1,6 @@
 import { isEasterEggRecommendation, type Recommendation } from '@/types/types';
 import { stripRecommendationEventMetadata } from '@/lib/cmi-recommendation-events';
+import { stripWildAnimalStickerMetadata } from '@/lib/cmi-wild-animal-stickers';
 
 export type CmiEasterIcon = {
   id: string;
@@ -110,7 +111,7 @@ export const getRecommendationReasonText = (recommendation: Pick<Recommendation,
   let cleanReason = recommendation.reason;
 
   for (let index = 0; index < 3; index += 1) {
-    const nextCleanReason = stripEasterIconMetadata(stripRecommendationEventMetadata(cleanReason));
+    const nextCleanReason = stripWildAnimalStickerMetadata(stripEasterIconMetadata(stripRecommendationEventMetadata(cleanReason)));
     if (nextCleanReason === cleanReason.trim()) return nextCleanReason;
     cleanReason = nextCleanReason;
   }

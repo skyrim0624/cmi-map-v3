@@ -15,6 +15,12 @@ test('生物识别通过同源 Pages Function 调用', () => {
   assert.match(source, /formData\.append\('image'/);
 });
 
+test('生物识别候选带主体轮廓数据用于贴纸裁切', () => {
+  assert.match(source, /import type \{ AnimalSubjectBox, AnimalSubjectPoint \} from '@\/lib\/cmi-wild-animal-stickers'/);
+  assert.match(source, /subjectBox\?: AnimalSubjectBox/);
+  assert.match(source, /subjectPolygon\?: AnimalSubjectPoint\[\]/);
+});
+
 test('生物识别文案不再输出可能式猜测', () => {
   assert.match(source, /`这是\$\{chineseName\}。物种介绍：\$\{intro\}`/);
   assert.match(source, /getAnimalChineseName\(candidate\)/);

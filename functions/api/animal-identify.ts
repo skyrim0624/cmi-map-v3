@@ -37,7 +37,21 @@ interface AnimalCandidate {
   rawLabel: string;
   source: 'vision';
   taxonRank?: string;
+  subjectBox?: SubjectBox;
+  subjectPolygon?: SubjectPoint[];
 }
+
+type SubjectBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+type SubjectPoint = {
+  x: number;
+  y: number;
+};
 
 type VisionSpeciesResult = {
   organismPresent?: boolean;
@@ -47,6 +61,8 @@ type VisionSpeciesResult = {
   taxonRank?: string;
   confidence?: number;
   introZh?: string;
+  subjectBox?: SubjectBox;
+  subjectPolygon?: SubjectPoint[];
 };
 
 type GbifSpeciesMatch = {
@@ -147,6 +163,54 @@ const toConfidence = (value: unknown) => {
   return confidence > 1 ? confidence / 100 : confidence;
 };
 
+const clampCoordinate = (value: number) => Math.min(1000, Math.max(0, value));
+
+const toSubjectCoordinate = (value: unknown) => {
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) return null;
+  return clampCoordinate(Math.round(numberValue));
+};
+
+const normalizeSubjectBox = (value: unknown): SubjectBox | undefined => {
+  if (!value || typeof value !== 'object') return undefined;
+  const record = value as Record<string, unknown>;
+  const x = toSubjectCoordinate(record.x);
+  const y = toSubjectCoordinate(record.y);
+  const width = toSubjectCoordinate(record.width);
+  const height = toSubjectCoordinate(record.height);
+
+  if (x === null || y === null || width === null || height === null || width < 8 || height < 8) {
+    return undefined;
+  }
+  const maxWidth = 1000 - x;
+  const maxHeight = 1000 - y;
+  if (maxWidth < 8 || maxHeight < 8) return undefined;
+
+  return {
+    x,
+    y,
+    width: Math.min(width, maxWidth),
+    height: Math.min(height, maxHeight),
+  };
+};
+
+const normalizeSubjectPolygon = (value: unknown): SubjectPoint[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+
+  const points = value
+    .slice(0, 32)
+    .map(point => {
+      if (!point || typeof point !== 'object') return null;
+      const record = point as Record<string, unknown>;
+      const x = toSubjectCoordinate(record.x);
+      const y = toSubjectCoordinate(record.y);
+      return x === null || y === null ? null : { x, y };
+    })
+    .filter((point): point is SubjectPoint => point !== null);
+
+  return points.length >= 3 ? points : undefined;
+};
+
 const toVisionSpeciesResult = (text: string): VisionSpeciesResult | null => {
   const parsed = extractJsonObject(text);
   if (!parsed) return null;
@@ -159,6 +223,8 @@ const toVisionSpeciesResult = (text: string): VisionSpeciesResult | null => {
     taxonRank: typeof parsed.taxonRank === 'string' ? parsed.taxonRank.trim().toUpperCase() : '',
     confidence: toConfidence(parsed.confidence),
     introZh: typeof parsed.introZh === 'string' ? parsed.introZh.trim() : '',
+    subjectBox: normalizeSubjectBox(parsed.subjectBox),
+    subjectPolygon: normalizeSubjectPolygon(parsed.subjectPolygon),
   };
 };
 
@@ -166,10 +232,12 @@ const buildSpeciesPrompt = () => [
   'Identify the primary visible animal or plant in this user photo.',
   'The user wants a taxonomic scientific name for a field observation in Chiang Mai, Thailand.',
   'Return only strict JSON with this exact shape:',
-  '{"organismPresent":true,"commonNameZh":"","commonNameEn":"","scientificName":"","taxonRank":"SPECIES","confidence":0.0,"introZh":""}',
+  '{"organismPresent":true,"commonNameZh":"","commonNameEn":"","scientificName":"","taxonRank":"SPECIES","confidence":0.0,"introZh":"","subjectBox":{"x":0,"y":0,"width":0,"height":0},"subjectPolygon":[{"x":0,"y":0}]}',
   'Rules:',
   '- Use a species or subspecies scientific name only when the animal or plant is visually clear enough.',
   '- introZh must be 2 concise Chinese sentences about distinctive visual traits, typical habitat or distribution, and useful observation notes.',
+  '- subjectBox is the tight rectangle around the primary organism, using integer x/y/width/height from 0 to 1000 relative to the image.',
+  '- subjectPolygon is a rough outside silhouette of the same organism with 8 to 16 clockwise points from 0 to 1000. Keep the whole visible body inside it.',
   '- Do not write uncertainty phrases in introZh, and do not tell the user to keep confirming later.',
   '- For domestic cat use Felis catus. For domestic dog use Canis lupus familiaris.',
   '- If the primary visible subject is a human, set organismPresent to false and leave names empty.',
@@ -328,6 +396,8 @@ const toVisionSpeciesCandidate = (
     rawLabel: `${modelId}: ${vision.scientificName}`,
     source: 'vision',
     taxonRank,
+    subjectBox: vision.subjectBox,
+    subjectPolygon: vision.subjectPolygon,
   };
 };
 

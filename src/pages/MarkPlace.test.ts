@@ -101,6 +101,12 @@ test('神奇动物打卡会调用生物识别并预选彩蛋', () => {
   assert.match(source, /setSelectedEventId\(CMI_MAP_WILD_CHIANG_MAI_EVENT_ID\)/);
   assert.match(source, /aria-pressed=\{isWildAnimalCheckin\}/);
   assert.match(source, /identifyAnimalPhoto\(images\[0\]\)/);
+  assert.match(source, /createAnimalStickerFromPhoto/);
+  assert.match(source, /animalStickerPreviewUrl/);
+  assert.match(source, /setAnimalStickerFile/);
+  assert.match(source, /uploadAnimalSticker\(stickerFile\)/);
+  assert.match(source, /animal_sticker_url: animalStickerUrl/);
+  assert.match(source, /animal_subject_box: selectedAnimalCandidate\.subjectBox/);
   assert.match(source, /setSelectedInputCategoryId\(easterOption\.id\)/);
   assert.match(source, /setSelectedEasterIconId\(candidate\.iconId\)/);
   assert.match(source, /assignCmiEventCaptureNumber\(recommendation\.id\)/);

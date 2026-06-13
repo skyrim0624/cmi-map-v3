@@ -1,7 +1,8 @@
 import { ArrowLeft, Camera, Check, KeyRound, LogOut, Pencil, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import AnimalStickerAlbum from '@/components/AnimalStickerAlbum';
 import BadgeUnlockOverlay from '@/components/BadgeUnlockOverlay';
 import BadgeWall from '@/components/BadgeWall';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -17,6 +18,8 @@ import {
   USER_NAME_TAKEN_ERROR_MESSAGE,
 } from '@/db/api';
 import { syncAchievementProgress } from '@/features/achievements/achievement-service';
+import { CMI_MAP_WILD_CHIANG_MAI_EVENT_ID } from '@/data/cmi-events';
+import { getWildAnimalStickerEntries } from '@/lib/cmi-wild-animal-stickers';
 import { getCmiEasterIconUrl, getRecommendationEasterIconId, getRecommendationReasonText } from '@/lib/easter-icons';
 import type { Badge } from '@/types/badges';
 import type { Category, PlacedSticker, Recommendation, Sticker } from '@/types/types';
@@ -26,7 +29,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const { user, profile, signOut, refreshProfile, loading: authLoading } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'my_pins' | 'wishlist' | 'badges'>('my_pins');
+  const [activeTab, setActiveTab] = useState<'my_pins' | 'animals' | 'wishlist' | 'badges'>('my_pins');
   const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
   const [myRecommendations, setMyRecommendations] = useState<Recommendation[]>([]);
   const [myWishlists, setMyWishlists] = useState<Recommendation[]>([]);
@@ -59,6 +62,10 @@ export default function Profile() {
   }
 
   const displayName = profile?.user_name || user?.email?.split('@')[0] || '游客';
+  const animalStickerEntries = useMemo(
+    () => getWildAnimalStickerEntries(myRecommendations),
+    [myRecommendations]
+  );
 
   useEffect(() => {
     loadData();
@@ -357,24 +364,31 @@ export default function Profile() {
       )}
 
       {/* ======== Tab 栏 ======== */}
-      <div className="flex border-b border-border/50 px-5 sticky top-[52px] bg-background z-40">
+      <div className="sticky top-[52px] z-40 flex overflow-x-auto border-b border-border/50 bg-background px-5 hide-scrollbar">
         <button
           onClick={() => setActiveTab('my_pins')}
-          className={`flex-1 pb-3 text-center font-bold text-sm transition-colors relative ${activeTab === 'my_pins' ? 'text-foreground' : 'text-stone-400'}`}
+          className={`relative min-w-[5.4rem] flex-1 whitespace-nowrap pb-3 text-center text-sm font-bold transition-colors ${activeTab === 'my_pins' ? 'text-foreground' : 'text-stone-400'}`}
         >
           我的痕迹 ({myRecommendations.length})
           {activeTab === 'my_pins' && <div className="absolute bottom-0 left-3 right-3 h-[2.5px] bg-foreground rounded-full" />}
         </button>
         <button
+          onClick={() => setActiveTab('animals')}
+          className={`relative min-w-[6.6rem] flex-1 whitespace-nowrap pb-3 text-center text-sm font-bold transition-colors ${activeTab === 'animals' ? 'text-[#0b3d24]' : 'text-stone-400'}`}
+        >
+          神奇动物图鉴 ({animalStickerEntries.length})
+          {activeTab === 'animals' && <div className="absolute bottom-0 left-3 right-3 h-[2.5px] bg-[#0b3d24] rounded-full" />}
+        </button>
+        <button
           onClick={() => setActiveTab('wishlist')}
-          className={`flex-1 pb-3 text-center font-bold text-sm transition-colors relative ${activeTab === 'wishlist' ? 'text-[#f43f5e]' : 'text-stone-400'}`}
+          className={`relative min-w-[5.4rem] flex-1 whitespace-nowrap pb-3 text-center text-sm font-bold transition-colors ${activeTab === 'wishlist' ? 'text-[#f43f5e]' : 'text-stone-400'}`}
         >
           我想去的 ({myWishlists.length})
           {activeTab === 'wishlist' && <div className="absolute bottom-0 left-3 right-3 h-[2.5px] bg-[#f43f5e] rounded-full" />}
         </button>
         <button
           onClick={() => setActiveTab('badges')}
-          className={`flex-1 pb-3 text-center font-bold text-sm transition-colors relative ${activeTab === 'badges' ? 'text-primary' : 'text-stone-400'}`}
+          className={`relative min-w-[4.8rem] flex-1 whitespace-nowrap pb-3 text-center text-sm font-bold transition-colors ${activeTab === 'badges' ? 'text-primary' : 'text-stone-400'}`}
         >
           成就 ({unlockedBadges.length})
           {activeTab === 'badges' && <div className="absolute bottom-0 left-3 right-3 h-[2.5px] bg-primary rounded-full" />}
@@ -382,7 +396,7 @@ export default function Profile() {
       </div>
 
       {/* ======== 分类筛选 ======== */}
-      {activeTab !== 'badges' && (
+      {activeTab !== 'badges' && activeTab !== 'animals' && (
         <div className="overflow-x-auto hide-scrollbar px-5 py-3">
           <div className="flex gap-2 min-w-max">
             <Button
@@ -423,6 +437,16 @@ export default function Profile() {
           '你的愿望清单空空如也',
           '回地图上逛逛，种点草',
           '/'
+        )}
+
+        {activeTab === 'animals' && (
+          <div className="pt-3">
+            <AnimalStickerAlbum
+              entries={animalStickerEntries}
+              emptyActionLabel="去拍一只"
+              onEmptyAction={() => navigate(`/mark?event=${encodeURIComponent(CMI_MAP_WILD_CHIANG_MAI_EVENT_ID)}`)}
+            />
+          </div>
         )}
 
         {activeTab === 'badges' && (
