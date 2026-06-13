@@ -4,50 +4,45 @@ import test from 'node:test';
 
 const source = readFileSync(new URL('./animal-identify.ts', import.meta.url), 'utf8');
 
-test('生物识别先做主体检测再分类兜底', () => {
-  assert.match(source, /const DETECTION_MODEL_ID = '@cf\/facebook\/detr-resnet-50'/);
-  assert.match(source, /const CLASSIFICATION_MODEL_ID = '@cf\/microsoft\/resnet-50'/);
-  assert.match(source, /const VISION_SPECIES_MODEL_ID = '@cf\/meta\/llama-3\.2-11b-vision-instruct'/);
+test('生物识别不再接入本地或 Cloudflare 开源物种模型', () => {
+  assert.doesNotMatch(source, /const DETECTION_MODEL_ID = '@cf\/facebook\/detr-resnet-50'/);
+  assert.doesNotMatch(source, /const CLASSIFICATION_MODEL_ID = '@cf\/microsoft\/resnet-50'/);
+  assert.doesNotMatch(source, /const VISION_SPECIES_MODEL_ID = '@cf\/meta\/llama-3\.2-11b-vision-instruct'/);
   assert.match(source, /const GEMINI_SPECIES_MODEL_ID = 'gemini-2\.5-flash'/);
-  assert.match(source, /const SELF_HOSTED_SPECIES_MODEL_ID = 'self-hosted-species-model'/);
-  assert.match(source, /detectAnimalCandidates\(env\.AI, bytes, dimensions\)/);
-  assert.match(source, /classifyAnimalCandidates\(env\.AI, bytes\)/);
+  assert.doesNotMatch(source, /const SELF_HOSTED_SPECIES_MODEL_ID = 'self-hosted-species-model'/);
+  assert.doesNotMatch(source, /detectAnimalCandidates\(env\.AI, bytes, dimensions\)/);
+  assert.doesNotMatch(source, /classifyAnimalCandidates\(env\.AI, bytes\)/);
 });
 
-test('分类兜底低置信度不再硬猜', () => {
-  assert.match(source, /const MIN_CLASSIFICATION_SCORE = 0\.30/);
-  assert.match(source, /score < MIN_CLASSIFICATION_SCORE/);
+test('Gemini 低置信度不再硬猜', () => {
+  assert.match(source, /const MIN_VISION_SPECIES_CONFIDENCE = 0\.68/);
+  assert.match(source, /vision\.confidence < MIN_VISION_SPECIES_CONFIDENCE/);
   assert.match(source, /status: candidates\.length > 0 \? 'ready' : 'no-match'/);
 });
 
 test('常见动物候选包含学名', () => {
-  assert.match(source, /scientificName: 'Canis lupus familiaris'/);
-  assert.match(source, /nameZh: '家犬'/);
-  assert.match(source, /scientificName: 'Felis catus'/);
-  assert.match(source, /nameZh: '家猫'/);
-  assert.match(source, /scientificName: 'Gekko gecko'/);
-  assert.match(source, /taxonRank: TAXON_RANK_SPECIES/);
-  assert.match(source, /taxonRank: TAXON_RANK_SUBSPECIES/);
+  assert.match(source, /\['Canis lupus familiaris', '家犬'\]/);
+  assert.match(source, /\['Felis catus', '家猫'\]/);
+  assert.match(source, /\['Gekko gecko', '大壁虎'\]/);
+  assert.match(source, /const TAXON_RANK_SPECIES = 'SPECIES'/);
+  assert.match(source, /const TAXON_RANK_SUBSPECIES = 'SUBSPECIES'/);
 });
 
-test('植物粗分类候选会进入物种模型', () => {
+test('GBIF 校验允许动植物但只返回物种级结果', () => {
   assert.match(source, /const TAXON_KINGDOM_PLANTAE = 'Plantae'/);
   assert.match(source, /const ALLOWED_GBIF_KINGDOMS = new Set\(\[TAXON_KINGDOM_ANIMALIA, TAXON_KINGDOM_PLANTAE\]\)/);
-  assert.match(source, /id: 'plant'/);
-  assert.match(source, /scientificName: 'Plantae'/);
-  assert.match(source, /id: 'flower'/);
-  assert.match(source, /scientificName: 'Angiosperms'/);
-  assert.match(source, /id: 'orchid'/);
-  assert.match(source, /scientificName: 'Orchidaceae'/);
+  assert.match(source, /!ALLOWED_GBIF_KINGDOMS\.has\(gbif\.kingdom \|\| ''\)/);
+  assert.match(source, /!isSpeciesLevelRank\(taxonRank\)/);
+  assert.match(source, /REJECTED_SCIENTIFIC_NAMES\.has\(scientificName\)/);
 });
 
 test('物种学名通过视觉模型和 GBIF 校验后才返回', () => {
   assert.match(source, /const GBIF_SPECIES_MATCH_URL = 'https:\/\/api\.gbif\.org\/v1\/species\/match'/);
-  assert.match(source, /identifySpeciesCandidate\(env, bytes, image\.type \|\| 'image\/jpeg', coarseCandidates\)/);
+  assert.match(source, /identifySpeciesCandidate\(env, imageBytes, image\.type \|\| 'image\/jpeg'\)/);
   assert.match(source, /GOOGLE_AI_STUDIO_API_KEY/);
-  assert.match(source, /CMI_MAP_ENABLE_META_VISION_SPECIES/);
-  assert.match(source, /CMI_MAP_SPECIES_MODEL_URL/);
-  assert.match(source, /runSelfHostedSpeciesModel/);
+  assert.doesNotMatch(source, /CMI_MAP_ENABLE_META_VISION_SPECIES/);
+  assert.doesNotMatch(source, /CMI_MAP_SPECIES_MODEL_URL/);
+  assert.doesNotMatch(source, /runSelfHostedSpeciesModel/);
   assert.match(source, /validateScientificNameWithGbif/);
   assert.match(source, /MIN_GBIF_SPECIES_CONFIDENCE/);
   assert.match(source, /!ALLOWED_GBIF_KINGDOMS\.has\(gbif\.kingdom \|\| ''\)/);
@@ -58,64 +53,47 @@ test('视觉模型提示词允许动植物但拒绝无主体图片', () => {
   assert.match(source, /Identify the primary visible animal or plant in this user photo/);
   assert.match(source, /"organismPresent":true/);
   assert.match(source, /parsed\.organismPresent === true \|\| parsed\.animalPresent === true/);
-  assert.match(source, /payload\.organismPresent !== false && payload\.animalPresent !== false/);
   assert.match(source, /set organismPresent to false/);
+  assert.match(source, /If the primary visible subject is a human/);
 });
 
-test('自托管专业模型优先于付费视觉大模型', () => {
-  assert.match(source, /if \(env\.CMI_MAP_SPECIES_MODEL_URL\)/);
-  assert.ok(source.indexOf('env.CMI_MAP_SPECIES_MODEL_URL') < source.indexOf('env.GOOGLE_AI_STUDIO_API_KEY'));
-  assert.match(source, /authorization: `Bearer \$\{token\}`/);
-  assert.match(source, /toVisionSpeciesResultFromRecord/);
+test('专业物种识别只走 Gemini 2.5 Flash', () => {
+  assert.match(source, /if \(!env\.GOOGLE_AI_STUDIO_API_KEY\)/);
+  assert.match(source, /runGeminiSpeciesModel\(env\.GOOGLE_AI_STUDIO_API_KEY, imageBytes, mimeType\)/);
+  assert.match(source, /thinkingConfig: \{\s+thinkingBudget: 0,\s+\}/);
+  assert.match(source, /maxOutputTokens: 512/);
+  assert.doesNotMatch(source, /runVisionSpeciesModel/);
+  assert.doesNotMatch(source, /VISION_SPECIES_FALLBACK_MODEL_ID/);
+  assert.doesNotMatch(source, /authorization: `Bearer \$\{token\}`/);
+  assert.doesNotMatch(source, /env\.AI/);
 });
 
-test('已有物种级结果走快速路径', () => {
-  assert.match(source, /needsVisionSpeciesLookup\(coarseCandidates\)/);
-  assert.match(source, /bestSpeciesLevelCandidate\(coarseCandidates\)/);
+test('没有 Gemini key 时接口明确不可用', () => {
+  assert.match(source, /status: 'unavailable'/);
+  assert.match(source, /provider: GEMINI_SPECIES_MODEL_ID/);
+  assert.match(source, /message: '识别服务暂时不可用'/);
+});
+
+test('Gemini 限流或临时繁忙不会伪装成无匹配', () => {
+  assert.match(source, /const GEMINI_MAX_ATTEMPTS = 2/);
+  assert.match(source, /GEMINI_RETRYABLE_STATUS_CODES\.has\(response\.status\)/);
+  assert.match(source, /new GeminiSpeciesModelUnavailableError/);
+  assert.match(source, /status: 'unavailable'/);
+  assert.match(source, /message: '识别服务繁忙，请稍后再试'/);
 });
 
 test('专业模型物种级结果优先展示', () => {
-  assert.match(source, /const prioritizeSpeciesCandidate = \(speciesCandidate: AnimalCandidate, coarseCandidates: AnimalCandidate\[\]\)/);
-  assert.match(source, /speciesCandidate,\s+\.\.\.mergedCandidates\.filter\(candidate => candidate\.id !== speciesCandidate\.id\)/);
-  assert.match(source, /prioritizeSpeciesCandidate\(speciesCandidate, coarseCandidates\)/);
-});
-
-test('动物检测过滤过小主体框并避免关键词误伤', () => {
-  assert.match(source, /const MIN_DETECTION_BOX_AREA_RATIO = 0\.015/);
-  assert.match(source, /const MIN_DETECTION_BOX_SHORT_SIDE = 72/);
-  assert.match(source, /labelMatchesKeyword/);
-  assert.match(source, /escapeRegExp/);
-  assert.doesNotMatch(source, /normalizedLabel\.includes\(keyword\)/);
+  assert.match(source, /const candidates = speciesCandidate \? \[speciesCandidate\] : \[\]/);
+  assert.match(source, /status: candidates\.length > 0 \? 'ready' : 'no-match'/);
+  assert.match(source, /provider: GEMINI_SPECIES_MODEL_ID/);
 });
 
 test('网页截图类输入不再信任检测框硬猜动物', () => {
-  assert.match(source, /const MIN_NON_FIELD_PHOTO_SCORE = 0\.55/);
-  assert.match(source, /const nonFieldPhotoLabels = new Set/);
-  assert.match(source, /'web site'/);
-  assert.match(source, /hasStrongNonFieldPhotoSignal\(classificationResult\.rawLabels\)/);
-  assert.match(source, /const hasSpeciesLevelDetection = Boolean\(bestSpeciesLevelCandidate\(detectionResult\.candidates\)\)/);
-  assert.match(source, /const shouldSuppressCoarseDetection = isNonFieldPhoto && !hasSpeciesLevelDetection/);
-  assert.match(source, /shouldSuppressCoarseDetection\s+\?\s+\[\]/);
+  assert.match(source, /If the photo is a screenshot, poster, web page, menu, document, or UI capture and does not contain a clear real animal or plant subject/);
+  assert.match(source, /set organismPresent to false/);
 });
 
 test('大面积人物照片不会再交给物种模型硬猜', () => {
-  assert.match(source, /const MIN_PERSON_DETECTION_SCORE = 0\.70/);
-  assert.match(source, /const MIN_PERSON_BOX_AREA_RATIO = 0\.08/);
-  assert.match(source, /const prominentPersonLabels = new Set\(\['person'\]\)/);
-  assert.match(source, /hasProminentPersonSignal\(detectionResult\.rawDetections, dimensions\)/);
-  assert.match(source, /const shouldSuppressSpeciesLookup = shouldSuppressCoarseDetection \|\|/);
-  assert.match(source, /hasProminentPerson &&\s+detectionResult\.candidates\.length === 0 &&\s+classificationResult\.candidates\.length === 0/);
-  assert.match(source, /const speciesLookupNeeded = !shouldSuppressSpeciesLookup && needsVisionSpeciesLookup\(coarseCandidates\)/);
-});
-
-test('检测命中后不混入分类兜底候选', () => {
-  assert.match(source, /!shouldSuppressCoarseDetection && detectionResult\.candidates\.length > 0 && !preferClassificationCandidate\s+\? detectionResult\.candidates/);
-});
-
-test('猫狗检测与分类冲突时允许犬种证据纠偏', () => {
-  assert.match(source, /const MIN_CLASSIFICATION_DISAGREEMENT_SCORE = 0\.30/);
-  assert.match(source, /'whippet'/);
-  assert.match(source, /'greyhound'/);
-  assert.match(source, /const disagreementOverridePairs = new Set\(\['cat:dog', 'dog:cat'\]\)/);
-  assert.match(source, /shouldPreferClassificationCandidate\(detectionResult\.candidates, classificationResult\.candidates\)/);
+  assert.match(source, /If the primary visible subject is a human/);
+  assert.match(source, /set organismPresent to false/);
 });

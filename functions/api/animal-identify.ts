@@ -1,42 +1,27 @@
-const CLASSIFICATION_MODEL_ID = '@cf/microsoft/resnet-50';
-const DETECTION_MODEL_ID = '@cf/facebook/detr-resnet-50';
-const VISION_SPECIES_MODEL_ID = '@cf/meta/llama-3.2-11b-vision-instruct';
-const VISION_SPECIES_FALLBACK_MODEL_ID = '@cf/llava-hf/llava-1.5-7b-hf';
 const GEMINI_SPECIES_MODEL_ID = 'gemini-2.5-flash';
-const SELF_HOSTED_SPECIES_MODEL_ID = 'self-hosted-species-model';
 const GEMINI_GENERATE_CONTENT_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_SPECIES_MODEL_ID}:generateContent`;
 const GBIF_SPECIES_MATCH_URL = 'https://api.gbif.org/v1/species/match';
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-const MIN_CLASSIFICATION_SCORE = 0.30;
-const MIN_CLASSIFICATION_DISAGREEMENT_SCORE = 0.30;
-const MIN_DETECTION_SCORE = 0.25;
-const MIN_DETECTION_BOX_AREA_RATIO = 0.015;
-const MIN_DETECTION_BOX_SHORT_SIDE = 72;
-const MIN_NON_FIELD_PHOTO_SCORE = 0.55;
-const MIN_PERSON_DETECTION_SCORE = 0.70;
-const MIN_PERSON_BOX_AREA_RATIO = 0.08;
 const MIN_VISION_SPECIES_CONFIDENCE = 0.68;
 const MIN_GBIF_SPECIES_CONFIDENCE = 82;
+const GEMINI_MAX_ATTEMPTS = 2;
 const TAXON_RANK_SPECIES = 'SPECIES';
 const TAXON_RANK_SUBSPECIES = 'SUBSPECIES';
 const TAXON_KINGDOM_ANIMALIA = 'Animalia';
 const TAXON_KINGDOM_PLANTAE = 'Plantae';
 const ALLOWED_GBIF_KINGDOMS = new Set([TAXON_KINGDOM_ANIMALIA, TAXON_KINGDOM_PLANTAE]);
+const REJECTED_SCIENTIFIC_NAMES = new Set(['Homo sapiens']);
+const GEMINI_RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
 
-type AiBinding = {
-  run: (
-    model: string,
-    input: Record<string, unknown>
-  ) => Promise<unknown>;
-};
+class GeminiSpeciesModelUnavailableError extends Error {
+  constructor() {
+    super('Gemini species model unavailable');
+  }
+}
 
 type PagesContext = {
   request: Request;
   env: {
-    AI?: AiBinding;
-    CMI_MAP_ENABLE_META_VISION_SPECIES?: string;
-    CMI_MAP_SPECIES_MODEL_TOKEN?: string;
-    CMI_MAP_SPECIES_MODEL_URL?: string;
     GOOGLE_AI_STUDIO_API_KEY?: string;
   };
 };
@@ -49,170 +34,28 @@ interface AnimalCandidate {
   kingdom?: string;
   score: number;
   rawLabel: string;
-  source: 'detection' | 'classification' | 'vision';
+  source: 'vision';
   taxonRank?: string;
-  iconId?: string;
 }
 
-type ImageClassificationPrediction = {
-  label?: string;
-  score?: number;
-};
-
-type ObjectDetectionPrediction = {
-  label?: string;
-  score?: number;
-  box?: unknown;
-};
-
-type ImageDimensions = {
-  width: number;
-  height: number;
-};
-
-const animalMatchers: Array<{
-  id: string;
-  nameZh: string;
-  nameEn: string;
+type VisionSpeciesResult = {
+  organismPresent?: boolean;
+  commonNameZh?: string;
+  commonNameEn?: string;
   scientificName?: string;
-  kingdom?: string;
   taxonRank?: string;
-  iconId?: string;
-  keywords: string[];
-}> = [
-  {
-    id: 'tokay-gecko',
-    nameZh: '大壁虎',
-    nameEn: 'Tokay gecko',
-    scientificName: 'Gekko gecko',
-    kingdom: TAXON_KINGDOM_ANIMALIA,
-    taxonRank: TAXON_RANK_SPECIES,
-    iconId: 'egg-v2-37-gecko',
-    keywords: ['gecko', 'lizard', 'agama', 'iguana', 'chameleon'],
-  },
-  {
-    id: 'cat',
-    nameZh: '家猫',
-    nameEn: 'Cat',
-    scientificName: 'Felis catus',
-    kingdom: TAXON_KINGDOM_ANIMALIA,
-    taxonRank: TAXON_RANK_SPECIES,
-    iconId: 'egg-v2-03-cat-face',
-    keywords: ['cat', 'tabby', 'tiger cat', 'egyptian cat', 'persian cat', 'siamese'],
-  },
-  {
-    id: 'dog',
-    nameZh: '家犬',
-    nameEn: 'Dog',
-    scientificName: 'Canis lupus familiaris',
-    kingdom: TAXON_KINGDOM_ANIMALIA,
-    taxonRank: TAXON_RANK_SUBSPECIES,
-    iconId: 'egg-v2-05-dog-face',
-    keywords: ['dog', 'hound', 'terrier', 'retriever', 'poodle', 'chihuahua', 'spaniel', 'shepherd', 'whippet', 'greyhound'],
-  },
-  {
-    id: 'bird',
-    nameZh: '鸟类',
-    nameEn: 'Bird',
-    scientificName: 'Aves',
-    kingdom: TAXON_KINGDOM_ANIMALIA,
-    taxonRank: 'CLASS',
-    iconId: 'egg-v2-38-bird',
-    keywords: ['bird', 'bulbul', 'sparrow', 'parrot', 'kingfisher', 'hornbill', 'drongo', 'myna', 'jay'],
-  },
-  {
-    id: 'butterfly',
-    nameZh: '蝴蝶',
-    nameEn: 'Butterfly',
-    scientificName: 'Lepidoptera',
-    kingdom: TAXON_KINGDOM_ANIMALIA,
-    taxonRank: 'ORDER',
-    iconId: 'egg-v2-36-butterfly',
-    keywords: ['butterfly', 'monarch', 'sulphur butterfly', 'ringlet'],
-  },
-  {
-    id: 'fish',
-    nameZh: '鱼类',
-    nameEn: 'Fish',
-    scientificName: 'Actinopterygii',
-    kingdom: TAXON_KINGDOM_ANIMALIA,
-    taxonRank: 'CLASS',
-    iconId: 'egg-v2-39-fish',
-    keywords: ['fish', 'goldfish', 'tench', 'eel', 'ray'],
-  },
-  {
-    id: 'snake',
-    nameZh: '蛇类',
-    nameEn: 'Snake',
-    scientificName: 'Serpentes',
-    kingdom: TAXON_KINGDOM_ANIMALIA,
-    taxonRank: 'SUBORDER',
-    keywords: ['snake', 'cobra', 'viper', 'python', 'boa'],
-  },
-  {
-    id: 'frog',
-    nameZh: '蛙类',
-    nameEn: 'Frog',
-    scientificName: 'Anura',
-    kingdom: TAXON_KINGDOM_ANIMALIA,
-    taxonRank: 'ORDER',
-    keywords: ['frog', 'toad', 'tree frog', 'bullfrog'],
-  },
-  {
-    id: 'insect',
-    nameZh: '昆虫',
-    nameEn: 'Insect',
-    scientificName: 'Insecta',
-    kingdom: TAXON_KINGDOM_ANIMALIA,
-    taxonRank: 'CLASS',
-    keywords: ['bee', 'ant', 'beetle', 'grasshopper', 'cricket', 'mantis', 'dragonfly', 'damselfly', 'fly'],
-  },
-  {
-    id: 'squirrel',
-    nameZh: '松鼠',
-    nameEn: 'Squirrel',
-    scientificName: 'Sciuridae',
-    kingdom: TAXON_KINGDOM_ANIMALIA,
-    taxonRank: 'FAMILY',
-    keywords: ['squirrel'],
-  },
-  {
-    id: 'plant',
-    nameZh: '植物',
-    nameEn: 'Plant',
-    scientificName: 'Plantae',
-    kingdom: TAXON_KINGDOM_PLANTAE,
-    taxonRank: 'KINGDOM',
-    keywords: ['plant', 'potted plant', 'houseplant', 'foliage', 'leaf', 'leaves', 'tree', 'shrub', 'herb'],
-  },
-  {
-    id: 'flower',
-    nameZh: '花卉植物',
-    nameEn: 'Flowering plant',
-    scientificName: 'Angiosperms',
-    kingdom: TAXON_KINGDOM_PLANTAE,
-    taxonRank: 'CLADE',
-    keywords: ['flower', 'flowers', 'blossom', 'bloom', 'daisy', 'rose', 'sunflower', 'hibiscus', 'lotus', 'lily'],
-  },
-  {
-    id: 'orchid',
-    nameZh: '兰科植物',
-    nameEn: 'Orchid',
-    scientificName: 'Orchidaceae',
-    kingdom: TAXON_KINGDOM_PLANTAE,
-    taxonRank: 'FAMILY',
-    keywords: ['orchid', 'orchids', 'lady slipper', "lady's slipper"],
-  },
-  {
-    id: 'palm',
-    nameZh: '棕榈类植物',
-    nameEn: 'Palm',
-    scientificName: 'Arecaceae',
-    kingdom: TAXON_KINGDOM_PLANTAE,
-    taxonRank: 'FAMILY',
-    keywords: ['palm', 'coconut', 'areca palm'],
-  },
-];
+  confidence?: number;
+};
+
+type GbifSpeciesMatch = {
+  canonicalName?: string;
+  scientificName?: string;
+  rank?: string;
+  status?: string;
+  confidence?: number;
+  matchType?: string;
+  kingdom?: string;
+};
 
 const chineseNameByScientificName = new Map<string, string>([
   ['Canis lupus familiaris', '家犬'],
@@ -233,6 +76,7 @@ const chineseNameByScientificName = new Map<string, string>([
   ['Pycnonotus jocosus', '红耳鹎'],
   ['Spilopelia chinensis', '珠颈斑鸠'],
   ['Geopelia striata', '斑姬地鸠'],
+  ['Halcyon pileata', '蓝翡翠'],
   ['Naja kaouthia', '单眼镜蛇'],
   ['Ptyas korros', '灰鼠蛇'],
   ['Boiga cyanea', '绿瘦蛇'],
@@ -273,332 +117,6 @@ const jsonResponse = (body: unknown, init: ResponseInit = {}) =>
     },
   });
 
-const normalizeLabel = (label: string) => label.toLocaleLowerCase();
-
-const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-const labelMatchesKeyword = (label: string, keyword: string) => {
-  const normalizedLabel = normalizeLabel(label);
-  const normalizedKeyword = normalizeLabel(keyword);
-  return new RegExp(`(^|[^a-z])${escapeRegExp(normalizedKeyword)}([^a-z]|$)`).test(normalizedLabel);
-};
-
-const findAnimalMatch = (label: string) => {
-  const normalizedLabel = normalizeLabel(label);
-  return animalMatchers.find(item => item.keywords.some(keyword => labelMatchesKeyword(normalizedLabel, keyword)));
-};
-
-const getImageDimensions = (bytes: Uint8Array): ImageDimensions | null => {
-  if (
-    bytes.length >= 24 &&
-    bytes[0] === 0x89 &&
-    bytes[1] === 0x50 &&
-    bytes[2] === 0x4e &&
-    bytes[3] === 0x47
-  ) {
-    return {
-      width: (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19],
-      height: (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23],
-    };
-  }
-
-  if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
-
-  let offset = 2;
-  while (offset < bytes.length - 9) {
-    if (bytes[offset] !== 0xff) {
-      offset += 1;
-      continue;
-    }
-
-    const marker = bytes[offset + 1];
-    const segmentLength = (bytes[offset + 2] << 8) | bytes[offset + 3];
-    if (segmentLength < 2) return null;
-
-    const isStartOfFrame = marker >= 0xc0 && marker <= 0xc3;
-    if (isStartOfFrame) {
-      return {
-        height: (bytes[offset + 5] << 8) | bytes[offset + 6],
-        width: (bytes[offset + 7] << 8) | bytes[offset + 8],
-      };
-    }
-
-    offset += 2 + segmentLength;
-  }
-
-  return null;
-};
-
-const getDetectionBoxRect = (box: unknown) => {
-  if (!box || typeof box !== 'object') return null;
-
-  const record = box as Record<string, unknown>;
-  const xMin = Number(record.xmin ?? record.xMin ?? record.left ?? record.x);
-  const yMin = Number(record.ymin ?? record.yMin ?? record.top ?? record.y);
-  const xMax = Number(record.xmax ?? record.xMax ?? record.right);
-  const yMax = Number(record.ymax ?? record.yMax ?? record.bottom);
-  const width = Number(record.width);
-  const height = Number(record.height);
-
-  if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
-    return { width, height, area: width * height };
-  }
-
-  if (
-    Number.isFinite(xMin) &&
-    Number.isFinite(yMin) &&
-    Number.isFinite(xMax) &&
-    Number.isFinite(yMax) &&
-    xMax > xMin &&
-    yMax > yMin
-  ) {
-    const boxWidth = xMax - xMin;
-    const boxHeight = yMax - yMin;
-    return { width: boxWidth, height: boxHeight, area: boxWidth * boxHeight };
-  }
-
-  return null;
-};
-
-const hasUsableDetectionBox = (prediction: ObjectDetectionPrediction, dimensions: ImageDimensions | null) => {
-  const rect = getDetectionBoxRect(prediction.box);
-  if (!rect) return true;
-
-  const shortSide = Math.min(rect.width, rect.height);
-  if (shortSide < MIN_DETECTION_BOX_SHORT_SIDE) return false;
-  if (!dimensions) return true;
-
-  const imageArea = dimensions.width * dimensions.height;
-  return imageArea > 0 && rect.area / imageArea >= MIN_DETECTION_BOX_AREA_RATIO;
-};
-
-const detectionScore = (prediction: ObjectDetectionPrediction) => {
-  const score = typeof prediction.score === 'number' ? prediction.score : 0;
-  const boxArea = getDetectionBoxRect(prediction.box)?.area ?? 0;
-  const areaBonus = boxArea > 0 ? Math.min(0.14, Math.log10(boxArea + 1) / 100) : 0;
-
-  return Math.min(0.99, 0.7 + score * 0.25 + areaBonus);
-};
-
-const classificationScore = (prediction: ImageClassificationPrediction) =>
-  typeof prediction.score === 'number' ? prediction.score : 0;
-
-const toClassificationCandidate = (prediction: ImageClassificationPrediction): AnimalCandidate | null => {
-  const label = prediction.label?.trim();
-  const score = classificationScore(prediction);
-  if (!label || score < MIN_CLASSIFICATION_SCORE) return null;
-
-  const match = findAnimalMatch(label);
-  if (!match) return null;
-
-  return {
-    id: match.id,
-    nameZh: match.nameZh,
-    nameEn: match.nameEn,
-    scientificName: match.scientificName,
-    kingdom: match.kingdom,
-    score,
-    rawLabel: label,
-    source: 'classification',
-    taxonRank: match.taxonRank,
-    iconId: match.iconId,
-  };
-};
-
-const toDetectionCandidate = (prediction: ObjectDetectionPrediction, dimensions: ImageDimensions | null): AnimalCandidate | null => {
-  const label = prediction.label?.trim();
-  const rawScore = typeof prediction.score === 'number' ? prediction.score : 0;
-  if (!label || rawScore < MIN_DETECTION_SCORE) return null;
-  if (!hasUsableDetectionBox(prediction, dimensions)) return null;
-
-  const match = findAnimalMatch(label);
-  if (!match) return null;
-
-  return {
-    id: match.id,
-    nameZh: match.nameZh,
-    nameEn: match.nameEn,
-    scientificName: match.scientificName,
-    kingdom: match.kingdom,
-    score: detectionScore(prediction),
-    rawLabel: label,
-    source: 'detection',
-    taxonRank: match.taxonRank,
-    iconId: match.iconId,
-  };
-};
-
-const uniqueCandidates = (candidates: AnimalCandidate[]) => {
-  const bestById = new Map<string, AnimalCandidate>();
-
-  for (const candidate of candidates) {
-    const current = bestById.get(candidate.id);
-    if (!current || candidate.score > current.score) {
-      bestById.set(candidate.id, candidate);
-    }
-  }
-
-  return [...bestById.values()].sort((left, right) => right.score - left.score).slice(0, 3);
-};
-
-const prioritizeSpeciesCandidate = (speciesCandidate: AnimalCandidate, coarseCandidates: AnimalCandidate[]) => {
-  const mergedCandidates = uniqueCandidates([speciesCandidate, ...coarseCandidates]);
-  return [
-    speciesCandidate,
-    ...mergedCandidates.filter(candidate => candidate.id !== speciesCandidate.id),
-  ].slice(0, 3);
-};
-
-const disagreementOverridePairs = new Set(['cat:dog', 'dog:cat']);
-
-// NOTE: DETR 偶尔会把小型犬识别成猫；只有分类模型给出明确猫狗反向证据时才纠偏。
-const shouldPreferClassificationCandidate = (
-  detectionCandidates: AnimalCandidate[],
-  classificationCandidates: AnimalCandidate[]
-) => {
-  const topDetection = detectionCandidates[0];
-  const topClassification = classificationCandidates[0];
-  if (!topDetection || !topClassification) return false;
-
-  const pairKey = `${topDetection.id}:${topClassification.id}`;
-  return (
-    disagreementOverridePairs.has(pairKey) &&
-    topClassification.score >= MIN_CLASSIFICATION_DISAGREEMENT_SCORE
-  );
-};
-
-const toPredictionList = (value: unknown): Array<Record<string, unknown>> => {
-  if (Array.isArray(value)) return value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object');
-  if (value && typeof value === 'object') {
-    const record = value as Record<string, unknown>;
-    if (Array.isArray(record.response)) {
-      return record.response.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object');
-    }
-  }
-
-  return [];
-};
-
-const nonFieldPhotoLabels = new Set([
-  'web site',
-  'website',
-  'screen',
-  'monitor',
-  'envelope',
-  'menu',
-  'book jacket',
-  'comic book',
-]);
-
-const hasStrongNonFieldPhotoSignal = (rawLabels: Array<Record<string, unknown>>) => {
-  const topLabel = rawLabels[0];
-  if (!topLabel) return false;
-
-  const label = typeof topLabel.label === 'string' ? normalizeLabel(topLabel.label) : '';
-  const score = typeof topLabel.score === 'number' ? topLabel.score : 0;
-  return score >= MIN_NON_FIELD_PHOTO_SCORE && nonFieldPhotoLabels.has(label);
-};
-
-const prominentPersonLabels = new Set(['person']);
-
-const hasProminentPersonSignal = (
-  rawDetections: Array<Record<string, unknown>>,
-  dimensions: ImageDimensions | null
-) => rawDetections.some(prediction => {
-  const label = typeof prediction.label === 'string' ? normalizeLabel(prediction.label) : '';
-  const score = typeof prediction.score === 'number' ? prediction.score : 0;
-  if (!prominentPersonLabels.has(label) || score < MIN_PERSON_DETECTION_SCORE) return false;
-
-  const rect = getDetectionBoxRect(prediction.box);
-  if (!rect || !dimensions) return true;
-
-  const imageArea = dimensions.width * dimensions.height;
-  return imageArea > 0 && rect.area / imageArea >= MIN_PERSON_BOX_AREA_RATIO;
-});
-
-const detectAnimalCandidates = async (ai: AiBinding, imageBytes: number[], dimensions: ImageDimensions | null) => {
-  try {
-    const detections = await ai.run(DETECTION_MODEL_ID, { image: imageBytes });
-    return {
-      candidates: uniqueCandidates(
-        toPredictionList(detections)
-          .map(prediction => toDetectionCandidate(prediction, dimensions))
-          .filter((item): item is AnimalCandidate => Boolean(item))
-      ),
-      rawDetections: toPredictionList(detections).slice(0, 8),
-      detectionAvailable: true,
-    };
-  } catch (error) {
-    console.warn('生物主体检测失败，改用分类兜底:', error);
-    return {
-      candidates: [],
-      rawDetections: [],
-      detectionAvailable: false,
-    };
-  }
-};
-
-const classifyAnimalCandidates = async (ai: AiBinding, imageBytes: number[]) => {
-  try {
-    const predictions = await ai.run(CLASSIFICATION_MODEL_ID, { image: imageBytes });
-    const predictionList = toPredictionList(predictions);
-
-    return {
-      candidates: uniqueCandidates(predictionList.map(toClassificationCandidate).filter((item): item is AnimalCandidate => Boolean(item))),
-      rawLabels: predictionList.slice(0, 5),
-    };
-  } catch (error) {
-    console.warn('动物分类兜底失败:', error);
-    return {
-      candidates: [],
-      rawLabels: [],
-    };
-  }
-};
-
-type VisionSpeciesResult = {
-  organismPresent?: boolean;
-  commonNameZh?: string;
-  commonNameEn?: string;
-  scientificName?: string;
-  taxonRank?: string;
-  confidence?: number;
-};
-
-type GbifSpeciesMatch = {
-  canonicalName?: string;
-  scientificName?: string;
-  rank?: string;
-  status?: string;
-  confidence?: number;
-  matchType?: string;
-  kingdom?: string;
-};
-
-const isSpeciesLevelRank = (rank: string | undefined) => (
-  rank === TAXON_RANK_SPECIES || rank === TAXON_RANK_SUBSPECIES
-);
-
-const bestSpeciesLevelCandidate = (candidates: AnimalCandidate[]) =>
-  candidates.find(candidate => isSpeciesLevelRank(candidate.taxonRank) && Boolean(candidate.scientificName));
-
-const needsVisionSpeciesLookup = (candidates: AnimalCandidate[]) => (
-  candidates.length === 0 || !bestSpeciesLevelCandidate(candidates)
-);
-
-const getAiResponseText = (value: unknown) => {
-  if (typeof value === 'string') return value;
-  if (!value || typeof value !== 'object') return '';
-
-  const record = value as Record<string, unknown>;
-  for (const key of ['response', 'description', 'result', 'text']) {
-    if (typeof record[key] === 'string') return record[key];
-    if (record[key] && typeof record[key] === 'object') return JSON.stringify(record[key]);
-  }
-
-  return '';
-};
-
 const extractJsonObject = (text: string) => {
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
@@ -631,58 +149,30 @@ const toVisionSpeciesResult = (text: string): VisionSpeciesResult | null => {
   const parsed = extractJsonObject(text);
   if (!parsed) return null;
 
-  const scientificName = normalizeScientificName(parsed.scientificName);
-  const confidence = toConfidence(parsed.confidence);
-
   return {
     organismPresent: parsed.organismPresent === true || parsed.animalPresent === true,
     commonNameZh: typeof parsed.commonNameZh === 'string' ? parsed.commonNameZh.trim() : '',
     commonNameEn: typeof parsed.commonNameEn === 'string' ? parsed.commonNameEn.trim() : '',
-    scientificName,
+    scientificName: normalizeScientificName(parsed.scientificName),
     taxonRank: typeof parsed.taxonRank === 'string' ? parsed.taxonRank.trim().toUpperCase() : '',
-    confidence,
+    confidence: toConfidence(parsed.confidence),
   };
 };
 
-const toVisionSpeciesResultFromRecord = (value: unknown): VisionSpeciesResult | null => {
-  if (!value || typeof value !== 'object') return null;
-
-  const record = value as Record<string, unknown>;
-  const payload = record.candidate && typeof record.candidate === 'object'
-    ? record.candidate as Record<string, unknown>
-    : record;
-  const scientificName = normalizeScientificName(payload.scientificName);
-  if (!scientificName) return null;
-
-  return {
-    organismPresent: payload.organismPresent !== false && payload.animalPresent !== false,
-    commonNameZh: typeof payload.commonNameZh === 'string' ? payload.commonNameZh.trim() : '',
-    commonNameEn: typeof payload.commonNameEn === 'string' ? payload.commonNameEn.trim() : '',
-    scientificName,
-    taxonRank: typeof payload.taxonRank === 'string' ? payload.taxonRank.trim().toUpperCase() : '',
-    confidence: toConfidence(payload.confidence ?? payload.score),
-  };
-};
-
-const buildSpeciesPrompt = (coarseCandidates: AnimalCandidate[]) => {
-  const coarseLabels = coarseCandidates
-    .map(candidate => `${candidate.nameEn}${candidate.scientificName ? ` / ${candidate.scientificName}` : ''}`)
-    .join(', ') || 'none';
-
-  return [
-    'Identify the primary visible animal or plant in this user photo.',
-    'The user wants a taxonomic scientific name for a field observation in Chiang Mai, Thailand.',
-    `Coarse detector candidates: ${coarseLabels}.`,
-    'Return only strict JSON with this exact shape:',
-    '{"organismPresent":true,"commonNameZh":"","commonNameEn":"","scientificName":"","taxonRank":"SPECIES","confidence":0.0}',
-    'Rules:',
-    '- Use a species or subspecies scientific name only when the animal or plant is visually clear enough.',
-    '- For domestic cat use Felis catus. For domestic dog use Canis lupus familiaris.',
-    '- If the photo does not contain a clear animal or plant, set organismPresent to false and leave names empty.',
-    '- If you can only identify a broad group, use that taxon name and set taxonRank to CLASS, ORDER, FAMILY, or GENUS with confidence below 0.68.',
-    '- Do not include explanations, markdown, or any words outside JSON.',
-  ].join('\n');
-};
+const buildSpeciesPrompt = () => [
+  'Identify the primary visible animal or plant in this user photo.',
+  'The user wants a taxonomic scientific name for a field observation in Chiang Mai, Thailand.',
+  'Return only strict JSON with this exact shape:',
+  '{"organismPresent":true,"commonNameZh":"","commonNameEn":"","scientificName":"","taxonRank":"SPECIES","confidence":0.0}',
+  'Rules:',
+  '- Use a species or subspecies scientific name only when the animal or plant is visually clear enough.',
+  '- For domestic cat use Felis catus. For domestic dog use Canis lupus familiaris.',
+  '- If the primary visible subject is a human, set organismPresent to false and leave names empty.',
+  '- If the photo is a screenshot, poster, web page, menu, document, or UI capture and does not contain a clear real animal or plant subject, set organismPresent to false and leave names empty.',
+  '- If the photo does not contain a clear animal or plant, set organismPresent to false and leave names empty.',
+  '- If you can only identify a broad group, use that taxon name and set taxonRank to CLASS, ORDER, FAMILY, or GENUS with confidence below 0.68.',
+  '- Do not include explanations, markdown, or any words outside JSON.',
+].join('\n');
 
 const toBase64 = (imageBytes: number[]) => {
   let binary = '';
@@ -694,20 +184,78 @@ const toBase64 = (imageBytes: number[]) => {
   return btoa(binary);
 };
 
-const toBase64Image = (imageBytes: number[]) => {
-  return `data:image/jpeg;base64,${toBase64(imageBytes)}`;
+const getGeminiResponseText = (value: unknown) => {
+  if (!value || typeof value !== 'object') return '';
+  const record = value as Record<string, unknown>;
+  const candidates = Array.isArray(record.candidates) ? record.candidates : [];
+  const firstCandidate = candidates[0];
+  if (!firstCandidate || typeof firstCandidate !== 'object') return '';
+
+  const content = (firstCandidate as Record<string, unknown>).content;
+  if (!content || typeof content !== 'object') return '';
+
+  const parts = (content as Record<string, unknown>).parts;
+  if (!Array.isArray(parts)) return '';
+
+  return parts
+    .map(part => (part && typeof part === 'object' ? (part as Record<string, unknown>).text : ''))
+    .filter((text): text is string => typeof text === 'string')
+    .join('\n');
 };
 
-const runVisionSpeciesModel = async (ai: AiBinding, modelId: string, imageBytes: number[], coarseCandidates: AnimalCandidate[]) => {
-  const result = await ai.run(modelId, {
-    image: modelId === VISION_SPECIES_FALLBACK_MODEL_ID ? imageBytes : toBase64Image(imageBytes),
-    prompt: buildSpeciesPrompt(coarseCandidates),
-    max_tokens: 220,
-    temperature: 0,
-  });
+const runGeminiSpeciesModel = async (
+  apiKey: string,
+  imageBytes: number[],
+  mimeType: string
+) => {
+  for (let attempt = 1; attempt <= GEMINI_MAX_ATTEMPTS; attempt += 1) {
+    const response = await fetch(GEMINI_GENERATE_CONTENT_URL, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            {
+              inline_data: {
+                mime_type: mimeType || 'image/jpeg',
+                data: toBase64(imageBytes),
+              },
+            },
+            { text: buildSpeciesPrompt() },
+          ],
+        }],
+        generationConfig: {
+          response_mime_type: 'application/json',
+          temperature: 0,
+          thinkingConfig: {
+            thinkingBudget: 0,
+          },
+          maxOutputTokens: 512,
+        },
+      }),
+    });
 
-  const responseText = getAiResponseText(result);
-  return toVisionSpeciesResult(responseText);
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      console.warn('Gemini 物种识别失败:', response.status, errorText.slice(0, 240));
+      if (GEMINI_RETRYABLE_STATUS_CODES.has(response.status) && attempt < GEMINI_MAX_ATTEMPTS) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        continue;
+      }
+      if (GEMINI_RETRYABLE_STATUS_CODES.has(response.status)) {
+        throw new GeminiSpeciesModelUnavailableError();
+      }
+      return null;
+    }
+
+    const data = await response.json().catch(() => null);
+    return toVisionSpeciesResult(getGeminiResponseText(data));
+  }
+
+  throw new GeminiSpeciesModelUnavailableError();
 };
 
 const validateScientificNameWithGbif = async (scientificName: string): Promise<GbifSpeciesMatch | null> => {
@@ -735,6 +283,10 @@ const validateScientificNameWithGbif = async (scientificName: string): Promise<G
 const toGbifCanonicalScientificName = (match: GbifSpeciesMatch) =>
   normalizeScientificName(match.canonicalName ?? match.scientificName);
 
+const isSpeciesLevelRank = (rank: string | undefined) => (
+  rank === TAXON_RANK_SPECIES || rank === TAXON_RANK_SUBSPECIES
+);
+
 const toVisionSpeciesCandidate = (
   vision: VisionSpeciesResult,
   gbif: GbifSpeciesMatch,
@@ -751,6 +303,7 @@ const toVisionSpeciesCandidate = (
     gbifConfidence < MIN_GBIF_SPECIES_CONFIDENCE ||
     !ALLOWED_GBIF_KINGDOMS.has(gbif.kingdom || '') ||
     !scientificName ||
+    REJECTED_SCIENTIFIC_NAMES.has(scientificName) ||
     !isSpeciesLevelRank(taxonRank)
   ) {
     return null;
@@ -772,175 +325,45 @@ const toVisionSpeciesCandidate = (
   };
 };
 
-const getGeminiResponseText = (value: unknown) => {
-  if (!value || typeof value !== 'object') return '';
-  const record = value as Record<string, unknown>;
-  const candidates = Array.isArray(record.candidates) ? record.candidates : [];
-  const firstCandidate = candidates[0];
-  if (!firstCandidate || typeof firstCandidate !== 'object') return '';
-
-  const content = (firstCandidate as Record<string, unknown>).content;
-  if (!content || typeof content !== 'object') return '';
-
-  const parts = (content as Record<string, unknown>).parts;
-  if (!Array.isArray(parts)) return '';
-
-  return parts
-    .map(part => (part && typeof part === 'object' ? (part as Record<string, unknown>).text : ''))
-    .filter((text): text is string => typeof text === 'string')
-    .join('\n');
-};
-
-const runGeminiSpeciesModel = async (
-  apiKey: string,
-  imageBytes: number[],
-  mimeType: string,
-  coarseCandidates: AnimalCandidate[]
-) => {
-  const response = await fetch(GEMINI_GENERATE_CONTENT_URL, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-goog-api-key': apiKey,
-    },
-    body: JSON.stringify({
-      contents: [{
-        parts: [
-          {
-            inline_data: {
-              mime_type: mimeType || 'image/jpeg',
-              data: toBase64(imageBytes),
-            },
-          },
-          { text: buildSpeciesPrompt(coarseCandidates) },
-        ],
-      }],
-      generationConfig: {
-        response_mime_type: 'application/json',
-        temperature: 0,
-        maxOutputTokens: 220,
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    console.warn('Gemini 物种识别失败:', response.status, errorText.slice(0, 240));
-    return null;
-  }
-
-  const data = await response.json().catch(() => null);
-  return toVisionSpeciesResult(getGeminiResponseText(data));
-};
-
-const runSelfHostedSpeciesModel = async (
-  endpointUrl: string,
-  token: string | undefined,
-  imageBytes: number[],
-  mimeType: string,
-  coarseCandidates: AnimalCandidate[]
-) => {
-  const formData = new FormData();
-  const imageFile = new File([new Uint8Array(imageBytes)], 'animal-checkin.jpg', {
-    type: mimeType || 'image/jpeg',
-  });
-  formData.append('image', imageFile);
-  formData.append('coarseCandidates', JSON.stringify(coarseCandidates.map(candidate => ({
-    nameZh: candidate.nameZh,
-    nameEn: candidate.nameEn,
-    scientificName: candidate.scientificName,
-    kingdom: candidate.kingdom,
-    taxonRank: candidate.taxonRank,
-    score: candidate.score,
-  }))));
-
-  const response = await fetch(endpointUrl, {
-    method: 'POST',
-    headers: token ? { authorization: `Bearer ${token}` } : undefined,
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    console.warn('自托管物种模型识别失败:', response.status, errorText.slice(0, 240));
-    return null;
-  }
-
-  const data = await response.json().catch(() => null);
-  return toVisionSpeciesResultFromRecord(data);
-};
-
 type SpeciesIdentificationResult = {
   candidate: AnimalCandidate | null;
-  provider?: string;
+  provider: string;
+  unavailable?: boolean;
 };
 
 const identifySpeciesCandidate = async (
   env: PagesContext['env'],
   imageBytes: number[],
-  mimeType: string,
-  coarseCandidates: AnimalCandidate[]
+  mimeType: string
 ): Promise<SpeciesIdentificationResult> => {
-  if (env.CMI_MAP_SPECIES_MODEL_URL) {
-    try {
-      const vision = await runSelfHostedSpeciesModel(
-        env.CMI_MAP_SPECIES_MODEL_URL,
-        env.CMI_MAP_SPECIES_MODEL_TOKEN,
-        imageBytes,
-        mimeType,
-        coarseCandidates
-      );
-      if (vision?.scientificName) {
-        const gbif = await validateScientificNameWithGbif(vision.scientificName);
-        const candidate = gbif ? toVisionSpeciesCandidate(vision, gbif, SELF_HOSTED_SPECIES_MODEL_ID) : null;
-        if (candidate) return { candidate, provider: SELF_HOSTED_SPECIES_MODEL_ID };
-      }
-    } catch (error) {
-      console.warn('自托管生物物种模型失败:', error);
-    }
+  if (!env.GOOGLE_AI_STUDIO_API_KEY) {
+    return { candidate: null, provider: GEMINI_SPECIES_MODEL_ID };
   }
 
-  if (env.GOOGLE_AI_STUDIO_API_KEY) {
-    try {
-      const vision = await runGeminiSpeciesModel(env.GOOGLE_AI_STUDIO_API_KEY, imageBytes, mimeType, coarseCandidates);
-      if (vision?.scientificName) {
-        const gbif = await validateScientificNameWithGbif(vision.scientificName);
-        const candidate = gbif ? toVisionSpeciesCandidate(vision, gbif, GEMINI_SPECIES_MODEL_ID) : null;
-        if (candidate) return { candidate, provider: GEMINI_SPECIES_MODEL_ID };
-      }
-    } catch (error) {
-      console.warn('Gemini 生物物种识别失败:', error);
-    }
-  }
-
-  if (env.CMI_MAP_ENABLE_META_VISION_SPECIES !== '1' || !env.AI) {
-    return { candidate: null };
-  }
-
-  for (const modelId of [VISION_SPECIES_MODEL_ID, VISION_SPECIES_FALLBACK_MODEL_ID]) {
-    try {
-      const vision = await runVisionSpeciesModel(env.AI, modelId, imageBytes, coarseCandidates);
-      if (!vision?.scientificName) continue;
-
+  try {
+    const vision = await runGeminiSpeciesModel(env.GOOGLE_AI_STUDIO_API_KEY, imageBytes, mimeType);
+    if (vision?.scientificName) {
       const gbif = await validateScientificNameWithGbif(vision.scientificName);
-      if (!gbif) continue;
-      const candidate = toVisionSpeciesCandidate(vision, gbif, modelId);
-      if (candidate) return { candidate, provider: modelId };
-    } catch (error) {
-      console.warn('生物物种视觉识别失败:', modelId, error);
+      const candidate = gbif ? toVisionSpeciesCandidate(vision, gbif, GEMINI_SPECIES_MODEL_ID) : null;
+      if (candidate) return { candidate, provider: GEMINI_SPECIES_MODEL_ID };
     }
+  } catch (error) {
+    if (error instanceof GeminiSpeciesModelUnavailableError) {
+      return { candidate: null, provider: GEMINI_SPECIES_MODEL_ID, unavailable: true };
+    }
+    console.warn('Gemini 生物物种识别失败:', error);
   }
 
-  return { candidate: null, provider: VISION_SPECIES_MODEL_ID };
+  return { candidate: null, provider: GEMINI_SPECIES_MODEL_ID };
 };
 
 export const onRequestPost = async ({ request, env }: PagesContext) => {
   const startedAt = Date.now();
 
-  if (!env.AI) {
+  if (!env.GOOGLE_AI_STUDIO_API_KEY) {
     return jsonResponse({
       status: 'unavailable',
-      provider: 'cloudflare-workers-ai',
+      provider: GEMINI_SPECIES_MODEL_ID,
       candidates: [],
       message: '识别服务暂时不可用',
     }, { status: 503 });
@@ -957,48 +380,29 @@ export const onRequestPost = async ({ request, env }: PagesContext) => {
     return jsonResponse({ status: 'error', candidates: [], message: '图片太大，请重新拍一张' }, { status: 413 });
   }
 
-  const byteArray = new Uint8Array(await image.arrayBuffer());
-  const bytes = [...byteArray];
-  const dimensions = getImageDimensions(byteArray);
-  const [detectionResult, classificationResult] = await Promise.all([
-    detectAnimalCandidates(env.AI, bytes, dimensions),
-    classifyAnimalCandidates(env.AI, bytes),
-  ]);
-  const isNonFieldPhoto = hasStrongNonFieldPhotoSignal(classificationResult.rawLabels);
-  const hasProminentPerson = hasProminentPersonSignal(detectionResult.rawDetections, dimensions);
-  const hasSpeciesLevelDetection = Boolean(bestSpeciesLevelCandidate(detectionResult.candidates));
-  const shouldSuppressCoarseDetection = isNonFieldPhoto && !hasSpeciesLevelDetection;
-  const shouldSuppressSpeciesLookup = shouldSuppressCoarseDetection || (
-    hasProminentPerson &&
-    detectionResult.candidates.length === 0 &&
-    classificationResult.candidates.length === 0
-  );
-  const preferClassificationCandidate = shouldPreferClassificationCandidate(detectionResult.candidates, classificationResult.candidates);
-  const coarseCandidates = !shouldSuppressCoarseDetection && detectionResult.candidates.length > 0 && !preferClassificationCandidate
-    ? detectionResult.candidates
-    : shouldSuppressCoarseDetection
-      ? []
-      : classificationResult.candidates;
-  const speciesLookupNeeded = !shouldSuppressSpeciesLookup && needsVisionSpeciesLookup(coarseCandidates);
-  const speciesResult = speciesLookupNeeded
-    ? await identifySpeciesCandidate(env, bytes, image.type || 'image/jpeg', coarseCandidates)
-    : { candidate: bestSpeciesLevelCandidate(coarseCandidates) ?? null };
+  const imageBytes = [...new Uint8Array(await image.arrayBuffer())];
+  const speciesResult = await identifySpeciesCandidate(env, imageBytes, image.type || 'image/jpeg');
+  if (speciesResult.unavailable) {
+    return jsonResponse({
+      status: 'unavailable',
+      provider: GEMINI_SPECIES_MODEL_ID,
+      elapsedMs: Date.now() - startedAt,
+      candidates: [],
+      message: '识别服务繁忙，请稍后再试',
+      rawDetections: [],
+      rawLabels: [],
+    }, { status: 503 });
+  }
+
   const speciesCandidate = speciesResult.candidate;
-  const candidates = speciesCandidate
-    ? prioritizeSpeciesCandidate(speciesCandidate, coarseCandidates)
-    : coarseCandidates;
-  const providerModels = [
-    ...(detectionResult.detectionAvailable ? [DETECTION_MODEL_ID] : []),
-    CLASSIFICATION_MODEL_ID,
-    ...(speciesLookupNeeded && speciesResult.provider ? [speciesResult.provider] : []),
-  ];
+  const candidates = speciesCandidate ? [speciesCandidate] : [];
 
   return jsonResponse({
     status: candidates.length > 0 ? 'ready' : 'no-match',
-    provider: providerModels.join('+'),
+    provider: GEMINI_SPECIES_MODEL_ID,
     elapsedMs: Date.now() - startedAt,
     candidates,
-    rawDetections: detectionResult.rawDetections,
-    rawLabels: classificationResult.rawLabels,
+    rawDetections: [],
+    rawLabels: [],
   });
 };
