@@ -50,11 +50,13 @@
   - 分享卡动态文字字体栈改为优先使用 `Hannotate SC` / `HanziPen SC` / `Wawati SC` / `Yuanti SC`。
   - 动物介绍、编号、时间戳字重提高到 900，并略微增大字号。
   - 动物名称最大字号从 38 提到 42，保持更厚重的图鉴卡片感。
+  - 动态文字增加 1px 同色描边，避免浏览器字体回退后仍显得太细。
 - 验证结果：
   - `node --test --experimental-strip-types src/lib/cmi-wild-animal-share-card.test.ts src/db/cmi-event-capture-numbers.test.ts src/pages/MarkPlace.test.ts` 通过，20 项测试全部通过。
   - `pnpm exec biome lint src/lib/cmi-wild-animal-share-card.ts src/lib/cmi-wild-animal-share-card.test.ts src/db/api.ts src/db/cmi-event-capture-numbers.test.ts` 通过。
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
+  - 使用 `/Users/andreas/Downloads/IMG_5991 2.jpg` 生成测试样卡 `/tmp/cmi-wild-share-card-img5991-2-readable-test.png`，检查照片裁切、模板压层和动态文字字重。
 
 ### 2026-06-13 13:25 +07 神奇动物分享卡切回装饰版模板
 

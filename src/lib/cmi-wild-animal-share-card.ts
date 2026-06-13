@@ -36,6 +36,7 @@ const DEEP_GREEN = '#0B3D24';
 const YELLOW = '#F6BE19';
 const WHITE = '#FFFFFF';
 const BLACK = '#050505';
+const TEXT_STROKE_WIDTH = 1;
 const PHOTO_BOX = { x: 50, y: 470, width: 924, height: 618, radius: 30 };
 const NUMBER_BOX = { x: 735, y: 51, width: 232, height: 78, radius: 39 };
 const SPECIES_NAME_BOX = { x: 250, y: 1116, width: 340, height: 54 };
@@ -164,8 +165,12 @@ const drawCenteredText = (
   context.save();
   context.font = font;
   context.fillStyle = fillStyle;
+  context.strokeStyle = fillStyle;
+  context.lineJoin = 'round';
+  context.lineWidth = TEXT_STROKE_WIDTH;
   context.textAlign = 'center';
   context.textBaseline = 'middle';
+  context.strokeText(text, x + width / 2, y + height / 2 + 1);
   context.fillText(text, x + width / 2, y + height / 2 + 1);
   context.restore();
 };
@@ -217,6 +222,9 @@ const drawFittedText = (
   context.textAlign = 'center';
   context.textBaseline = 'middle';
   context.fillStyle = color;
+  context.strokeStyle = color;
+  context.lineJoin = 'round';
+  context.lineWidth = TEXT_STROKE_WIDTH;
 
   while (fontSize > minFontSize) {
     context.font = `900 ${fontSize}px ${FONT_FAMILY}`;
@@ -225,6 +233,7 @@ const drawFittedText = (
   }
 
   context.font = `900 ${fontSize}px ${FONT_FAMILY}`;
+  context.strokeText(text, x + width / 2, y);
   context.fillText(text, x + width / 2, y);
   context.restore();
 };
@@ -264,6 +273,7 @@ const drawWrappedText = (
   }
 
   lines.forEach((line, index) => {
+    context.strokeText(line, x, y + index * lineHeight);
     context.fillText(line, x, y + index * lineHeight);
   });
 };
@@ -322,6 +332,9 @@ export const createCmiWildAnimalShareCard = async ({
   context.save();
   context.font = INTRO_FONT;
   context.fillStyle = DEEP_GREEN;
+  context.strokeStyle = DEEP_GREEN;
+  context.lineJoin = 'round';
+  context.lineWidth = TEXT_STROKE_WIDTH;
   context.textAlign = 'left';
   context.textBaseline = 'top';
   drawWrappedText(

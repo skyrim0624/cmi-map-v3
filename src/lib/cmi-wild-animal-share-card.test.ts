@@ -32,6 +32,9 @@ test('神奇动物分享卡动态文字使用偏手写圆体且加重', () => {
   assert.match(source, /const INTRO_FONT = `900 29px \$\{FONT_FAMILY\}`/);
   assert.match(source, /const NUMBER_FONT = `900 38px \$\{FONT_FAMILY\}`/);
   assert.match(source, /const TIMESTAMP_FONT = `900 30px \$\{FONT_FAMILY\}`/);
+  assert.match(source, /const TEXT_STROKE_WIDTH = 1/);
+  assert.match(source, /context\.strokeText\(text, x \+ width \/ 2, y\)/);
+  assert.match(source, /context\.strokeText\(line, x, y \+ index \* lineHeight\)/);
   assert.match(source, /SPECIES_NAME_BOX\.width - 28,\n    42,/);
 });
 
