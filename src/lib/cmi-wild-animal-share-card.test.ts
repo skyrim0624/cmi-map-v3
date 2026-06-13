@@ -27,6 +27,14 @@ test('神奇动物分享卡主展示中文名和真实活动二维码', () => {
   assert.match(source, /drawNumberPill\(context, captureNumberLabel\)/);
 });
 
+test('神奇动物分享卡动态文字使用偏手写圆体且加重', () => {
+  assert.match(source, /"Hannotate SC", "HanziPen SC", "Wawati SC", "Yuanti SC"/);
+  assert.match(source, /const INTRO_FONT = `900 29px \$\{FONT_FAMILY\}`/);
+  assert.match(source, /const NUMBER_FONT = `900 38px \$\{FONT_FAMILY\}`/);
+  assert.match(source, /const TIMESTAMP_FONT = `900 30px \$\{FONT_FAMILY\}`/);
+  assert.match(source, /SPECIES_NAME_BOX\.width - 28,\n    42,/);
+});
+
 test('神奇动物分享卡使用干净二维码区域', () => {
   assert.match(source, /const QR_BOX = \{ x: 736, y: 1179, size: 196 \}/);
   assert.match(source, /const QR_BACKGROUND_BOX = \{ x: 724, y: 1167, size: 220, radius: 8 \}/);

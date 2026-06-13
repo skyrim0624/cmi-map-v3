@@ -27,10 +27,11 @@ export interface CmiWildAnimalShareCardResult {
 const TEMPLATE_URL = '/cmi-home/share-card-templates/wild-chiang-mai-template-v4.png';
 const CARD_WIDTH = 1024;
 const CARD_HEIGHT = 1536;
-const FONT_FAMILY = '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif';
-const INTRO_FONT = `800 27px ${FONT_FAMILY}`;
-const NUMBER_FONT = `900 36px ${FONT_FAMILY}`;
-const TIMESTAMP_FONT = `900 28px ${FONT_FAMILY}`;
+const FONT_FAMILY =
+  '"Hannotate SC", "HanziPen SC", "Wawati SC", "Yuanti SC", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif';
+const INTRO_FONT = `900 29px ${FONT_FAMILY}`;
+const NUMBER_FONT = `900 38px ${FONT_FAMILY}`;
+const TIMESTAMP_FONT = `900 30px ${FONT_FAMILY}`;
 const DEEP_GREEN = '#0B3D24';
 const YELLOW = '#F6BE19';
 const WHITE = '#FFFFFF';
@@ -313,7 +314,7 @@ export const createCmiWildAnimalShareCard = async ({
     SPECIES_NAME_BOX.x,
     SPECIES_NAME_BOX.y + SPECIES_NAME_BOX.height / 2 + 1,
     SPECIES_NAME_BOX.width - 28,
-    38,
+    42,
     22,
     DEEP_GREEN
   );
