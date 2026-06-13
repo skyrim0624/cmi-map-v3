@@ -2618,3 +2618,17 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm build` 通过。
   - 本地生产预览 `http://127.0.0.1:4173/` 手机视口验证：根节点有内容，首屏显示地图入口和底部导航，控制台不再出现 Supabase URL 错误。
+
+### 2026-06-13 神奇动物图鉴与贴纸化裁切
+
+- 背景：用户希望把“神奇动物在哪里”的拍照记录沉淀到个人主页图鉴，并参考 Jungle Animals 贴纸风格，把识别到的动物自动裁成贴纸逐张收藏。
+- 本轮实现：
+  - Gemini 物种识别结果新增 `subjectBox` 和 `subjectPolygon`，用于返回主体框和粗轮廓点。
+  - 前端用 canvas 将原照片按主体区域生成透明底、白边、阴影的贴纸文件，并在发布页显示“已剪成贴纸”预览。
+  - 发布神奇动物记录时上传贴纸文件，并把贴纸 URL、中文名、学名和主体框写入推荐记录；如果表字段未同步，会把贴纸元数据写进正文兜底。
+  - 个人主页和公开个人主页新增神奇动物图鉴 tab，贴纸以网格展示，点开后可全屏逐张翻看。
+  - Supabase migration 新增 `animal_sticker_url`、`animal_common_name`、`animal_scientific_name`、`animal_subject_box` 字段。
+- 验证结果：
+  - `node --test functions/api/animal-identify.test.ts src/services/animal-identification.test.ts src/pages/MarkPlace.test.ts src/features/profiles/public-profile-page.test.ts src/pages/Profile.test.ts src/pages/PersonMap.test.ts` 通过，36 项测试通过。
+  - `npm run lint` 通过，包含 TypeScript 检查、Biome、Tailwind 语法检查和 Vite build。
+  - 本地浏览器 `http://localhost:5173/people/local-qa-user` 验证：公开主页显示 `TA 的图鉴`，点击后进入空图鉴状态，分类筛选隐藏；390×844 手机视口无溢出。
