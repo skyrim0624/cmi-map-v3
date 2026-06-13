@@ -71,7 +71,11 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```env
 CMI_MAP_SPECIES_MODEL_URL=https://你的模型服务域名/identify
 CMI_MAP_SPECIES_MODEL_TOKEN=模型服务密钥
+CMI_MAP_SEGMENT_MODEL_URL=https://你的模型服务域名/segment
+CMI_MAP_SEGMENT_MODEL_TOKEN=模型服务密钥
 ```
+
+`/api/animal-segment` 会代理自托管分割模型，返回透明 PNG。神奇动物打卡会优先用这个透明抠图生成白边贴纸；如果服务未配置或临时失败，会回退到前端粗轮廓裁切，避免发布流程中断。
 
 数据库迁移放在 `supabase/migrations/`。新环境需要应用这些迁移来创建 `profiles`、`recommendations`、`upvotes`、`wishlists` 和贴纸相关表。当前权限策略允许公开浏览地点，登录用户只能写入自己的资料、推荐、点赞和收藏，管理员角色通过 `profiles.role = 'admin'` 控制。
 

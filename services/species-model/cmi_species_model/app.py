@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import json
-import os
 from dataclasses import replace
 from io import BytesIO
+from math import ceil, floor
+import json
+import os
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, Response, UploadFile
 from PIL import Image, UnidentifiedImageError
 
 from .bioclip import BioClipModel, BioClipSettings
@@ -45,10 +46,12 @@ MIN_MARGIN = env_float("SPECIES_MIN_MARGIN", 0.06)
 MAX_CANDIDATES = env_int("SPECIES_MAX_CANDIDATES", 180)
 PRELOAD_MODELS = os.getenv("BIOCLIP_PRELOAD", "0") == "1"
 DEBUG_TOPK = os.getenv("SPECIES_DEBUG_TOPK", "0") == "1"
+SEGMENT_MODEL = os.getenv("SEGMENT_MODEL", "isnet-general-use")
 
 catalog = load_species_catalog(Path(CATALOG_PATH) if CATALOG_PATH else None)
 primary_model = BioClipModel(BioClipSettings(PRIMARY_MODEL, DEVICE))
 fallback_model = BioClipModel(BioClipSettings(FALLBACK_MODEL, DEVICE)) if FALLBACK_MODEL else None
+segment_session: Any | None = None
 
 app = FastAPI(title="CMI Map Species Model", version="1.0.0")
 
@@ -82,6 +85,32 @@ def parse_coarse_candidates(value: str | None) -> list[dict[str, Any]]:
     return [item for item in parsed if isinstance(item, dict)]
 
 
+def parse_subject_box(value: str | None) -> dict[str, float] | None:
+    if not value:
+        return None
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(parsed, dict):
+        return None
+
+    box: dict[str, float] = {}
+    for key in ("x", "y", "width", "height"):
+        raw_value = parsed.get(key)
+        if not isinstance(raw_value, int | float):
+            return None
+        box[key] = max(0.0, min(1000.0, float(raw_value)))
+
+    if box["width"] < 8 or box["height"] < 8:
+        return None
+    box["width"] = min(box["width"], 1000.0 - box["x"])
+    box["height"] = min(box["height"], 1000.0 - box["y"])
+    if box["width"] < 8 or box["height"] < 8:
+        return None
+    return box
+
+
 def decode_image(payload: bytes) -> Image.Image:
     if len(payload) > MAX_IMAGE_BYTES:
         raise HTTPException(status_code=413, detail="image too large")
@@ -91,6 +120,67 @@ def decode_image(payload: bytes) -> Image.Image:
     except (UnidentifiedImageError, OSError) as error:
         raise HTTPException(status_code=400, detail="invalid image") from error
     return image.convert("RGB")
+
+
+def expand_subject_crop(image: Image.Image, subject_box: dict[str, float] | None) -> tuple[int, int, int, int]:
+    if not subject_box:
+        return (0, 0, image.width, image.height)
+
+    source_x = subject_box["x"] / 1000 * image.width
+    source_y = subject_box["y"] / 1000 * image.height
+    source_width = subject_box["width"] / 1000 * image.width
+    source_height = subject_box["height"] / 1000 * image.height
+    padding = max(source_width, source_height) * 0.32
+
+    left = max(0, floor(source_x - padding))
+    top = max(0, floor(source_y - padding))
+    right = min(image.width, ceil(source_x + source_width + padding))
+    bottom = min(image.height, ceil(source_y + source_height + padding))
+
+    if right - left < 16 or bottom - top < 16:
+        return (0, 0, image.width, image.height)
+    return (left, top, right, bottom)
+
+
+def get_segment_session() -> Any:
+    global segment_session
+    if segment_session is None:
+        try:
+            from rembg import new_session
+        except ImportError as error:
+            raise HTTPException(status_code=503, detail="segment model unavailable") from error
+        segment_session = new_session(SEGMENT_MODEL)
+    return segment_session
+
+
+def remove_background(image: Image.Image) -> Image.Image:
+    try:
+        from rembg import remove
+    except ImportError as error:
+        raise HTTPException(status_code=503, detail="segment model unavailable") from error
+
+    result = remove(image, session=get_segment_session(), post_process_mask=True)
+    if isinstance(result, bytes):
+        result_image = Image.open(BytesIO(result))
+        result_image.load()
+        return result_image.convert("RGBA")
+    if isinstance(result, Image.Image):
+        return result.convert("RGBA")
+    raise HTTPException(status_code=500, detail="segment model failed")
+
+
+def trim_transparent_bounds(image: Image.Image) -> Image.Image:
+    alpha = image.getchannel("A")
+    bounds = alpha.getbbox()
+    if bounds is None:
+        raise HTTPException(status_code=422, detail="no subject found")
+    return image.crop(bounds)
+
+
+def encode_png(image: Image.Image) -> bytes:
+    output = BytesIO()
+    image.save(output, format="PNG", optimize=True)
+    return output.getvalue()
 
 
 def should_run_fallback(primary_probability: float, primary_margin: float) -> bool:
@@ -259,3 +349,24 @@ async def identify_species(
     if DEBUG_TOPK:
         response["topPredictions"] = [serialize_prediction(prediction) for prediction in primary_predictions]
     return response
+
+
+@app.post("/segment")
+async def segment_subject(
+    image: UploadFile = File(...),
+    subjectBox: str | None = Form(None),
+    authorization: str | None = Header(None),
+) -> Response:
+    require_authorization(authorization)
+
+    image_bytes = await image.read()
+    pil_image = decode_image(image_bytes)
+    crop_box = expand_subject_crop(pil_image, parse_subject_box(subjectBox))
+    cropped_image = pil_image.crop(crop_box)
+    segmented_image = trim_transparent_bounds(remove_background(cropped_image))
+
+    return Response(
+        content=encode_png(segmented_image),
+        media_type="image/png",
+        headers={"cache-control": "no-store"},
+    )

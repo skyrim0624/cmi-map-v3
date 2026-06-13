@@ -1,6 +1,6 @@
 # CMI Map 优化任务日志
 
-更新时间：2026-06-11 +07
+更新时间：2026-06-13 +07
 
 ## 目标
 
@@ -41,8 +41,25 @@
 26. [完成] 神奇动物图鉴卡右下角排版修正：弱化爪印、放大二维码、重排进度号
 27. [完成] `/mark` 发布 tag 前台步骤退后台，默认按拍摄 / 照片坐标直接发布
 28. [完成] 上传相关页面主题色统一为 CMI 绿色
+29. [完成] 神奇动物贴纸改为优先使用自托管分割模型自动抠图
 
 ## 执行记录
+
+### 2026-06-13 神奇动物贴纸自动抠图模型链路
+
+- 本轮实现：
+  - 新增 Pages Function `/api/animal-segment`，代理自托管分割模型，返回透明 PNG，不调用 Image Gen。
+  - 自托管物种模型服务新增 `/segment` 接口，使用 `rembg` 分割模型按主体框聚焦裁切并输出透明抠图。
+  - 前端 `createAnimalStickerFromPhoto` 改为优先请求透明抠图，再重新加白边和阴影生成贴纸；服务不可用时回退到原粗轮廓裁切，避免发布中断。
+  - README 和模型服务文档补充 `CMI_MAP_SEGMENT_MODEL_URL` / `CMI_MAP_SEGMENT_MODEL_TOKEN` 配置。
+- 验证结果：
+  - `node --test --experimental-strip-types functions/api/animal-segment.test.ts src/lib/cmi-wild-animal-stickers.test.ts src/services/animal-identification.test.ts src/pages/MarkPlace.test.ts src/pages/Profile.test.ts src/features/profiles/public-profile-page.test.ts` 通过，27 项测试全部通过。
+  - `cd services/species-model && python3 -m unittest discover -s tests` 通过，12 项测试全部通过。
+  - `python3 -m py_compile services/species-model/cmi_species_model/app.py` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint functions/api/animal-segment.ts functions/api/animal-segment.test.ts src/lib/cmi-wild-animal-stickers.ts src/lib/cmi-wild-animal-stickers.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 使用 `/Users/andreas/Downloads/IMG_5991 2.jpg` 跑模型服务分割逻辑，生成透明 cutout 和贴纸预览；本地浏览器检查 `/mark?event=cmi-wild-chiang-mai-2026-06`，页面正常渲染，生物识别入口可见。
 
 ### 2026-06-13 13:58 +07 神奇动物分享卡动态文字改为偏手写圆体
 

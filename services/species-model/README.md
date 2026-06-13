@@ -60,6 +60,24 @@ services/species-model/scripts/start-tunnel.sh
 }
 ```
 
+## 自动抠图接口
+
+同一个服务也提供 `/segment`，用于神奇动物图鉴贴纸的自动抠图。主站会把用户拍的照片传给这个接口，接口返回透明 PNG；前端再加白边和阴影生成最终贴纸。
+
+```bash
+curl -X POST http://127.0.0.1:8000/segment \
+  -H 'Authorization: Bearer dev-token' \
+  -F 'image=@/path/to/photo.jpg' \
+  -F 'subjectBox={"x":300,"y":420,"width":260,"height":360}' \
+  --output cutout.png
+```
+
+默认分割模型是 `isnet-general-use`。如需切换模型：
+
+```bash
+SEGMENT_MODEL=u2net SPECIES_MODEL_TOKEN=dev-token services/species-model/scripts/start-local.sh
+```
+
 ## Docker 启动
 
 ```bash
@@ -81,9 +99,11 @@ docker run --rm -p 8000:8000 \
 ```txt
 CMI_MAP_SPECIES_MODEL_URL=https://你的模型服务域名/identify
 CMI_MAP_SPECIES_MODEL_TOKEN=和 SPECIES_MODEL_TOKEN 相同的密钥
+CMI_MAP_SEGMENT_MODEL_URL=https://你的模型服务域名/segment
+CMI_MAP_SEGMENT_MODEL_TOKEN=和 SPECIES_MODEL_TOKEN 相同的密钥
 ```
 
-CMI Map 主站已经会优先调用这个服务；没有配置时继续走现有粗识别链路。
+CMI Map 主站已经会优先调用这个服务；没有配置物种识别时继续走主站现有识别链路，没有配置抠图服务时贴纸会回退到粗轮廓裁切。
 
 ## 可调参数
 
@@ -95,6 +115,7 @@ CMI Map 主站已经会优先调用这个服务；没有配置时继续走现有
 | `BIOCLIP_FALLBACK_MODE` | `auto` | `auto` / `always` / `never` |
 | `BIOCLIP_DEVICE` | `auto` | `auto` / `cuda` / `mps` / `cpu` |
 | `BIOCLIP_PRELOAD` | `0` | `1` 表示启动时预加载模型；本地脚本默认设为 `1` |
+| `SEGMENT_MODEL` | `isnet-general-use` | 自动抠图使用的 rembg 分割模型 |
 | `SPECIES_MIN_CONFIDENCE` | `0.68` | 低于这个值不返回物种 |
 | `SPECIES_MIN_MARGIN` | `0.06` | 前两名差距太小不返回物种 |
 | `SPECIES_MAX_CANDIDATES` | `180` | 单次参与比对的最大候选数 |

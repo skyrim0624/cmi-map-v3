@@ -5,3 +5,5 @@ pillow>=10,<13
 torch>=2.4,<3
 open_clip_torch>=2.26,<4
 huggingface-hub>=0.24,<2
+rembg>=2.0,<3
+onnxruntime>=1.18,<2
