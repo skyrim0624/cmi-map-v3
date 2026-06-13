@@ -24,24 +24,24 @@ export interface CmiWildAnimalShareCardResult {
   fileName: string;
 }
 
-const TEMPLATE_URL = '/cmi-home/share-card-templates/wild-chiang-mai-template-v3.png';
+const TEMPLATE_URL = '/cmi-home/share-card-templates/wild-chiang-mai-template-v4.png';
 const CARD_WIDTH = 1024;
 const CARD_HEIGHT = 1536;
 const FONT_FAMILY = '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif';
-const INTRO_FONT = `800 29px ${FONT_FAMILY}`;
-const NUMBER_FONT = `900 38px ${FONT_FAMILY}`;
-const TIMESTAMP_FONT = `900 31px ${FONT_FAMILY}`;
+const INTRO_FONT = `800 27px ${FONT_FAMILY}`;
+const NUMBER_FONT = `900 36px ${FONT_FAMILY}`;
+const TIMESTAMP_FONT = `900 28px ${FONT_FAMILY}`;
 const DEEP_GREEN = '#0B3D24';
 const YELLOW = '#F6BE19';
 const WHITE = '#FFFFFF';
 const BLACK = '#050505';
-const PHOTO_BOX = { x: 61, y: 511, width: 902, height: 598, radius: 28 };
-const NUMBER_BOX = { x: 746, y: 47, width: 226, height: 84, radius: 42 };
-const SPECIES_NAME_BOX = { x: 70, y: 1160, width: 620, height: 58 };
-const INTRO_BOX = { x: 72, y: 1230, width: 612, lineHeight: 43, maxLines: 4 };
-const QR_BOX = { x: 760, y: 1221, size: 170 };
-const QR_BACKGROUND_BOX = { x: 739, y: 1199, size: 212, radius: 14 };
-const TIMESTAMP_BOX = { x: 62, y: 1396, width: 448, height: 54 };
+const PHOTO_BOX = { x: 50, y: 470, width: 924, height: 618, radius: 30 };
+const NUMBER_BOX = { x: 735, y: 51, width: 232, height: 78, radius: 39 };
+const SPECIES_NAME_BOX = { x: 250, y: 1116, width: 340, height: 54 };
+const INTRO_BOX = { x: 145, y: 1210, width: 480, lineHeight: 52, maxLines: 3 };
+const QR_BOX = { x: 736, y: 1179, size: 196 };
+const QR_BACKGROUND_BOX = { x: 724, y: 1167, size: 220, radius: 8 };
+const TIMESTAMP_BOX = { x: 162, y: 1418, width: 345, height: 78 };
 
 const speciesIntroById: Record<string, string> = {
   dog: '家犬与人类共同生活时间很长，常在院子、街角和店门口活动，是城市日常里最容易遇见的伙伴。',
@@ -303,8 +303,8 @@ export const createCmiWildAnimalShareCard = async ({
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = 'high';
 
-  context.drawImage(templateImage, 0, 0, CARD_WIDTH, CARD_HEIGHT);
   drawImageCover(context, photoImage, PHOTO_BOX.x, PHOTO_BOX.y, PHOTO_BOX.width, PHOTO_BOX.height);
+  context.drawImage(templateImage, 0, 0, CARD_WIDTH, CARD_HEIGHT);
   drawNumberPill(context, captureNumberLabel);
 
   drawFittedText(
@@ -313,7 +313,7 @@ export const createCmiWildAnimalShareCard = async ({
     SPECIES_NAME_BOX.x,
     SPECIES_NAME_BOX.y + SPECIES_NAME_BOX.height / 2 + 1,
     SPECIES_NAME_BOX.width - 28,
-    43,
+    38,
     22,
     DEEP_GREEN
   );

@@ -44,6 +44,19 @@
 
 ## 执行记录
 
+### 2026-06-13 13:25 +07 神奇动物分享卡切回装饰版模板
+
+- 本轮实现：
+  - 按用户提供的分享卡片图新增 `wild-chiang-mai-template-v4.png`。
+  - 将模板照片区做成透明窗口，改为先绘制用户照片、再覆盖模板，保留红车、叶子、蝴蝶和标题装饰。
+  - 重新校准照片、编号、动物名、介绍、二维码和时间戳位置，避免照片压住模板装饰。
+- 验证结果：
+  - `node --test --experimental-strip-types src/lib/cmi-wild-animal-share-card.test.ts src/db/cmi-event-capture-numbers.test.ts src/pages/MarkPlace.test.ts` 通过，19 项测试全部通过。
+  - `pnpm exec biome lint src/lib/cmi-wild-animal-share-card.ts src/lib/cmi-wild-animal-share-card.test.ts src/db/api.ts src/db/cmi-event-capture-numbers.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地用 `wild-chiang-mai-template-v4.png` 和小狗照片合成样卡，确认模板装饰保留在照片上层，未出现上一轮的大块白底。
+
 ### 2026-06-12 12:24 +07 神奇动物分享卡切到无装饰干净模板
 
 - 本轮实现：
