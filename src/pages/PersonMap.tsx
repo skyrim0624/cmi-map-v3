@@ -542,7 +542,7 @@ export default function PersonMap() {
           <div className="pt-3">
             <AnimalStickerAlbum
               entries={animalStickerEntries}
-              emptyText="TA 还没有动物贴纸"
+              emptyText="TA 还没有神奇生物贴纸"
             />
           </div>
         )}

@@ -2649,3 +2649,15 @@
   - `node --test functions/api/animal-identify.test.ts src/services/animal-identification.test.ts src/pages/MarkPlace.test.ts src/features/profiles/public-profile-page.test.ts src/pages/Profile.test.ts src/pages/PersonMap.test.ts` 通过，36 项测试通过。
   - `npm run lint` 通过，包含 TypeScript 检查、Biome、Tailwind 语法检查和 Vite build。
   - 本地浏览器 `http://localhost:5173/people/local-qa-user` 验证：公开主页显示 `TA 的图鉴`，点击后进入空图鉴状态，分类筛选隐藏；390×844 手机视口无溢出。
+
+### 2026-06-14 神奇生物图鉴入口命名修正
+
+- 背景：用户反馈个人主页没有看到“神奇生物图鉴”；排查发现正式站尚未加载 6 月 13 日图鉴代码，且本地入口仍写作“神奇动物图鉴”/“TA 的图鉴”，识别度不够。
+- 本轮实现：
+  - 个人主页 tab 统一改为“神奇生物图鉴”。
+  - 公开个人主页 tab 改为“TA 的神奇生物图鉴”，空状态改为“神奇生物贴纸”。
+  - 图鉴默认空状态和未命名贴纸默认名同步为“神奇生物”。
+- 验证结果：
+  - `node --test --experimental-strip-types src/pages/Profile.test.ts src/features/profiles/public-profile-page.test.ts src/pages/PersonMap.test.ts src/lib/cmi-wild-animal-stickers.test.ts` 通过，6 项测试通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过。

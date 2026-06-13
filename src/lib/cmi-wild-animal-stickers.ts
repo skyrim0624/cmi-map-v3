@@ -161,7 +161,7 @@ export const getWildAnimalStickerEntries = (recommendations: Recommendation[]): 
       id: recommendation.id,
       stickerUrl,
       photoUrl: fallbackPhotoUrl,
-      commonName: metadata?.commonName || '神奇动物',
+      commonName: metadata?.commonName || '神奇生物',
       scientificName: metadata?.scientificName || null,
       placeName: recommendation.place_name,
       createdAt: recommendation.created_at,

@@ -18,7 +18,7 @@ export const buildPublicProfileTabs = ({
   postCount: number;
 }): PublicProfileTab[] => [
   { id: 'recommendations', label: 'TA 的痕迹', count: recommendationCount },
-  { id: 'animals', label: 'TA 的图鉴', count: animalCount },
+  { id: 'animals', label: 'TA 的神奇生物图鉴', count: animalCount },
   { id: 'posts', label: 'TA 的动态', count: postCount },
 ];
 

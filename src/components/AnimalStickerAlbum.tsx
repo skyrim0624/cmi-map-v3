@@ -18,7 +18,7 @@ const formatStickerDate = (value: string) => {
 
 export default function AnimalStickerAlbum({
   entries,
-  emptyText = '还没有动物贴纸',
+  emptyText = '还没有神奇生物贴纸',
   emptyActionLabel,
   onEmptyAction,
 }: AnimalStickerAlbumProps) {

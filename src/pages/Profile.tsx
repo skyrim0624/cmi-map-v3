@@ -376,7 +376,7 @@ export default function Profile() {
           onClick={() => setActiveTab('animals')}
           className={`relative min-w-[6.6rem] flex-1 whitespace-nowrap pb-3 text-center text-sm font-bold transition-colors ${activeTab === 'animals' ? 'text-[#0b3d24]' : 'text-stone-400'}`}
         >
-          神奇动物图鉴 ({animalStickerEntries.length})
+          神奇生物图鉴 ({animalStickerEntries.length})
           {activeTab === 'animals' && <div className="absolute bottom-0 left-3 right-3 h-[2.5px] bg-[#0b3d24] rounded-full" />}
         </button>
         <button
