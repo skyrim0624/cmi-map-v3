@@ -37,6 +37,9 @@ test('神奇动物分享卡底部只叠加动物名、介绍和时间戳', () =>
   assert.match(source, /const SPECIES_NAME_BOX = \{ x: 70, y: 1160, width: 620, height: 58 \}/);
   assert.match(source, /const INTRO_BOX = \{ x: 72, y: 1230, width: 612, lineHeight: 43, maxLines: 4 \}/);
   assert.match(source, /const TIMESTAMP_BOX = \{ x: 62, y: 1396, width: 448, height: 54 \}/);
+  assert.match(source, /candidate\.introZh\?\.trim\(\) \|\|/);
+  assert.match(source, /speciesIntroById\[candidate\.id\] \|\|/);
+  assert.match(source, /getAnimalIntro\(candidate\) \|\|/);
   assert.match(source, /drawWrappedText\(\s+context,\s+getIntro\(candidate\),/);
   assert.match(source, /drawCenteredText\(\s+context,\s+timestamp,/);
   assert.doesNotMatch(source, /drawInfoRow\(context, '发现者'|drawInfoRow\(context, '时间'|drawInfoRow\(context, '地点'|drawInfoRow\(context, '介绍'/);

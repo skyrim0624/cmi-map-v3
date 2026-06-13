@@ -16,7 +16,7 @@ test('生物识别通过同源 Pages Function 调用', () => {
 });
 
 test('生物识别文案不再输出可能式猜测', () => {
-  assert.match(source, /`这是\$\{chineseName\}。\$\{intro\}`/);
+  assert.match(source, /`这是\$\{chineseName\}。物种介绍：\$\{intro\}`/);
   assert.match(source, /getAnimalChineseName\(candidate\)/);
   assert.match(source, /getAnimalIntro\(candidate\)/);
   assert.match(source, /isSpeciesLevelRank\(candidate\.taxonRank\)/);
@@ -26,13 +26,20 @@ test('生物识别文案不再输出可能式猜测', () => {
 
 test('物种识别结果会生成基础介绍', () => {
   assert.match(source, /export const getAnimalIntro = \(candidate: AnimalIdentificationCandidate\) =>/);
+  assert.match(source, /candidate\.introZh\?\.trim\(\) \|\|/);
   assert.match(source, /const animalIntroByScientificName: Record<string, string>/);
   assert.match(source, /'Hemidactylus frenatus': '疣尾蜥虎是城市里很常见的小型壁虎/);
   assert.match(source, /'Halcyon pileata': '蓝翡翠常见于水边/);
   assert.match(source, /'Bougainvillea spectabilis': '叶子花在清迈街边和院墙上很常见/);
   assert.match(source, /'Plumeria rubra': '红鸡蛋花常见于寺庙、庭院和街边/);
   assert.match(source, /'Canis lupus familiaris': animalIntroById\.dog/);
-  assert.match(source, /return `这是\$\{chineseName\}。\$\{intro\}`/);
+  assert.match(source, /return `这是\$\{chineseName\}。物种介绍：\$\{intro\}`/);
+});
+
+test('Gemini 返回的新物种中文介绍会优先展示', () => {
+  assert.match(source, /introZh\?: string/);
+  assert.match(source, /candidate\.introZh\?\.trim\(\) \|\|/);
+  assert.match(source, /物种介绍：\$\{intro\}/);
 });
 
 test('生物候选展示名优先使用中文名', () => {

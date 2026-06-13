@@ -51,8 +51,10 @@ test('物种学名通过视觉模型和 GBIF 校验后才返回', () => {
 
 test('视觉模型提示词允许动植物但拒绝无主体图片', () => {
   assert.match(source, /Identify the primary visible animal or plant in this user photo/);
-  assert.match(source, /"organismPresent":true/);
+  assert.match(source, /"organismPresent":true,"commonNameZh":"","commonNameEn":"","scientificName":"","taxonRank":"SPECIES","confidence":0\.0,"introZh":""/);
+  assert.match(source, /introZh must be 2 concise Chinese sentences/);
   assert.match(source, /parsed\.organismPresent === true \|\| parsed\.animalPresent === true/);
+  assert.match(source, /introZh: typeof parsed\.introZh === 'string' \? parsed\.introZh\.trim\(\) : ''/);
   assert.match(source, /set organismPresent to false/);
   assert.match(source, /If the primary visible subject is a human/);
 });
@@ -84,6 +86,7 @@ test('Gemini 限流或临时繁忙不会伪装成无匹配', () => {
 
 test('专业模型物种级结果优先展示', () => {
   assert.match(source, /const candidates = speciesCandidate \? \[speciesCandidate\] : \[\]/);
+  assert.match(source, /introZh: vision\.introZh/);
   assert.match(source, /status: candidates\.length > 0 \? 'ready' : 'no-match'/);
   assert.match(source, /provider: GEMINI_SPECIES_MODEL_ID/);
 });

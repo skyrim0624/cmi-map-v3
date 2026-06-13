@@ -6,6 +6,7 @@ export interface AnimalIdentificationCandidate {
   nameEn: string;
   scientificName?: string;
   kingdom?: string;
+  introZh?: string;
   score: number;
   rawLabel: string;
   source?: 'detection' | 'classification' | 'vision';
@@ -128,6 +129,7 @@ export const getAnimalChineseName = (candidate: AnimalIdentificationCandidate) =
   candidate.nameZh?.trim() || fallbackChineseNames[candidate.id] || getAnimalScientificName(candidate);
 
 export const getAnimalIntro = (candidate: AnimalIdentificationCandidate) =>
+  candidate.introZh?.trim() ||
   animalIntroByScientificName[getAnimalScientificName(candidate)] ||
   animalIntroById[candidate.id] ||
   '这次识别可以先作为观察线索，后续结合更近的照片、地点、花叶果实或行为描述继续确认。';
@@ -141,10 +143,10 @@ export const buildAnimalCandidateDescription = (candidate: AnimalIdentificationC
   const chineseName = getAnimalChineseName(candidate);
   const intro = getAnimalIntro(candidate);
   if (isSpeciesLevelRank(candidate.taxonRank) || candidate.source === 'vision') {
-    return `这是${chineseName}。${intro}`;
+    return `这是${chineseName}。物种介绍：${intro}`;
   }
 
-  return `识别到${chineseName}。${intro}需要更近照片才能定到具体物种。`;
+  return `识别到${chineseName}。物种介绍：${intro}需要更近照片才能定到具体物种。`;
 };
 
 export const identifyAnimalPhoto = async (file: File): Promise<AnimalIdentificationResult> => {

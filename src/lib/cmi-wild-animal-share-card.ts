@@ -4,6 +4,7 @@ import { getPublicCmiEventUrl } from '@/lib/paths';
 import {
   type AnimalIdentificationCandidate,
   getAnimalChineseName,
+  getAnimalIntro,
 } from '@/services/animal-identification';
 import type { Recommendation } from '@/types/types';
 
@@ -267,7 +268,10 @@ const drawWrappedText = (
 };
 
 const getIntro = (candidate: AnimalIdentificationCandidate) =>
-  speciesIntroById[candidate.id] ?? '这是一条来自本次图像识别的动物记录。可以结合照片、地点和观察描述继续补充。';
+  candidate.introZh?.trim() ||
+  speciesIntroById[candidate.id] ||
+  getAnimalIntro(candidate) ||
+  '这是一条来自本次图像识别的动物记录。可以结合照片、地点和观察描述继续补充。';
 
 export const createCmiWildAnimalShareCard = async ({
   photoFile,

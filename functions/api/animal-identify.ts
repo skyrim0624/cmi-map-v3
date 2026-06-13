@@ -32,6 +32,7 @@ interface AnimalCandidate {
   nameEn: string;
   scientificName?: string;
   kingdom?: string;
+  introZh?: string;
   score: number;
   rawLabel: string;
   source: 'vision';
@@ -45,6 +46,7 @@ type VisionSpeciesResult = {
   scientificName?: string;
   taxonRank?: string;
   confidence?: number;
+  introZh?: string;
 };
 
 type GbifSpeciesMatch = {
@@ -156,6 +158,7 @@ const toVisionSpeciesResult = (text: string): VisionSpeciesResult | null => {
     scientificName: normalizeScientificName(parsed.scientificName),
     taxonRank: typeof parsed.taxonRank === 'string' ? parsed.taxonRank.trim().toUpperCase() : '',
     confidence: toConfidence(parsed.confidence),
+    introZh: typeof parsed.introZh === 'string' ? parsed.introZh.trim() : '',
   };
 };
 
@@ -163,9 +166,11 @@ const buildSpeciesPrompt = () => [
   'Identify the primary visible animal or plant in this user photo.',
   'The user wants a taxonomic scientific name for a field observation in Chiang Mai, Thailand.',
   'Return only strict JSON with this exact shape:',
-  '{"organismPresent":true,"commonNameZh":"","commonNameEn":"","scientificName":"","taxonRank":"SPECIES","confidence":0.0}',
+  '{"organismPresent":true,"commonNameZh":"","commonNameEn":"","scientificName":"","taxonRank":"SPECIES","confidence":0.0,"introZh":""}',
   'Rules:',
   '- Use a species or subspecies scientific name only when the animal or plant is visually clear enough.',
+  '- introZh must be 2 concise Chinese sentences about distinctive visual traits, typical habitat or distribution, and useful observation notes.',
+  '- Do not write uncertainty phrases in introZh, and do not tell the user to keep confirming later.',
   '- For domestic cat use Felis catus. For domestic dog use Canis lupus familiaris.',
   '- If the primary visible subject is a human, set organismPresent to false and leave names empty.',
   '- If the photo is a screenshot, poster, web page, menu, document, or UI capture and does not contain a clear real animal or plant subject, set organismPresent to false and leave names empty.',
@@ -318,6 +323,7 @@ const toVisionSpeciesCandidate = (
     nameEn: commonNameEn,
     scientificName,
     kingdom: gbif.kingdom,
+    introZh: vision.introZh,
     score: Math.min(0.99, vision.confidence * 0.82 + (gbifConfidence / 100) * 0.18),
     rawLabel: `${modelId}: ${vision.scientificName}`,
     source: 'vision',
