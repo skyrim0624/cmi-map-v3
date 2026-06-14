@@ -2701,3 +2701,17 @@
   - `node --test --experimental-strip-types src/pages/Profile.test.ts src/features/profiles/public-profile-page.test.ts src/pages/PersonMap.test.ts src/lib/cmi-wild-animal-stickers.test.ts` 通过，6 项测试通过。
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm build` 通过。
+
+### 2026-06-14 神奇生物图鉴贴画底图重做
+
+- 背景：用户明确不希望把主 KV 原图虚化当背景，而是要按主 KV 的轻漫、清迈、热带动物风格重新生成一张四周有元素、中间留白的贴画底图，用来凸显自动抠出的神奇生物贴纸。
+- 本轮实现：
+  - 新增图鉴专用留白画板 `wild-sticker-album-board-v1.webp`：四周保留卡通植物、寺庙、山、蝴蝶、壁虎等元素，中间保持干净留白。
+  - 图鉴页不再引用活动主 KV 原图，只使用新生成的图鉴底图。
+  - 收紧贴纸排列：缩小横纵间距、压低网格行高，并放大贴纸槽位，让已收集动物更像贴画册而不是稀疏卡片。
+- 验证结果：
+  - `node --test --experimental-strip-types src/components/AnimalStickerAlbum.test.ts src/lib/cmi-wild-animal-stickers.test.ts src/pages/Profile.test.ts src/pages/PersonMap.test.ts src/features/profiles/public-profile-page.test.ts` 通过，9 项测试通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/components/AnimalStickerAlbum.tsx src/components/AnimalStickerAlbum.test.ts` 通过。
+  - `pnpm build` 通过。
+  - 本地浏览器验证公开个人主页：桌面和 390×844 手机视口均可看到新留白底图，6 个已识别动物贴纸集中展示在画板中。

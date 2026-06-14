@@ -6,12 +6,14 @@ const source = readFileSync(new URL('./AnimalStickerAlbum.tsx', import.meta.url)
 
 test('神奇生物图鉴是贴画收集页而不是三列方格卡片', () => {
   assert.match(source, /ALBUM_STICKER_SLOTS/);
-  assert.match(source, /cmi-wild-chiang-mai-2026-06\.png/);
-  assert.match(source, /清迈神奇动物在哪里主 KV/);
-  assert.match(source, /gridAutoRows: '1rem'/);
+  assert.match(source, /wild-sticker-album-board-v1\.webp/);
+  assert.match(source, /按主 KV 风格重新生成的留白画板/);
+  assert.match(source, /gridAutoRows: '0\.78rem'/);
+  assert.match(source, /gap-x-0 gap-y-1/);
   assert.match(source, /gridColumn: `span \$\{slot\.colSpan\}`/);
   assert.match(source, /rotate\(\$\{slot\.rotation\}deg\)/);
   assert.match(source, /object-contain/);
+  assert.doesNotMatch(source, /cmi-wild-chiang-mai-2026-06\.png/);
   assert.doesNotMatch(source, /grid grid-cols-3 gap-3/);
 });
 

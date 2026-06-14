@@ -28,17 +28,17 @@ type AlbumStickerSlot = {
 };
 
 const ALBUM_STICKER_SLOTS: AlbumStickerSlot[] = [
-  { colSpan: 5, rowSpan: 9, rotation: -9, scale: 1.04, translateY: 0 },
-  { colSpan: 4, rowSpan: 8, rotation: 7, scale: 0.94, translateY: 12 },
-  { colSpan: 5, rowSpan: 9, rotation: -3, scale: 1.08, translateY: -6 },
-  { colSpan: 6, rowSpan: 8, rotation: 5, scale: 1.02, translateY: 4 },
-  { colSpan: 4, rowSpan: 7, rotation: -11, scale: 0.92, translateY: -8 },
-  { colSpan: 5, rowSpan: 10, rotation: 8, scale: 1.08, translateY: 10 },
-  { colSpan: 5, rowSpan: 8, rotation: -5, scale: 1, translateY: 2 },
-  { colSpan: 7, rowSpan: 9, rotation: 4, scale: 1.06, translateY: -4 },
+  { colSpan: 5, rowSpan: 10, rotation: -9, scale: 1.08, translateY: 0 },
+  { colSpan: 4, rowSpan: 9, rotation: 7, scale: 1, translateY: 4 },
+  { colSpan: 5, rowSpan: 10, rotation: -3, scale: 1.1, translateY: -4 },
+  { colSpan: 5, rowSpan: 9, rotation: 5, scale: 1.05, translateY: 2 },
+  { colSpan: 4, rowSpan: 8, rotation: -11, scale: 0.98, translateY: -6 },
+  { colSpan: 5, rowSpan: 10, rotation: 8, scale: 1.1, translateY: 4 },
+  { colSpan: 5, rowSpan: 9, rotation: -5, scale: 1.04, translateY: 0 },
+  { colSpan: 6, rowSpan: 10, rotation: 4, scale: 1.08, translateY: -3 },
 ];
 
-const WILD_CHIANG_MAI_KV_IMAGE = '/cmi-home/event-posters/cmi-wild-chiang-mai-2026-06.png';
+const WILD_ANIMAL_ALBUM_BOARD_IMAGE = '/cmi-home/animal-album-backgrounds/wild-sticker-album-board-v1.webp';
 
 const getAlbumStickerSlot = (index: number) => ALBUM_STICKER_SLOTS[index % ALBUM_STICKER_SLOTS.length];
 
@@ -148,47 +148,19 @@ export default function AnimalStickerAlbum({
         aria-label="神奇生物贴画册"
         className="relative isolate overflow-hidden rounded-[1.8rem] border-[3px] border-[#0b3d24] bg-[#fff8df] px-3 py-5 shadow-[8px_10px_0_rgba(11,61,36,0.18)]"
       >
-        {/* NOTE: 用“清迈神奇动物在哪里主 KV”做底纹，避免图鉴变成另一套视觉。 */}
+        {/* NOTE: 这是按主 KV 风格重新生成的留白画板，不直接复用活动 KV 原图。 */}
         <div
           aria-hidden="true"
           className="absolute inset-0 -z-10"
           style={{
-            backgroundImage:
-              `linear-gradient(rgba(255,248,223,0.7), rgba(255,248,223,0.76)), url("${WILD_CHIANG_MAI_KV_IMAGE}")`,
-            backgroundPosition: 'center top',
+            backgroundImage: `url("${WILD_ANIMAL_ALBUM_BOARD_IMAGE}")`,
+            backgroundPosition: 'center center',
             backgroundSize: 'cover',
           }}
         />
         <div
-          aria-hidden="true"
-          className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_18%_18%,rgba(255,216,63,0.22)_0_3px,transparent_4px),radial-gradient(circle_at_84%_30%,rgba(255,143,181,0.2)_0_6px,transparent_7px)]"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute left-2 top-2 h-20 w-28 -rotate-6 rounded-[48%] border-[3px] border-[#ff4a24]/80"
-        />
-        <img
-          src="/map-icons/cmi-easter-v2/egg-v2-08-leaf.png"
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute -left-6 -top-5 h-20 w-20 -rotate-12 opacity-70"
-        />
-        <img
-          src="/map-icons/cmi-easter-v2/egg-v2-07-flower.png"
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-5 top-7 h-16 w-16 rotate-12 opacity-70"
-        />
-        <img
-          src="/map-icons/cmi-easter-v2/egg-v2-08-leaf.png"
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-5 right-3 h-16 w-16 rotate-[28deg] opacity-65"
-        />
-
-        <div
-          className="relative grid grid-flow-row-dense grid-cols-12 gap-x-1 gap-y-3"
-          style={{ gridAutoRows: '1rem' }}
+          className="relative grid grid-flow-row-dense grid-cols-12 gap-x-0 gap-y-1 px-1 py-3"
+          style={{ gridAutoRows: '0.78rem' }}
         >
           {displayEntries.map((entry, index) => {
             const slot = getAlbumStickerSlot(index);
