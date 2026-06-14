@@ -50,8 +50,8 @@
 ### 2026-06-14 神奇动物贴纸精细透明抠图生产链路
 
 - 本轮实现：
-  - `/api/animal-segment` 保留自托管 rembg 分割模型优先级；当 Pages 未配置 `CMI_MAP_SEGMENT_MODEL_URL` 时，不再直接 503，而是走 Cloudflare Images Binding 的 `segment: "foreground"`。
-  - 新增 `IMAGES` binding，让生产环境可直接对上传图片字节做前景分割，输出透明 PNG，再由前端加白边和阴影生成贴纸。
+  - `/api/animal-segment` 保留自托管 rembg 分割模型优先级；当 Pages 未配置 `CMI_MAP_SEGMENT_MODEL_URL` 时，不再直接 503，而是通过 Cloudflare Images 的 `segment: "foreground"` 做前景分割。
+  - 新增 `imageUrl` 入参：旧图鉴记录直接用已有照片 URL 分割；新拍照发布时在原图上传后重新生成一次精细透明贴纸，避免只保存预览阶段的粗轮廓兜底。
   - 这条链路是像素级前景分割，不调用 Image Gen，不再依赖已失效的本机 tunnel。
 - 待验证：
   - 部署后用用户小白狗照片直接打 `/api/animal-segment`，确认返回 `image/png` 且存在透明 alpha。

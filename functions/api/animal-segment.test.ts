@@ -17,11 +17,11 @@ test('动物抠图接口代理自托管分割模型而不是图像生成', () =>
 });
 
 test('动物抠图接口未配置自托管模型时走 Cloudflare 前景分割', () => {
-  assert.match(source, /IMAGES\?: CloudflareImagesBinding/);
-  assert.match(source, /createCloudflareForegroundCutout\(image, env\)/);
-  assert.match(source, /\.transform\(\{ segment: 'foreground' \}\)/);
-  assert.match(source, /\.output\(\{ format: 'image\/png' \}\)/);
+  assert.match(source, /normalizeImageUrl\(requestFormData\.get\('imageUrl'\)\)/);
+  assert.match(source, /createCloudflareForegroundCutout\(imageUrl\)/);
+  assert.match(source, /cf: \{\s*image: \{\s*segment: 'foreground',\s*format: 'png'/);
   assert.match(source, /Cloudflare Images 前景分割失败/);
+  assert.doesNotMatch(source, /IMAGES\?: CloudflareImagesBinding/);
 });
 
 test('动物抠图接口限制输入并在模型不可用时明确失败', () => {
@@ -30,5 +30,5 @@ test('动物抠图接口限制输入并在模型不可用时明确失败', () =>
   assert.match(source, /status: 'unavailable'/);
   assert.match(source, /message: '抠图服务暂时不可用'/);
   assert.match(source, /status: 'error'/);
-  assert.match(source, /message: '需要上传图片'/);
+  assert.match(source, /message: '需要上传图片或图片地址'/);
 });

@@ -102,6 +102,8 @@ test('神奇动物打卡会调用生物识别并预选彩蛋', () => {
   assert.match(source, /aria-pressed=\{isWildAnimalCheckin\}/);
   assert.match(source, /identifyAnimalPhoto\(images\[0\]\)/);
   assert.match(source, /createAnimalStickerFromPhoto/);
+  assert.match(source, /sourceImageUrl/);
+  assert.match(source, /createAnimalStickerPreview\(images\[0\], selectedAnimalCandidate, imageUrls\[0\]\)/);
   assert.match(source, /animalStickerPreviewUrl/);
   assert.match(source, /setAnimalStickerFile/);
   assert.match(source, /uploadAnimalSticker\(stickerFile\)/);

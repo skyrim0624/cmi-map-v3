@@ -1274,10 +1274,14 @@ export default function MarkPlace() {
 
   const createAnimalStickerPreview = async (
     photoFile: File,
-    candidate: AnimalIdentificationCandidate
+    candidate: AnimalIdentificationCandidate,
+    sourceImageUrl?: string
   ) => {
     try {
-      const stickerFile = await createAnimalStickerFromPhoto(photoFile, candidate);
+      const stickerFile = await createAnimalStickerFromPhoto(photoFile, {
+        ...candidate,
+        sourceImageUrl,
+      });
       applyAnimalStickerFile(stickerFile);
       return stickerFile;
     } catch (error) {
@@ -1482,7 +1486,9 @@ export default function MarkPlace() {
       let animalStickerUrl: string | null = null;
 
       if (isWildAnimalCheckin && images[0] && selectedAnimalCandidate) {
-        const stickerFile = animalStickerFile ?? await createAnimalStickerPreview(images[0], selectedAnimalCandidate);
+        const stickerFile = imageUrls[0]
+          ? await createAnimalStickerPreview(images[0], selectedAnimalCandidate, imageUrls[0])
+          : animalStickerFile ?? await createAnimalStickerPreview(images[0], selectedAnimalCandidate);
         if (stickerFile) animalStickerUrl = await uploadAnimalSticker(stickerFile);
       }
 

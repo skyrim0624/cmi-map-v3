@@ -39,6 +39,7 @@ type StickerGeometryInput = {
   subjectPolygon?: AnimalSubjectPoint[];
   nameZh?: string;
   scientificName?: string;
+  sourceImageUrl?: string;
 };
 
 const STICKER_OUTPUT_SIZE = 720;
@@ -287,6 +288,7 @@ const requestAnimalSubjectCutout = async (
 
   const formData = new FormData();
   formData.append('image', uploadFile, 'animal-segment.jpg');
+  if (geometry.sourceImageUrl) formData.append('imageUrl', geometry.sourceImageUrl);
   if (geometry.subjectBox) formData.append('subjectBox', JSON.stringify(geometry.subjectBox));
 
   const response = await fetch(ANIMAL_SEGMENT_ENDPOINT, {
@@ -519,6 +521,9 @@ export const createAnimalStickerFromImageUrl = async (
     'wild-animal-source.jpg',
     { type: sourceBlob.type || 'image/jpeg' }
   );
-  const stickerFile = await createAnimalStickerFromPhoto(sourceFile, geometry);
+  const stickerFile = await createAnimalStickerFromPhoto(sourceFile, {
+    ...geometry,
+    sourceImageUrl: photoUrl,
+  });
   return URL.createObjectURL(stickerFile);
 };
