@@ -4,7 +4,7 @@ import unittest
 
 from PIL import Image
 
-from cmi_species_model.app import expand_subject_crop, parse_subject_box
+from cmi_species_model.app import expand_subject_crop, parse_subject_box, resize_for_segmentation
 
 
 class SegmentationHelpersTest(unittest.TestCase):
@@ -26,6 +26,14 @@ class SegmentationHelpersTest(unittest.TestCase):
         self.assertEqual(crop[3], 800)
         self.assertLess(crop[0], 620)
         self.assertLess(crop[1], 640)
+
+    def test_resize_for_segmentation_caps_large_images(self) -> None:
+        image = Image.new("RGB", (1800, 1200), "white")
+
+        resized = resize_for_segmentation(image)
+
+        self.assertLessEqual(max(resized.size), 896)
+        self.assertEqual(round(resized.width / resized.height, 2), 1.5)
 
 
 if __name__ == "__main__":

@@ -47,6 +47,7 @@ MAX_CANDIDATES = env_int("SPECIES_MAX_CANDIDATES", 180)
 PRELOAD_MODELS = os.getenv("BIOCLIP_PRELOAD", "0") == "1"
 DEBUG_TOPK = os.getenv("SPECIES_DEBUG_TOPK", "0") == "1"
 SEGMENT_MODEL = os.getenv("SEGMENT_MODEL", "isnet-general-use")
+SEGMENT_MAX_DIMENSION = env_int("SEGMENT_MAX_DIMENSION", 896)
 
 catalog = load_species_catalog(Path(CATALOG_PATH) if CATALOG_PATH else None)
 primary_model = BioClipModel(BioClipSettings(PRIMARY_MODEL, DEVICE))
@@ -140,6 +141,20 @@ def expand_subject_crop(image: Image.Image, subject_box: dict[str, float] | None
     if right - left < 16 or bottom - top < 16:
         return (0, 0, image.width, image.height)
     return (left, top, right, bottom)
+
+
+def resize_for_segmentation(image: Image.Image) -> Image.Image:
+    max_dimension = max(320, SEGMENT_MAX_DIMENSION)
+    longest_side = max(image.width, image.height)
+    if longest_side <= max_dimension:
+        return image
+
+    scale = max_dimension / longest_side
+    target_size = (
+        max(1, round(image.width * scale)),
+        max(1, round(image.height * scale)),
+    )
+    return image.resize(target_size, Image.Resampling.LANCZOS)
 
 
 def get_segment_session() -> Any:
@@ -362,7 +377,7 @@ async def segment_subject(
     image_bytes = await image.read()
     pil_image = decode_image(image_bytes)
     crop_box = expand_subject_crop(pil_image, parse_subject_box(subjectBox))
-    cropped_image = pil_image.crop(crop_box)
+    cropped_image = resize_for_segmentation(pil_image.crop(crop_box))
     segmented_image = trim_transparent_bounds(remove_background(cropped_image))
 
     return Response(

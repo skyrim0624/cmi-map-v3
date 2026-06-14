@@ -23,6 +23,8 @@ SPECIES_MODEL_TOKEN=dev-token services/species-model/scripts/start-local.sh
 SPECIES_MODEL_TOKEN=dev-token BIOCLIP_FALLBACK_MODE=auto services/species-model/scripts/start-local.sh
 ```
 
+当前常驻 launchd 服务使用 `PORT=8765`，避免和其他本地 FastAPI 项目的 `8000` 端口冲突。
+
 健康检查：
 
 ```bash
@@ -116,6 +118,7 @@ CMI Map 主站已经会优先调用这个服务；没有配置物种识别时继
 | `BIOCLIP_DEVICE` | `auto` | `auto` / `cuda` / `mps` / `cpu` |
 | `BIOCLIP_PRELOAD` | `0` | `1` 表示启动时预加载模型；本地脚本默认设为 `1` |
 | `SEGMENT_MODEL` | `isnet-general-use` | 自动抠图使用的 rembg 分割模型 |
+| `SEGMENT_MAX_DIMENSION` | `896` | 送入分割模型前的长边上限，用来保证贴纸清晰度并避免公网请求超时 |
 | `SPECIES_MIN_CONFIDENCE` | `0.68` | 低于这个值不返回物种 |
 | `SPECIES_MIN_MARGIN` | `0.06` | 前两名差距太小不返回物种 |
 | `SPECIES_MAX_CANDIDATES` | `180` | 单次参与比对的最大候选数 |

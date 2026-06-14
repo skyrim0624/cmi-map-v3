@@ -43,18 +43,33 @@
 28. [完成] 上传相关页面主题色统一为 CMI 绿色
 29. [完成] 神奇动物贴纸改为优先使用自托管分割模型自动抠图
 30. [完成] 个人主页神奇生物图鉴改为主 KV 贴画收集册
-31. [完成] 精细透明抠图改走 Cloudflare Images 前景分割兜底
+31. [完成] 精细透明抠图改走原图 URL + 自托管分割服务
+32. [完成] 恢复 `species.cmimap.com` 常驻模型服务和 tunnel
 
 ## 执行记录
+
+### 2026-06-14 神奇动物贴纸自托管分割服务恢复
+
+- 本轮实现：
+  - 新增用户级 launchd 配置：`com.andreas.cmi-species-model` 常驻运行本地物种/分割模型服务，`com.andreas.cmi-species-tunnel` 常驻运行 `species.cmimap.com` 的命名 tunnel。
+  - 常驻模型服务端口改为 `8765`，避免被其他本地 FastAPI 项目的 `8000` 抢占；Cloudflare Tunnel 已同步指向 `127.0.0.1:8765`。
+  - 分割前会先按主体框裁剪并把长边限制到 `896px`，保留贴纸清晰度，同时避免公网请求被 Cloudflare 100 秒超时拦截。
+  - 生产 Pages secrets 已重新配置到 `https://species.cmimap.com/segment` 和 `https://species.cmimap.com/identify`，抠图优先走自托管 `rembg` / `isnet-general-use`，不是 Image Gen。
+  - Cloudflare Images `segment=foreground` 代码保留为无自托管模型时的兜底；当前域名还未启用 Image Transformations，所以生产不依赖这条路。
+- 验证结果：
+  - `http://127.0.0.1:8765/health` 和 `https://species.cmimap.com/health` 均返回 `ok: true`。
+  - launchd 当前进程：模型服务监听 `*:8765`，tunnel 已注册 Cloudflare 连接。
+  - 使用 `/Users/andreas/Downloads/IMG_5991 2.jpg` 调公网 `/segment`，6 秒返回 `348 x 455` 的 `RGBA PNG`，确认存在透明 alpha。
+  - `cd services/species-model && .venv/bin/python -m unittest discover -s tests` 通过，13 项测试全部通过。
 
 ### 2026-06-14 神奇动物贴纸精细透明抠图生产链路
 
 - 本轮实现：
-  - `/api/animal-segment` 保留自托管 rembg 分割模型优先级；当 Pages 未配置 `CMI_MAP_SEGMENT_MODEL_URL` 时，不再直接 503，而是通过 Cloudflare Images 的 `segment: "foreground"` 做前景分割。
+  - `/api/animal-segment` 保留自托管 rembg 分割模型优先级；当 Pages 未配置 `CMI_MAP_SEGMENT_MODEL_URL` 时，不再直接 503，而是尝试通过 Cloudflare Images 的 `segment: "foreground"` 做前景分割。
   - 新增 `imageUrl` 入参：旧图鉴记录直接用已有照片 URL 分割；新拍照发布时在原图上传后重新生成一次精细透明贴纸，避免只保存预览阶段的粗轮廓兜底。
-  - 这条链路是像素级前景分割，不调用 Image Gen，不再依赖已失效的本机 tunnel。
-- 待验证：
-  - 部署后用用户小白狗照片直接打 `/api/animal-segment`，确认返回 `image/png` 且存在透明 alpha。
+  - 生产主链路是像素级前景分割，不调用 Image Gen；Cloudflare Images 兜底需要域名启用 Image Transformations 后才会生效。
+- 验证结果：
+  - Cloudflare Images 直连兜底在当前 `cmimap.com` zone 未启用 Image Transformations，测试会返回原图或 404，因此已改为恢复自托管模型服务并配置生产 secrets。
 
 ### 2026-06-14 个人主页神奇生物图鉴贴画册
 
