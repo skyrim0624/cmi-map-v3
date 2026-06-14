@@ -43,8 +43,18 @@
 28. [完成] 上传相关页面主题色统一为 CMI 绿色
 29. [完成] 神奇动物贴纸改为优先使用自托管分割模型自动抠图
 30. [完成] 个人主页神奇生物图鉴改为主 KV 贴画收集册
+31. [完成] 精细透明抠图改走 Cloudflare Images 前景分割兜底
 
 ## 执行记录
+
+### 2026-06-14 神奇动物贴纸精细透明抠图生产链路
+
+- 本轮实现：
+  - `/api/animal-segment` 保留自托管 rembg 分割模型优先级；当 Pages 未配置 `CMI_MAP_SEGMENT_MODEL_URL` 时，不再直接 503，而是走 Cloudflare Images Binding 的 `segment: "foreground"`。
+  - 新增 `IMAGES` binding，让生产环境可直接对上传图片字节做前景分割，输出透明 PNG，再由前端加白边和阴影生成贴纸。
+  - 这条链路是像素级前景分割，不调用 Image Gen，不再依赖已失效的本机 tunnel。
+- 待验证：
+  - 部署后用用户小白狗照片直接打 `/api/animal-segment`，确认返回 `image/png` 且存在透明 alpha。
 
 ### 2026-06-14 个人主页神奇生物图鉴贴画册
 

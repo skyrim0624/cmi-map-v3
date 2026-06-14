@@ -1,5 +1,18 @@
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
+type ImagesOutput = {
+  response(): Response;
+};
+
+type ImagesPipeline = {
+  transform(options: Record<string, unknown>): ImagesPipeline;
+  output(options: { format: string; quality?: number }): Promise<ImagesOutput>;
+};
+
+type CloudflareImagesBinding = {
+  input(input: ReadableStream | ArrayBuffer | Blob): ImagesPipeline;
+};
+
 type PagesContext = {
   request: Request;
   env: {
@@ -7,6 +20,7 @@ type PagesContext = {
     CMI_MAP_SEGMENT_MODEL_TOKEN?: string;
     CMI_MAP_SPECIES_MODEL_URL?: string;
     CMI_MAP_SPECIES_MODEL_TOKEN?: string;
+    IMAGES?: CloudflareImagesBinding;
   };
 };
 
@@ -32,15 +46,42 @@ const getSegmentModelUrl = (env: PagesContext['env']) => {
 const getSegmentModelToken = (env: PagesContext['env']) =>
   env.CMI_MAP_SEGMENT_MODEL_TOKEN?.trim() || env.CMI_MAP_SPECIES_MODEL_TOKEN?.trim() || '';
 
-export const onRequestPost = async ({ request, env }: PagesContext) => {
-  const segmentModelUrl = getSegmentModelUrl(env);
-  if (!segmentModelUrl) {
+const createCloudflareForegroundCutout = async (
+  image: File,
+  env: PagesContext['env']
+) => {
+  if (!env.IMAGES) {
     return jsonResponse({
       status: 'unavailable',
       message: '抠图服务暂时不可用',
     }, { status: 503 });
   }
 
+  try {
+    const output = await env.IMAGES
+      .input(image.stream())
+      .transform({ segment: 'foreground' })
+      .output({ format: 'image/png' });
+    const response = output.response();
+    if (!response.ok) throw new Error('Cloudflare foreground segmentation failed');
+
+    return new Response(response.body, {
+      status: 200,
+      headers: {
+        'content-type': 'image/png',
+        'cache-control': 'no-store',
+      },
+    });
+  } catch (error) {
+    console.warn('Cloudflare Images 前景分割失败:', error);
+    return jsonResponse({
+      status: 'unavailable',
+      message: '抠图服务暂时不可用',
+    }, { status: 503 });
+  }
+};
+
+export const onRequestPost = async ({ request, env }: PagesContext) => {
   const requestFormData = await request.formData();
   const image = requestFormData.get('image');
   const subjectBox = requestFormData.get('subjectBox');
@@ -52,6 +93,9 @@ export const onRequestPost = async ({ request, env }: PagesContext) => {
   if (image.size > MAX_IMAGE_BYTES) {
     return jsonResponse({ status: 'error', message: '图片太大，请重新拍一张' }, { status: 413 });
   }
+
+  const segmentModelUrl = getSegmentModelUrl(env);
+  if (!segmentModelUrl) return createCloudflareForegroundCutout(image, env);
 
   const formData = new FormData();
   formData.append('image', image, image.name || 'animal-checkin.jpg');

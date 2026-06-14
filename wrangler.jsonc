@@ -6,5 +6,8 @@
   "ai": {
     "binding": "AI",
     "remote": true
+  },
+  "images": {
+    "binding": "IMAGES"
   }
 }

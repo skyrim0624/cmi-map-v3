@@ -16,7 +16,15 @@ test('动物抠图接口代理自托管分割模型而不是图像生成', () =>
   assert.doesNotMatch(source, /GEMINI|GOOGLE_AI|image generate|Image Gen/i);
 });
 
-test('动物抠图接口限制输入并在模型未配置时明确失败', () => {
+test('动物抠图接口未配置自托管模型时走 Cloudflare 前景分割', () => {
+  assert.match(source, /IMAGES\?: CloudflareImagesBinding/);
+  assert.match(source, /createCloudflareForegroundCutout\(image, env\)/);
+  assert.match(source, /\.transform\(\{ segment: 'foreground' \}\)/);
+  assert.match(source, /\.output\(\{ format: 'image\/png' \}\)/);
+  assert.match(source, /Cloudflare Images 前景分割失败/);
+});
+
+test('动物抠图接口限制输入并在模型不可用时明确失败', () => {
   assert.match(source, /const MAX_IMAGE_BYTES = 8 \* 1024 \* 1024/);
   assert.match(source, /image\.size > MAX_IMAGE_BYTES/);
   assert.match(source, /status: 'unavailable'/);
