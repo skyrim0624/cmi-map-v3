@@ -61,7 +61,7 @@ export default function AnimalStickerAlbum({
   const displayEntries = useMemo<DisplayStickerEntry[]>(
     () => entries.map(entry => ({
       ...entry,
-      displayStickerUrl: generatedStickerUrls[entry.id] || (entry.needsStickerGeneration ? undefined : entry.stickerUrl),
+      displayStickerUrl: generatedStickerUrls[entry.id] || entry.stickerUrl,
     })),
     [entries, generatedStickerUrls]
   );
@@ -164,7 +164,7 @@ export default function AnimalStickerAlbum({
         >
           {displayEntries.map((entry, index) => {
             const slot = getAlbumStickerSlot(index);
-            const isPreparingSticker = entry.needsStickerGeneration && Boolean(entry.photoUrl) && !entry.displayStickerUrl;
+            const isFallbackPhotoSticker = entry.needsStickerGeneration && !generatedStickerUrls[entry.id];
 
             return (
               <button
@@ -180,19 +180,18 @@ export default function AnimalStickerAlbum({
                 }}
               >
                 <span className="sr-only">{entry.commonName}</span>
-                {entry.displayStickerUrl ? (
-                  <img
-                    src={entry.displayStickerUrl}
-                    alt=""
-                    className="max-h-full max-w-full object-contain drop-shadow-[0_12px_0_rgba(11,61,36,0.12)] transition duration-200 group-hover:scale-105"
-                  />
-                ) : (
-                  <span
-                    aria-hidden="true"
-                    className={`grid h-20 w-20 place-items-center rounded-[45%_55%_48%_52%] border-2 border-dashed border-[#0b3d24]/25 bg-[#fff7dc]/78 ${isPreparingSticker ? 'animate-pulse' : ''}`}
-                  >
-                    <img src="/map-icons/cmi-easter-v2/egg-v2-08-leaf.png" alt="" className="h-9 w-9 opacity-55" />
-                  </span>
+                {entry.displayStickerUrl && (
+                  isFallbackPhotoSticker ? (
+                    <span className="relative block h-full max-h-full w-full max-w-full overflow-hidden rounded-[42%_58%_47%_53%/46%_44%_56%_54%] border-[7px] border-[#fffef5] bg-[#fffef5] shadow-[8px_12px_0_rgba(11,61,36,0.13)] transition duration-200 group-hover:scale-105">
+                      <img src={entry.displayStickerUrl} alt="" className="h-full w-full object-cover" />
+                    </span>
+                  ) : (
+                    <img
+                      src={entry.displayStickerUrl}
+                      alt=""
+                      className="max-h-full max-w-full object-contain drop-shadow-[0_12px_0_rgba(11,61,36,0.12)] transition duration-200 group-hover:scale-105"
+                    />
+                  )
                 )}
               </button>
             );
@@ -224,14 +223,18 @@ export default function AnimalStickerAlbum({
 
           <article className="w-full max-w-[22rem] rounded-[1.8rem] border-2 border-[#0b3d24] bg-[#fff7dc] px-5 pb-5 pt-6 text-center shadow-[8px_10px_0_rgba(0,0,0,0.22)]">
             <div className="mx-auto flex aspect-square max-h-[52dvh] items-center justify-center">
-              {selectedEntry.displayStickerUrl ? (
-                <img
-                  src={selectedEntry.displayStickerUrl}
-                  alt={selectedEntry.commonName}
-                  className="max-h-full max-w-full object-contain drop-shadow-[0_16px_0_rgba(11,61,36,0.12)]"
-                />
-              ) : (
-                <div className="h-28 w-28 animate-pulse rounded-[45%_55%_48%_52%] border-2 border-dashed border-[#0b3d24]/25 bg-[#fffef4]" />
+              {selectedEntry.displayStickerUrl && (
+                selectedEntry.needsStickerGeneration && !generatedStickerUrls[selectedEntry.id] ? (
+                  <span className="relative block aspect-square max-h-full max-w-full overflow-hidden rounded-[42%_58%_47%_53%/46%_44%_56%_54%] border-[10px] border-[#fffef5] bg-[#fffef5] shadow-[10px_16px_0_rgba(11,61,36,0.14)]">
+                    <img src={selectedEntry.displayStickerUrl} alt={selectedEntry.commonName} className="h-full w-full object-cover" />
+                  </span>
+                ) : (
+                  <img
+                    src={selectedEntry.displayStickerUrl}
+                    alt={selectedEntry.commonName}
+                    className="max-h-full max-w-full object-contain drop-shadow-[0_16px_0_rgba(11,61,36,0.12)]"
+                  />
+                )
               )}
             </div>
             <h2 className="mt-3 text-2xl font-black leading-tight text-[#0b3d24]">{selectedEntry.commonName}</h2>

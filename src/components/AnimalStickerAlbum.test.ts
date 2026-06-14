@@ -24,6 +24,10 @@ test('旧动物照片在图鉴页会先转成临时贴纸预览', () => {
   assert.match(source, /generatingStickerIdsRef/);
   assert.match(source, /failedStickerIdsRef/);
   assert.match(source, /entry\.needsStickerGeneration/);
+  assert.match(source, /displayStickerUrl: generatedStickerUrls\[entry\.id\] \|\| entry\.stickerUrl/);
+  assert.match(source, /isFallbackPhotoSticker/);
+  assert.match(source, /border-\[7px\] border-\[#fffef5\]/);
   assert.match(source, /URL\.revokeObjectURL/);
   assert.doesNotMatch(source, /\}, \[entries, generatedStickerUrls\]\)/);
+  assert.doesNotMatch(source, /entry\.needsStickerGeneration \? undefined : entry\.stickerUrl/);
 });

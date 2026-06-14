@@ -2709,6 +2709,7 @@
   - 新增图鉴专用留白画板 `wild-sticker-album-board-v1.webp`：四周保留卡通植物、寺庙、山、蝴蝶、壁虎等元素，中间保持干净留白，不加占位虚线。
   - 图鉴页不再引用活动主 KV 原图，只使用新生成的图鉴底图。
   - 收紧贴纸排列：缩小横纵间距、压低网格行高，并放大贴纸槽位，让已收集动物更像贴画册而不是稀疏卡片。
+  - 旧照片现场生成精细贴纸期间先显示白边照片贴纸框，生成失败也不再露出虚线占位圈。
 - 验证结果：
   - `node --test --experimental-strip-types src/components/AnimalStickerAlbum.test.ts src/lib/cmi-wild-animal-stickers.test.ts src/pages/Profile.test.ts src/pages/PersonMap.test.ts src/features/profiles/public-profile-page.test.ts` 通过，9 项测试通过。
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
