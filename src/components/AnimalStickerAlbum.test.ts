@@ -8,12 +8,14 @@ test('神奇生物图鉴是贴画收集页而不是三列方格卡片', () => {
   assert.match(source, /ALBUM_STICKER_SLOTS/);
   assert.match(source, /wild-sticker-album-board-v1\.webp/);
   assert.match(source, /按主 KV 风格重新生成的留白画板/);
-  assert.match(source, /gridAutoRows: '0\.78rem'/);
-  assert.match(source, /gap-x-0 gap-y-1/);
-  assert.match(source, /gridColumn: `span \$\{slot\.colSpan\}`/);
+  assert.match(source, /aspect-\[941\/1672\]/);
+  assert.match(source, /object-fill/);
+  assert.match(source, /gridTemplateRows: 'repeat\(30, minmax\(0, 1fr\)\)'/);
+  assert.match(source, /gridColumn: `\$\{slot\.colStart\} \/ span \$\{slot\.colSpan\}`/);
   assert.match(source, /rotate\(\$\{slot\.rotation\}deg\)/);
   assert.match(source, /object-contain/);
   assert.doesNotMatch(source, /cmi-wild-chiang-mai-2026-06\.png/);
+  assert.doesNotMatch(source, /backgroundSize: 'cover'/);
   assert.doesNotMatch(source, /grid grid-cols-3 gap-3/);
 });
 

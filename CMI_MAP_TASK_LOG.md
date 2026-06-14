@@ -2716,3 +2716,17 @@
   - `pnpm exec biome lint src/components/AnimalStickerAlbum.tsx src/components/AnimalStickerAlbum.test.ts` 通过。
   - `pnpm build` 通过。
   - 本地浏览器验证公开个人主页：桌面和 390×844 手机视口均可看到新留白底图，6 个已识别动物贴纸集中展示在画板中。
+
+### 2026-06-14 神奇生物图鉴底图比例修正
+
+- 背景：用户反馈图鉴底图被显示成奇怪的宽方形，没有完整展示生成好的竖版图鉴背景。
+- 本轮实现：
+  - 图鉴画板外层改为 `941/1672` 原图比例，不再由贴纸网格内容撑高。
+  - 底图从 `background-size: cover` 裁切层改为完整图片层，按原比例铺满整张画板。
+  - 贴纸层改为覆盖在完整竖版画板上的 30 行定位网格，避免底图被宽容器裁掉。
+- 验证结果：
+  - `node --test --experimental-strip-types src/components/AnimalStickerAlbum.test.ts src/lib/cmi-wild-animal-stickers.test.ts src/pages/Profile.test.ts src/pages/PersonMap.test.ts src/features/profiles/public-profile-page.test.ts` 通过，9 项测试通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/components/AnimalStickerAlbum.tsx src/components/AnimalStickerAlbum.test.ts` 通过。
+  - `pnpm build` 通过。
+  - 本地浏览器验证：手机宽度和 1024px 宽视口下图鉴画板比例均为 `0.563`，匹配原图 `941/1672`，底图完整显示且不再使用 `cover` 裁切。

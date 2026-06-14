@@ -20,22 +20,23 @@ const formatStickerDate = (value: string) => {
 };
 
 type AlbumStickerSlot = {
+  colStart: number;
+  rowStart: number;
   colSpan: number;
   rowSpan: number;
   rotation: number;
   scale: number;
-  translateY: number;
 };
 
 const ALBUM_STICKER_SLOTS: AlbumStickerSlot[] = [
-  { colSpan: 5, rowSpan: 10, rotation: -9, scale: 1.08, translateY: 0 },
-  { colSpan: 4, rowSpan: 9, rotation: 7, scale: 1, translateY: 4 },
-  { colSpan: 5, rowSpan: 10, rotation: -3, scale: 1.1, translateY: -4 },
-  { colSpan: 5, rowSpan: 9, rotation: 5, scale: 1.05, translateY: 2 },
-  { colSpan: 4, rowSpan: 8, rotation: -11, scale: 0.98, translateY: -6 },
-  { colSpan: 5, rowSpan: 10, rotation: 8, scale: 1.1, translateY: 4 },
-  { colSpan: 5, rowSpan: 9, rotation: -5, scale: 1.04, translateY: 0 },
-  { colSpan: 6, rowSpan: 10, rotation: 4, scale: 1.08, translateY: -3 },
+  { colStart: 1, rowStart: 2, colSpan: 5, rowSpan: 6, rotation: -9, scale: 1.08 },
+  { colStart: 8, rowStart: 3, colSpan: 4, rowSpan: 5, rotation: 7, scale: 1 },
+  { colStart: 2, rowStart: 9, colSpan: 5, rowSpan: 6, rotation: -3, scale: 1.08 },
+  { colStart: 7, rowStart: 10, colSpan: 5, rowSpan: 7, rotation: 5, scale: 1.05 },
+  { colStart: 1, rowStart: 18, colSpan: 4, rowSpan: 5, rotation: -11, scale: 0.98 },
+  { colStart: 6, rowStart: 20, colSpan: 5, rowSpan: 7, rotation: 8, scale: 1.06 },
+  { colStart: 2, rowStart: 25, colSpan: 5, rowSpan: 5, rotation: -5, scale: 1 },
+  { colStart: 8, rowStart: 25, colSpan: 4, rowSpan: 5, rotation: 4, scale: 1 },
 ];
 
 const WILD_ANIMAL_ALBUM_BOARD_IMAGE = '/cmi-home/animal-album-backgrounds/wild-sticker-album-board-v1.webp';
@@ -160,21 +161,18 @@ export default function AnimalStickerAlbum({
     <>
       <section
         aria-label="神奇生物贴画册"
-        className="relative isolate overflow-hidden rounded-[1.8rem] border-[3px] border-[#0b3d24] bg-[#fff8df] px-3 py-5 shadow-[8px_10px_0_rgba(11,61,36,0.18)]"
+        className="relative isolate mx-auto aspect-[941/1672] w-full max-w-[34rem] overflow-hidden rounded-[1.8rem] border-[3px] border-[#0b3d24] bg-[#fff8df] shadow-[8px_10px_0_rgba(11,61,36,0.18)]"
       >
+        <img
+          src={WILD_ANIMAL_ALBUM_BOARD_IMAGE}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 h-full w-full object-fill"
+        />
         {/* NOTE: 这是按主 KV 风格重新生成的留白画板，不直接复用活动 KV 原图。 */}
         <div
-          aria-hidden="true"
-          className="absolute inset-0 -z-10"
-          style={{
-            backgroundImage: `url("${WILD_ANIMAL_ALBUM_BOARD_IMAGE}")`,
-            backgroundPosition: 'center center',
-            backgroundSize: 'cover',
-          }}
-        />
-        <div
-          className="relative grid grid-flow-row-dense grid-cols-12 gap-x-0 gap-y-1 px-1 py-3"
-          style={{ gridAutoRows: '0.78rem' }}
+          className="absolute inset-[5.5%] grid grid-cols-12 gap-0"
+          style={{ gridTemplateRows: 'repeat(30, minmax(0, 1fr))' }}
         >
           {displayEntries.map((entry, index) => {
             const slot = getAlbumStickerSlot(index);
@@ -187,9 +185,9 @@ export default function AnimalStickerAlbum({
                 onClick={() => setSelectedIndex(index)}
                 className="group relative flex h-full min-w-0 items-center justify-center outline-none transition duration-200 active:scale-95 focus-visible:z-30 focus-visible:rounded-[1.25rem] focus-visible:ring-2 focus-visible:ring-[#0b3d24]"
                 style={{
-                  gridColumn: `span ${slot.colSpan}`,
-                  gridRow: `span ${slot.rowSpan}`,
-                  transform: `translateY(${slot.translateY}px) rotate(${slot.rotation}deg) scale(${slot.scale})`,
+                  gridColumn: `${slot.colStart} / span ${slot.colSpan}`,
+                  gridRow: `${slot.rowStart} / span ${slot.rowSpan}`,
+                  transform: `rotate(${slot.rotation}deg) scale(${slot.scale})`,
                   zIndex: 10 + index,
                 }}
               >
