@@ -39,6 +39,7 @@ const ALBUM_STICKER_SLOTS: AlbumStickerSlot[] = [
 ];
 
 const WILD_ANIMAL_ALBUM_BOARD_IMAGE = '/cmi-home/animal-album-backgrounds/wild-sticker-album-board-v1.webp';
+const STICKER_GENERATION_BATCH_SIZE = 3;
 
 const getAlbumStickerSlot = (index: number) => ALBUM_STICKER_SLOTS[index % ALBUM_STICKER_SLOTS.length];
 
@@ -72,39 +73,52 @@ export default function AnimalStickerAlbum({
     let cancelled = false;
 
     const generateMissingStickers = async () => {
-      for (const entry of entries) {
-        if (
-          !entry.needsStickerGeneration
-          || !entry.photoUrl
-          || generatedStickerIdsRef.current.has(entry.id)
-          || generatingStickerIdsRef.current.has(entry.id)
-          || failedStickerIdsRef.current.has(entry.id)
-        ) {
-          continue;
-        }
+      const pendingEntries = entries.filter(entry => (
+        entry.needsStickerGeneration
+        && entry.photoUrl
+        && !generatedStickerIdsRef.current.has(entry.id)
+        && !generatingStickerIdsRef.current.has(entry.id)
+        && !failedStickerIdsRef.current.has(entry.id)
+      ));
 
-        try {
-          generatingStickerIdsRef.current.add(entry.id);
-          const generatedUrl = await createAnimalStickerFromImageUrl(entry.photoUrl, {
-            subjectBox: entry.subjectBox ?? undefined,
-            nameZh: entry.commonName,
-            scientificName: entry.scientificName ?? undefined,
-          });
+      for (let index = 0; index < pendingEntries.length; index += STICKER_GENERATION_BATCH_SIZE) {
+        if (cancelled) return;
+        const batch = pendingEntries.slice(index, index + STICKER_GENERATION_BATCH_SIZE);
 
-          if (cancelled) {
-            URL.revokeObjectURL(generatedUrl);
+        await Promise.all(batch.map(async entry => {
+          if (
+            !entry.needsStickerGeneration
+            || !entry.photoUrl
+            || generatedStickerIdsRef.current.has(entry.id)
+            || generatingStickerIdsRef.current.has(entry.id)
+            || failedStickerIdsRef.current.has(entry.id)
+          ) {
             return;
           }
 
-          generatedUrlsRef.current.push(generatedUrl);
-          generatedStickerIdsRef.current.add(entry.id);
-          setGeneratedStickerUrls(current => ({ ...current, [entry.id]: generatedUrl }));
-        } catch (error) {
-          failedStickerIdsRef.current.add(entry.id);
-          console.warn('图鉴贴纸预览生成失败:', error);
-        } finally {
-          generatingStickerIdsRef.current.delete(entry.id);
-        }
+          try {
+            generatingStickerIdsRef.current.add(entry.id);
+            const generatedUrl = await createAnimalStickerFromImageUrl(entry.photoUrl, {
+              subjectBox: entry.subjectBox ?? undefined,
+              nameZh: entry.commonName,
+              scientificName: entry.scientificName ?? undefined,
+            });
+
+            if (cancelled) {
+              URL.revokeObjectURL(generatedUrl);
+              return;
+            }
+
+            generatedUrlsRef.current.push(generatedUrl);
+            generatedStickerIdsRef.current.add(entry.id);
+            setGeneratedStickerUrls(current => ({ ...current, [entry.id]: generatedUrl }));
+          } catch (error) {
+            failedStickerIdsRef.current.add(entry.id);
+            console.warn('图鉴贴纸预览生成失败:', error);
+          } finally {
+            generatingStickerIdsRef.current.delete(entry.id);
+          }
+        }));
       }
     };
 
