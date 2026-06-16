@@ -102,6 +102,7 @@ import {
   getPublicCmiEventUrl,
 } from '@/lib/paths';
 import { createCmiEventShareCard } from '@/lib/cmi-event-share-card';
+import { getDisplayPlaceName, getRecommendationMetaParts } from '@/lib/recommendation-display';
 import { formatBlackboardCreatedLabel } from '@/features/home/blackboard/blackboard-model';
 import {
   CMI_INN_PLACE_NAME,
@@ -369,8 +370,9 @@ function getRecommendationAssociationTag(
     };
   }
 
-  const placeName = recommendation.place_name.trim();
-  return placeName ? { kind: 'place', label: placeName } : null;
+  const placeName = getDisplayPlaceName(recommendation.place_name);
+  if (!placeName) return null;
+  return { kind: 'place', label: placeName };
 }
 
 function getBlackboardPostAuthorProfile(post: BlackboardPostRecord, profiles: ProfileLookup) {
@@ -407,8 +409,9 @@ function getBlackboardAssociationTag(
     };
   }
 
-  const placeName = post.linked_place_name?.trim();
-  return placeName ? { kind: 'place', label: placeName } : null;
+  const placeName = getDisplayPlaceName(post.linked_place_name);
+  if (!placeName) return null;
+  return { kind: 'place', label: placeName };
 }
 
 function getFeedItemSortTime(value: string) {
@@ -1628,8 +1631,9 @@ function PlacePostSheet({
   const authorAvatarUrl = authorProfile?.avatar_url?.trim() ?? '';
   const categoryLabel = normalizeCategory(recommendation.category);
   const summary = getRecommendationSummary(recommendation).trim();
-  const title = recommendation.place_name.trim();
+  const title = getDisplayPlaceName(recommendation.place_name);
   const visibleSummary = summary && summary !== title ? summary : '';
+  const panelLabel = title || visibleSummary || authorName;
   const sheetStyle = { '--cmi-v3-sheet-drag-y': `${dragOffset}px` } as CSSProperties;
   const sheetClassName = [
     'cmi-v3-selected-note',
@@ -1658,7 +1662,7 @@ function PlacePostSheet({
         role="button"
         tabIndex={0}
         aria-expanded={isExpanded}
-        aria-label={title}
+        aria-label={panelLabel}
         onKeyDown={handlePanelKeyDown}
         {...dragHandlers}
       >
@@ -1672,10 +1676,10 @@ function PlacePostSheet({
               <span>{`${categoryLabel} · ${formatTraceTime(recommendation.created_at)}`}</span>
             </div>
           </div>
-          <h2>{title}</h2>
+          {title && <h2>{title}</h2>}
           {visibleSummary && <p>{visibleSummary}</p>}
         </div>
-        <img className="cmi-v3-place-post-photo" src={imageUrl} alt={title} />
+        <img className="cmi-v3-place-post-photo" src={imageUrl} alt={panelLabel} />
       </div>
     </article>
   );
@@ -1928,6 +1932,9 @@ function MapPulseSheet({
               const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
               const authorAvatarUrl = authorProfile?.avatar_url?.trim() || getFallbackAvatarUrl(authorName);
               const linkedEventBadge = getRecommendationEventBadge(recommendation, events);
+              const traceMetaParts = getRecommendationMetaParts(recommendation.place_name, '');
+              const traceMetaLabel = [formatTraceTime(recommendation.created_at), ...traceMetaParts].join(' · ');
+              const imageAlt = getDisplayPlaceName(recommendation.place_name) || getRecommendationSummary(recommendation);
 
               return (
                 <article
@@ -1944,7 +1951,7 @@ function MapPulseSheet({
                   }}
                 >
                   <PlacedStickerLayer placements={placedStickers[recommendation.id]} variant="pulse" />
-                  <img className="cmi-v3-map-pulse-trace-image" src={imageUrl} alt={recommendation.place_name} />
+                  <img className="cmi-v3-map-pulse-trace-image" src={imageUrl} alt={imageAlt} />
                   <div className="cmi-v3-map-pulse-trace-content">
                     <EventPosterWatermark badge={linkedEventBadge} variant="pulse" />
                     <div className="cmi-v3-map-pulse-trace-head">
@@ -1959,7 +1966,7 @@ function MapPulseSheet({
                     </div>
                     <p>{getRecommendationSummary(recommendation)}</p>
                     <div className="cmi-v3-map-pulse-trace-foot">
-                      <span>{`${formatTraceTime(recommendation.created_at)} · ${recommendation.place_name}`}</span>
+                      <span>{traceMetaLabel}</span>
                       <RecommendationActionButtons
                         isWishlisted={localWishlists[recommendation.id] ?? false}
                         onComment={() => onOpenPath(getAddTracePath(recommendation.place_name))}

@@ -35,6 +35,7 @@ import {
 import { getRecommendationReasonText } from '@/lib/easter-icons';
 import { getWildAnimalStickerEntries } from '@/lib/cmi-wild-animal-stickers';
 import { getCmiFeedPath, getPlacePath } from '@/lib/paths';
+import { getDisplayPlaceName, getRecommendationMetaParts } from '@/lib/recommendation-display';
 import { cn } from '@/lib/utils';
 import type { Category, PlacedSticker, Recommendation, Sticker } from '@/types/types';
 import { CATEGORIES, categoryMatchesFilter, getCategoryIconUrl } from '@/types/types';
@@ -65,6 +66,8 @@ const getTopStickers = (placedStickers: PlacedSticker[] | undefined, topN = 3) =
 function RecommendationCard({ recommendation }: { recommendation: Recommendation }) {
   const navigate = useNavigate();
   const topStickers = getTopStickers(recommendation.placed_stickers);
+  const displayPlaceName = getDisplayPlaceName(recommendation.place_name);
+  const metaParts = getRecommendationMetaParts(recommendation.place_name, recommendation.user_name);
 
   return (
     <button
@@ -92,10 +95,13 @@ function RecommendationCard({ recommendation }: { recommendation: Recommendation
           “{getRecommendationReasonText(recommendation)}”
         </p>
         <p className="truncate text-xs font-semibold text-muted-foreground">
-          <span className="mr-1">📍</span>
-          {recommendation.place_name}
-          <span className="mx-0.5 opacity-50">|</span>
-          {recommendation.user_name}
+          {displayPlaceName && <span className="mr-1">📍</span>}
+          {metaParts.map((part, index) => (
+            <span key={`${recommendation.id}:${part}`}>
+              {index > 0 && <span className="mx-0.5 opacity-50">|</span>}
+              <span>{part}</span>
+            </span>
+          ))}
         </p>
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           {topStickers.map(({ sticker, count }) => (
@@ -476,19 +482,19 @@ export default function PersonMap() {
         />
       )}
 
-      <div className="sticky top-[52px] z-40 flex border-b border-border/50 bg-background px-5">
+      <div className="sticky top-[52px] z-40 flex gap-2 overflow-x-auto border-b border-border/50 bg-background px-4 hide-scrollbar">
         {tabs.map(tab => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`relative flex-1 whitespace-nowrap pb-3 text-center text-sm font-bold transition-colors ${
+            className={`relative shrink-0 whitespace-nowrap px-2 pb-3 text-center text-[13px] font-black transition-colors ${
               activeTab === tab.id ? 'text-foreground' : 'text-stone-400'
             }`}
           >
             {tab.label} ({tab.count})
             {activeTab === tab.id && (
-              <span className="absolute bottom-0 left-3 right-3 h-[2.5px] rounded-full bg-foreground" />
+              <span className="absolute bottom-0 left-2 right-2 h-[2.5px] rounded-full bg-foreground" />
             )}
           </button>
         ))}

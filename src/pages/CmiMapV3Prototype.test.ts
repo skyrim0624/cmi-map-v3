@@ -106,3 +106,11 @@ test('动态流帖子使用正文优先排版并显示右上角关联标签', ()
     /\.cmi-v3-feed-stream \.cmi-v3-recommendation-actions \{[\s\S]*?position: absolute;[\s\S]*?right: 14px;[\s\S]*?bottom: 12px;/,
   );
 });
+
+test('动态流和底部动态列表不展示纯经纬度地点名', () => {
+  assert.match(source, /getDisplayPlaceName/);
+  assert.match(source, /getRecommendationMetaParts/);
+  assert.match(source, /const placeName = getDisplayPlaceName\(recommendation\.place_name\)/);
+  assert.doesNotMatch(source, /return placeName \? \{ kind: 'place', label: placeName \} : null;/);
+  assert.doesNotMatch(source, /\$\{formatTraceTime\(recommendation\.created_at\)\} · \$\{recommendation\.place_name\}/);
+});

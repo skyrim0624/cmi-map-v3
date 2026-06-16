@@ -67,6 +67,8 @@ test('打卡文字输入不再重复生成预览且操作按钮在输入框下�
   assert.ok(textareaIndex > -1);
   assert.ok(voiceButtonIndex > textareaIndex);
   assert.ok(confirmButtonIndex > textareaIndex);
+  assert.doesNotMatch(voiceStageSource, /animalStickerPreviewUrl/);
+  assert.doesNotMatch(voiceStageSource, /已剪成贴纸|贴纸已生成/);
 });
 
 test('清迈客栈标签打卡后进入动态页而不是旧客栈页', () => {
@@ -101,13 +103,12 @@ test('神奇动物打卡会调用生物识别并预选彩蛋', () => {
   assert.match(source, /setSelectedEventId\(CMI_MAP_WILD_CHIANG_MAI_EVENT_ID\)/);
   assert.match(source, /aria-pressed=\{isWildAnimalCheckin\}/);
   assert.match(source, /identifyAnimalPhoto\(images\[0\]\)/);
-  assert.match(source, /createAnimalStickerFromPhoto/);
-  assert.match(source, /sourceImageUrl/);
-  assert.match(source, /createAnimalStickerPreview\(images\[0\], selectedAnimalCandidate, imageUrls\[0\]\)/);
-  assert.match(source, /animalStickerPreviewUrl/);
-  assert.match(source, /setAnimalStickerFile/);
-  assert.match(source, /uploadAnimalSticker\(stickerFile\)/);
-  assert.match(source, /animal_sticker_url: animalStickerUrl/);
+  assert.doesNotMatch(source, /createAnimalStickerFromPhoto/);
+  assert.doesNotMatch(source, /createAnimalStickerPreview/);
+  assert.doesNotMatch(source, /animalStickerPreviewUrl/);
+  assert.doesNotMatch(source, /setAnimalStickerFile/);
+  assert.doesNotMatch(source, /uploadAnimalSticker/);
+  assert.doesNotMatch(source, /animal_sticker_url: animalStickerUrl/);
   assert.match(source, /animal_subject_box: selectedAnimalCandidate\.subjectBox/);
   assert.match(source, /setSelectedInputCategoryId\(easterOption\.id\)/);
   assert.match(source, /setSelectedEasterIconId\(candidate\.iconId\)/);

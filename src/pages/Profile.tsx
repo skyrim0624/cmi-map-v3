@@ -21,6 +21,7 @@ import { syncAchievementProgress } from '@/features/achievements/achievement-ser
 import { CMI_MAP_WILD_CHIANG_MAI_EVENT_ID } from '@/data/cmi-events';
 import { getWildAnimalStickerEntries } from '@/lib/cmi-wild-animal-stickers';
 import { getCmiEasterIconUrl, getRecommendationEasterIconId, getRecommendationReasonText } from '@/lib/easter-icons';
+import { getDisplayPlaceName, getRecommendationMetaParts } from '@/lib/recommendation-display';
 import type { Badge } from '@/types/badges';
 import type { Category, PlacedSticker, Recommendation, Sticker } from '@/types/types';
 import { CATEGORIES, categoryMatchesFilter, getCategoryIconUrl } from '@/types/types';
@@ -210,12 +211,16 @@ export default function Profile() {
     }
     return (
       <div className="space-y-3">
-        {items.map((rec) => (
-          <div
-            key={rec.id}
-            className="flex gap-3 p-3.5 bg-card border border-border/60 rounded-2xl shadow-sm cursor-pointer transition-transform hover:translate-y-[-2px] hover:shadow-md"
-            onClick={() => navigate(`/place/${encodeURIComponent(rec.place_name)}`)}
-          >
+        {items.map((rec) => {
+          const displayPlaceName = getDisplayPlaceName(rec.place_name);
+          const metaParts = getRecommendationMetaParts(rec.place_name, rec.user_name);
+
+          return (
+            <div
+              key={rec.id}
+              className="flex gap-3 p-3.5 bg-card border border-border/60 rounded-2xl shadow-sm cursor-pointer transition-transform hover:translate-y-[-2px] hover:shadow-md"
+              onClick={() => navigate(`/place/${encodeURIComponent(rec.place_name)}`)}
+            >
             {rec.images && rec.images.length > 0 ? (
               <img src={rec.images[0]} alt="" className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
             ) : (
@@ -231,10 +236,13 @@ export default function Profile() {
               <p className="text-sm leading-relaxed line-clamp-2">"{getRecommendationReasonText(rec)}"</p>
               <div className="space-y-1.5">
                 <p className="text-xs text-muted-foreground truncate whitespace-nowrap">
-                  <span className="mr-1">📍</span>
-                  <span>{rec.place_name}</span>
-                  <span className="mx-0.5 opacity-50">|</span>
-                  <span>{rec.user_name}</span>
+                  {displayPlaceName && <span className="mr-1">📍</span>}
+                  {metaParts.map((part, index) => (
+                    <span key={`${rec.id}:${part}`}>
+                      {index > 0 && <span className="mx-0.5 opacity-50">|</span>}
+                      <span>{part}</span>
+                    </span>
+                  ))}
                 </p>
                 <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                   {/* 聚合排序前3的贴纸印章 */}
@@ -254,7 +262,8 @@ export default function Profile() {
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
@@ -364,34 +373,34 @@ export default function Profile() {
       )}
 
       {/* ======== Tab 栏 ======== */}
-      <div className="sticky top-[52px] z-40 flex overflow-x-auto border-b border-border/50 bg-background px-5 hide-scrollbar">
+      <div className="sticky top-[52px] z-40 flex gap-2 overflow-x-auto border-b border-border/50 bg-background px-4 hide-scrollbar">
         <button
           onClick={() => setActiveTab('my_pins')}
-          className={`relative min-w-[5.4rem] flex-1 whitespace-nowrap pb-3 text-center text-sm font-bold transition-colors ${activeTab === 'my_pins' ? 'text-foreground' : 'text-stone-400'}`}
+          className={`relative shrink-0 whitespace-nowrap px-2 pb-3 text-center text-[13px] font-black transition-colors ${activeTab === 'my_pins' ? 'text-foreground' : 'text-stone-400'}`}
         >
           我的痕迹 ({myRecommendations.length})
-          {activeTab === 'my_pins' && <div className="absolute bottom-0 left-3 right-3 h-[2.5px] bg-foreground rounded-full" />}
+          {activeTab === 'my_pins' && <div className="absolute bottom-0 left-2 right-2 h-[2.5px] bg-foreground rounded-full" />}
         </button>
         <button
           onClick={() => setActiveTab('animals')}
-          className={`relative min-w-[6.6rem] flex-1 whitespace-nowrap pb-3 text-center text-sm font-bold transition-colors ${activeTab === 'animals' ? 'text-[#0b3d24]' : 'text-stone-400'}`}
+          className={`relative shrink-0 whitespace-nowrap px-2 pb-3 text-center text-[13px] font-black transition-colors ${activeTab === 'animals' ? 'text-[#0b3d24]' : 'text-stone-400'}`}
         >
           神奇生物图鉴 ({animalStickerEntries.length})
-          {activeTab === 'animals' && <div className="absolute bottom-0 left-3 right-3 h-[2.5px] bg-[#0b3d24] rounded-full" />}
+          {activeTab === 'animals' && <div className="absolute bottom-0 left-2 right-2 h-[2.5px] bg-[#0b3d24] rounded-full" />}
         </button>
         <button
           onClick={() => setActiveTab('wishlist')}
-          className={`relative min-w-[5.4rem] flex-1 whitespace-nowrap pb-3 text-center text-sm font-bold transition-colors ${activeTab === 'wishlist' ? 'text-[#f43f5e]' : 'text-stone-400'}`}
+          className={`relative shrink-0 whitespace-nowrap px-2 pb-3 text-center text-[13px] font-black transition-colors ${activeTab === 'wishlist' ? 'text-[#f43f5e]' : 'text-stone-400'}`}
         >
           我想去的 ({myWishlists.length})
-          {activeTab === 'wishlist' && <div className="absolute bottom-0 left-3 right-3 h-[2.5px] bg-[#f43f5e] rounded-full" />}
+          {activeTab === 'wishlist' && <div className="absolute bottom-0 left-2 right-2 h-[2.5px] bg-[#f43f5e] rounded-full" />}
         </button>
         <button
           onClick={() => setActiveTab('badges')}
-          className={`relative min-w-[4.8rem] flex-1 whitespace-nowrap pb-3 text-center text-sm font-bold transition-colors ${activeTab === 'badges' ? 'text-primary' : 'text-stone-400'}`}
+          className={`relative shrink-0 whitespace-nowrap px-2 pb-3 text-center text-[13px] font-black transition-colors ${activeTab === 'badges' ? 'text-primary' : 'text-stone-400'}`}
         >
           成就 ({unlockedBadges.length})
-          {activeTab === 'badges' && <div className="absolute bottom-0 left-3 right-3 h-[2.5px] bg-primary rounded-full" />}
+          {activeTab === 'badges' && <div className="absolute bottom-0 left-2 right-2 h-[2.5px] bg-primary rounded-full" />}
         </button>
       </div>
 

@@ -16,7 +16,7 @@ import {
   isCmiInnEvent,
 } from '@/data/cmi-events';
 import { getCmiInputCategoryOptionById, getCmiInputCategoryOptions } from '@/data/cmi-taxonomy';
-import { assignCmiEventCaptureNumber, createRecommendation, getAllRecommendations, uploadAnimalSticker, uploadImages } from '@/db/api';
+import { assignCmiEventCaptureNumber, createRecommendation, getAllRecommendations, uploadImages } from '@/db/api';
 import { getPublishedCmiEvents } from '@/db/cmi-events';
 import {
   DEFAULT_CAMERA_CAPTURE_QUALITY,
@@ -38,7 +38,6 @@ import {
   type CmiWildAnimalShareCardResult,
   createCmiWildAnimalShareCard,
 } from '@/lib/cmi-wild-animal-share-card';
-import { createAnimalStickerFromPhoto } from '@/lib/cmi-wild-animal-stickers';
 import {
   DEFAULT_CMI_EASTER_ICON_ID,
 } from '@/lib/easter-icons';
@@ -564,8 +563,6 @@ export default function MarkPlace() {
   const [selectedAnimalCandidateId, setSelectedAnimalCandidateId] = useState<string>('');
   const [wildAnimalShareCard, setWildAnimalShareCard] = useState<CmiWildAnimalShareCardResult | null>(null);
   const [isWildAnimalSharePanelOpen, setIsWildAnimalSharePanelOpen] = useState(false);
-  const [animalStickerFile, setAnimalStickerFile] = useState<File | null>(null);
-  const [animalStickerPreviewUrl, setAnimalStickerPreviewUrl] = useState<string | null>(null);
 
   const [sourceType, setSourceType] = useState<'live' | 'exif' | null>(null);
 
@@ -614,7 +611,6 @@ export default function MarkPlace() {
 
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const routeRootRef = useRef<HTMLDivElement>(null);
-  const animalStickerPreviewUrlRef = useRef<string | null>(null);
   const recognitionRef = useRef<InstanceType<SpeechRecognitionConstructor> | null>(null);
   const animalIdentificationRequestRef = useRef(0);
   const speechStartingRef = useRef(false);
@@ -653,10 +649,6 @@ export default function MarkPlace() {
       scrollContainer.style.overscrollBehavior = previousOverscrollBehavior;
     };
   }, [stage]);
-
-  useEffect(() => () => {
-    if (animalStickerPreviewUrlRef.current) URL.revokeObjectURL(animalStickerPreviewUrlRef.current);
-  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -1241,10 +1233,6 @@ export default function MarkPlace() {
     setAnimalIdentification(null);
     setAnimalIdentificationStatus('idle');
     setSelectedAnimalCandidateId('');
-    setAnimalStickerFile(null);
-    if (animalStickerPreviewUrlRef.current) URL.revokeObjectURL(animalStickerPreviewUrlRef.current);
-    animalStickerPreviewUrlRef.current = null;
-    setAnimalStickerPreviewUrl(null);
   };
 
   const resetWildAnimalShareCard = () => {
@@ -1262,32 +1250,6 @@ export default function MarkPlace() {
     }
     if (candidate.iconId) setSelectedEasterIconId(candidate.iconId);
     setDescription(current => current.trim() || buildAnimalCandidateDescription(candidate));
-  };
-
-  const applyAnimalStickerFile = (stickerFile: File | null) => {
-    setAnimalStickerFile(stickerFile);
-    if (animalStickerPreviewUrlRef.current) URL.revokeObjectURL(animalStickerPreviewUrlRef.current);
-    const nextPreviewUrl = stickerFile ? URL.createObjectURL(stickerFile) : null;
-    animalStickerPreviewUrlRef.current = nextPreviewUrl;
-    setAnimalStickerPreviewUrl(nextPreviewUrl);
-  };
-
-  const createAnimalStickerPreview = async (
-    photoFile: File,
-    candidate: AnimalIdentificationCandidate,
-    sourceImageUrl?: string
-  ) => {
-    try {
-      const stickerFile = await createAnimalStickerFromPhoto(photoFile, {
-        ...candidate,
-        sourceImageUrl,
-      });
-      applyAnimalStickerFile(stickerFile);
-      return stickerFile;
-    } catch (error) {
-      console.error('动物贴纸生成失败:', error);
-      return null;
-    }
   };
 
   const getAutomaticPublishCategory = (): Category => {
@@ -1348,7 +1310,6 @@ export default function MarkPlace() {
             );
             if (result.candidates[0]) {
               applyAnimalCandidate(result.candidates[0]);
-              void createAnimalStickerPreview(images[0], result.candidates[0]);
             }
             setStage('voice');
           })
@@ -1483,15 +1444,6 @@ export default function MarkPlace() {
       const linkedEvent = selectedEventId
         ? eventOptions.find(event => event.id === selectedEventId) ?? getCmiEventById(selectedEventId)
         : null;
-      let animalStickerUrl: string | null = null;
-
-      if (isWildAnimalCheckin && images[0] && selectedAnimalCandidate) {
-        const stickerFile = imageUrls[0]
-          ? await createAnimalStickerPreview(images[0], selectedAnimalCandidate, imageUrls[0])
-          : animalStickerFile ?? await createAnimalStickerPreview(images[0], selectedAnimalCandidate);
-        if (stickerFile) animalStickerUrl = await uploadAnimalSticker(stickerFile);
-      }
-
       const recommendationInput = {
         place_name: placeName,
         category: selectedCategory,
@@ -1508,8 +1460,7 @@ export default function MarkPlace() {
           linked_event_id: linkedEvent.id,
           linked_event_title: linkedEvent.title,
         } : {}),
-        ...(selectedAnimalCandidate && animalStickerUrl ? {
-          animal_sticker_url: animalStickerUrl,
+        ...(selectedAnimalCandidate ? {
           animal_common_name: formatAnimalCandidateLabel(selectedAnimalCandidate),
           animal_scientific_name: selectedAnimalCandidate.scientificName ?? null,
           animal_subject_box: selectedAnimalCandidate.subjectBox,
@@ -1972,10 +1923,10 @@ export default function MarkPlace() {
             )}
 
             {stage === 'voice' && (
-              <div className="w-full flex flex-col items-center gap-4 py-4 animate-in slide-in-from-bottom-10 fade-in duration-500">
+              <div className="w-full flex flex-col items-center gap-3 px-4 pt-2 pb-3 animate-in slide-in-from-bottom-10 fade-in duration-500">
                 <div className="w-full max-w-sm">
                   {isWildAnimalCheckin && (
-                    <div className="mb-3 rounded-3xl border border-stone-200 bg-white/90 p-3 text-left shadow-sm">
+                    <div className="mb-2 rounded-3xl border border-stone-200 bg-white/90 p-2.5 text-left shadow-sm">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-black text-stone-800">生物识别</p>
                         {animalIdentificationStatus === 'running' && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
@@ -2010,23 +1961,13 @@ export default function MarkPlace() {
                               : '这张没识别清楚，换张近一点的照片或直接写名称。'}
                         </p>
                       )}
-                      {animalStickerPreviewUrl && (
-                        <div className="mt-3 flex items-center gap-3 rounded-2xl border border-[#0b3d24]/15 bg-[#fff7dc] px-3 py-2">
-                          <img
-                            src={animalStickerPreviewUrl}
-                            alt=""
-                            className="h-14 w-14 shrink-0 object-contain drop-shadow-[0_6px_0_rgba(11,61,36,0.12)]"
-                          />
-                          <p className="min-w-0 text-xs font-black text-[#0b3d24]">已剪成贴纸</p>
-                        </div>
-                      )}
                     </div>
                   )}
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="写下地点名和具体体验，比如：Fern Forest，树很多很安静，适合上午写东西"
-                    className="w-full min-h-28 resize-none rounded-2xl border border-stone-200 bg-white/90 px-4 py-3 text-[15px] leading-relaxed text-stone-800 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                    className="w-full min-h-24 resize-none rounded-2xl border border-stone-200 bg-white/90 px-4 py-3 text-[15px] leading-relaxed text-stone-800 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
                     maxLength={240}
                   />
                   {interimTranscript && (
