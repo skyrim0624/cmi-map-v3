@@ -1,0 +1,8 @@
+top-left-monkey-vines	top-left-monkey-vines.png	237x140
+top-left-edge-leaves	top-left-edge-leaves.png	83x275
+top-right-temple-hills	top-right-temple-hills.png	318x385
+left-edge-foliage-flowers	left-edge-foliage-flowers.png	105x980
+right-edge-foliage-flowers	right-edge-foliage-flowers.png	108x1070
+bottom-left-pagoda-foliage	bottom-left-pagoda-foliage.png	125x285
+bottom-right-elephant-foliage	bottom-right-elephant-foliage.png	198x200
+bottom-foliage-strip	bottom-foliage-strip.png	853x97
