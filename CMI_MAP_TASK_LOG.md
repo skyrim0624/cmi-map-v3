@@ -1,6 +1,6 @@
 # CMI Map 优化任务日志
 
-更新时间：2026-06-14 +07
+更新时间：2026-06-16 +07
 
 ## 目标
 
@@ -45,8 +45,26 @@
 30. [完成] 个人主页神奇生物图鉴改为主 KV 贴画收集册
 31. [完成] 精细透明抠图改走原图 URL + 自托管分割服务
 32. [完成] 恢复 `species.cmimap.com` 常驻模型服务和 tunnel
+33. [完成] 修复 `cmimap.com` 被旧 Production 部署覆盖回古早首页
 
 ## 执行记录
+
+### 2026-06-16 cmimap.com 旧版回滚排查与恢复
+
+- 背景：用户反馈手机打开 `cmimap.com` 仍显示“清迈，今天怎么过？”古早首页。
+- 排查结果：
+  - 正式域名 HTML 当时引用 `assets/index-DCv0t-7L.js`，该入口包里 `/` 仍是旧 `SceneHome`，`/cmi-home` 仍是旧 `CmiHome`。
+  - Cloudflare Pages 部署列表显示，2 小时前 `cc92159 Add parking QR to registration emails` 被部署成 `cmi-map` Production；该提交只改邮件停车二维码，代码基线仍是旧首页，因此覆盖了 6 小时前正确的 `3be4245` Production。
+  - 线上旧包还主动加载 `/registerSW.js`，旧 `/sw.js` 使用 Workbox 预缓存，会加重手机端旧版残留。
+- 本轮修复：
+  - 用干净 worktree 从 `3be4245 Fix check-in and profile mobile display` 构建，避免混入当前工作区未提交改动。
+  - 执行 `pnpm build` 通过，PWA precache 检查为 `0 项`。
+  - 重新部署到 Cloudflare Pages 项目 `cmi-map` 的 Production：`https://2bc795b0.cmi-map.pages.dev`，Source 为 `3be4245`。
+- 验证结果：
+  - Cloudflare Pages 部署列表确认最新 Production 为 `2bc795b0`，Branch `master`，Source `3be4245`。
+  - `https://cmimap.com/?verify=restore-3be4245-20260616` 返回入口 `assets/index-CpjujB-0.js`，HTML 不再加载 `/registerSW.js`。
+  - 线上入口包确认 `/` 为 `CMI Map 3.0` / `CmiMapV3Prototype`，`/cmi-home` 已重定向到动态页。
+  - `https://cmimap.com/sw.js` 当前返回自毁脚本，会 `unregister` 并清理 caches。
 
 ### 2026-06-14 神奇动物贴纸自托管分割服务恢复
 
