@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import AnimalStickerAlbum from '@/components/AnimalStickerAlbum';
 import BadgeUnlockOverlay from '@/components/BadgeUnlockOverlay';
 import BadgeWall from '@/components/BadgeWall';
+import WildAnimalPhotoAlbum from '@/components/WildAnimalPhotoAlbum';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,12 +26,43 @@ import { getDisplayPlaceName, getRecommendationMetaParts } from '@/lib/recommend
 import type { Badge } from '@/types/badges';
 import type { Category, PlacedSticker, Recommendation, Sticker } from '@/types/types';
 import { CATEGORIES, categoryMatchesFilter, getCategoryIconUrl } from '@/types/types';
+import './profile-theme.css';
+
+type ProfileTab = 'my_pins' | 'animals' | 'wishlist' | 'badges';
+
+const WILD_CHIANG_MAI_PROFILE_THEME_ENABLED = true;
+const DEFAULT_PROFILE_TAB: ProfileTab = WILD_CHIANG_MAI_PROFILE_THEME_ENABLED ? 'animals' : 'my_pins';
+const WILD_PROFILE_THEME_ASSETS = [
+  ['top-left-monkey', '/cmi-home/profile-theme-wild-chiang-mai/top-left-monkey-vines.png'],
+  ['top-left-leaves', '/cmi-home/profile-theme-wild-chiang-mai/top-left-edge-leaves.png'],
+  ['top-right-temple', '/cmi-home/profile-theme-wild-chiang-mai/top-right-temple-hills.png'],
+  ['left-edge', '/cmi-home/profile-theme-wild-chiang-mai/left-edge-foliage-flowers.png'],
+  ['right-edge', '/cmi-home/profile-theme-wild-chiang-mai/right-edge-foliage-flowers.png'],
+  ['bottom-left', '/cmi-home/profile-theme-wild-chiang-mai/bottom-left-pagoda-foliage.png'],
+  ['bottom-right', '/cmi-home/profile-theme-wild-chiang-mai/bottom-right-elephant-foliage.png'],
+  ['bottom-strip', '/cmi-home/profile-theme-wild-chiang-mai/bottom-foliage-strip.png'],
+] as const;
+
+function WildProfileThemeDecor() {
+  return (
+    <div className="wild-profile-theme__decor" aria-hidden="true">
+      {WILD_PROFILE_THEME_ASSETS.map(([name, src]) => (
+        <img
+          key={name}
+          src={src}
+          alt=""
+          className={`wild-profile-theme__asset wild-profile-theme__asset--${name}`}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function Profile() {
   const navigate = useNavigate();
   const { user, profile, signOut, refreshProfile, loading: authLoading } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'my_pins' | 'animals' | 'wishlist' | 'badges'>('my_pins');
+  const [activeTab, setActiveTab] = useState<ProfileTab>(DEFAULT_PROFILE_TAB);
   const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
   const [myRecommendations, setMyRecommendations] = useState<Recommendation[]>([]);
   const [myWishlists, setMyWishlists] = useState<Recommendation[]>([]);
@@ -161,17 +193,6 @@ export default function Profile() {
     }
   };
 
-  // Tab 样式
-  const tabClass = (tab: typeof activeTab, color: string) =>
-    `flex-1 pb-3 text-center font-bold text-sm transition-colors relative whitespace-nowrap ${
-      activeTab === tab ? `text-${color}` : 'text-stone-400'
-    }`;
-
-  const tabUnderline = (tab: typeof activeTab, color: string) =>
-    activeTab === tab
-      ? <div className={`absolute bottom-0 left-3 right-3 h-[2.5px] bg-${color} rounded-full`} />
-      : null;
-
   const getTopStickers = (placedStickers: PlacedSticker[] | undefined, topN: number = 3) => {
     if (!placedStickers || placedStickers.length === 0) return [];
     const stickersArray = Array.isArray(placedStickers) ? placedStickers : [placedStickers];
@@ -218,7 +239,7 @@ export default function Profile() {
           return (
             <div
               key={rec.id}
-              className="flex gap-3 p-3.5 bg-card border border-border/60 rounded-2xl shadow-sm cursor-pointer transition-transform hover:translate-y-[-2px] hover:shadow-md"
+              className="wild-profile-trace-card flex gap-3 p-3.5 bg-card border border-border/60 rounded-2xl shadow-sm cursor-pointer transition-transform hover:translate-y-[-2px] hover:shadow-md"
               onClick={() => navigate(`/place/${encodeURIComponent(rec.place_name)}`)}
             >
             {rec.images && rec.images.length > 0 ? (
@@ -269,9 +290,11 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-background relative">
+    <div className={`min-h-screen relative ${WILD_CHIANG_MAI_PROFILE_THEME_ENABLED ? 'wild-profile-theme' : 'bg-background'}`}>
+      {WILD_CHIANG_MAI_PROFILE_THEME_ENABLED && <WildProfileThemeDecor />}
+      <div className="wild-profile-theme__content">
       {/* 顶部导航 */}
-      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-md px-4 py-3 flex justify-between items-center safe-top border-b border-border/40">
+      <div className="wild-profile-topbar sticky top-0 z-50 bg-background/80 backdrop-blur-md px-4 py-3 flex justify-between items-center safe-top border-b border-border/40">
         <Button variant="ghost" size="icon" className="rounded-full press-feedback" onClick={() => navigate('/')}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -286,7 +309,7 @@ export default function Profile() {
       </div>
 
       {/* ======== 紧凑横排头部 ======== */}
-      <div className="flex items-center gap-4 px-5 py-4">
+      <div className="wild-profile-header flex items-center gap-4 px-5 py-4">
         {/* 头像 */}
         <div className="relative flex-shrink-0 group">
           <Avatar
@@ -363,7 +386,7 @@ export default function Profile() {
         <div className="px-5 pb-4">
           <Button
             variant="outline"
-            className="h-11 w-full rounded-2xl border-[#2e2a23]/12 bg-[#f8f1df] font-black text-[#2f553e]"
+            className="wild-profile-agent-token h-11 w-full rounded-2xl border-[#2e2a23]/12 bg-[#f8f1df] font-black text-[#2f553e]"
             onClick={() => navigate('/admin/agent-tokens')}
           >
             <KeyRound className="h-4 w-4" />
@@ -373,7 +396,7 @@ export default function Profile() {
       )}
 
       {/* ======== Tab 栏 ======== */}
-      <div className="sticky top-[52px] z-40 flex gap-2 overflow-x-auto border-b border-border/50 bg-background px-4 hide-scrollbar">
+      <div className="wild-profile-tabs sticky top-[52px] z-40 flex gap-2 overflow-x-auto border-b border-border/50 bg-background px-4 hide-scrollbar">
         <button
           onClick={() => setActiveTab('my_pins')}
           className={`relative shrink-0 whitespace-nowrap px-2 pb-3 text-center text-[13px] font-black transition-colors ${activeTab === 'my_pins' ? 'text-foreground' : 'text-stone-400'}`}
@@ -433,7 +456,7 @@ export default function Profile() {
       )}
 
       {/* ======== 内容区 ======== */}
-      <div className="px-5 pb-12">
+      <div className="wild-profile-main px-5 pb-12">
         {activeTab === 'my_pins' && renderList(
           myRecommendations.filter(r => selectedCategory === 'all' || categoryMatchesFilter(r.category, selectedCategory)),
           '手账本里还没有你的清迈痕迹',
@@ -450,11 +473,19 @@ export default function Profile() {
 
         {activeTab === 'animals' && (
           <div className="pt-3">
-            <AnimalStickerAlbum
-              entries={animalStickerEntries}
-              emptyActionLabel="去拍一只"
-              onEmptyAction={() => navigate(`/mark?event=${encodeURIComponent(CMI_MAP_WILD_CHIANG_MAI_EVENT_ID)}`)}
-            />
+            {WILD_CHIANG_MAI_PROFILE_THEME_ENABLED ? (
+              <WildAnimalPhotoAlbum
+                entries={animalStickerEntries}
+                emptyActionLabel="去拍一只"
+                onEmptyAction={() => navigate(`/mark?event=${encodeURIComponent(CMI_MAP_WILD_CHIANG_MAI_EVENT_ID)}`)}
+              />
+            ) : (
+              <AnimalStickerAlbum
+                entries={animalStickerEntries}
+                emptyActionLabel="去拍一只"
+                onEmptyAction={() => navigate(`/mark?event=${encodeURIComponent(CMI_MAP_WILD_CHIANG_MAI_EVENT_ID)}`)}
+              />
+            )}
           </div>
         )}
 
@@ -472,6 +503,7 @@ export default function Profile() {
           onClose={() => setNewlyUnlockedBadge(null)}
         />
       )}
+      </div>
     </div>
   );
 }

@@ -139,14 +139,17 @@ export const getRecommendationAnimalSticker = (
 ): WildAnimalStickerMetadata | null => {
   const stickerUrl = recommendation.animal_sticker_url?.trim();
   const metadata = extractWildAnimalStickerMetadata(recommendation.reason);
+  const commonName = recommendation.animal_common_name?.trim() || metadata?.commonName || '';
+  const scientificName = recommendation.animal_scientific_name?.trim() || metadata?.scientificName || '';
+  const subjectBox = normalizeAnimalSubjectBox(recommendation.animal_subject_box) ?? metadata?.subjectBox ?? null;
 
-  if (!stickerUrl && !metadata?.stickerUrl) return metadata;
+  if (!stickerUrl && !metadata?.stickerUrl && !commonName && !scientificName && !subjectBox) return metadata;
 
   return {
     stickerUrl: stickerUrl || metadata?.stickerUrl || '',
-    commonName: recommendation.animal_common_name?.trim() || metadata?.commonName || '',
-    scientificName: recommendation.animal_scientific_name?.trim() || metadata?.scientificName || '',
-    subjectBox: normalizeAnimalSubjectBox(recommendation.animal_subject_box) ?? metadata?.subjectBox ?? null,
+    commonName,
+    scientificName,
+    subjectBox,
   };
 };
 

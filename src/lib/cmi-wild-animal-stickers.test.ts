@@ -31,3 +31,10 @@ test('图鉴旧照片条目标记为需要现场生成贴纸', () => {
   assert.match(source, /createAnimalStickerFromImageUrl/);
   assert.match(source, /sourceImageUrl: photoUrl/);
 });
+
+test('图鉴照片条目保留识别出的动物名称字段', () => {
+  assert.match(source, /const commonName = recommendation\.animal_common_name\?\.trim\(\) \|\| metadata\?\.commonName \|\| ''/);
+  assert.match(source, /const scientificName = recommendation\.animal_scientific_name\?\.trim\(\) \|\| metadata\?\.scientificName \|\| ''/);
+  assert.match(source, /!commonName && !scientificName && !subjectBox/);
+  assert.match(source, /commonName,\n    scientificName,\n    subjectBox,/);
+});

@@ -4,8 +4,11 @@ import test from 'node:test';
 
 const source = readFileSync(new URL('./Profile.tsx', import.meta.url), 'utf8');
 
-test('个人主页提供神奇生物图鉴贴纸册', () => {
+test('个人主页提供主题版神奇生物照片图鉴', () => {
   assert.match(source, /AnimalStickerAlbum/);
+  assert.match(source, /WildAnimalPhotoAlbum/);
+  assert.match(source, /WILD_CHIANG_MAI_PROFILE_THEME_ENABLED/);
+  assert.match(source, /profile-theme-wild-chiang-mai/);
   assert.match(source, /getWildAnimalStickerEntries/);
   assert.match(source, /'animals'/);
   assert.match(source, /神奇生物图鉴/);
