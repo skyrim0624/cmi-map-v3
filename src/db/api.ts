@@ -584,7 +584,8 @@ export const createRecommendation = async (
 
     if (
       mergedUnsupportedFields.easterIcon === unsupportedFields.easterIcon &&
-      mergedUnsupportedFields.linkedEvent === unsupportedFields.linkedEvent
+      mergedUnsupportedFields.linkedEvent === unsupportedFields.linkedEvent &&
+      mergedUnsupportedFields.animalSticker === unsupportedFields.animalSticker
     ) {
       console.error('创建推荐失败:', error);
       return null;

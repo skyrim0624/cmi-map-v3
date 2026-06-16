@@ -2730,3 +2730,21 @@
   - `pnpm exec biome lint src/components/AnimalStickerAlbum.tsx src/components/AnimalStickerAlbum.test.ts` 通过。
   - `pnpm build` 通过。
   - 本地浏览器验证：手机宽度和 1024px 宽视口下图鉴画板比例均为 `0.563`，匹配原图 `941/1672`，底图完整显示且不再使用 `cover` 裁切。
+
+### 2026-06-16 神奇生物打卡保存失败修复
+
+- 背景：用户反馈最近两条神奇生物打卡都提示“这条痕迹没有留下来，请再试一次”。
+- 排查结果：
+  - 前端拍照、定位和生物识别已完成，失败发生在最终写入 `recommendations`。
+  - 线上 Supabase 缺少 `animal_sticker_url` 等贴纸字段，以及 `linked_event_capture_number` 活动编号字段；对应本地迁移未同步到线上。
+  - 前端旧库兼容重试逻辑漏判 `animalSticker` 字段变化，导致字段缺失时没有进入元数据兜底重试。
+- 本轮实现：
+  - 线上补执行 `20260609055200_cmi_event_capture_numbers` 和 `20260613090000_add_wild_animal_stickers` 两段既有迁移，并修复迁移历史。
+  - 修正 `createRecommendation` 的兼容重试判断，动物贴纸字段缺失时也能进入兜底逻辑。
+  - 新增 `src/db/api.test.ts` 锁住动物贴纸字段兼容逻辑。
+- 验证结果：
+  - 线上 REST 只读验证已能读取 `animal_sticker_url`、`animal_common_name`、`animal_scientific_name`、`animal_subject_box`、`linked_event_capture_number`。
+  - `node --test --experimental-strip-types src/db/api.test.ts src/db/cmi-event-capture-numbers.test.ts src/services/animal-identification.test.ts src/lib/cmi-wild-animal-stickers.test.ts` 通过，15 项测试通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm build` 通过。
+  - 旧的 `src/pages/MarkPlace.test.ts` 里有两个源码断言仍失败，原因是测试仍禁止当前已上线的贴纸预览/贴纸生成代码，不属于本轮保存失败修复。
