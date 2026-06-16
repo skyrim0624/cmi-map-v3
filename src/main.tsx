@@ -4,6 +4,7 @@ import App from "./App.tsx";
 import { AppWrapper } from "./components/common/PageMeta.tsx";
 
 const STALE_BUILD_RELOAD_KEY = "cmi-map:stale-build-reload-path";
+const DEV_SW_CLEANUP_RELOAD_KEY = "cmi-map:dev-sw-cleanup-reloaded";
 
 const isStaleBuildError = (error: unknown) => {
   const message = String(
@@ -48,19 +49,27 @@ window.addEventListener("error", (event) => {
 });
 
 if (import.meta.env.DEV && "serviceWorker" in navigator) {
-  navigator.serviceWorker.getRegistrations().then(registrations => {
-    registrations.forEach(registration => {
-      registration.unregister();
-    });
-  });
+  const cleanupLocalServiceWorkers = async () => {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    const cacheNames = "caches" in window ? await caches.keys() : [];
 
-  if ("caches" in window) {
-    caches.keys().then(cacheNames => {
-      cacheNames.forEach(cacheName => {
-        caches.delete(cacheName);
-      });
-    });
-  }
+    await Promise.all([
+      ...registrations.map(registration => registration.unregister()),
+      ...cacheNames.map(cacheName => caches.delete(cacheName)),
+    ]);
+
+    if (
+      (registrations.length > 0 || cacheNames.length > 0) &&
+      sessionStorage.getItem(DEV_SW_CLEANUP_RELOAD_KEY) !== window.location.origin
+    ) {
+      sessionStorage.setItem(DEV_SW_CLEANUP_RELOAD_KEY, window.location.origin);
+      window.location.reload();
+    }
+  };
+
+  cleanupLocalServiceWorkers().catch(error => {
+    console.warn("清理本地 Service Worker 缓存失败", error);
+  });
 }
 
 if (import.meta.env.PROD && "serviceWorker" in navigator) {

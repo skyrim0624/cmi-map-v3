@@ -52,3 +52,6 @@ docs/cmi-map-icon-inventory-*/
 
 # Supabase local CLI cache
 supabase/.temp/
+
+# Cloudflare local CLI cache
+.wrangler/
