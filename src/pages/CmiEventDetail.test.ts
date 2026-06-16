@@ -17,6 +17,9 @@ test('神奇动物活动主页接入推荐动态互动状态', () => {
   assert.match(source, /toggleRecommendationWishlist\(recommendation\.id, user\.id\)/);
   assert.match(source, /placeRecommendationSticker\(\{/);
   assert.match(source, /onOpenComment=\{\(recommendation\) => navigate\(getAddTracePath\(recommendation\.place_name\)\)\}/);
+  assert.match(source, /getProfilesByUserIds\(userIds\)/);
+  assert.match(source, /getProfilesByUserNames\(userNames\)/);
+  assert.match(source, /authorProfilesByKey=\{authorProfilesByKey\}/);
   assert.match(source, /wishlistStateByRecommendationId=\{wishlistStateByRecommendationId\}/);
   assert.match(source, /onStartStamp=\{handleStartStamp\}/);
   assert.match(source, /onToggleWishlist=\{handleToggleWishlist\}/);

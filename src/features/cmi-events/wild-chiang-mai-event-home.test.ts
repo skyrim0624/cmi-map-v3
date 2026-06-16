@@ -9,9 +9,14 @@ test('神奇动物捕获卡保留动态帖同款互动动作', () => {
   assert.match(source, /aria-label="盖戳"/);
   assert.match(source, /aria-label=\{isWishlisted \? '取消收藏' : '收藏'\}/);
   assert.match(source, /aria-label="评论"/);
+  assert.match(source, /grid grid-cols-\[34px_minmax\(0,1fr\)\]/);
+  assert.match(source, /formatTraceTime\(recommendation\?\.created_at \?\? image\.createdAt\)/);
   assert.match(source, /onStamp=\{\(\) => onStartStamp\(recommendation\.id\)\}/);
   assert.match(source, /onWishlist=\{\(\) => onToggleWishlist\(recommendation\)\}/);
   assert.match(source, /onComment=\{\(\) => onOpenComment\(recommendation\)\}/);
+  assert.doesNotMatch(source, /<span>盖戳<\/span>/);
+  assert.doesNotMatch(source, /<span>收藏<\/span>/);
+  assert.doesNotMatch(source, /<span>评论<\/span>/);
 });
 
 test('神奇动物捕获卡支持把图章盖到卡片上', () => {

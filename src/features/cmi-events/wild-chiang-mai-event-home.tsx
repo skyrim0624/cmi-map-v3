@@ -2,6 +2,7 @@ import { Bookmark, Camera, MessageCircle, Sticker as StickerIcon, Trophy } from 
 import { type MouseEvent as ReactMouseEvent, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import type { CmiEvent } from '@/data/cmi-events';
+import type { PublicProfile } from '@/db/api';
 import {
   getEventRecapLeaderboard,
   type EventRecapImage,
@@ -19,6 +20,7 @@ interface WildChiangMaiEventHomeProps {
   activeRecIdForSticker: string | null;
   activeStickerId: string | null;
   availableStickers: Sticker[];
+  authorProfilesByKey: Record<string, PublicProfile>;
   placedStickers: PlacedStickerMap;
   showStickerDrawer: boolean;
   wishlistStateByRecommendationId: WishlistStateMap;
@@ -33,6 +35,61 @@ interface WildChiangMaiEventHomeProps {
 }
 
 const formatCaptureCount = (count: number) => `${count} 次捕获`;
+const USER_AVATAR_FALLBACK_COLORS = ['#f6c85f', '#f28c6b', '#70b7a7', '#6f9fd8', '#b58ad9', '#ef9eb3'];
+
+const getProfileLookupKey = (value: string | null | undefined) =>
+  value?.normalize('NFKC').trim().toLowerCase() ?? '';
+
+const getRecommendationAuthorProfile = (
+  recommendation: Recommendation,
+  profiles: Record<string, PublicProfile>
+) => profiles[getProfileLookupKey(recommendation.user_id)]
+  ?? profiles[getProfileLookupKey(recommendation.user_name)]
+  ?? null;
+
+const getUserInitial = (name: string | null | undefined) => {
+  const normalizedName = name?.normalize('NFKC').trim();
+  return normalizedName ? Array.from(normalizedName)[0].toUpperCase() : 'C';
+};
+
+const escapeSvgText = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+const getFallbackAvatarUrl = (name: string) => {
+  const initial = getUserInitial(name);
+  const colorIndex = Array.from(name || initial).reduce(
+    (sum, character) => sum + (character.codePointAt(0) ?? 0),
+    0
+  ) % USER_AVATAR_FALLBACK_COLORS.length;
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+      <rect width="96" height="96" rx="48" fill="${USER_AVATAR_FALLBACK_COLORS[colorIndex]}"/>
+      <text x="48" y="48" text-anchor="middle" dominant-baseline="central" alignment-baseline="middle" font-family="Arial, sans-serif" font-size="38" font-weight="800" fill="#2f2a23">${escapeSvgText(initial)}</text>
+    </svg>
+  `;
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
+const formatTraceTime = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '刚刚';
+
+  const diffMinutes = Math.max(0, Math.round((Date.now() - date.getTime()) / 60000));
+  if (diffMinutes < 1) return '刚刚';
+  if (diffMinutes < 60) return `${diffMinutes} 分钟前`;
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours} 小时前`;
+
+  return date.toLocaleDateString('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+  });
+};
 
 export function WildChiangMaiEventHome({
   event,
@@ -43,6 +100,7 @@ export function WildChiangMaiEventHome({
   activeRecIdForSticker,
   activeStickerId,
   availableStickers,
+  authorProfilesByKey,
   placedStickers,
   showStickerDrawer,
   wishlistStateByRecommendationId,
@@ -160,12 +218,18 @@ export function WildChiangMaiEventHome({
                   const isStampTargetActive = Boolean(
                     recommendation && activeStickerId && activeRecIdForSticker === recommendation.id
                   );
+                  const authorProfile = recommendation
+                    ? getRecommendationAuthorProfile(recommendation, authorProfilesByKey)
+                    : null;
+                  const authorName = recommendation?.user_name || authorProfile?.user_name || image.userName || 'CMI 朋友';
+                  const authorAvatarUrl = authorProfile?.avatar_url?.trim() || getFallbackAvatarUrl(authorName);
+                  const createdLabel = formatTraceTime(recommendation?.created_at ?? image.createdAt);
 
                   return (
                     <article
                       key={image.id}
                       className={cn(
-                        'relative grid grid-cols-[5.6rem_minmax(0,1fr)] gap-3 overflow-hidden border-[2px] border-[#111827] bg-white p-3 shadow-[4px_5px_0_rgba(17,24,39,0.16)]',
+                        'relative grid grid-cols-[96px_minmax(0,1fr)] items-start gap-[13px] overflow-hidden border-[2px] border-[#111827] bg-white px-[14px] py-[13px] shadow-[4px_5px_0_rgba(17,24,39,0.16)]',
                         index % 2 === 0 ? 'rotate-[1deg]' : 'rotate-[-1deg]',
                         isStampTargetActive && 'cursor-crosshair outline outline-[3px] outline-offset-2 outline-[#ff8bb9]'
                       )}
@@ -180,16 +244,25 @@ export function WildChiangMaiEventHome({
                       <img
                         src={image.imageUrl}
                         alt={`${image.userName} 捕获的神奇动物`}
-                        className="relative z-0 aspect-square w-full border-[2px] border-[#111827] object-cover"
+                        className="relative z-0 h-24 w-24 rounded-[13px] border border-[#111827]/15 bg-[#f7f7f7] object-cover"
                         loading="lazy"
                         decoding="async"
                       />
-                      <div className="relative z-20 min-w-0 py-1">
-                        <p className="inline-block max-w-full truncate bg-[#111827] px-2 py-1 text-sm font-black text-white">
-                          {image.userName}
-                        </p>
-                        <p className="mt-2 text-xs font-black text-[#1297d8]">{image.placeName}</p>
-                        <p className="mt-2 line-clamp-2 text-sm font-semibold leading-snug text-[#384252]">
+                      <div className="relative z-20 flex min-w-0 flex-col">
+                        <div className="grid grid-cols-[34px_minmax(0,1fr)] items-start gap-2.5">
+                          <span className="block h-[34px] w-[34px] overflow-hidden rounded-full bg-white">
+                            <img src={authorAvatarUrl} alt="" className="h-full w-full object-cover" />
+                          </span>
+                          <div className="min-w-0">
+                            <strong className="block truncate text-[14px] font-black leading-[1.12] text-[#111827]">
+                              {authorName}
+                            </strong>
+                            <span className="mt-0.5 block truncate text-[12px] font-black leading-tight text-[#111827]">
+                              {createdLabel}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="mt-3 line-clamp-2 text-[17px] font-black leading-snug text-[#111827]">
                           {image.reason || '发现了一只神奇动物'}
                         </p>
                         {recommendation && (
@@ -290,20 +363,20 @@ function WildCaptureActions({
   };
 
   return (
-    <div className="mt-3 flex items-center gap-3 text-[#111827]" aria-label="神奇动物互动">
+    <div className="mt-4 flex items-center gap-9 text-[#111827]" aria-label="神奇动物互动">
       <button
         type="button"
-        className="grid h-8 w-8 place-items-center rounded-full border-[2px] border-[#111827] bg-[#fff7dc] shadow-[2px_3px_0_rgba(17,24,39,0.14)] transition active:scale-95"
+        className="grid h-8 w-8 place-items-center rounded-full bg-transparent transition active:scale-95"
         onClick={(event) => handleActionClick(event, onStamp)}
         aria-label="盖戳"
         title="盖戳"
       >
-        <StickerIcon className="h-4 w-4" strokeWidth={3} />
+        <StickerIcon className="h-5 w-5" strokeWidth={3} />
       </button>
       <button
         type="button"
         className={cn(
-          'grid h-8 w-8 place-items-center rounded-full border-[2px] border-[#111827] bg-[#fff7dc] shadow-[2px_3px_0_rgba(17,24,39,0.14)] transition active:scale-95',
+          'grid h-8 w-8 place-items-center rounded-full bg-transparent transition active:scale-95',
           isWishlisted && 'text-[#ff5a4d]'
         )}
         onClick={(event) => handleActionClick(event, onWishlist)}
@@ -311,16 +384,16 @@ function WildCaptureActions({
         aria-pressed={isWishlisted}
         title="收藏"
       >
-        <Bookmark className={cn('h-4 w-4', isWishlisted && 'fill-current')} strokeWidth={3} />
+        <Bookmark className={cn('h-5 w-5', isWishlisted && 'fill-current')} strokeWidth={3} />
       </button>
       <button
         type="button"
-        className="grid h-8 w-8 place-items-center rounded-full border-[2px] border-[#111827] bg-[#fff7dc] shadow-[2px_3px_0_rgba(17,24,39,0.14)] transition active:scale-95"
+        className="grid h-8 w-8 place-items-center rounded-full bg-transparent transition active:scale-95"
         onClick={(event) => handleActionClick(event, onComment)}
         aria-label="评论"
         title="评论"
       >
-        <MessageCircle className="h-4 w-4" strokeWidth={3} />
+        <MessageCircle className="h-5 w-5" strokeWidth={3} />
       </button>
     </div>
   );

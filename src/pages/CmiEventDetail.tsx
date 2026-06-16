@@ -40,7 +40,12 @@ import {
   getPublishedCmiEvents,
   registerForCmiEvent,
 } from '@/db/cmi-events';
-import { getAllRecommendations } from '@/db/api';
+import {
+  getAllRecommendations,
+  getProfilesByUserIds,
+  getProfilesByUserNames,
+  type PublicProfile,
+} from '@/db/api';
 import {
   type EventDetailRegistrationButtonTone,
   getEventDetailRegistrationButtonState,
@@ -98,6 +103,7 @@ type NavigatorWithFileShare = Navigator & {
   canShare?: (data: FileShareData) => boolean;
   share?: (data: FileShareData) => Promise<void>;
 };
+type ProfileLookup = Record<string, PublicProfile>;
 
 const decodeRouteParam = (value: string | undefined) => {
   if (!value) return '';
@@ -137,6 +143,16 @@ const getExternalRegistrationClipboardValue = (registrationLabel: string) => {
 const isWishlistedByUser = (recommendation: Recommendation, userId: string | null | undefined) => {
   if (!userId) return false;
   return recommendation.wishlists?.some(wishlist => wishlist.user_id === userId) ?? false;
+};
+
+const getProfileLookupKey = (value: string | null | undefined) =>
+  value?.normalize('NFKC').trim().toLowerCase() ?? '';
+
+const addProfileLookupEntry = (lookup: ProfileLookup, profile: PublicProfile) => {
+  [profile.id, profile.handle, profile.user_name].forEach(value => {
+    const key = getProfileLookupKey(value);
+    if (key) lookup[key] = profile;
+  });
 };
 
 const clampStickerRatio = (value: number) => Math.min(100, Math.max(0, value));
@@ -251,6 +267,7 @@ export default function CmiEventDetail() {
   const [sharingEvent, setSharingEvent] = useState(false);
   const [recapRecommendations, setRecapRecommendations] = useState<Recommendation[]>([]);
   const [recapsLoading, setRecapsLoading] = useState(false);
+  const [authorProfilesByKey, setAuthorProfilesByKey] = useState<ProfileLookup>({});
   const [localWishlists, setLocalWishlists] = useState<WishlistStateMap>({});
   const [placedStickers, setPlacedStickers] = useState<PlacedStickerMap>({});
   const [availableStickers, setAvailableStickers] = useState<Sticker[]>([]);
@@ -343,6 +360,7 @@ export default function CmiEventDetail() {
     setManagedRegistrations([]);
     setPublicRegistrations([]);
     setRegistrationMarkedFull(false);
+    setAuthorProfilesByKey({});
     setLocalWishlists({});
     setPlacedStickers({});
     setShowStickerDrawer(false);
@@ -481,6 +499,44 @@ export default function CmiEventDetail() {
       isMounted = false;
     };
   }, [eventId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (recapRecommendations.length === 0) {
+      setAuthorProfilesByKey({});
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    const userIds = recapRecommendations.map(recommendation => recommendation.user_id);
+    const userNames = recapRecommendations
+      .map(recommendation => recommendation.user_name)
+      .filter(name => Boolean(getProfileLookupKey(name)));
+
+    Promise.all([
+      getProfilesByUserIds(userIds),
+      getProfilesByUserNames(userNames),
+    ])
+      .then(([profilesById, profilesByName]) => {
+        if (!isMounted) return;
+
+        const nextLookup: ProfileLookup = {};
+        [...profilesById, ...profilesByName].forEach(profile => {
+          addProfileLookupEntry(nextLookup, profile);
+        });
+        setAuthorProfilesByKey(nextLookup);
+      })
+      .catch(error => {
+        console.error('活动返图用户头像加载失败:', error);
+        if (isMounted) setAuthorProfilesByKey({});
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [recapRecommendations]);
 
   useEffect(() => {
     let isMounted = true;
@@ -836,6 +892,7 @@ export default function CmiEventDetail() {
         activeRecIdForSticker={activeRecIdForSticker}
         activeStickerId={activeStickerId}
         availableStickers={availableStickers}
+        authorProfilesByKey={authorProfilesByKey}
         placedStickers={placedStickers}
         showStickerDrawer={showStickerDrawer}
         wishlistStateByRecommendationId={wishlistStateByRecommendationId}
