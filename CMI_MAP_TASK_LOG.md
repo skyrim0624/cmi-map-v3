@@ -63,24 +63,26 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - Playwright 430x860 截图确认地图上展示带「神奇生物在哪里」文字的贴纸 marker；生产构建 `pnpm build` 通过。
 
-### 2026-06-17 cmimap.com 旧原型首页彻底下线并恢复统一入口
+### 2026-06-17 cmimap.com 旧原型与旧地图入口彻底下线
 
-- 背景：用户反馈在浏览器打开 `cmimap.com` 仍看到“清迈，今天怎么过？”旧原型首页。
+- 背景：用户反馈在浏览器打开 `cmimap.com` 仍看到“清迈，今天怎么过？”旧原型首页，随后又反馈 `cmimap.com/map` 仍进入旧地图页。
 - 根因：
   - `src/routes.tsx` 仍把根路径 `/` 和 `/v3` 指向 `CmiMapV3Prototype`。
   - `getCmiFeedPath` / `getCmiEventsPath` 仍生成 `/?screen=feed`、`/?screen=events`，内部跳转还可能把用户带回旧原型。
-  - 第一轮修正误把根域名接到 `/map`，但 `/map` 是统一入口里 `CMI MAP` 按钮进入后的地图页，不是主入口。
+  - 第一轮修正误把根域名接到 `/map`，导致用户仍可能从浏览器历史或搜索结果进入旧地图页。
 - 本轮修复：
   - 删除 `CmiMapV3Prototype.tsx`、`cmi-map-v3-prototype.css` 及其专属测试文件。
   - `/` 直接渲染 `/community` 同款统一社区入口，不再跳到 `/map`。
-  - `/v3`、`/blackboard`、`/cmi-home` 全部重定向到 `/`。
-  - 旧动态 / 活动路径工具改为 `/map` 与 `/map?scene=tomorrow-events`。
+  - `/map`、`/v3`、`/blackboard`、`/cmi-home` 全部重定向到 `/`。
+  - 统一入口里的 `CMI MAP` 热区改回 `https://cmimap.com`，避免点击后再次进入旧地图页。
+  - 历史 `/map?...` 链接即使被浏览器历史或旧入口打开，也会被统一收回 `/`。
 - 验证结果：
-  - `node --test --experimental-strip-types src/routes.test.ts src/pages/CmiCommunityEntrance.test.ts src/lib/paths.test.ts` 通过，14 项测试全部通过。
+  - `node --test --experimental-strip-types src/routes.test.ts src/pages/CmiCommunityEntrance.test.ts src/lib/paths.test.ts` 通过。
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm exec biome lint src/routes.tsx src/routes.test.ts src/App.tsx src/pages/CmiCommunityEntrance.tsx src/pages/CmiCommunityEntrance.test.ts` 通过。
   - `pnpm build` 通过，PWA precache 检查为 `0 项`。
-  - 本地浏览器验证 `http://127.0.0.1:5189/` 显示黄色统一入口，不显示地图搜索和“标记新地点”；`CMI MAP` 链接仍指向 `https://cmimap.com/map`。
+  - 本地浏览器验证 `http://127.0.0.1:5189/` 显示黄色统一入口，不显示地图搜索和“标记新地点”；`CMI MAP` 链接指向 `https://cmimap.com`。
+  - 本地浏览器验证 `http://127.0.0.1:5189/map` 会回到 `/` 统一入口，不再显示地图页。
   - 本地浏览器验证 `/v3` 会回到 `/` 统一入口；轮播箭头可切到 `02/05`，console 无 warn/error。
 
 ### 2026-06-16 cmimap.com 旧版回滚排查与恢复

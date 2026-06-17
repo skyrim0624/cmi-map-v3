@@ -10,6 +10,13 @@ test('根域名直接渲染社区统一入口，不再跳到地图页', () => {
   assert.doesNotMatch(source, /path: '\/'[\s\S]*?<Navigate to="\/map" replace \/>/);
 });
 
+test('地图旧入口也不再渲染地图页，统一回到社区入口', () => {
+  assert.doesNotMatch(source, /const MapView = lazy/);
+  assert.doesNotMatch(source, /element: <MapView \/>/);
+  assert.match(source, /path: '\/map'/);
+  assert.match(source, /element: <Navigate to="\/" replace \/>/);
+});
+
 test('旧清迈客栈页不再渲染独立页面，改为统一入口', () => {
   assert.match(source, /path: '\/cmi-home'/);
   assert.match(source, /element: <Navigate to="\/" replace \/>/);

@@ -2,7 +2,6 @@ import { lazy, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { getSceneMapPath } from '@/lib/paths';
 
-const MapView = lazy(() => import('./pages/MapView'));
 const ListView = lazy(() => import('./pages/ListView'));
 const PlaceDetail = lazy(() => import('./pages/PlaceDetail'));
 const AddTrace = lazy(() => import('./pages/AddTrace'));
@@ -56,9 +55,9 @@ export const routes: RouteConfig[] = [
     public: true,
   },
   {
-    name: '地图查看',
+    name: '旧地图入口',
     path: '/map',
-    element: <MapView />,
+    element: <Navigate to="/" replace />,
     public: true,
   },
   {

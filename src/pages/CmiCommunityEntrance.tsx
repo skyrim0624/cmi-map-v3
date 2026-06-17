@@ -207,7 +207,7 @@ export default function CmiCommunityEntrance() {
         />
         <a
           className="cmi-reference-hotspot cmi-reference-hotspot--map"
-          href="https://cmimap.com/map"
+          href="https://cmimap.com"
           aria-label="CMI MAP"
         />
         <a
