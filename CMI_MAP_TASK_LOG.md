@@ -66,6 +66,9 @@
   - `pnpm exec biome lint src/routes.tsx src/routes.test.ts src/lib/paths.ts src/lib/paths.test.ts src/pages/MarkPlace.test.ts src/App.tsx` 通过。
   - `pnpm build` 通过，PWA precache 检查为 `0 项`。
   - 本地浏览器验证 `http://127.0.0.1:5188/` 与 `/v3` 均跳转到 `/map`；页面显示新地图和“标记新地点”，不再出现旧 hero 文案，console 无 warn/error。
+  - 已部署到 Cloudflare Pages Production：`https://83691ad2.cmi-map.pages.dev`，Source 为 `a13a1af`。
+  - 正式域名 `https://cmimap.com/?verify=a13a1af-old-home-removed` 与 `/v3?verify=a13a1af-old-home-removed` 均返回新入口 `assets/index-CLhERvTB.js`；线上 `index` 和 `MapView` 包均不含旧原型名或旧首页文案。
+  - 正式域名浏览器验证：`https://cmimap.com/` 和 `/v3` 都实际落到 `/map`，显示新地图，console 无 warn/error。
 
 ### 2026-06-16 cmimap.com 旧版回滚排查与恢复
 
