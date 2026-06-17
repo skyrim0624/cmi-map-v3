@@ -2766,3 +2766,18 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - `pnpm build` 通过。
   - 旧的 `src/pages/MarkPlace.test.ts` 里有两个源码断言仍失败，原因是测试仍禁止当前已上线的贴纸预览/贴纸生成代码，不属于本轮保存失败修复。
+
+### 2026-06-17 神奇生物图鉴圆形贴纸与延展墙
+
+- 背景：用户反馈自动沿生物边缘裁切的贴纸会把主体裁得很恐怖，希望统一像小猫照片那样做圆形；同时图鉴墙不能固定一张尺寸，需要随着生物数量增加继续向下延伸。
+- 本轮实现：
+  - 图鉴页不再把照片现场生成轮廓抠图贴纸，改为直接用原照片圆形展示，并根据识别主体框调整圆形裁切中心。
+  - 图鉴画板按每 8 个贴纸一页重复背景，外层高度随页数增长，生物继续增加时会继续向下排布。
+  - 底层贴纸生成工具移除 `/api/animal-segment` 抠图路径和多边形回退路径，改为生成带白边、阴影的圆形照片贴纸。
+  - 更新图鉴组件和贴纸工具测试，锁住“圆形照片贴纸”和“背景按页重复延伸”的行为。
+- 验证结果：
+  - `node --test src/components/AnimalStickerAlbum.test.ts src/lib/cmi-wild-animal-stickers.test.ts` 通过，6 项测试通过。
+  - `pnpm exec tsgo -p tsconfig.check.json` 通过。
+  - `pnpm exec biome lint src/components/AnimalStickerAlbum.tsx src/components/AnimalStickerAlbum.test.ts src/lib/cmi-wild-animal-stickers.ts src/lib/cmi-wild-animal-stickers.test.ts` 通过。
+  - `pnpm build` 通过。
+  - 本地浏览器验证公开个人主页 `/people/625942b7-e5ee-4098-8895-299105379344`：390×844 手机视口和默认桌面视口均显示 7 个圆形照片贴纸，背景重复策略生效，控制台无相关 error/warn；点开贴纸弹窗后仍为圆形照片展示。
