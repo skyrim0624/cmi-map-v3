@@ -46,9 +46,27 @@
 31. [完成] 精细透明抠图改走原图 URL + 自托管分割服务
 32. [完成] 恢复 `species.cmimap.com` 常驻模型服务和 tunnel
 33. [完成] 修复 `cmimap.com` 被旧 Production 部署覆盖回古早首页
-34. [完成] 彻底移除旧 `CmiMapV3Prototype` 首页，根域名保留统一社区入口
+34. [完成] 修正正式入口：`cmimap.com` 只显示“神奇动物在哪里”新地图屏
 
 ## 执行记录
+
+### 2026-06-17 cmimap.com 正式入口改为神奇动物新地图屏
+
+- 背景：用户明确指出 `cmimap.com` 不要显示黄色统一入口，也不要显示旧 map；正式域名只应打开截图中的“神奇动物在哪里”新地图页。
+- 根因：
+  - 上一轮误把 `/` 和 `/map` 收到黄色统一入口，方向错误。
+  - “神奇动物在哪里”新地图屏实际在已删除的 `CmiMapV3Prototype` 的 map 状态里，不应该整组件删除。
+- 本轮修复：
+  - 恢复 `CmiMapV3Prototype.tsx`、`cmi-map-v3-prototype.css` 及其专属测试。
+  - `/` 和 `/map` 都直接渲染“神奇动物在哪里”新地图屏。
+  - `/community`、`/v3`、`/blackboard`、`/cmi-home` 全部回到 `/`，不再露出黄色统一入口或旧首页。
+  - `AppShell` 把 `/map` 纳入全屏地图壳层，避免被旧窄容器包住。
+- 验证结果：
+  - `node --test --experimental-strip-types src/routes.test.ts src/pages/CmiMapV3Prototype.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts src/lib/paths.test.ts` 通过，23 项测试全部通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/routes.tsx src/routes.test.ts src/App.tsx src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
+  - 应用内浏览器移动视口验证 `http://127.0.0.1:5190/`：显示“搜动态 / 地点”、神奇动物贴纸、底部“地图 / 动态 / 活动 / 打卡拍照”，不显示黄色统一入口、“清迈，今天怎么过？”或旧搜索“搜地点 / 分类”。
+  - 应用内浏览器验证 `http://127.0.0.1:5190/map` 与根路径一致；底部“活动”可进入 `/?screen=events`，再点“地图”回到 `/`。
 
 ### 2026-06-17 神奇生物在哪里地图贴纸 marker
 

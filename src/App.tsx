@@ -10,7 +10,7 @@ import { RouteGuard } from '@/components/common/RouteGuard';
 
 const AppShell: React.FC = () => {
   const location = useLocation();
-  const isArcadeRoute = location.pathname === '/' || location.pathname === '/community' || location.pathname === '/swap';
+  const isArcadeRoute = location.pathname === '/' || location.pathname === '/map' || location.pathname === '/swap';
   const shellClassName = [
     'flex justify-center overflow-hidden',
     isArcadeRoute ? 'bg-transparent' : 'bg-neutral-100/50 dark:bg-neutral-900/50',

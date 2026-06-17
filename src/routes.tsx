@@ -2,6 +2,7 @@ import { lazy, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { getSceneMapPath } from '@/lib/paths';
 
+const CmiMapV3Prototype = lazy(() => import('./pages/CmiMapV3Prototype'));
 const ListView = lazy(() => import('./pages/ListView'));
 const PlaceDetail = lazy(() => import('./pages/PlaceDetail'));
 const AddTrace = lazy(() => import('./pages/AddTrace'));
@@ -17,7 +18,6 @@ const PlaygroundMarkPlace = lazy(() => import('./pages/PlaygroundMarkPlace'));
 const PlaygroundWishlist = lazy(() => import('./pages/PlaygroundWishlist'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Login = lazy(() => import('./pages/Login'));
-const CmiCommunityEntrance = lazy(() => import('./pages/CmiCommunityEntrance'));
 const CmiSwapPage = lazy(() => import('./pages/CmiSwapPage'));
 
 export interface RouteConfig {
@@ -37,15 +37,15 @@ export const routes: RouteConfig[] = [
     public: true,
   },
   {
-    name: 'CMI 社区入口',
+    name: '神奇动物地图',
     path: '/',
-    element: <CmiCommunityEntrance />,
+    element: <CmiMapV3Prototype />,
     public: true,
   },
   {
-    name: 'CMI 社区入口',
+    name: '旧社区入口',
     path: '/community',
-    element: <CmiCommunityEntrance />,
+    element: <Navigate to="/" replace />,
     public: true,
   },
   {
@@ -55,9 +55,9 @@ export const routes: RouteConfig[] = [
     public: true,
   },
   {
-    name: '旧地图入口',
+    name: '神奇动物地图',
     path: '/map',
-    element: <Navigate to="/" replace />,
+    element: <CmiMapV3Prototype />,
     public: true,
   },
   {
