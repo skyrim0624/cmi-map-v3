@@ -38,9 +38,9 @@ export const routes: RouteConfig[] = [
     public: true,
   },
   {
-    name: 'CMI Map',
+    name: 'CMI 社区入口',
     path: '/',
-    element: <Navigate to="/map" replace />,
+    element: <CmiCommunityEntrance />,
     public: true,
   },
   {
@@ -64,7 +64,7 @@ export const routes: RouteConfig[] = [
   {
     name: '旧动态入口',
     path: '/blackboard',
-    element: <Navigate to="/map" replace />,
+    element: <Navigate to="/" replace />,
     public: true,
   },
   {
@@ -87,13 +87,13 @@ export const routes: RouteConfig[] = [
   {
     name: '清迈客栈',
     path: '/cmi-home',
-    element: <Navigate to="/map" replace />,
+    element: <Navigate to="/" replace />,
     public: true,
   },
   {
     name: '旧 CMI Map 原型',
     path: '/v3',
-    element: <Navigate to="/map" replace />,
+    element: <Navigate to="/" replace />,
     public: true,
   },
   {

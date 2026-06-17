@@ -46,7 +46,7 @@
 31. [完成] 精细透明抠图改走原图 URL + 自托管分割服务
 32. [完成] 恢复 `species.cmimap.com` 常驻模型服务和 tunnel
 33. [完成] 修复 `cmimap.com` 被旧 Production 部署覆盖回古早首页
-34. [完成] 彻底移除旧 `CmiMapV3Prototype` 首页，只保留新 `/map` 入口
+34. [完成] 彻底移除旧 `CmiMapV3Prototype` 首页，根域名保留统一社区入口
 
 ## 执行记录
 
@@ -63,25 +63,25 @@
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
   - Playwright 430x860 截图确认地图上展示带「神奇生物在哪里」文字的贴纸 marker；生产构建 `pnpm build` 通过。
 
-### 2026-06-17 cmimap.com 旧原型首页彻底下线
+### 2026-06-17 cmimap.com 旧原型首页彻底下线并恢复统一入口
 
 - 背景：用户反馈在浏览器打开 `cmimap.com` 仍看到“清迈，今天怎么过？”旧原型首页。
 - 根因：
   - `src/routes.tsx` 仍把根路径 `/` 和 `/v3` 指向 `CmiMapV3Prototype`。
   - `getCmiFeedPath` / `getCmiEventsPath` 仍生成 `/?screen=feed`、`/?screen=events`，内部跳转还可能把用户带回旧原型。
+  - 第一轮修正误把根域名接到 `/map`，但 `/map` 是统一入口里 `CMI MAP` 按钮进入后的地图页，不是主入口。
 - 本轮修复：
   - 删除 `CmiMapV3Prototype.tsx`、`cmi-map-v3-prototype.css` 及其专属测试文件。
-  - `/`、`/v3`、`/blackboard`、`/cmi-home` 全部重定向到 `/map`。
+  - `/` 直接渲染 `/community` 同款统一社区入口，不再跳到 `/map`。
+  - `/v3`、`/blackboard`、`/cmi-home` 全部重定向到 `/`。
   - 旧动态 / 活动路径工具改为 `/map` 与 `/map?scene=tomorrow-events`。
 - 验证结果：
-  - `node --test --experimental-strip-types src/routes.test.ts src/lib/paths.test.ts src/pages/MarkPlace.test.ts` 通过，23 项测试全部通过。
+  - `node --test --experimental-strip-types src/routes.test.ts src/pages/CmiCommunityEntrance.test.ts src/lib/paths.test.ts` 通过，14 项测试全部通过。
   - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
-  - `pnpm exec biome lint src/routes.tsx src/routes.test.ts src/lib/paths.ts src/lib/paths.test.ts src/pages/MarkPlace.test.ts src/App.tsx` 通过。
+  - `pnpm exec biome lint src/routes.tsx src/routes.test.ts src/App.tsx src/pages/CmiCommunityEntrance.tsx src/pages/CmiCommunityEntrance.test.ts` 通过。
   - `pnpm build` 通过，PWA precache 检查为 `0 项`。
-  - 本地浏览器验证 `http://127.0.0.1:5188/` 与 `/v3` 均跳转到 `/map`；页面显示新地图和“标记新地点”，不再出现旧 hero 文案，console 无 warn/error。
-  - 已部署到 Cloudflare Pages Production：`https://83691ad2.cmi-map.pages.dev`，Source 为 `a13a1af`。
-  - 正式域名 `https://cmimap.com/?verify=a13a1af-old-home-removed` 与 `/v3?verify=a13a1af-old-home-removed` 均返回新入口 `assets/index-CLhERvTB.js`；线上 `index` 和 `MapView` 包均不含旧原型名或旧首页文案。
-  - 正式域名浏览器验证：`https://cmimap.com/` 和 `/v3` 都实际落到 `/map`，显示新地图，console 无 warn/error。
+  - 本地浏览器验证 `http://127.0.0.1:5189/` 显示黄色统一入口，不显示地图搜索和“标记新地点”；`CMI MAP` 链接仍指向 `https://cmimap.com/map`。
+  - 本地浏览器验证 `/v3` 会回到 `/` 统一入口；轮播箭头可切到 `02/05`，console 无 warn/error。
 
 ### 2026-06-16 cmimap.com 旧版回滚排查与恢复
 
