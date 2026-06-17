@@ -132,7 +132,7 @@ export const CMI_EVENT_TIME_BUCKET_LABELS: Record<CmiEventTimeBucket, string> = 
   stable: '稳定活动',
 };
 
-export const CMI_EVENTS_LAST_MAINTAINED_AT = '2026-06-17T14:48:58+07:00';
+export const CMI_EVENTS_LAST_MAINTAINED_AT = '2026-06-17T23:23:55+07:00';
 export const CMI_MAP_EVENT_REGISTRATION_LABEL = 'CMI Map 一键报名';
 export const CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE =
   '参与方式：通过 CMI Map 一键报名；报名成功后，确认邮件会附上微信群、联系人二维码和到场指引。';
@@ -783,8 +783,8 @@ export const CMI_EVENTS: CmiEvent[] = [
     isCmiRelated: true,
     isVerified: true,
     verificationStatus: 'verified',
-    lastCheckedAt: '2026-06-17T14:48:58+07:00',
-    nextCheckBefore: '2026-06-17T17:00:00+07:00',
+    visibilityStatus: 'archived',
+    lastCheckedAt: '2026-06-17T23:23:55+07:00',
     reliabilityNote:
       '信息来自 0617 机器学习推文、发布页、同目录官方海报，并用“0617 灭霸 AI 入门”同时间海报 OCR 交叉核对；时间、地点、费用和参与方式均明确。',
     tags: ['CMI', '清迈客栈', 'AI', '机器学习', '分享会', '免费'],
@@ -792,7 +792,7 @@ export const CMI_EVENTS: CmiEvent[] = [
     organizerName: 'CMI 社区',
     organizerEmail: 'events@cmimap.com',
     registrationEnabled: true,
-    registrationStatus: 'open',
+    registrationStatus: 'closed',
     attendeeVisibility: 'count-only',
     coverImageUrl: '/cmi-home/event-posters/cmi-machine-learning-intro-2026-06-17.png',
   },
@@ -951,6 +951,39 @@ export const CMI_EVENTS: CmiEvent[] = [
     registrationStatus: 'open',
     attendeeVisibility: 'count-only',
     coverImageUrl: '/cmi-home/event-posters/cmi-fantastic-fungi-screening-2026-06-20.png',
+  },
+  {
+    id: 'cmi-fruit-friends-ai-3d-workshop-2026-06-21',
+    title: '水果朋友大派对｜AI + 3D 青少年创新体验活动',
+    type: 'workshop',
+    startAt: '2026-06-21T15:00:00+07:00',
+    endAt: '2026-06-21T17:00:00+07:00',
+    venueName: '清迈客栈',
+    area: 'CMI / 清迈客栈',
+    mapLocation: { latitude: 18.7932, longitude: 98.9874, category: '清迈客栈' },
+    priceLabel: '免费参与',
+    registrationLabel: CMI_MAP_EVENT_REGISTRATION_LABEL,
+    sourceType: 'cmi',
+    sourceLabel: 'CMI 活动宣传内容文件夹',
+    hostName: '乐凡老师 × CMI 社区',
+    language: '中文',
+    suitableFor: ['10-18 岁青少年', 'AI 视觉生成', 'AI 建模新手', '3D 打印体验', '亲子活动'],
+    isCmiRelated: true,
+    isVerified: true,
+    verificationStatus: 'verified',
+    lastCheckedAt: '2026-06-17T23:23:55+07:00',
+    nextCheckBefore: '2026-06-21T13:00:00+07:00',
+    reliabilityNote:
+      '信息来自 6.21 水果朋友大派对推文、发布页与同目录官方海报；时间、地点、费用、时长、适合人群和名额均明确。原材料未提供报名链接，本轮按 CMI Map 内置报名系统发布。',
+    tags: ['CMI', '清迈客栈', 'AI', '3D打印', '青少年', '工作坊', '免费'],
+    summary: '面向 10-18 岁青少年的 AI + 3D 创造体验，在 2 小时内完成水果朋友角色的创意构思、AI 视觉生成与 3D 模型设计。',
+    organizerName: 'CMI 社区',
+    organizerEmail: 'events@cmimap.com',
+    capacity: 10,
+    registrationEnabled: true,
+    registrationStatus: 'open',
+    attendeeVisibility: 'count-only',
+    coverImageUrl: '/cmi-home/event-posters/cmi-fruit-friends-ai-3d-workshop-2026-06-21.png',
   },
   {
     id: 'jing-jai-weekend-market',

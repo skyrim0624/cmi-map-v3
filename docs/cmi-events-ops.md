@@ -81,19 +81,23 @@
 
 Time Out 的本周末专题可以作为及时线索源；如果只用 Time Out，`reliabilityNote` 必须写明“出发前仍建议复核场地方动态”。Citylife、主办方官网、场地方页面和 CMI 自有公告优先级更高。
 
-最新一次维护：2026-06-17 14:48 ICT，本轮从 `/Users/andreas/CMI/活动宣传内容/六月活动` 新增并发布 6 条 CMI / 清迈客栈活动：`cmi-machine-learning-intro-2026-06-17`、`cmi-wild-chiang-mai-nature-quest-2026-06-18`、`cmi-kongxiang-canteen-zongzi-2026-06-19`、`cmi-ai-open-mic-community-ai-2026-06-19`、`cmi-swap-skills-market-2026-06-20`、`cmi-fantastic-fungi-screening-2026-06-20`。
+最新一次维护：2026-06-17 23:23 ICT，本轮从 `/Users/andreas/CMI/活动宣传内容/六月活动/6.21 水果朋友大派对` 新增并发布 1 条 CMI / 清迈客栈活动：`cmi-fruit-friends-ai-3d-workshop-2026-06-21`；同时归档已结束的 `cmi-machine-learning-intro-2026-06-17`。
 
-本轮远程状态同步按 2026-06-17 14:48 ICT 归档已结束的 CMI / 清迈客栈活动，并刷新到期复核时间。`0617 泰语课` 因费用缺失且海报/正文参与方式口径冲突，保留 `needs_review`；`0617 灭霸 AI 入门` 作为机器学习活动重复海报素材合并处理；6/9-6/15 的新增材料已过期，记录为未发布。
+上一轮维护：2026-06-17 14:48 ICT，从 `/Users/andreas/CMI/活动宣传内容/六月活动` 新增并发布 6 条 CMI / 清迈客栈活动：`cmi-machine-learning-intro-2026-06-17`、`cmi-wild-chiang-mai-nature-quest-2026-06-18`、`cmi-kongxiang-canteen-zongzi-2026-06-19`、`cmi-ai-open-mic-community-ai-2026-06-19`、`cmi-swap-skills-market-2026-06-20`、`cmi-fantastic-fungi-screening-2026-06-20`。
+
+远程状态同步按 2026-06-17 23:23 ICT 归档已结束的 CMI / 清迈客栈活动，并检查到期复核时间；本轮无到期复核刷新。`0617 泰语课` 因费用缺失且海报/正文参与方式口径冲突，继续保留 `needs_review`；原 6/21 周历线索已由独立活动文件夹确认并发布。
 
 同步动作：
 
-- 6 条活动均通过 `pnpm cmi:event:publish -- --input <event.json> --admin-publish` 写入远程 `public.cmi_events`，发布后 `--verify-remote --strict` 均通过；远程记录为 `published / verified / cmi`，Storage 图片 HEAD 均返回 `image/*`。
-- 已新增审计迁移 `supabase/migrations/20260617144858_sync_cmi_inn_events_20260617.sql`，包含已结束活动归档、到期复核刷新和 6 条新增活动 upsert。
-- 本地兜底 `src/data/cmi-events.ts` 已更新维护时间并新增 6 条活动。
-- `src/data/cmi-event-details.ts` 已补充 6 条活动的详情页海报、首页卡片背景和正文映射。
-- 已生成 6 张首页卡片背景到 `public/cmi-home/event-card-backgrounds/`，尺寸为 1280x549；详情页海报已保存到 `public/cmi-home/event-posters/`。`cmi-swap-skills-market-2026-06-20` 的原始海报为 17MB，已压缩为 1280 宽 JPEG 后作为发布素材。
+- 6 月 21 日水果朋友活动已通过 `pnpm cmi:event:publish -- --input tmp/cmi-fruit-friends-ai-3d-workshop-2026-06-21.json --admin-publish` 写入远程 `public.cmi_events`；远程记录为 `published / verified / cmi`，Storage 图片 HEAD 返回 `image/*`。
+- 上一轮 6 条活动均通过 `pnpm cmi:event:publish -- --input <event.json> --admin-publish` 写入远程 `public.cmi_events`，发布后 `--verify-remote --strict` 均通过；远程记录为 `published / verified / cmi`，Storage 图片 HEAD 均返回 `image/*`。
+- 已新增审计迁移 `supabase/migrations/20260617232355_sync_cmi_inn_events_and_fruit_friends_20260617.sql`，包含本轮已结束活动归档、到期复核刷新逻辑和 6 月 21 日新增活动 upsert。
+- 上一轮审计迁移 `supabase/migrations/20260617144858_sync_cmi_inn_events_20260617.sql` 包含 6 条活动 upsert。
+- 本地兜底 `src/data/cmi-events.ts` 已更新维护时间、新增 6 月 21 日水果朋友活动，并把 6 月 17 日机器学习活动标记为 `archived / closed`。
+- `src/data/cmi-event-details.ts` 已补充 6 月 21 日活动的详情页海报、首页卡片背景和正文映射。
+- 已生成 6 月 21 日活动首页卡片背景到 `public/cmi-home/event-card-backgrounds/`，尺寸为 1280x549；详情页海报已保存到 `public/cmi-home/event-posters/`。
 
-当前本地兜底包含的近期 CMI / 清迈客栈活动：`cmi-machine-learning-intro-2026-06-17`、`cmi-wild-chiang-mai-nature-quest-2026-06-18`、`cmi-kongxiang-canteen-zongzi-2026-06-19`、`cmi-ai-open-mic-community-ai-2026-06-19`、`cmi-swap-skills-market-2026-06-20`、`cmi-fantastic-fungi-screening-2026-06-20`。
+当前本地兜底包含的近期 CMI / 清迈客栈活动：`cmi-wild-chiang-mai-nature-quest-2026-06-18`、`cmi-kongxiang-canteen-zongzi-2026-06-19`、`cmi-ai-open-mic-community-ai-2026-06-19`、`cmi-swap-skills-market-2026-06-20`、`cmi-fantastic-fungi-screening-2026-06-20`、`cmi-fruit-friends-ai-3d-workshop-2026-06-21`。
 
 ## 类型标签
 

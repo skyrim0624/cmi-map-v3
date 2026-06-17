@@ -75,6 +75,8 @@ export const CMI_EVENT_POSTER_BY_ID: Partial<Record<string, string>> = {
     '/cmi-home/event-posters/cmi-swap-skills-market-2026-06-20.jpg',
   'cmi-fantastic-fungi-screening-2026-06-20':
     '/cmi-home/event-posters/cmi-fantastic-fungi-screening-2026-06-20.png',
+  'cmi-fruit-friends-ai-3d-workshop-2026-06-21':
+    '/cmi-home/event-posters/cmi-fruit-friends-ai-3d-workshop-2026-06-21.png',
 };
 
 export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = {
@@ -125,6 +127,8 @@ export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = 
     '/cmi-home/event-card-backgrounds/cmi-swap-skills-market-2026-06-20.jpg',
   'cmi-fantastic-fungi-screening-2026-06-20':
     '/cmi-home/event-card-backgrounds/cmi-fantastic-fungi-screening-2026-06-20.jpg',
+  'cmi-fruit-friends-ai-3d-workshop-2026-06-21':
+    '/cmi-home/event-card-backgrounds/cmi-fruit-friends-ai-3d-workshop-2026-06-21.jpg',
 };
 
 export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailContent> = {
@@ -1095,6 +1099,26 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
       { kind: 'list', items: ['喜欢纪录片、自然、生态与生命科学的人', '对意识、连接、非人类智慧这些主题有兴趣的人', '想在周六晚上安静看一部电影、再和大家聊聊的人'] },
       { kind: 'heading', text: '活动信息' },
       { kind: 'list', items: ['活动时间：6 月 20 日（周六）19:00', '活动地点：清迈客栈', '场地费用：免费参与', CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE] },
+    ],
+  },
+  'cmi-fruit-friends-ai-3d-workshop-2026-06-21': {
+    eventId: 'cmi-fruit-friends-ai-3d-workshop-2026-06-21',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-fruit-friends-ai-3d-workshop-2026-06-21']!,
+    postTitle: '水果朋友大派对｜AI + 3D 青少年创新体验活动',
+    postBlocks: [
+      { kind: 'paragraph', text: '如果你的孩子喜欢画画、玩游戏、做手工，这场 AI + 3D 创造之旅会带他们完整体验一次从创意构思到 3D 模型设计的创作挑战。' },
+      { kind: 'paragraph', text: '本周日 6 月 21 日下午 3 点，乐凡老师将在清迈客栈带队举办「水果朋友大派对｜AI + 3D 青少年创新体验活动」。' },
+      { kind: 'paragraph', text: '活动面向 10-18 岁青少年，通过生成式 AI、AI 建模和 3D 打印流程，让零基础学生在 2 小时内完成一次从创意构思、AI 视觉生成到 3D 模型设计的创作挑战，亲手打造属于自己的水果朋友角色。' },
+      { kind: 'heading', text: '活动亮点' },
+      {
+        kind: 'list',
+        items: ['零基础也能完成 AI 设计作品', '亲手创造独一无二的水果朋友', '体验未来设计师的创意工作流程', '获得专属 AI 创作成果'],
+      },
+      { kind: 'heading', text: '活动信息' },
+      {
+        kind: 'list',
+        items: ['活动时间：6 月 21 日（周日）15:00-17:00', '活动地点：清迈客栈', '场地费用：免费参与', '适合人群：10-18 岁青少年', '参与准备：需自带手机和电脑', '活动名额：限额 10 人', CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE],
+      },
     ],
   },
 };
