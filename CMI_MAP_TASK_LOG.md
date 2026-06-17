@@ -2802,3 +2802,13 @@
   - `pnpm exec biome lint src/components/AnimalStickerAlbum.tsx src/components/AnimalStickerAlbum.test.ts src/lib/cmi-wild-animal-stickers.ts src/lib/cmi-wild-animal-stickers.test.ts` 通过。
   - `pnpm build` 通过。
   - 本地浏览器验证公开个人主页 `/people/625942b7-e5ee-4098-8895-299105379344`：390×844 手机视口和默认桌面视口均显示 7 个圆形照片贴纸，背景重复策略生效，控制台无相关 error/warn；点开贴纸弹窗后仍为圆形照片展示。
+
+### 2026-06-17 拍照打卡坐标防偏移修复
+
+- 背景：用户担心拍照打卡后地图点位仍有位置误差，旧逻辑在 GPS/EXIF 失败时会把当前地图坐标当作可发布坐标。
+- 本轮实现：
+  - 定位失败不再静默发布默认地图中心，改为进入已有手动定点流程。
+  - 照片、EXIF 或已选地点进入手动改点时，不再被地图组件二次自动定位覆盖。
+- 验证结果：
+  - `node --test src/pages/MarkPlace.test.ts` 通过，12 项测试通过。
+  - `pnpm run lint` 通过，包含 TypeScript 检查、Biome、Tailwind 语法检查和 Vite build。

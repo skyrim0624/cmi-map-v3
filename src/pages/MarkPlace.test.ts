@@ -7,11 +7,10 @@ const indexCssSource = readFileSync(new URL('../index.css', import.meta.url), 'u
 const leafletMapSource = readFileSync(new URL('../components/map/LeafletMap.tsx', import.meta.url), 'utf8');
 const playgroundMarkPlaceSource = readFileSync(new URL('./PlaygroundMarkPlace.tsx', import.meta.url), 'utf8');
 
-test('相册旧照优先使用 EXIF 坐标，读不到也不强制手动定点', () => {
+test('相册旧照优先使用 EXIF 坐标，读不到再尝试 GPS', () => {
   assert.match(source, /extractGpsCoordinatesFromImageFile\(sourceFile\)/);
   assert.match(source, /applyCapturedCoordinates\(exifCoordinates, '照片坐标 \(EXIF\)'\)/);
-  assert.match(source, /fetchCurrentLocation\('照片没有定位，已用当前地图坐标'\)/);
-  assert.doesNotMatch(source, /markLocationCaptureFailed\('照片没有定位，发布前需手动定点'\)/);
+  assert.match(source, /fetchCurrentLocation\('照片没有定位，请手动定点'\)/);
   assert.match(source, /const timer2 = setTimeout\(\(\) => \{\s+setStage\('voice'\);/);
   assert.doesNotMatch(source, /sourceType === 'exif' \? 'map_fallback' : 'voice'/);
 });
@@ -27,7 +26,7 @@ test('手动选点页提供地点搜索和候选绑定', () => {
 test('手动选点地图不会把拖动后的中心继续作为 Leaflet 默认中心', () => {
   assert.match(source, /const \[mapDefaultCenter, setMapDefaultCenter\] = useState\(initialCenter\)/);
   assert.match(source, /defaultCenter=\{mapDefaultCenter\}/);
-  assert.match(source, /onCenterChange=\{\(lat, lng\) => setCenter\(\{lat, lng\}\)\}/);
+  assert.match(source, /onCenterChange=\{\(lat, lng\) => setCenter\(\{ lat, lng \}\)\}/);
 });
 
 test('网页相机拍照输出正方形并使用取景框双指缩放', () => {
@@ -155,19 +154,22 @@ test('发布不再强制进入标签选择页', () => {
   assert.doesNotMatch(source, /getCategoryIconUrl/);
 });
 
-test('拍照定位成功后直接用坐标发布，手动选点只作为修改入口', () => {
+test('拍照定位必须拿到真实坐标或手动确认后才能发布', () => {
   assert.match(source, /type LocationCaptureStatus = 'pending' \| 'ready' \| 'failed'/);
   assert.match(source, /formatCoordinatePlaceName\(targetCoordinates\)/);
-  assert.match(source, /continueWithCurrentCoordinate\(fallbackLabel\)/);
+  assert.match(source, /markLocationCaptureFailed\(fallbackLabel\)/);
   assert.match(source, /setLocationCaptureStatus\('ready'\)/);
   assert.match(source, /setLocationCaptureStatus\('failed'\)/);
   assert.match(source, /if \(locationCaptureStatus === 'failed'\) \{/);
-  assert.match(source, /if \(photoURL\) \{\s+setLocationCaptureStatus\('ready'\);\s+void handleSubmitFinal\(getAutomaticPublishCategory\(\)\);/);
   assert.match(source, /setStage\('map_fallback'\)/);
   assert.match(source, /void handleSubmitFinal\(getAutomaticPublishCategory\(\)\)/);
+  assert.match(source, /const shouldAutoLocateMapFallback = !photoURL && !pickedPlaceName\.trim\(\) && !hasInitialPickedPlace/);
+  assert.match(source, /showUserLocation=\{shouldAutoLocateMapFallback\}/);
   assert.match(source, /aria-label="修改位置"/);
   assert.match(source, /位置不对？修改/);
   assert.match(source, /aria-label=\{locationCaptureStatus === 'failed' && !photoURL \? '去手动定点' : '发布动态'\}/);
+  assert.doesNotMatch(source, /continueWithCurrentCoordinate/);
+  assert.doesNotMatch(source, /定位暂时失败，已用当前地图坐标/);
   assert.doesNotMatch(source, /punctuationIndex/);
   assert.doesNotMatch(source, /text\.substring\(0, Math\.min\(30, text\.length\)\)/);
   assert.doesNotMatch(source, /aria-label=\{selectedPlaceLabel \? '进入分类发布' : '先关联地点'\}/);

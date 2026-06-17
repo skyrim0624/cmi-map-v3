@@ -1116,13 +1116,8 @@ export default function MarkPlace() {
     setLocationCaptureStatus('failed');
   };
 
-  const continueWithCurrentCoordinate = (label: string) => {
-    setLocationName(label);
-    setLocationCaptureStatus('ready');
-  };
-
   // 获取地理位置
-  const fetchCurrentLocation = (fallbackLabel = '定位暂时失败，已用当前地图坐标') => {
+  const fetchCurrentLocation = (fallbackLabel = '定位暂时失败，请手动定点') => {
     setLocationCaptureStatus('pending');
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -1134,12 +1129,12 @@ export default function MarkPlace() {
         },
         (error) => {
           console.error("GPS 获取失败", error);
-          continueWithCurrentCoordinate(fallbackLabel);
+          markLocationCaptureFailed(fallbackLabel);
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     } else {
-      continueWithCurrentCoordinate(fallbackLabel);
+      markLocationCaptureFailed(fallbackLabel);
     }
   };
 
@@ -1171,7 +1166,7 @@ export default function MarkPlace() {
       } else if (exifCoordinates) {
         applyCapturedCoordinates(exifCoordinates, '照片坐标 (EXIF)');
       } else {
-        fetchCurrentLocation('照片没有定位，已用当前地图坐标');
+        fetchCurrentLocation('照片没有定位，请手动定点');
       }
 
       setTimeout(() => {
@@ -1271,12 +1266,6 @@ export default function MarkPlace() {
     }
 
     if (locationCaptureStatus === 'failed') {
-      if (photoURL) {
-        setLocationCaptureStatus('ready');
-        void handleSubmitFinal(getAutomaticPublishCategory());
-        return;
-      }
-
       setStage('map_fallback');
       return;
     }
@@ -1530,6 +1519,8 @@ export default function MarkPlace() {
 
     setStage('voice');
   };
+
+  const shouldAutoLocateMapFallback = !photoURL && !pickedPlaceName.trim() && !hasInitialPickedPlace;
 
   if (authLoading || !user) {
     return (
@@ -1829,16 +1820,17 @@ export default function MarkPlace() {
             )}
             
             {stage === 'map_fallback' && (
-               <div className="absolute inset-0 animate-in fade-in duration-300">
-	                 <LeafletMap
-                       key={pickedPlaceName || `${mapDefaultCenter.lat}-${mapDefaultCenter.lng}`}
-	                   mode="mark"
-	                   defaultZoom={15}
-	                   defaultCenter={mapDefaultCenter}
-	                   markTargetYRatio={0.5}
-	                   onCenterChange={(lat, lng) => setCenter({lat, lng})}
-	                   className="h-full w-full border-none outline-none"
-	                 />
+              <div className="absolute inset-0 animate-in fade-in duration-300">
+                <LeafletMap
+                  key={pickedPlaceName || `${mapDefaultCenter.lat}-${mapDefaultCenter.lng}`}
+                  mode="mark"
+                  defaultZoom={15}
+                  defaultCenter={mapDefaultCenter}
+                  markTargetYRatio={0.5}
+                  showUserLocation={shouldAutoLocateMapFallback}
+                  onCenterChange={(lat, lng) => setCenter({ lat, lng })}
+                  className="h-full w-full border-none outline-none"
+                />
                  <div className="pointer-events-none absolute inset-x-0 top-0 z-[1001] h-40 bg-gradient-to-b from-background/95 via-background/70 to-transparent" />
                  <div className="absolute inset-x-4 top-[calc(env(safe-area-inset-top)+4.75rem)] z-[1002] rounded-3xl border border-foreground/10 bg-background/92 px-4 py-3 shadow-lg backdrop-blur-md">
                    <div className="text-center">
