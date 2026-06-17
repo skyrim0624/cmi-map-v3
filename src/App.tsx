@@ -10,16 +10,13 @@ import { RouteGuard } from '@/components/common/RouteGuard';
 
 const AppShell: React.FC = () => {
   const location = useLocation();
-  const isV3Route = location.pathname === '/' || location.pathname === '/v3';
   const isArcadeRoute = location.pathname === '/community' || location.pathname === '/swap';
   const shellClassName = [
     'flex justify-center overflow-hidden',
     isArcadeRoute ? 'bg-transparent' : 'bg-neutral-100/50 dark:bg-neutral-900/50',
-    isV3Route ? 'cmi-v3-app-shell' : 'h-[100dvh]',
+    'h-[100dvh]',
   ].join(' ');
-  const mainClassName = isV3Route
-    ? 'min-h-0 flex-1 overflow-hidden overscroll-none bg-background'
-    : isArcadeRoute
+  const mainClassName = isArcadeRoute
       ? 'min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-transparent [-webkit-overflow-scrolling:touch]'
     : 'min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-background [-webkit-overflow-scrolling:touch]';
   const contentClassName = [
@@ -46,7 +43,7 @@ const AppShell: React.FC = () => {
                   element={route.element}
                 />
               ))}
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to="/map" replace />} />
             </Routes>
           </Suspense>
         </main>

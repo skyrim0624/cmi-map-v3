@@ -1,6 +1,6 @@
 # CMI Map 优化任务日志
 
-更新时间：2026-06-16 +07
+更新时间：2026-06-17 +07
 
 ## 目标
 
@@ -46,8 +46,26 @@
 31. [完成] 精细透明抠图改走原图 URL + 自托管分割服务
 32. [完成] 恢复 `species.cmimap.com` 常驻模型服务和 tunnel
 33. [完成] 修复 `cmimap.com` 被旧 Production 部署覆盖回古早首页
+34. [完成] 彻底移除旧 `CmiMapV3Prototype` 首页，只保留新 `/map` 入口
 
 ## 执行记录
+
+### 2026-06-17 cmimap.com 旧原型首页彻底下线
+
+- 背景：用户反馈在浏览器打开 `cmimap.com` 仍看到“清迈，今天怎么过？”旧原型首页。
+- 根因：
+  - `src/routes.tsx` 仍把根路径 `/` 和 `/v3` 指向 `CmiMapV3Prototype`。
+  - `getCmiFeedPath` / `getCmiEventsPath` 仍生成 `/?screen=feed`、`/?screen=events`，内部跳转还可能把用户带回旧原型。
+- 本轮修复：
+  - 删除 `CmiMapV3Prototype.tsx`、`cmi-map-v3-prototype.css` 及其专属测试文件。
+  - `/`、`/v3`、`/blackboard`、`/cmi-home` 全部重定向到 `/map`。
+  - 旧动态 / 活动路径工具改为 `/map` 与 `/map?scene=tomorrow-events`。
+- 验证结果：
+  - `node --test --experimental-strip-types src/routes.test.ts src/lib/paths.test.ts src/pages/MarkPlace.test.ts` 通过，23 项测试全部通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/routes.tsx src/routes.test.ts src/lib/paths.ts src/lib/paths.test.ts src/pages/MarkPlace.test.ts src/App.tsx` 通过。
+  - `pnpm build` 通过，PWA precache 检查为 `0 项`。
+  - 本地浏览器验证 `http://127.0.0.1:5188/` 与 `/v3` 均跳转到 `/map`；页面显示新地图和“标记新地点”，不再出现旧 hero 文案，console 无 warn/error。
 
 ### 2026-06-16 cmimap.com 旧版回滚排查与恢复
 

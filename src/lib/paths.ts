@@ -72,7 +72,7 @@ export const getCmiEventCreatePath = (input?: {
 export const getCmiEventManagePath = (eventId: string) =>
   `/events/${encodeURIComponent(eventId)}/manage`;
 
-export const getCmiEventsPath = () => '/?screen=events';
+export const getCmiEventsPath = () => '/map?scene=tomorrow-events';
 
 export const getCmiFeedPath = (input?: {
   compose?: boolean;
@@ -80,13 +80,14 @@ export const getCmiFeedPath = (input?: {
   placeName?: string | null;
   locationLabel?: string | null;
 }) => {
-  const searchParams = new URLSearchParams({ screen: 'feed' });
+  const searchParams = new URLSearchParams();
   if (input?.compose) searchParams.set('compose', '1');
   if (input?.eventId) searchParams.set('event', input.eventId);
   if (input?.placeName) searchParams.set('place', input.placeName);
   if (input?.locationLabel) searchParams.set('location', input.locationLabel);
 
-  return `/?${searchParams.toString()}`;
+  const query = searchParams.toString();
+  return query ? `/map?${query}` : '/map';
 };
 
 export const getCmiBlackboardPath = getCmiFeedPath;

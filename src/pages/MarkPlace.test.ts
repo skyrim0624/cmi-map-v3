@@ -4,7 +4,6 @@ import test from 'node:test';
 
 const source = readFileSync(new URL('./MarkPlace.tsx', import.meta.url), 'utf8');
 const indexCssSource = readFileSync(new URL('../index.css', import.meta.url), 'utf8');
-const cmiMapPrototypeCssSource = readFileSync(new URL('./cmi-map-v3-prototype.css', import.meta.url), 'utf8');
 const leafletMapSource = readFileSync(new URL('../components/map/LeafletMap.tsx', import.meta.url), 'utf8');
 const playgroundMarkPlaceSource = readFileSync(new URL('./PlaygroundMarkPlace.tsx', import.meta.url), 'utf8');
 
@@ -179,7 +178,6 @@ test('上传相关页面主题色统一为绿色', () => {
   assert.match(indexCssSource, /--primary: 145 68% 31%/);
   assert.match(indexCssSource, /--accent: 145 45% 92%/);
   assert.match(indexCssSource, /--ring: 145 68% 31%/);
-  assert.match(cmiMapPrototypeCssSource, /--cmi-v3-purple: #0b8d45/);
 
   assert.match(source, /bg-\[#063d27\]/);
   assert.match(source, /bg-\[#0b3d24\]/);

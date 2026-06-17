@@ -1,6 +1,6 @@
 import { lazy, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import { getCmiFeedPath, getSceneMapPath } from '@/lib/paths';
+import { getSceneMapPath } from '@/lib/paths';
 
 const MapView = lazy(() => import('./pages/MapView'));
 const ListView = lazy(() => import('./pages/ListView'));
@@ -18,7 +18,6 @@ const PlaygroundMarkPlace = lazy(() => import('./pages/PlaygroundMarkPlace'));
 const PlaygroundWishlist = lazy(() => import('./pages/PlaygroundWishlist'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Login = lazy(() => import('./pages/Login'));
-const CmiMapV3Prototype = lazy(() => import('./pages/CmiMapV3Prototype'));
 const CmiCommunityEntrance = lazy(() => import('./pages/CmiCommunityEntrance'));
 const CmiSwapPage = lazy(() => import('./pages/CmiSwapPage'));
 
@@ -39,9 +38,9 @@ export const routes: RouteConfig[] = [
     public: true,
   },
   {
-    name: 'CMI Map 3.0',
+    name: 'CMI Map',
     path: '/',
-    element: <CmiMapV3Prototype />,
+    element: <Navigate to="/map" replace />,
     public: true,
   },
   {
@@ -65,7 +64,7 @@ export const routes: RouteConfig[] = [
   {
     name: '旧动态入口',
     path: '/blackboard',
-    element: <Navigate to={getCmiFeedPath()} replace />,
+    element: <Navigate to="/map" replace />,
     public: true,
   },
   {
@@ -88,13 +87,13 @@ export const routes: RouteConfig[] = [
   {
     name: '清迈客栈',
     path: '/cmi-home',
-    element: <Navigate to={getCmiFeedPath()} replace />,
+    element: <Navigate to="/map" replace />,
     public: true,
   },
   {
-    name: 'CMI Map 3.0 原型',
+    name: '旧 CMI Map 原型',
     path: '/v3',
-    element: <CmiMapV3Prototype />,
+    element: <Navigate to="/map" replace />,
     public: true,
   },
   {
