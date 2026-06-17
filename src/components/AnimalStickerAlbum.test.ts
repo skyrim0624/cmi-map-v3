@@ -4,34 +4,35 @@ import test from 'node:test';
 
 const source = readFileSync(new URL('./AnimalStickerAlbum.tsx', import.meta.url), 'utf8');
 
-test('神奇生物图鉴是贴画收集页而不是三列方格卡片', () => {
+test('神奇生物图鉴是可向下延伸的贴画收集页', () => {
   assert.match(source, /ALBUM_STICKER_SLOTS/);
   assert.match(source, /wild-sticker-album-board-v1\.webp/);
-  assert.match(source, /按主 KV 风格重新生成的留白画板/);
-  assert.match(source, /aspect-\[941\/1672\]/);
-  assert.match(source, /object-fill/);
-  assert.match(source, /gridTemplateRows: 'repeat\(30, minmax\(0, 1fr\)\)'/);
+  assert.match(source, /ALBUM_BOARD_ASPECT_HEIGHT \* albumPageCount/);
+  assert.match(source, /getAlbumPageCount/);
+  assert.match(source, /ALBUM_STICKERS_PER_PAGE = ALBUM_STICKER_SLOTS\.length/);
+  assert.match(source, /backgroundRepeat: 'repeat-y'/);
+  assert.match(source, /backgroundSize: '100% auto'/);
+  assert.match(source, /背景图按页重复，贴纸位按每页 8 个继续往下排/);
+  assert.match(source, /gridTemplateRows: `repeat\(\$\{ALBUM_STICKER_ROW_COUNT\}, minmax\(0, 1fr\)\)`/);
   assert.match(source, /gridColumn: `\$\{slot\.colStart\} \/ span \$\{slot\.colSpan\}`/);
   assert.match(source, /rotate\(\$\{slot\.rotation\}deg\)/);
-  assert.match(source, /object-contain/);
   assert.doesNotMatch(source, /cmi-wild-chiang-mai-2026-06\.png/);
   assert.doesNotMatch(source, /backgroundSize: 'cover'/);
+  assert.doesNotMatch(source, /aspect-\[941\/1672\]/);
+  assert.doesNotMatch(source, /object-fill/);
   assert.doesNotMatch(source, /grid grid-cols-3 gap-3/);
 });
 
-test('旧动物照片在图鉴页会先转成临时贴纸预览', () => {
-  assert.match(source, /createAnimalStickerFromImageUrl/);
-  assert.match(source, /generatedStickerUrls/);
-  assert.match(source, /generatedStickerIdsRef/);
-  assert.match(source, /generatingStickerIdsRef/);
-  assert.match(source, /failedStickerIdsRef/);
-  assert.match(source, /entry\.needsStickerGeneration/);
-  assert.match(source, /displayStickerUrl: generatedStickerUrls\[entry\.id\] \|\| entry\.stickerUrl/);
-  assert.match(source, /isFallbackPhotoSticker/);
+test('图鉴贴纸直接使用圆形照片，不再展示轮廓抠图', () => {
+  assert.match(source, /getAnimalStickerPhotoUrl/);
+  assert.match(source, /entry\.photoUrl\?\.trim\(\) \|\| entry\.stickerUrl/);
+  assert.match(source, /getAnimalStickerObjectPosition/);
+  assert.match(source, /rounded-full/);
   assert.match(source, /border-\[7px\] border-\[#fffef5\]/);
-  assert.match(source, /STICKER_GENERATION_BATCH_SIZE = 3/);
-  assert.match(source, /Promise\.all\(batch\.map/);
-  assert.match(source, /URL\.revokeObjectURL/);
-  assert.doesNotMatch(source, /\}, \[entries, generatedStickerUrls\]\)/);
+  assert.match(source, /object-cover/);
+  assert.match(source, /objectPosition: getAnimalStickerObjectPosition\(entry\.subjectBox\)/);
+  assert.doesNotMatch(source, /createAnimalStickerFromImageUrl/);
+  assert.doesNotMatch(source, /generatedStickerUrls/);
+  assert.doesNotMatch(source, /isFallbackPhotoSticker/);
   assert.doesNotMatch(source, /entry\.needsStickerGeneration \? undefined : entry\.stickerUrl/);
 });

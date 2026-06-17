@@ -1,9 +1,6 @@
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  createAnimalStickerFromImageUrl,
-  type WildAnimalStickerEntry,
-} from '@/lib/cmi-wild-animal-stickers';
+import { useMemo, useState } from 'react';
+import type { AnimalSubjectBox, WildAnimalStickerEntry } from '@/lib/cmi-wild-animal-stickers';
 
 interface AnimalStickerAlbumProps {
   entries: WildAnimalStickerEntry[];
@@ -40,12 +37,27 @@ const ALBUM_STICKER_SLOTS: AlbumStickerSlot[] = [
 ];
 
 const WILD_ANIMAL_ALBUM_BOARD_IMAGE = '/cmi-home/animal-album-backgrounds/wild-sticker-album-board-v1.webp';
-const STICKER_GENERATION_BATCH_SIZE = 3;
+const ALBUM_BOARD_ASPECT_WIDTH = 941;
+const ALBUM_BOARD_ASPECT_HEIGHT = 1672;
+const ALBUM_STICKER_ROW_COUNT = 30;
+const ALBUM_PAGE_CONTENT_INSET_PERCENT = 5.5;
+const ALBUM_PAGE_CONTENT_HEIGHT_PERCENT = 100 - ALBUM_PAGE_CONTENT_INSET_PERCENT * 2;
+const ALBUM_STICKERS_PER_PAGE = ALBUM_STICKER_SLOTS.length;
 
 const getAlbumStickerSlot = (index: number) => ALBUM_STICKER_SLOTS[index % ALBUM_STICKER_SLOTS.length];
 
-type DisplayStickerEntry = WildAnimalStickerEntry & {
-  displayStickerUrl?: string;
+const getAlbumPageCount = (entryCount: number) => Math.max(1, Math.ceil(entryCount / ALBUM_STICKERS_PER_PAGE));
+
+const getAnimalStickerPhotoUrl = (entry: WildAnimalStickerEntry) => (
+  entry.photoUrl?.trim() || entry.stickerUrl
+);
+
+const getAnimalStickerObjectPosition = (subjectBox?: AnimalSubjectBox | null) => {
+  if (!subjectBox) return '50% 50%';
+
+  const centerX = subjectBox.x + subjectBox.width / 2;
+  const centerY = subjectBox.y + subjectBox.height / 2;
+  return `${centerX / 10}% ${centerY / 10}%`;
 };
 
 export default function AnimalStickerAlbum({
@@ -55,85 +67,18 @@ export default function AnimalStickerAlbum({
   onEmptyAction,
 }: AnimalStickerAlbumProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [generatedStickerUrls, setGeneratedStickerUrls] = useState<Record<string, string>>({});
-  const generatedUrlsRef = useRef<string[]>([]);
-  const generatedStickerIdsRef = useRef<Set<string>>(new Set());
-  const generatingStickerIdsRef = useRef<Set<string>>(new Set());
-  const failedStickerIdsRef = useRef<Set<string>>(new Set());
-  const displayEntries = useMemo<DisplayStickerEntry[]>(
-    () => entries.map(entry => ({
-      ...entry,
-      displayStickerUrl: generatedStickerUrls[entry.id] || entry.stickerUrl,
-    })),
-    [entries, generatedStickerUrls]
+  const albumPageCount = getAlbumPageCount(entries.length);
+  const albumPages = useMemo(
+    () => Array.from({ length: albumPageCount }, (_, pageIndex) => (
+      entries.slice(
+        pageIndex * ALBUM_STICKERS_PER_PAGE,
+        (pageIndex + 1) * ALBUM_STICKERS_PER_PAGE
+      )
+    )),
+    [albumPageCount, entries]
   );
-  const selectedEntry = selectedIndex === null ? null : displayEntries[selectedIndex] ?? null;
+  const selectedEntry = selectedIndex === null ? null : entries[selectedIndex] ?? null;
   const canStep = entries.length > 1;
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const generateMissingStickers = async () => {
-      const pendingEntries = entries.filter(entry => (
-        entry.needsStickerGeneration
-        && entry.photoUrl
-        && !generatedStickerIdsRef.current.has(entry.id)
-        && !generatingStickerIdsRef.current.has(entry.id)
-        && !failedStickerIdsRef.current.has(entry.id)
-      ));
-
-      for (let index = 0; index < pendingEntries.length; index += STICKER_GENERATION_BATCH_SIZE) {
-        if (cancelled) return;
-        const batch = pendingEntries.slice(index, index + STICKER_GENERATION_BATCH_SIZE);
-
-        await Promise.all(batch.map(async entry => {
-          if (
-            !entry.needsStickerGeneration
-            || !entry.photoUrl
-            || generatedStickerIdsRef.current.has(entry.id)
-            || generatingStickerIdsRef.current.has(entry.id)
-            || failedStickerIdsRef.current.has(entry.id)
-          ) {
-            return;
-          }
-
-          try {
-            generatingStickerIdsRef.current.add(entry.id);
-            const generatedUrl = await createAnimalStickerFromImageUrl(entry.photoUrl, {
-              subjectBox: entry.subjectBox ?? undefined,
-              nameZh: entry.commonName,
-              scientificName: entry.scientificName ?? undefined,
-            });
-
-            if (cancelled) {
-              URL.revokeObjectURL(generatedUrl);
-              return;
-            }
-
-            generatedUrlsRef.current.push(generatedUrl);
-            generatedStickerIdsRef.current.add(entry.id);
-            setGeneratedStickerUrls(current => ({ ...current, [entry.id]: generatedUrl }));
-          } catch (error) {
-            failedStickerIdsRef.current.add(entry.id);
-            console.warn('图鉴贴纸预览生成失败:', error);
-          } finally {
-            generatingStickerIdsRef.current.delete(entry.id);
-          }
-        }));
-      }
-    };
-
-    void generateMissingStickers();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [entries]);
-
-  useEffect(() => () => {
-    generatedUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
-    generatedUrlsRef.current = [];
-  }, []);
 
   const step = (offset: number) => {
     if (selectedIndex === null || entries.length === 0) return;
@@ -161,54 +106,60 @@ export default function AnimalStickerAlbum({
     <>
       <section
         aria-label="神奇生物贴画册"
-        className="relative isolate mx-auto aspect-[941/1672] w-full max-w-[34rem] overflow-hidden rounded-[1.8rem] border-[3px] border-[#0b3d24] bg-[#fff8df] shadow-[8px_10px_0_rgba(11,61,36,0.18)]"
+        className="relative isolate mx-auto w-full max-w-[34rem] overflow-hidden rounded-[1.8rem] border-[3px] border-[#0b3d24] bg-[#fff8df] shadow-[8px_10px_0_rgba(11,61,36,0.18)]"
+        style={{
+          aspectRatio: `${ALBUM_BOARD_ASPECT_WIDTH} / ${ALBUM_BOARD_ASPECT_HEIGHT * albumPageCount}`,
+          backgroundImage: `url(${WILD_ANIMAL_ALBUM_BOARD_IMAGE})`,
+          backgroundPosition: 'top center',
+          backgroundRepeat: 'repeat-y',
+          backgroundSize: '100% auto',
+        }}
       >
-        <img
-          src={WILD_ANIMAL_ALBUM_BOARD_IMAGE}
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 -z-10 h-full w-full object-fill"
-        />
-        {/* NOTE: 这是按主 KV 风格重新生成的留白画板，不直接复用活动 KV 原图。 */}
-        <div
-          className="absolute inset-[5.5%] grid grid-cols-12 gap-0"
-          style={{ gridTemplateRows: 'repeat(30, minmax(0, 1fr))' }}
-        >
-          {displayEntries.map((entry, index) => {
-            const slot = getAlbumStickerSlot(index);
-            const isFallbackPhotoSticker = entry.needsStickerGeneration && !generatedStickerUrls[entry.id];
+        {/* NOTE: 背景图按页重复，贴纸位按每页 8 个继续往下排。 */}
+        {albumPages.map((pageEntries, pageIndex) => (
+          <div
+            key={pageIndex}
+            className="absolute left-[5.5%] right-[5.5%] grid grid-cols-12 gap-0"
+            style={{
+              top: `${(pageIndex * 100 + ALBUM_PAGE_CONTENT_INSET_PERCENT) / albumPageCount}%`,
+              height: `${ALBUM_PAGE_CONTENT_HEIGHT_PERCENT / albumPageCount}%`,
+              gridTemplateRows: `repeat(${ALBUM_STICKER_ROW_COUNT}, minmax(0, 1fr))`,
+            }}
+          >
+            {pageEntries.map((entry, slotIndex) => {
+              const index = pageIndex * ALBUM_STICKERS_PER_PAGE + slotIndex;
+              const slot = getAlbumStickerSlot(slotIndex);
+              const photoUrl = getAnimalStickerPhotoUrl(entry);
 
-            return (
-              <button
-                key={entry.id}
-                type="button"
-                onClick={() => setSelectedIndex(index)}
-                className="group relative flex h-full min-w-0 items-center justify-center outline-none transition duration-200 active:scale-95 focus-visible:z-30 focus-visible:rounded-[1.25rem] focus-visible:ring-2 focus-visible:ring-[#0b3d24]"
-                style={{
-                  gridColumn: `${slot.colStart} / span ${slot.colSpan}`,
-                  gridRow: `${slot.rowStart} / span ${slot.rowSpan}`,
-                  transform: `rotate(${slot.rotation}deg) scale(${slot.scale})`,
-                  zIndex: 10 + index,
-                }}
-              >
-                <span className="sr-only">{entry.commonName}</span>
-                {entry.displayStickerUrl && (
-                  isFallbackPhotoSticker ? (
-                    <span className="relative block h-full max-h-full w-full max-w-full overflow-hidden rounded-[42%_58%_47%_53%/46%_44%_56%_54%] border-[7px] border-[#fffef5] bg-[#fffef5] shadow-[8px_12px_0_rgba(11,61,36,0.13)] transition duration-200 group-hover:scale-105">
-                      <img src={entry.displayStickerUrl} alt="" className="h-full w-full object-cover" />
+              return (
+                <button
+                  key={entry.id}
+                  type="button"
+                  onClick={() => setSelectedIndex(index)}
+                  className="group relative flex h-full min-w-0 items-center justify-center outline-none transition duration-200 active:scale-95 focus-visible:z-30 focus-visible:rounded-[1.25rem] focus-visible:ring-2 focus-visible:ring-[#0b3d24]"
+                  style={{
+                    gridColumn: `${slot.colStart} / span ${slot.colSpan}`,
+                    gridRow: `${slot.rowStart} / span ${slot.rowSpan}`,
+                    transform: `rotate(${slot.rotation}deg) scale(${slot.scale})`,
+                    zIndex: 10 + index,
+                  }}
+                >
+                  <span className="sr-only">{entry.commonName}</span>
+                  {photoUrl && (
+                    <span className="relative block aspect-square h-full max-h-full max-w-full overflow-hidden rounded-full border-[7px] border-[#fffef5] bg-[#fffef5] shadow-[8px_12px_0_rgba(11,61,36,0.13)] transition duration-200 group-hover:scale-105">
+                      <img
+                        src={photoUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        style={{ objectPosition: getAnimalStickerObjectPosition(entry.subjectBox) }}
+                      />
                     </span>
-                  ) : (
-                    <img
-                      src={entry.displayStickerUrl}
-                      alt=""
-                      className="max-h-full max-w-full object-contain drop-shadow-[0_12px_0_rgba(11,61,36,0.12)] transition duration-200 group-hover:scale-105"
-                    />
-                  )
-                )}
-              </button>
-            );
-          })}
-        </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </section>
 
       {selectedEntry && (
@@ -235,18 +186,15 @@ export default function AnimalStickerAlbum({
 
           <article className="w-full max-w-[22rem] rounded-[1.8rem] border-2 border-[#0b3d24] bg-[#fff7dc] px-5 pb-5 pt-6 text-center shadow-[8px_10px_0_rgba(0,0,0,0.22)]">
             <div className="mx-auto flex aspect-square max-h-[52dvh] items-center justify-center">
-              {selectedEntry.displayStickerUrl && (
-                selectedEntry.needsStickerGeneration && !generatedStickerUrls[selectedEntry.id] ? (
-                  <span className="relative block aspect-square max-h-full max-w-full overflow-hidden rounded-[42%_58%_47%_53%/46%_44%_56%_54%] border-[10px] border-[#fffef5] bg-[#fffef5] shadow-[10px_16px_0_rgba(11,61,36,0.14)]">
-                    <img src={selectedEntry.displayStickerUrl} alt={selectedEntry.commonName} className="h-full w-full object-cover" />
-                  </span>
-                ) : (
+              {getAnimalStickerPhotoUrl(selectedEntry) && (
+                <span className="relative block aspect-square h-full max-h-full max-w-full overflow-hidden rounded-full border-[10px] border-[#fffef5] bg-[#fffef5] shadow-[10px_16px_0_rgba(11,61,36,0.14)]">
                   <img
-                    src={selectedEntry.displayStickerUrl}
+                    src={getAnimalStickerPhotoUrl(selectedEntry)}
                     alt={selectedEntry.commonName}
-                    className="max-h-full max-w-full object-contain drop-shadow-[0_16px_0_rgba(11,61,36,0.12)]"
+                    className="h-full w-full object-cover"
+                    style={{ objectPosition: getAnimalStickerObjectPosition(selectedEntry.subjectBox) }}
                   />
-                )
+                </span>
               )}
             </div>
             <h2 className="mt-3 text-2xl font-black leading-tight text-[#0b3d24]">{selectedEntry.commonName}</h2>
