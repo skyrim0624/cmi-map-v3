@@ -47,12 +47,15 @@ export type MapMarkerVisual = {
   isCommunity: boolean;
   isAvatar?: boolean;
   isPoster?: boolean;
+  isSticker?: boolean;
 };
 
 const EASTER_EGG_ICON_PATHS = ['/map-icons/cmi-easter/', '/map-icons/cmi-easter-v2/'];
 
 export const isEasterEggMarkerVisual = (visual: Pick<MapMarkerVisual, 'iconUrl'>) =>
   EASTER_EGG_ICON_PATHS.some(path => visual.iconUrl.includes(path));
+
+export const isStickerMarkerVisual = (visual: Pick<MapMarkerVisual, 'isSticker'>) => Boolean(visual.isSticker);
 
 // NOTE: 地图点位用更细的图标表达地点类型，避免生存服务全部落到同一个工具箱图标。
 const CMI_FLAT_ICON_BASE = '/map-icons/cmi-flat-v2';
@@ -222,6 +225,7 @@ export const getMapMarkerVisual = (
         iconUrl: markerData.visualOverride.iconUrl,
         isAvatar: markerData.visualOverride.isAvatar,
         isPoster: markerData.visualOverride.isPoster,
+        isSticker: markerData.visualOverride.isSticker,
       }
       : visual
   );
@@ -253,6 +257,24 @@ export const getMapMarkerVisual = (
 export const renderMarkerBadgeHtml = (visual: MapMarkerVisual, isHotspot: boolean) => {
   const label = escapeHtml(visual.label);
   const iconUrl = escapeHtml(visual.iconUrl);
+  if (visual.isSticker) {
+    const stickerSize = isHotspot ? 96 : 90;
+
+    return `
+      <img src="${iconUrl}" alt="${label}" loading="lazy" style="
+        position:absolute;
+        left:50%;
+        bottom:0;
+        width:${stickerSize}px;
+        height:${stickerSize}px;
+        object-fit:contain;
+        display:block;
+        transform:translateX(-50%);
+        filter:drop-shadow(0 6px 9px rgba(26, 64, 39, 0.22));
+      " />
+    `;
+  }
+
   const iconSize = visual.isAvatar ? (isHotspot ? 46 : 42) : (isHotspot ? 48 : 44);
   const shouldCoverImage = Boolean(visual.isAvatar || visual.isPoster);
   const imageSize = visual.isPoster
@@ -351,6 +373,48 @@ export const renderEasterEggMarkerHtml = (visual: MapMarkerVisual) => {
 };
 
 export const renderClusterIconHtml = (visuals: MapMarkerVisual[], count: number) => {
+  const stickerVisual = visuals.find(isStickerMarkerVisual);
+  if (stickerVisual) {
+    const iconUrl = escapeHtml(stickerVisual.iconUrl);
+    const label = escapeHtml(stickerVisual.label);
+
+    return `
+      <div title="${label}" aria-label="${label}" style="position:relative; width:96px; height:96px;">
+        <img src="${iconUrl}" alt="${label}" loading="lazy" style="
+          position:absolute;
+          left:50%;
+          bottom:0;
+          width:90px;
+          height:90px;
+          transform:translateX(-50%);
+          object-fit:contain;
+          filter:drop-shadow(0 6px 9px rgba(26, 64, 39, 0.22));
+        " />
+        ${count > 1 ? `
+          <div style="
+            position:absolute;
+            right:5px;
+            top:47px;
+            z-index:10;
+            min-width:22px;
+            height:20px;
+            padding:0 6px 1px;
+            border-radius:999px;
+            background:#fff8eb;
+            color:#342f2a;
+            font-family:'Inter','PingFang SC','Noto Sans SC',sans-serif;
+            font-weight:950;
+            font-size:11px;
+            line-height:20px;
+            text-align:center;
+            border:1.5px solid rgba(55,49,43,0.28);
+            box-shadow:0 2px 0 rgba(45,39,34,0.15), 0 3px 7px rgba(45,39,34,0.14);
+          ">+${count}</div>
+        ` : ''}
+      </div>
+    `;
+  }
+
   if (visuals.length > 0 && visuals.every(isEasterEggMarkerVisual)) {
     const displayedVisuals = visuals.slice(0, 3);
     const miniIcons = displayedVisuals.map((visual, index) => {

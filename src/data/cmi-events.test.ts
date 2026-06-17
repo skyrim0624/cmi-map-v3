@@ -6,6 +6,7 @@ import {
   CMI_MAP_WILD_CHIANG_MAI_EVENT_ID,
   CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
   formatCmiEventShareCardTime,
+  getCmiEventMapMarker,
   isCmiMapCheckinActivityEvent,
   isCmiInnEvent,
   normalizeCmiEventRegistration,
@@ -114,6 +115,16 @@ test('神奇动物在哪里是主题打卡活动，不归一为报名活动', ()
   assert.equal(isCmiMapCheckinActivityEvent(event), true);
   assert.equal(isCmiInnEvent(event), false);
   assert.equal(normalizeCmiEventRegistration(event).registrationLabel, CMI_MAP_CHECKIN_ACTIVITY_LABEL);
+});
+
+test('神奇动物线下任务地图 marker 使用神奇生物贴纸', () => {
+  const event = CMI_EVENTS.find(candidate => candidate.id === 'cmi-wild-chiang-mai-nature-quest-2026-06-18');
+  assert.ok(event);
+
+  const marker = getCmiEventMapMarker(event);
+  assert.equal(marker?.visualOverride?.label, '神奇生物在哪里');
+  assert.equal(marker?.visualOverride?.iconUrl, '/map-icons/cmi-flat-v2/wild-chiang-mai-bio-label.png');
+  assert.equal(marker?.visualOverride?.isSticker, true);
 });
 
 test('清迈客栈活动开始后归一为已关闭报名', () => {

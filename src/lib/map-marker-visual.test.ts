@@ -15,6 +15,17 @@ test('活动海报 marker 用圆形封面裁切而不是完整缩图', () => {
   assert.match(source, /overflow:hidden/);
 });
 
+test('贴纸型 marker 直接展示完整贴纸图标', () => {
+  assert.match(source, /isSticker\?: boolean/);
+  assert.match(source, /export const isStickerMarkerVisual/);
+  assert.match(source, /isSticker: markerData\.visualOverride\.isSticker/);
+  assert.match(source, /if \(visual\.isSticker\)/);
+  assert.match(source, /object-fit:contain/);
+  assert.match(source, /bottom:0;/);
+  assert.match(source, /filter:drop-shadow\(0 6px 9px rgba\(26, 64, 39, 0\.22\)\)/);
+  assert.match(source, /const stickerVisual = visuals\.find\(isStickerMarkerVisual\)/);
+});
+
 test('地图 marker 整体尺寸保持轻量', () => {
   assert.match(source, /visual\.isAvatar \? \(isHotspot \? 46 : 42\) : \(isHotspot \? 48 : 44\)/);
   assert.match(source, /width:40px/);

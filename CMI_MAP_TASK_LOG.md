@@ -50,6 +50,19 @@
 
 ## 执行记录
 
+### 2026-06-17 神奇生物在哪里地图贴纸 marker
+
+- 背景：动态列表里的活动 tag 不能继续用普通文字标签，需要复用活动主入口视觉资产做更像活动入口的地图贴纸。
+- 本轮实现：
+  - 新增 `wild-chiang-mai-bio-label.png` 透明贴纸素材，延续「神奇动物在哪里」入口的鸟、叶片和寺塔视觉，并加入「神奇生物在哪里」文字。
+  - `神奇动物在哪里` 线下任务地图 marker 改为使用专属贴纸，不再套普通圆形活动 marker。
+  - 同地点活动聚合里如果包含这个专属活动，会优先露出贴纸，避免被普通动态头像或活动点位盖住。
+- 验证结果：
+  - `node --test --experimental-strip-types src/data/cmi-events.test.ts src/lib/map-marker-visual.test.ts` 通过。
+  - `pnpm exec biome lint src/data/cmi-events.ts src/data/cmi-events.test.ts src/lib/map-marker-visual.ts src/lib/map-marker-visual.test.ts src/components/map/LeafletMap.tsx src/types/types.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - Playwright 430x860 截图确认地图上展示带「神奇生物在哪里」文字的贴纸 marker；生产构建 `pnpm build` 通过。
+
 ### 2026-06-17 cmimap.com 旧原型首页彻底下线
 
 - 背景：用户反馈在浏览器打开 `cmimap.com` 仍看到“清迈，今天怎么过？”旧原型首页。
