@@ -7,7 +7,6 @@ import { CHIANG_MAI_FEATURE_LINES } from '@/data/chiang-mai-map-features';
 import {
   getMapMarkerVisual,
   isEasterEggMarkerVisual,
-  isStickerMarkerVisual,
   type MapMarkerVisual,
   renderClusterIconHtml,
   renderEasterEggMarkerHtml,
@@ -849,18 +848,18 @@ export const LeafletMap = ({
         const children = cluster.getAllChildMarkers();
         const count = children.length;
         
-        // 聚合里如果包含专属活动贴纸，需要优先露出；普通点再只展示前 3 个叠放印章。
-        const visuals = children
+        // 最多展示 3 个叠放的类型印章，数量用“处”表达，避免被误读成点赞或评分。
+        const displayMarkers = children.slice(0, Math.min(3, count));
+        const visuals = displayMarkers
           .map(marker => markerVisualsRef.current.get(marker))
           .filter((visual): visual is MapMarkerVisual => Boolean(visual));
         const isEasterEggCluster = visuals.length > 0 && visuals.every(isEasterEggMarkerVisual);
-        const isStickerCluster = visuals.some(isStickerMarkerVisual);
         
         return L.divIcon({
           html: renderClusterIconHtml(visuals, count),
           className: 'scrapbook-cluster-icon bg-transparent border-none',
-          iconSize: isStickerCluster ? [96, 96] : isEasterEggCluster ? [44, 38] : [62, 54],
-          iconAnchor: isStickerCluster ? [48, 90] : isEasterEggCluster ? [22, 19] : [31, 50]
+          iconSize: isEasterEggCluster ? [44, 38] : [62, 54],
+          iconAnchor: isEasterEggCluster ? [22, 19] : [31, 50]
         });
       }
     });
@@ -954,17 +953,11 @@ export const LeafletMap = ({
       `).join('');
 
       const isHotspot = totalUpvotes > 0;
-      const rootWidth = markerVisual.isSticker
-        ? (isHotspot ? 104 : 98)
-        : markerVisual.isAvatar ? (isHotspot ? 56 : 52) : (isHotspot ? 58 : 54);
-      const rootHeight = markerVisual.isSticker
-        ? (isHotspot ? 104 : 98)
-        : markerVisual.isAvatar ? (isHotspot ? 56 : 52) : (isHotspot ? 58 : 54);
-      const iconAnchor = markerVisual.isSticker
-        ? (isHotspot ? [52, 98] as [number, number] : [49, 92] as [number, number])
-        : markerVisual.isAvatar
-          ? (isHotspot ? [28, 51] as [number, number] : [26, 47] as [number, number])
-          : (isHotspot ? [29, 53] as [number, number] : [27, 49] as [number, number]);
+      const rootWidth = markerVisual.isAvatar ? (isHotspot ? 56 : 52) : (isHotspot ? 58 : 54);
+      const rootHeight = markerVisual.isAvatar ? (isHotspot ? 56 : 52) : (isHotspot ? 58 : 54);
+      const iconAnchor = markerVisual.isAvatar
+        ? (isHotspot ? [28, 51] as [number, number] : [26, 47] as [number, number])
+        : (isHotspot ? [29, 53] as [number, number] : [27, 49] as [number, number]);
       
       const icon = L.divIcon({
         className: 'custom-marker-icon bg-transparent border-none',

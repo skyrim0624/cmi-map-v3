@@ -1626,7 +1626,6 @@ export const normalizeCmiEventRegistration = <Event extends CmiEvent>(
 };
 
 const CMI_EVENT_MARKER_ID_PREFIX = 'cmi-event:';
-const CMI_MAP_WILD_CHIANG_MAI_MARKER_ICON_URL = '/map-icons/cmi-flat-v2/wild-chiang-mai-bio-label.png';
 
 export const getCmiEventMarkerId = (eventId: string) => `${CMI_EVENT_MARKER_ID_PREFIX}${eventId}`;
 
@@ -1666,13 +1665,6 @@ export const getCmiEventMapMarker = (event: CmiEvent): MapMarker | null => {
     latitude: event.mapLocation.latitude,
     longitude: event.mapLocation.longitude,
     recommendations: [recommendation],
-    visualOverride: event.id === CMI_MAP_WILD_CHIANG_MAI_EVENT_ID || event.title.includes('神奇动物在哪里')
-      ? {
-        label: '神奇生物在哪里',
-        iconUrl: CMI_MAP_WILD_CHIANG_MAI_MARKER_ICON_URL,
-        isSticker: true,
-      }
-      : undefined,
   };
 };
 

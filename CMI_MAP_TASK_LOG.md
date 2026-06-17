@@ -68,18 +68,15 @@
   - 应用内浏览器移动视口验证 `http://127.0.0.1:5190/`：显示“搜动态 / 地点”、神奇动物贴纸、底部“地图 / 动态 / 活动 / 打卡拍照”，不显示黄色统一入口、“清迈，今天怎么过？”或旧搜索“搜地点 / 分类”。
   - 应用内浏览器验证 `http://127.0.0.1:5190/map` 与根路径一致；底部“活动”可进入 `/?screen=events`，再点“地图”回到 `/`。
 
-### 2026-06-17 神奇生物在哪里地图贴纸 marker
+### 2026-06-17 回滚神奇生物地图 marker 接入
 
-- 背景：动态列表里的活动 tag 不能继续用普通文字标签，需要复用活动主入口视觉资产做更像活动入口的地图贴纸。
-- 本轮实现：
-  - 新增 `wild-chiang-mai-bio-label.png` 透明贴纸素材，延续「神奇动物在哪里」入口的鸟、叶片和寺塔视觉，并加入「神奇生物在哪里」文字。
-  - `神奇动物在哪里` 线下任务地图 marker 改为使用专属贴纸，不再套普通圆形活动 marker。
-  - 同地点活动聚合里如果包含这个专属活动，会优先露出贴纸，避免被普通动态头像或活动点位盖住。
+- 背景：用户明确指出「神奇生物在哪里」视觉资产应服务动态里的活动 tag，不应直接放到地图 marker 上。
+- 本轮修正：
+  - 撤回 `神奇动物在哪里` 线下任务地图 marker 的专属贴纸覆盖逻辑。
+  - 撤回地图 marker / 聚合 marker 的 `isSticker` 分支，恢复原有圆形活动 marker 行为。
+  - 保留 `wild-chiang-mai-bio-label.png` 图片资产，不删除，后续用于动态活动 tag 设计。
 - 验证结果：
-  - `node --test --experimental-strip-types src/data/cmi-events.test.ts src/lib/map-marker-visual.test.ts` 通过。
-  - `pnpm exec biome lint src/data/cmi-events.ts src/data/cmi-events.test.ts src/lib/map-marker-visual.ts src/lib/map-marker-visual.test.ts src/components/map/LeafletMap.tsx src/types/types.ts` 通过。
-  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
-  - Playwright 430x860 截图确认地图上展示带「神奇生物在哪里」文字的贴纸 marker；生产构建 `pnpm build` 通过。
+  - 图片文件仍保留在 `public/map-icons/cmi-flat-v2/wild-chiang-mai-bio-label.png`。
 
 ### 2026-06-17 cmimap.com 旧原型与旧地图入口彻底下线
 
