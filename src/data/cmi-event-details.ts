@@ -63,6 +63,18 @@ export const CMI_EVENT_POSTER_BY_ID: Partial<Record<string, string>> = {
     '/cmi-home/event-posters/cmi-ai-3d-spaceship-workshop-2026-06-07.jpg',
   'cmi-talk-fathers-day-speaker-call-2026-06-07':
     '/cmi-home/event-posters/cmi-talk-fathers-day-speaker-call-2026-06-07.png',
+  'cmi-machine-learning-intro-2026-06-17':
+    '/cmi-home/event-posters/cmi-machine-learning-intro-2026-06-17.png',
+  'cmi-wild-chiang-mai-nature-quest-2026-06-18':
+    '/cmi-home/event-posters/cmi-wild-chiang-mai-nature-quest-2026-06-18.jpg',
+  'cmi-kongxiang-canteen-zongzi-2026-06-19':
+    '/cmi-home/event-posters/cmi-kongxiang-canteen-zongzi-2026-06-19.png',
+  'cmi-ai-open-mic-community-ai-2026-06-19':
+    '/cmi-home/event-posters/cmi-ai-open-mic-community-ai-2026-06-19.png',
+  'cmi-swap-skills-market-2026-06-20':
+    '/cmi-home/event-posters/cmi-swap-skills-market-2026-06-20.jpg',
+  'cmi-fantastic-fungi-screening-2026-06-20':
+    '/cmi-home/event-posters/cmi-fantastic-fungi-screening-2026-06-20.png',
 };
 
 export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = {
@@ -101,6 +113,18 @@ export const CMI_EVENT_CARD_BACKGROUND_BY_ID: Partial<Record<string, string>> = 
     '/cmi-home/event-card-backgrounds/cmi-ai-3d-spaceship-workshop-2026-06-07.jpg',
   'cmi-talk-fathers-day-speaker-call-2026-06-07':
     '/cmi-home/event-card-backgrounds/cmi-talk-fathers-day-speaker-call-2026-06-07.jpg',
+  'cmi-machine-learning-intro-2026-06-17':
+    '/cmi-home/event-card-backgrounds/cmi-machine-learning-intro-2026-06-17.jpg',
+  'cmi-wild-chiang-mai-nature-quest-2026-06-18':
+    '/cmi-home/event-card-backgrounds/cmi-wild-chiang-mai-nature-quest-2026-06-18.jpg',
+  'cmi-kongxiang-canteen-zongzi-2026-06-19':
+    '/cmi-home/event-card-backgrounds/cmi-kongxiang-canteen-zongzi-2026-06-19.jpg',
+  'cmi-ai-open-mic-community-ai-2026-06-19':
+    '/cmi-home/event-card-backgrounds/cmi-ai-open-mic-community-ai-2026-06-19.jpg',
+  'cmi-swap-skills-market-2026-06-20':
+    '/cmi-home/event-card-backgrounds/cmi-swap-skills-market-2026-06-20.jpg',
+  'cmi-fantastic-fungi-screening-2026-06-20':
+    '/cmi-home/event-card-backgrounds/cmi-fantastic-fungi-screening-2026-06-20.jpg',
 };
 
 export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailContent> = {
@@ -971,6 +995,106 @@ export const CMI_EVENT_DETAIL_CONTENT_BY_ID: Record<string, CmiEventDetailConten
           CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE,
         ],
       },
+    ],
+  },
+  'cmi-machine-learning-intro-2026-06-17': {
+    eventId: 'cmi-machine-learning-intro-2026-06-17',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-machine-learning-intro-2026-06-17']!,
+    postTitle: '机器学习：从底层逻辑更好地学习和理解 AI',
+    postBlocks: [
+      { kind: 'paragraph', text: '现在很多人已经开始把 AI 当成日常工具。' },
+      {
+        kind: 'paragraph',
+        text: '但如果只停留在“会用工具”，很容易遇到一个问题：它为什么有时很聪明，有时又会一本正经地胡说？',
+      },
+      {
+        kind: 'paragraph',
+        text: '这周三晚上，爱德蒙的东风破会在清迈客栈带大家从吴恩达课程《机器学习》开始，做一场面向普通学习者的入门分享。',
+      },
+      { kind: 'heading', text: '本次会聊什么' },
+      {
+        kind: 'list',
+        items: ['机器学习到底在学习什么', '为什么理解机器学习能帮助我们理解 AI', 'AI 能做什么、不能做什么，边界在哪里', '普通人如何开始系统学习机器学习'],
+      },
+      { kind: 'heading', text: '活动信息' },
+      {
+        kind: 'list',
+        items: ['活动时间：6 月 17 日（周三）19:00-21:00', '活动地点：清迈客栈', '场地费用：免费参与', CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE],
+      },
+    ],
+  },
+  'cmi-wild-chiang-mai-nature-quest-2026-06-18': {
+    eventId: 'cmi-wild-chiang-mai-nature-quest-2026-06-18',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-wild-chiang-mai-nature-quest-2026-06-18']!,
+    postTitle: '清迈神奇动物在哪里｜雨季自然探索任务',
+    postBlocks: [
+      { kind: 'paragraph', text: '清迈的雨季，不只是阵雨和潮湿。山林开始变得更绿，昆虫、鸟类、植物和动物也在这个季节变得更容易被看见。' },
+      { kind: 'paragraph', text: '6 月 18 日到 6 月 30 日，CMI 会发起「清迈神奇动物在哪里」主题活动。线下有两次自然探索，线上会同步开启「寻找神奇动物赏金猎人」挑战。' },
+      { kind: 'heading', text: '线下探索' },
+      {
+        kind: 'list',
+        items: ['第一期「探寻」：6 月 18 日（周四）16:30 清迈客栈集合，17:00-21:00 清迈夜间动物园', '第二期「感受」：6 月 25 日（周四）12:30 清迈客栈集合，13:00-15:30 素贴山-蒲屏公园'],
+      },
+      { kind: 'heading', text: '线上也能参加' },
+      { kind: 'paragraph', text: '6 月 18 日至 6 月 30 日，在小红书分享你在清迈找到的神奇动植物，带话题 #cmi社区 #清迈神奇动物在哪里，并 @清迈客栈CMI社区，即可参与线上活动。' },
+      { kind: 'heading', text: '活动信息' },
+      {
+        kind: 'list',
+        items: ['集合地点：清迈客栈', '费用说明：外出门票与交通费用如有，以现场实际为准', CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE],
+      },
+    ],
+  },
+  'cmi-kongxiang-canteen-zongzi-2026-06-19': {
+    eventId: 'cmi-kongxiang-canteen-zongzi-2026-06-19',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-kongxiang-canteen-zongzi-2026-06-19']!,
+    postTitle: '空想食堂端午特别版｜跟着紫姀姐一起包粽子',
+    postBlocks: [
+      { kind: 'paragraph', text: '这个周五刚好遇上端午，所以这一次的空想食堂会做成一场端午特别版：一起包粽子。' },
+      { kind: 'paragraph', text: '紫姀姐会来现场教大家。不需要会包粽子，也不需要提前练习，可以洗粽叶、放糯米、包起来、系好，再一起等粽子出锅。' },
+      { kind: 'heading', text: '活动信息' },
+      { kind: 'list', items: ['活动时间：6 月 19 日（周五）16:00 开始', '活动地点：清迈客栈', '场地费用：免费参与', CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE] },
+    ],
+  },
+  'cmi-ai-open-mic-community-ai-2026-06-19': {
+    eventId: 'cmi-ai-open-mic-community-ai-2026-06-19',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-ai-open-mic-community-ai-2026-06-19']!,
+    postTitle: 'AI 开放麦第七期｜AI 在社区内的应用',
+    postBlocks: [
+      { kind: 'paragraph', text: '这期 AI 开放麦想聊一个更具体的问题：AI 在社区内的应用。' },
+      { kind: 'paragraph', text: '这里说的社区，是像 CMI / 清迈客栈这样，因为话题、活动、共同语境和长期相处聚集起来的线下社区。' },
+      { kind: 'heading', text: '这次会聊' },
+      {
+        kind: 'list',
+        items: ['AI 能不能帮助一个社区更好地记录自己', '能不能让新来的人更快理解这里发生过什么', '能不能帮助活动、讨论、项目和人之间产生更好的连接', '哪些事情适合 AI 辅助，哪些事情必须继续由人完成'],
+      },
+      { kind: 'heading', text: '活动信息' },
+      { kind: 'list', items: ['活动时间：6 月 19 日（周五）20:00，空想食堂后', '活动地点：清迈客栈', '场地费用：免费参与', CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE] },
+    ],
+  },
+  'cmi-swap-skills-market-2026-06-20': {
+    eventId: 'cmi-swap-skills-market-2026-06-20',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-swap-skills-market-2026-06-20']!,
+    postTitle: '旧物与技能交换集市',
+    postBlocks: [
+      { kind: 'paragraph', text: '这周六，清迈客栈发起一场「旧物与技能交换集市」。' },
+      { kind: 'paragraph', text: '这不是正式摊位市集，也不是商业买卖活动，更像是把大家手里闲置的东西、会做的事、愿意交换的时间放到同一张桌子上。' },
+      { kind: 'heading', text: '这次可以交换什么' },
+      { kind: 'list', items: ['旧物：书、衣服、生活用品、小工具、旅行装备、电子配件、手作物', '技能：修图、剪辑、摄影、做饭、语言练习、编程、简历修改、作品集建议、泰国生活经验'] },
+      { kind: 'heading', text: '活动信息' },
+      { kind: 'list', items: ['活动时间：6 月 20 日（周六）15:00', '活动地点：清迈客栈', '场地费用：免费参与', CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE] },
+    ],
+  },
+  'cmi-fantastic-fungi-screening-2026-06-20': {
+    eventId: 'cmi-fantastic-fungi-screening-2026-06-20',
+    posterUrl: CMI_EVENT_POSTER_BY_ID['cmi-fantastic-fungi-screening-2026-06-20']!,
+    postTitle: 'Magic Lab 观影会｜《神奇蘑菇》',
+    postBlocks: [
+      { kind: 'paragraph', text: '在森林脚下，还有一张更古老、更安静的网络。它连接树木，分解死亡，孕育新生。' },
+      { kind: 'paragraph', text: '本周六晚，Magic Lab 观影会一起看《神奇蘑菇》（Fantastic Fungi）。这不是一部只讲蘑菇的自然纪录片，更像一次进入地下世界的旅行。' },
+      { kind: 'heading', text: '适合谁来' },
+      { kind: 'list', items: ['喜欢纪录片、自然、生态与生命科学的人', '对意识、连接、非人类智慧这些主题有兴趣的人', '想在周六晚上安静看一部电影、再和大家聊聊的人'] },
+      { kind: 'heading', text: '活动信息' },
+      { kind: 'list', items: ['活动时间：6 月 20 日（周六）19:00', '活动地点：清迈客栈', '场地费用：免费参与', CMI_MAP_EVENT_REGISTRATION_DETAIL_LINE] },
     ],
   },
 };
