@@ -47,8 +47,24 @@
 32. [完成] 恢复 `species.cmimap.com` 常驻模型服务和 tunnel
 33. [完成] 修复 `cmimap.com` 被旧 Production 部署覆盖回古早首页
 34. [完成] 修正正式入口：`cmimap.com` 只显示“神奇动物在哪里”新地图屏
+35. [完成] `cmimap.com` 桌面打开也固定为手机宽度地图壳层
 
 ## 执行记录
+
+### 2026-06-17 cmimap.com 桌面固定手机宽度地图壳层
+
+- 背景：用户明确要求桌面浏览器打开 `cmimap.com` 时不要铺成网页宽屏，只显示中间一个和手机一样的细长区域。
+- 本轮修复：
+  - `/` 和 `/map` 单独使用手机地图壳层，最大宽度固定为 `430px`，桌面居中显示。
+  - 手机视口不额外缩窄，仍按设备宽度显示。
+  - `/swap` 保持原有全屏透明壳层，不混入本次规则。
+- 验证结果：
+  - 本地 2048px 桌面视口验证：中间壳层宽度 `430px`，左右居中，底部导航宽度 `428px`，无黄色统一入口、无旧首页文案、无旧地图搜索。
+  - 本地 390px 手机视口验证：壳层宽度 `390px`，底部 4 个导航正常；点击“活动”进入 `/?screen=events`。
+  - `node --test --experimental-strip-types src/App.test.ts src/routes.test.ts src/pages/CmiMapV3Prototype.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts` 通过，18 项测试全部通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/App.tsx src/App.test.ts src/routes.tsx src/routes.test.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查为 `0 项`。
 
 ### 2026-06-17 cmimap.com 正式入口改为神奇动物新地图屏
 

@@ -10,18 +10,25 @@ import { RouteGuard } from '@/components/common/RouteGuard';
 
 const AppShell: React.FC = () => {
   const location = useLocation();
-  const isArcadeRoute = location.pathname === '/' || location.pathname === '/map' || location.pathname === '/swap';
+  const isMobileMapRoute = location.pathname === '/' || location.pathname === '/map';
+  const isArcadeRoute = location.pathname === '/swap';
   const shellClassName = [
     'flex justify-center overflow-hidden',
     isArcadeRoute ? 'bg-transparent' : 'bg-neutral-100/50 dark:bg-neutral-900/50',
     'h-[100dvh]',
   ].join(' ');
-  const mainClassName = isArcadeRoute
+  const mainClassName = isMobileMapRoute
+    ? 'min-h-0 flex-1 overflow-hidden overscroll-contain bg-background [-webkit-overflow-scrolling:touch]'
+    : isArcadeRoute
       ? 'min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-transparent [-webkit-overflow-scrolling:touch]'
     : 'min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-background [-webkit-overflow-scrolling:touch]';
   const contentClassName = [
     'relative flex h-full min-h-0 w-full flex-col overflow-hidden [transform:translateZ(0)]',
-    isArcadeRoute ? 'bg-transparent' : 'max-w-[480px] bg-background shadow-xl sm:border-x sm:border-border/40',
+    isMobileMapRoute
+      ? 'max-w-[430px] bg-background shadow-xl sm:border-x sm:border-border/40'
+      : isArcadeRoute
+        ? 'bg-transparent'
+        : 'max-w-[480px] bg-background shadow-xl sm:border-x sm:border-border/40',
   ].join(' ');
 
   return (
