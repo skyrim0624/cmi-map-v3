@@ -6,6 +6,7 @@ import path from "node:path";
 
 const DIST_DIR = fileURLToPath(new URL("../dist/", import.meta.url));
 const SERVICE_WORKER_PATH = path.join(DIST_DIR, "sw.js");
+const REGISTER_SW_PATH = path.join(DIST_DIR, "registerSW.js");
 const MAX_PRECACHE_BYTES = 8 * 1024 * 1024;
 const ALLOWED_PRECACHE_IMAGES = new Set([
   "apple-touch-icon.png",
@@ -37,7 +38,12 @@ if (!existsSync(SERVICE_WORKER_PATH)) {
   throw new Error("缺少 dist/sw.js，无法检查 PWA 预缓存。");
 }
 
+if (!existsSync(REGISTER_SW_PATH)) {
+  throw new Error("缺少 dist/registerSW.js，无法覆盖旧 PWA 注册脚本。");
+}
+
 const serviceWorkerSource = readFileSync(SERVICE_WORKER_PATH, "utf8");
+const registerSwSource = readFileSync(REGISTER_SW_PATH, "utf8");
 const precacheUrls = Array.from(
   serviceWorkerSource.matchAll(/url:"([^"]+)"/g),
   match => match[1]
@@ -101,6 +107,10 @@ if (blockedUrls.length > 0) {
 const blockedDistDirs = findBlockedDistDirs(DIST_DIR);
 if (blockedDistDirs.length > 0) {
   failures.push(`以下调试/过程目录不该进入 dist：${blockedDistDirs.join(", ")}`);
+}
+
+if (/serviceWorker\s*\.\s*register/.test(registerSwSource)) {
+  failures.push("dist/registerSW.js 不允许继续注册 Service Worker");
 }
 
 if (failures.length > 0) {

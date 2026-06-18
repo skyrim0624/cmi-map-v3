@@ -48,8 +48,25 @@
 33. [完成] 修复 `cmimap.com` 被旧 Production 部署覆盖回古早首页
 34. [完成] 修正正式入口：`cmimap.com` 只显示“神奇动物在哪里”新地图屏
 35. [完成] `cmimap.com` 桌面打开也固定为手机宽度地图壳层
+36. [完成] 修复旧 Production 再次覆盖与 `/registerSW.js` 残留注册
 
 ## 执行记录
+
+### 2026-06-18 cmimap.com 旧 Production 再次覆盖与旧 Service Worker 注册兜底
+
+- 背景：用户在应用内浏览器重新看到“清迈，今天怎么过？”旧首页。
+- 根因：
+  - Cloudflare Pages 最新 Production 被 3 小时前的旧直传部署 `742b1e97` 覆盖，Source 标为 `cc92159`，导致 `https://cmimap.com/` 重新返回旧入口包 `index-DCv0t-7L.js`。
+  - Pages 项目当前 Git Provider 为 `No`，不是 GitHub 自动构建；这是一次 Pages 直传 Production 覆盖。
+  - 新 HTML 已不引用 `/registerSW.js`，但 Cloudflare 上残留的旧 `/registerSW.js` 仍会注册 `/sw.js`，拿到旧 HTML 的浏览器可能继续触发 Service Worker。
+- 本轮修复：
+  - 用当前 HEAD `bd1a98e` 重新构建并部署 Production：`https://638ce6db.cmi-map.pages.dev`。
+  - 新增 `public/registerSW.js`，只注销已有 Service Worker、清理 caches 并刷新一次，不再注册。
+  - 构建检查新增 `dist/registerSW.js` 兜底：文件缺失或继续调用 `serviceWorker.register` 时直接失败。
+- 验证结果：
+  - `https://cmimap.com/` 当前 HTML 已指向新入口包 `index-BwwQsg09.js`，不再包含 `vite-plugin-pwa:register-sw`。
+  - `https://cmimap.com/sw.js` 当前为自毁脚本，会 `unregister` 并清理 caches。
+  - `https://cmimap.com/registerSW.js` 已改为注销旧 Service Worker 的兜底脚本。
 
 ### 2026-06-17 cmimap.com 桌面固定手机宽度地图壳层
 
