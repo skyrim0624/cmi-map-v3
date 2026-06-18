@@ -146,11 +146,11 @@ const isSpeciesLevelRank = (rank: string | undefined) => rank === 'SPECIES' || r
 export const buildAnimalCandidateDescription = (candidate: AnimalIdentificationCandidate) => {
   const chineseName = getAnimalChineseName(candidate);
   const intro = getAnimalIntro(candidate);
-  if (isSpeciesLevelRank(candidate.taxonRank) || candidate.source === 'vision') {
+  if (isSpeciesLevelRank(candidate.taxonRank)) {
     return `这是${chineseName}。物种介绍：${intro}`;
   }
 
-  return `识别到${chineseName}。物种介绍：${intro}需要更近照片才能定到具体物种。`;
+  return `识别到${chineseName}。物种介绍：${intro}`;
 };
 
 export const identifyAnimalPhoto = async (file: File): Promise<AnimalIdentificationResult> => {

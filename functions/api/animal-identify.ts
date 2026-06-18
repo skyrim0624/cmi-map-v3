@@ -570,6 +570,7 @@ const toTrustedSpeciesCandidate = (
   if (
     !vision.organismPresent ||
     !scientificName ||
+    !isSpeciesLevelRank(taxonRank) ||
     confidence <= 0 ||
     REJECTED_SCIENTIFIC_NAMES.has(scientificName)
   ) {
@@ -745,7 +746,7 @@ export const onRequestPost = async ({ request, env }: PagesContext) => {
   if (speciesResult.unavailable) {
     return jsonResponse({
       status: 'unavailable',
-      provider: GEMINI_SPECIES_MODEL_ID,
+      provider: speciesResult.provider,
       elapsedMs: Date.now() - startedAt,
       candidates: [],
       message: '识别服务繁忙，请稍后再试',
@@ -759,7 +760,7 @@ export const onRequestPost = async ({ request, env }: PagesContext) => {
 
   return jsonResponse({
     status: candidates.length > 0 ? 'ready' : 'no-match',
-    provider: GEMINI_SPECIES_MODEL_ID,
+    provider: speciesResult.provider,
     elapsedMs: Date.now() - startedAt,
     candidates,
     rawDetections: [],

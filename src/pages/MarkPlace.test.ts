@@ -128,7 +128,7 @@ test('神奇动物打卡会调用生物识别并预选彩蛋', () => {
   assert.match(source, /生物识别/);
   assert.match(source, /正在识别生物主体。/);
   assert.match(source, /animalIdentification\?\.message/);
-  assert.match(source, /这张没识别清楚，换张近一点的照片或直接写名称。/);
+  assert.match(source, /这张没有识别到可靠物种，可以直接写名称继续发布。/);
   assert.doesNotMatch(source, /拍照后会先给出可能候选。/);
   assert.doesNotMatch(source, /BioCLIP/);
 });

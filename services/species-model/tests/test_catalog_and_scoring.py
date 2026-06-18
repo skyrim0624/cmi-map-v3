@@ -3,7 +3,12 @@ from __future__ import annotations
 import unittest
 
 from cmi_species_model.catalog import coarse_candidate_groups, load_species_catalog, select_species_pool
-from cmi_species_model.app import visual_adjustment
+from cmi_species_model.app import (
+    build_broad_plant_response,
+    looks_like_leaf_dominant_photo,
+    should_return_broad_plant,
+    visual_adjustment,
+)
 from cmi_species_model.scoring import ModelPrediction, choose_species_decision
 
 
@@ -108,6 +113,29 @@ class SpeciesScoringTest(unittest.TestCase):
 
         self.assertGreater(kingfisher_adjustment, 0.5)
         self.assertLess(myna_adjustment, 0)
+
+    def test_green_leaf_dominant_photo_triggers_plant_guard(self) -> None:
+        signals = {
+            "greenRatio": 0.31,
+            "greenSaturatedRatio": 0.58,
+            "maxGreenTileRatio": 0.81,
+        }
+
+        self.assertTrue(looks_like_leaf_dominant_photo(signals))
+
+    def test_leaf_only_plant_result_stays_broad_when_species_confidence_is_weak(self) -> None:
+        banana = next(candidate for candidate in load_species_catalog() if candidate.scientific_name == "Musa acuminata")
+        primary = ModelPrediction("bioclip-2.5", banana, probability=0.90, margin=0.08)
+        decision = choose_species_decision(primary, None, min_confidence=0.68, min_margin=0.06)
+
+        self.assertTrue(decision.accepted)
+        self.assertTrue(should_return_broad_plant(decision, plant_guard_enabled=True))
+
+        response = build_broad_plant_response(decision.confidence, decision.provider, 22)
+        self.assertEqual(response["commonNameZh"], "植物")
+        self.assertEqual(response["scientificName"], "Plantae")
+        self.assertEqual(response["taxonRank"], "KINGDOM")
+        self.assertFalse(response["animalPresent"])
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ from fastapi import FastAPI, File, Form, Header, HTTPException, Response, Upload
 from PIL import Image, UnidentifiedImageError
 
 from .bioclip import BioClipModel, BioClipSettings
-from .catalog import load_species_catalog, select_species_pool
+from .catalog import coarse_candidate_groups, load_species_catalog, select_species_pool
 from .scoring import ModelPrediction, choose_species_decision
 
 
@@ -43,6 +43,8 @@ FALLBACK_MODEL = os.getenv("BIOCLIP_FALLBACK_MODEL", FALLBACK_MODEL_ID)
 FALLBACK_MODE = os.getenv("BIOCLIP_FALLBACK_MODE", "auto").lower()
 MIN_CONFIDENCE = env_float("SPECIES_MIN_CONFIDENCE", 0.68)
 MIN_MARGIN = env_float("SPECIES_MIN_MARGIN", 0.06)
+PLANT_SPECIES_MIN_CONFIDENCE = env_float("SPECIES_PLANT_MIN_CONFIDENCE", 0.82)
+PLANT_SPECIES_MIN_MARGIN = env_float("SPECIES_PLANT_MIN_MARGIN", 0.14)
 MAX_CANDIDATES = env_int("SPECIES_MAX_CANDIDATES", 180)
 PRELOAD_MODELS = os.getenv("BIOCLIP_PRELOAD", "0") == "1"
 DEBUG_TOPK = os.getenv("SPECIES_DEBUG_TOPK", "0") == "1"
@@ -210,6 +212,7 @@ def image_color_signals(image: Image.Image) -> dict[str, float]:
     sample = image.resize((160, 80))
     pixels = list(sample.getdata())
     blue_pixels = 0
+    green_pixels = 0
     saturated_pixels = 0
     for red, green, blue in pixels:
         if max(red, green, blue) < 70 or max(red, green, blue) - min(red, green, blue) < 35:
@@ -217,11 +220,15 @@ def image_color_signals(image: Image.Image) -> dict[str, float]:
         saturated_pixels += 1
         if blue > red * 1.25 and green > red * 1.05 and max(blue, green) > 100:
             blue_pixels += 1
+        if green > red * 1.16 and green > blue * 1.04 and green > 76:
+            green_pixels += 1
 
     max_blue_tile = 0.0
+    max_green_tile = 0.0
     for top in range(0, sample.height, 16):
         for left in range(0, sample.width, 16):
             tile_blue_pixels = 0
+            tile_green_pixels = 0
             tile_saturated_pixels = 0
             for y in range(top, min(top + 16, sample.height)):
                 for x in range(left, min(left + 16, sample.width)):
@@ -231,14 +238,56 @@ def image_color_signals(image: Image.Image) -> dict[str, float]:
                     tile_saturated_pixels += 1
                     if blue > red * 1.25 and green > red * 1.05 and max(blue, green) > 100:
                         tile_blue_pixels += 1
+                    if green > red * 1.16 and green > blue * 1.04 and green > 76:
+                        tile_green_pixels += 1
             if tile_saturated_pixels:
                 max_blue_tile = max(max_blue_tile, tile_blue_pixels / tile_saturated_pixels)
+                max_green_tile = max(max_green_tile, tile_green_pixels / tile_saturated_pixels)
 
     return {
         "blueRatio": blue_pixels / max(1, len(pixels)),
         "blueSaturatedRatio": blue_pixels / max(1, saturated_pixels),
         "maxBlueTileRatio": max_blue_tile,
+        "greenRatio": green_pixels / max(1, len(pixels)),
+        "greenSaturatedRatio": green_pixels / max(1, saturated_pixels),
+        "maxGreenTileRatio": max_green_tile,
     }
+
+
+def looks_like_leaf_dominant_photo(color_signals: dict[str, float]) -> bool:
+    return (
+        color_signals.get("greenRatio", 0.0) >= 0.18
+        and (
+            color_signals.get("greenSaturatedRatio", 0.0) >= 0.42
+            or color_signals.get("maxGreenTileRatio", 0.0) >= 0.58
+        )
+    )
+
+
+def build_broad_plant_response(confidence: float, provider: str, candidate_pool_size: int) -> dict[str, Any]:
+    return {
+        "organismPresent": True,
+        "animalPresent": False,
+        "commonNameZh": "植物",
+        "commonNameEn": "Plant",
+        "scientificName": "Plantae",
+        "taxonRank": "KINGDOM",
+        "confidence": round(max(0.45, min(0.67, confidence or 0.58)), 4),
+        "introZh": "这是一张植物主体清楚的照片。当前主要可见的是叶片，先按植物记录，避免硬猜成错误物种。",
+        "provider": provider,
+        "candidatePoolSize": candidate_pool_size,
+    }
+
+
+def should_return_broad_plant(decision: Any, plant_guard_enabled: bool) -> bool:
+    if not plant_guard_enabled:
+        return False
+    if not decision.accepted or decision.candidate is None:
+        return True
+    if "plant" not in decision.candidate.groups:
+        return True
+    primary_margin = decision.primary.margin if decision.primary else 0.0
+    return decision.confidence < PLANT_SPECIES_MIN_CONFIDENCE or primary_margin < PLANT_SPECIES_MIN_MARGIN
 
 
 def visual_adjustment(prediction: ModelPrediction, color_signals: dict[str, float]) -> float:
@@ -315,13 +364,19 @@ async def identify_species(
     image_bytes = await image.read()
     pil_image = decode_image(image_bytes)
     coarse_candidates = parse_coarse_candidates(coarseCandidates)
+    color_signals = image_color_signals(pil_image)
+    coarse_groups = coarse_candidate_groups(coarse_candidates) if coarse_candidates else set()
+    plant_guard_enabled = "plant" in coarse_groups or looks_like_leaf_dominant_photo(color_signals)
     species_pool = select_species_pool(
         catalog,
         coarse_candidates,
         max_candidates=MAX_CANDIDATES,
     )
+    if plant_guard_enabled:
+        plant_pool = [candidate for candidate in catalog if "plant" in candidate.groups]
+        if len(plant_pool) >= 8:
+            species_pool = plant_pool[:MAX_CANDIDATES]
 
-    color_signals = image_color_signals(pil_image)
     primary_predictions = primary_model.predict_top(
         pil_image,
         species_pool,
@@ -339,6 +394,16 @@ async def identify_species(
         min_confidence=MIN_CONFIDENCE,
         min_margin=MIN_MARGIN,
     )
+    if should_return_broad_plant(decision, plant_guard_enabled):
+        response = build_broad_plant_response(
+            decision.confidence,
+            decision.provider or (primary.model_id if primary else PRIMARY_MODEL),
+            len(species_pool),
+        )
+        if DEBUG_TOPK:
+            response["topPredictions"] = [serialize_prediction(prediction) for prediction in primary_predictions]
+        return response
+
     if not decision.accepted:
         response = {
             "organismPresent": False,

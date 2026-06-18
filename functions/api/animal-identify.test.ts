@@ -97,7 +97,8 @@ test('专业模型物种级结果优先展示', () => {
   assert.match(source, /const candidates = speciesCandidate \? \[speciesCandidate\] : \[\]/);
   assert.match(source, /introZh: vision\.introZh/);
   assert.match(source, /status: candidates\.length > 0 \? 'ready' : 'no-match'/);
-  assert.match(source, /provider: GEMINI_SPECIES_MODEL_ID/);
+  assert.match(source, /provider: speciesResult\.provider/);
+  assert.match(source, /!isSpeciesLevelRank\(taxonRank\)/);
 });
 
 test('网页截图类输入不再信任检测框硬猜动物', () => {

@@ -1993,7 +1993,7 @@ export default function MarkPlace() {
                             ? '正在识别生物主体。'
                             : animalIdentificationStatus === 'idle'
                               ? '拍下动植物后会自动识别。'
-                              : animalIdentification?.message ?? '这张没识别清楚，换张近一点的照片或直接写名称。'}
+                              : animalIdentification?.message ?? '这张没有识别到可靠物种，可以直接写名称继续发布。'}
                         </p>
                       )}
                     </div>

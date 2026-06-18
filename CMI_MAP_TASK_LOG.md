@@ -52,8 +52,31 @@
 37. [完成] 禁用旧 v1 定时部署入口，防止旧包再次覆盖 Production
 38. [完成] 地点详情页隐藏纯坐标标题和分类标签
 39. [完成] 修复安卓神奇动物图鉴卡保存 / 分享兜底与识别服务备用链路
+40. [完成] 修复清楚植物照片被判“识别不清楚”与绿叶误判动物问题
 
 ## 执行记录
+
+### 2026-06-18 清楚植物照片识别准确性修正
+
+- 背景：安卓用户反馈照片已经拍得很清楚，但页面仍提示“这张没识别清楚”，用户感觉卡住；本轮样例是清楚绿叶植物照片。
+- 根因：
+  - Gemini 对带 UI 的截图会返回 no-match；随后自托管 BioCLIP 若用全候选库，会把大片绿叶图误判成鸟类等动物，存在比 no-match 更严重的错误识别风险。
+  - 自托管模型对叶片主体会给出某些具体植物候选，但缺少花、果、叶背、树干等关键特征时，具体物种并不稳定。
+  - Pages Function 返回的 `provider` 被写死为 Gemini，排查时看不出实际结果来自自托管模型。
+- 本轮修复：
+  - 自托管模型服务增加绿叶主体检测；绿叶占比高或上游粗分类为植物时，只进入植物候选池，不再从鸟类 / 动物候选中挑结果。
+  - 对“只有叶片特征”的植物照片提高具体物种接受门槛；门槛不够时返回“植物 / Plantae”大类，而不是硬猜尖蕉、兰花或动物。
+  - Pages Function 不再把 `Plantae` 这类 KINGDOM 大类当作具体物种；返回 provider 改为真实识别来源。
+  - 前端 no-match 文案改为“没有识别到可靠物种”，不再暗示用户照片拍得不清楚。
+- 验证结果：
+  - 用户截图裁出的植物主体图和完整截图调用 `species.cmimap.com/identify`，均返回 `commonNameZh: "植物"`、`scientificName: "Plantae"`、`taxonRank: "KINGDOM"`，不再返回鸟或错误具体植物。
+  - 当前正式 `https://cmimap.com/api/animal-identify` 用用户截图调用返回 `status: "ready"`，候选为“植物 / Plantae”，不再是 no-match。
+  - `services/species-model/.venv/bin/python -m unittest tests/test_catalog_and_scoring.py` 通过，11 项测试全部通过。
+  - `node --test functions/api/animal-identify.test.ts src/services/animal-identification.test.ts src/pages/MarkPlace.test.ts` 通过，32 项测试全部通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome check functions/api/animal-identify.ts functions/api/animal-identify.test.ts src/services/animal-identification.ts src/services/animal-identification.test.ts src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 应用内浏览器 414x695 视口打开本地 `/mark?event=cmi-wild-chiang-mai-2026-06`：正常跳转登录页，无 framework overlay，无 console error / warn；截图接口本轮仍为工具层超时。
 
 ### 2026-06-18 安卓神奇动物图鉴卡保存 / 分享与识别服务兜底
 

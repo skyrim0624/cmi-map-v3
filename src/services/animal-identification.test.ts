@@ -28,7 +28,7 @@ test('生物识别文案不再输出可能式猜测', () => {
   assert.match(source, /getAnimalChineseName\(candidate\)/);
   assert.match(source, /getAnimalIntro\(candidate\)/);
   assert.match(source, /isSpeciesLevelRank\(candidate\.taxonRank\)/);
-  assert.match(source, /需要更近照片才能定到具体物种/);
+  assert.match(source, /return `识别到\$\{chineseName\}。物种介绍：\$\{intro\}`/);
   assert.doesNotMatch(source, /可能是/);
 });
 
