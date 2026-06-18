@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -euo pipefail
 
-REPO_DIR="/Users/andreas/vibe coding/nomaday app!!/cmi map v1"
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PAGES_PROJECT_NAME="${CF_PAGES_PROJECT_NAME:-cmi-map}"
 PAGES_PRODUCTION_BRANCH="${CF_PAGES_PRODUCTION_BRANCH:-master}"
 
@@ -31,6 +31,11 @@ appliedUpdateCount="$(
 )"
 
 npm run build
+
+if [[ "$PAGES_PROJECT_NAME" == "cmi-map" && "${ALLOW_CMI_MAP_MAINTENANCE_PRODUCTION_DEPLOY:-0}" != "1" ]]; then
+  echo "Production deployment skipped: set ALLOW_CMI_MAP_MAINTENANCE_PRODUCTION_DEPLOY=1 for an intentional cmimap.com deploy."
+  exit 0
+fi
 
 if [[ "${FORCE_DEPLOY:-0}" != "1" && "$appliedUpdateCount" -eq 0 ]]; then
   echo "No classification updates applied; skipping Cloudflare production deployment."

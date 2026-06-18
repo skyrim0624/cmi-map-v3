@@ -49,8 +49,31 @@
 34. [完成] 修正正式入口：`cmimap.com` 只显示“神奇动物在哪里”新地图屏
 35. [完成] `cmimap.com` 桌面打开也固定为手机宽度地图壳层
 36. [完成] 修复旧 Production 再次覆盖与 `/registerSW.js` 残留注册
+37. [完成] 禁用旧 v1 定时部署入口，防止旧包再次覆盖 Production
 
 ## 执行记录
+
+### 2026-06-18 禁用旧 v1 定时部署入口
+
+- 背景：用户要求确保不再出现旧版本回滚。
+- 最终根因：
+  - 系统里实际运行着 `com.andreas.cmi-map-classification-audit` LaunchAgent。
+  - 该任务每小时执行一次，指向旧目录 `/Users/andreas/vibe coding/nomaday app!!/cmi map v1/scripts/run-classification-maintenance.sh`。
+  - 旧脚本会从 v1 构建并部署同一个 Cloudflare Pages 项目 `cmi-map`，日志中可见它准备过旧提交 `cc92159` 的 worktree。
+- 本轮防护：
+  - 已从 launchd 卸载并 disable `com.andreas.cmi-map-classification-audit`。
+  - `~/Library/LaunchAgents/com.andreas.cmi-map-classification-audit.plist` 和仓库模板都加 `Disabled=true`，并改为指向 v3 路径，避免继续指向 v1。
+  - v1 的 `run-classification-maintenance.sh` 增加硬拦截：默认禁止旧仓库部署 `cmi-map` Production，除非显式设置 `ALLOW_LEGACY_CMI_MAP_PRODUCTION_DEPLOY=1`。
+  - v3 的维护脚本默认不自动部署 `cmi-map` Production，除非显式设置 `ALLOW_CMI_MAP_MAINTENANCE_PRODUCTION_DEPLOY=1`。
+  - 构建检查增加旧版本入口痕迹扫描：如果 `dist` 里出现“清迈，今天怎么过”、`SceneHome`、`CmiHome` 或旧 `MapView` 页面 chunk，构建失败。
+- 验证结果：
+  - `launchctl print-disabled gui/501` 显示 `com.andreas.cmi-map-classification-audit` 已 disabled。
+  - 直接运行 v1 脚本返回 `Blocked: legacy cmi map v1 is not allowed to deploy Cloudflare Pages project cmi-map.`，不会部署。
+  - 两份 LaunchAgent plist 均通过 `plutil -lint`。
+  - `node --test --experimental-strip-types src/App.test.ts src/routes.test.ts src/pages/CmiMapV3Prototype.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts` 通过，18 项测试全部通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint README.md scripts/check-pwa-precache.mjs public/registerSW.js src/App.tsx src/App.test.ts src/routes.tsx src/routes.test.ts src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.test.ts src/pages/CmiMapV3Prototype.map-pulse.test.ts` 通过。
+  - `pnpm build` 通过，旧首页构建痕迹扫描未触发。
 
 ### 2026-06-18 cmimap.com 旧 Production 再次覆盖与旧 Service Worker 注册兜底
 

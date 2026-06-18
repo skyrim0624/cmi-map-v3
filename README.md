@@ -40,7 +40,7 @@ CMI Map 不做广告地图，也不做 AI 行程工具；它是一张让用心�
 - **前端**：React 18 + TypeScript + Vite + Tailwind CSS
 - **地图渲染**：Leaflet + React Leaflet
 - **后端 / 数据库**：Supabase (PostgreSQL + Auth + Storage)
-- **部署**：Cloudflare Pages（推送自动部署）
+- **部署**：Cloudflare Pages（当前为手动直传部署；正式发布必须从本仓库构建并通过构建产物检查）
 
 ## 如何本地运行
 

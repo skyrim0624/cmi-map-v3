@@ -4,13 +4,15 @@
 <dict>
   <key>Label</key>
   <string>com.andreas.cmi-map-classification-audit</string>
+  <key>Disabled</key>
+  <true/>
   <key>ProgramArguments</key>
   <array>
     <string>/bin/zsh</string>
-    <string>/Users/andreas/vibe coding/nomaday app!!/cmi map v1/scripts/run-classification-maintenance.sh</string>
+    <string>/Users/andreas/vibe coding/nomaday app!!/cmi map v3/scripts/run-classification-maintenance.sh</string>
   </array>
   <key>WorkingDirectory</key>
-  <string>/Users/andreas/vibe coding/nomaday app!!/cmi map v1</string>
+  <string>/Users/andreas/vibe coding/nomaday app!!/cmi map v3</string>
   <key>StartInterval</key>
   <integer>3600</integer>
   <key>RunAtLoad</key>

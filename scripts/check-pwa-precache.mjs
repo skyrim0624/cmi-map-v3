@@ -33,6 +33,25 @@ const BLOCKED_DIST_DIR_NAMES = new Set([
   "playgrounds",
   "prototypes",
 ]);
+const TEXT_FILE_PATTERN = /\.(html|js|css)$/i;
+const FORBIDDEN_PRODUCTION_MARKERS = [
+  {
+    label: "旧首页文案",
+    pattern: /清迈，\s*今天怎么过/,
+  },
+  {
+    label: "旧 SceneHome 页面 chunk",
+    pattern: /SceneHome-[\w-]+\.js/,
+  },
+  {
+    label: "旧 CmiHome 独立页 chunk",
+    pattern: /CmiHome-[\w-]+\.js/,
+  },
+  {
+    label: "旧 MapView 页面 chunk",
+    pattern: /MapView-[\w-]+\.js/,
+  },
+];
 
 if (!existsSync(SERVICE_WORKER_PATH)) {
   throw new Error("缺少 dist/sw.js，无法检查 PWA 预缓存。");
@@ -87,6 +106,33 @@ const findBlockedDistDirs = (dir, relativeDir = "") => {
   return blockedDirs;
 };
 
+const findForbiddenProductionMarkers = (dir, relativeDir = "") => {
+  if (!existsSync(dir)) return [];
+
+  const matches = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const relativePath = path.join(relativeDir, entry.name);
+    const fullPath = path.join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      matches.push(...findForbiddenProductionMarkers(fullPath, relativePath));
+      continue;
+    }
+
+    if (!TEXT_FILE_PATTERN.test(entry.name)) continue;
+
+    const fileSource = readFileSync(fullPath, "utf8");
+    const haystack = `${relativePath}\n${fileSource}`;
+    for (const marker of FORBIDDEN_PRODUCTION_MARKERS) {
+      if (marker.pattern.test(haystack)) {
+        matches.push(`${relativePath} (${marker.label})`);
+      }
+    }
+  }
+
+  return matches;
+};
+
 const formatMB = (bytes) => `${(bytes / 1024 / 1024).toFixed(2)}MB`;
 const failures = [];
 
@@ -107,6 +153,11 @@ if (blockedUrls.length > 0) {
 const blockedDistDirs = findBlockedDistDirs(DIST_DIR);
 if (blockedDistDirs.length > 0) {
   failures.push(`以下调试/过程目录不该进入 dist：${blockedDistDirs.join(", ")}`);
+}
+
+const forbiddenProductionMarkers = findForbiddenProductionMarkers(DIST_DIR);
+if (forbiddenProductionMarkers.length > 0) {
+  failures.push(`构建产物包含旧版本入口痕迹：${forbiddenProductionMarkers.join(", ")}`);
 }
 
 if (/serviceWorker\s*\.\s*register/.test(registerSwSource)) {
