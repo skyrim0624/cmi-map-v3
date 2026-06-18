@@ -13,7 +13,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Carousel,
@@ -35,20 +34,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   CMI_EVENTS,
+  type CmiEvent,
   formatCmiEventTime,
   getCmiEventById,
   getCmiEventSortTime,
   isCmiInnEvent,
-  type CmiEvent,
 } from '@/data/cmi-events';
 import {
-  getCmiDetailTagsForRecommendation,
+  type CmiRecommendationDisplayContext,
   getCmiPlaceTypeTagsForRecommendation,
   getCmiRecommendationDisplayTag,
   getCmiSceneMapFilterGroupId,
   matchesCmiMapFilterGroup,
   matchesCmiPlaceTypeTag,
-  type CmiRecommendationDisplayContext,
 } from '@/data/cmi-taxonomy';
 import { getPlaceGuide, isCommunityCuratedRecommendation } from '@/data/place-guides';
 import {
@@ -74,11 +72,12 @@ import {
   removeStickerPlacement,
   replaceStickerPlacement,
 } from '@/features/interactions/recommendation-card-interactions';
+import { getStableProfileIdentity } from '@/features/profiles/profile-identity';
 import { getRecommendationLinkedEvent } from '@/lib/cmi-recommendation-events';
 import { getCmiEasterIconUrl, getRecommendationEasterIconId, getRecommendationReasonText } from '@/lib/easter-icons';
 import { getAddTracePath, getCmiEventCreatePath, getPersonMapPath, getPlaceMapPath, getPlacePath } from '@/lib/paths';
-import { getStableProfileIdentity } from '@/features/profiles/profile-identity';
 import { createPlaceShareCard, type PlaceShareCardResult } from '@/lib/place-share-card';
+import { getDisplayPlaceName } from '@/lib/recommendation-display';
 import type { PlacedSticker, Recommendation, Sticker } from '@/types/types';
 import { getCategoryIconUrl, normalizeCategory } from '@/types/types';
 
@@ -139,6 +138,16 @@ const getPrimaryBadgeForRecommendation = (
 
 const getProfileInitial = (displayName: string) => displayName.trim().charAt(0).toUpperCase() || '?';
 const EDIT_EVENT_OPTION_LIMIT = 16;
+
+const safelyDecodePathParam = (value?: string | null) => {
+  if (!value) return '';
+
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
 
 const getEditableEventTagOptions = (
   events: CmiEvent[],
@@ -810,19 +819,13 @@ export default function PlaceDetail() {
   const allImages = recommendations.flatMap(r => r.images);
   const firstGuide = getPlaceGuide(firstRec.place_name, firstRec.category);
   const firstIsCommunityGuide = isCommunityCuratedRecommendation(firstRec);
+  const displayPlaceName = getDisplayPlaceName(safelyDecodePathParam(placeName));
+  const shouldShowPlaceHeader = firstIsCommunityGuide || Boolean(displayPlaceName);
   const detailDisplayContext = {
     mapFilterGroupId: detailMapFilterGroupId,
     placeTypeId: entryPlaceTypeId,
   };
-  const firstPlaceTypeTags = getCmiPlaceTypeTagsForRecommendation(firstRec);
-  const firstDetailTags = getCmiDetailTagsForRecommendation(firstRec);
   const firstPrimaryBadge = getPrimaryBadgeForRecommendation(firstRec, detailDisplayContext);
-  const inlineDetailTags = [
-    ...firstPlaceTypeTags
-      .filter(tag => !(firstPrimaryBadge.isPlaceType && tag.label === firstPrimaryBadge.label))
-      .map(tag => ({ id: `place-${tag.id}`, label: tag.label })),
-    ...firstDetailTags.map(tag => ({ id: `detail-${tag.id}`, label: tag.label })),
-  ];
   const editingLinkedEvent = editingRecommendation
     ? getRecommendationLinkedEvent(editingRecommendation)
     : null;
@@ -906,62 +909,32 @@ export default function PlaceDetail() {
 
           {/* 内容区域 */}
           <div className="space-y-5 px-6 pb-8 pt-7">
-            {/* 地点名称和分类 */}
-            <div className="space-y-3">
-              {firstIsCommunityGuide ? (
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 space-y-1">
-                      <h1 className="break-words text-4xl font-black leading-tight text-foreground">{firstGuide.title}</h1>
-                      {firstGuide.title !== placeName && (
-                        <p className="break-words text-sm font-semibold text-muted-foreground">{placeName}</p>
-                      )}
+            {/* 地点名称 */}
+            {shouldShowPlaceHeader && (
+              <div className="space-y-3">
+                {firstIsCommunityGuide ? (
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 space-y-1">
+                        <h1 className="break-words text-4xl font-black leading-tight text-foreground">{firstGuide.title}</h1>
+                        {displayPlaceName && firstGuide.title !== displayPlaceName && (
+                          <p className="break-words text-sm font-semibold text-muted-foreground">{displayPlaceName}</p>
+                        )}
+                      </div>
+                      <span className="shrink-0 rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-center text-xs font-black text-emerald-700">
+                        社区整理
+                      </span>
                     </div>
-                    <span className="shrink-0 rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-center text-xs font-black text-emerald-700">
-                      社区整理
-                    </span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className="rounded-full border-border/70 bg-background/90 px-2.5 py-1 text-muted-foreground shadow-sm"
-                    >
-                      <img src={firstPrimaryBadge.iconUrl} alt="" className="mr-1 h-5 w-5 object-contain" />
-                      {firstPrimaryBadge.label}
-                    </Badge>
-                    {inlineDetailTags.map(tag => (
-                      <span
-                        key={tag.id}
-                        className="rounded-full border border-primary/15 bg-primary/5 px-2.5 py-1 text-xs font-black text-primary/80"
-                      >
-                        {tag.label}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <h1 className="break-words text-4xl font-black leading-tight text-foreground">{placeName}</h1>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className="rounded-full border-border/70 bg-background/90 px-2.5 py-1 text-muted-foreground shadow-sm"
-                    >
-                      <img src={firstPrimaryBadge.iconUrl} alt="" className="mr-1 h-5 w-5 object-contain" />
-                      {firstPrimaryBadge.label}
-                    </Badge>
-                    {inlineDetailTags.map(tag => (
-                      <span
-                        key={tag.id}
-                        className="rounded-full border border-primary/15 bg-primary/5 px-2.5 py-1 text-xs font-black text-primary/80"
-                      >
-                        {tag.label}
-                      </span>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+                ) : (
+                  <>
+                    {displayPlaceName && (
+                      <h1 className="break-words text-4xl font-black leading-tight text-foreground">{displayPlaceName}</h1>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             {/* 推荐列表 */}
             <div className="space-y-6">

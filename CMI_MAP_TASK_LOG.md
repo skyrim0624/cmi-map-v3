@@ -1,6 +1,6 @@
 # CMI Map 优化任务日志
 
-更新时间：2026-06-17 +07
+更新时间：2026-06-18 +07
 
 ## 目标
 
@@ -50,8 +50,23 @@
 35. [完成] `cmimap.com` 桌面打开也固定为手机宽度地图壳层
 36. [完成] 修复旧 Production 再次覆盖与 `/registerSW.js` 残留注册
 37. [完成] 禁用旧 v1 定时部署入口，防止旧包再次覆盖 Production
+38. [完成] 地点详情页隐藏纯坐标标题和分类标签
 
 ## 执行记录
+
+### 2026-06-18 地点详情页隐藏纯坐标标题和分类标签
+
+- 背景：用户反馈 `/place/地图坐标 · 18.78220, 98.97992` 这类详情页顶部显示坐标没有意义，且暂时不希望详情页展示“彩蛋”等分类标签。
+- 本轮修复：
+  - `PlaceDetail` 复用 `getDisplayPlaceName`，纯坐标型地点名只保留给定位和跳转，不再作为可见标题显示。
+  - 删除地点详情页顶部分类 badge 渲染，不再显示“彩蛋”或其它分类标签。
+  - 新增 `PlaceDetail.test.ts`，防止后续重新把原始 `placeName` 直接塞进标题或把分类标签行加回来。
+- 验证结果：
+  - `node --test src/pages/PlaceDetail.test.ts src/lib/recommendation-display.test.ts` 通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome check src/pages/PlaceDetail.tsx src/pages/PlaceDetail.test.ts src/lib/recommendation-display.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 应用内浏览器 414x695 视口验证本地详情页：不显示“地图坐标 · 18.78220”、不显示“彩蛋”，底部“CMI地图 / 导航 / 叫车”仍可见；点击“CMI地图”能回到带该点参数的地图页。
 
 ### 2026-06-18 禁用旧 v1 定时部署入口
 
