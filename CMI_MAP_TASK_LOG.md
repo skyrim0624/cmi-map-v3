@@ -60,13 +60,16 @@
   - Pages 项目当前 Git Provider 为 `No`，不是 GitHub 自动构建；这是一次 Pages 直传 Production 覆盖。
   - 新 HTML 已不引用 `/registerSW.js`，但 Cloudflare 上残留的旧 `/registerSW.js` 仍会注册 `/sw.js`，拿到旧 HTML 的浏览器可能继续触发 Service Worker。
 - 本轮修复：
-  - 用当前 HEAD `bd1a98e` 重新构建并部署 Production：`https://638ce6db.cmi-map.pages.dev`。
+  - 先用当前 HEAD `bd1a98e` 重新构建并恢复新入口 Production。
   - 新增 `public/registerSW.js`，只注销已有 Service Worker、清理 caches 并刷新一次，不再注册。
   - 构建检查新增 `dist/registerSW.js` 兜底：文件缺失或继续调用 `serviceWorker.register` 时直接失败。
+  - 重新部署带 `/registerSW.js` 兜底的 Production。
 - 验证结果：
   - `https://cmimap.com/` 当前 HTML 已指向新入口包 `index-BwwQsg09.js`，不再包含 `vite-plugin-pwa:register-sw`。
   - `https://cmimap.com/sw.js` 当前为自毁脚本，会 `unregister` 并清理 caches。
   - `https://cmimap.com/registerSW.js` 已改为注销旧 Service Worker 的兜底脚本。
+  - 应用内浏览器 414px 视口验证：显示“搜动态 / 地点”、底部“地图 / 动态 / 活动 / 打卡拍照”，不再显示旧首页。
+  - 应用内浏览器 2048px 桌面视口验证：中间壳层宽度 `430px`，左右居中。
 
 ### 2026-06-17 cmimap.com 桌面固定手机宽度地图壳层
 
