@@ -74,6 +74,10 @@
   - `pnpm exec biome check functions/api/animal-identify.ts functions/api/animal-identify.test.ts src/services/animal-identification.ts src/services/animal-identification.test.ts src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts` 通过。
   - `pnpm build` 通过，PWA precache 检查通过。
   - 本地应用内浏览器 414x695 视口打开 `/mark?event=cmi-wild-chiang-mai-2026-06`：未登录时正常跳转登录页，无前端 error / warn；分享面板分支由源码测试覆盖。
+  - 已部署到 Cloudflare Pages Production：`https://34ecfe42.cmi-map.pages.dev`，Source 为 `99a8d13`。
+  - 正式域名 `https://cmimap.com/` 返回新入口包 `index-DEHjLHxU.js`，未扫到“清迈，今天怎么过”、`SceneHome`、`CmiHome` 等旧首页痕迹。
+  - 正式域名 `MarkPlace-C806UjJl.js` 可访问，并包含“安卓里分享打不开时 / 长按上面的图鉴卡保存 / 识别超时了”等新兜底文案。
+  - 用用户发来的安卓反馈截图调用正式 `/api/animal-identify` 返回 `HTTP 200`、`status: "no-match"`，不再出现此前 Gemini quota 时的 `503 unavailable`。
 
 ### 2026-06-18 地点详情页隐藏纯坐标标题和分类标签
 
