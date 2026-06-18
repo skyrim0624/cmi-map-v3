@@ -32,6 +32,7 @@ const FONT_FAMILY =
 const INTRO_FONT = `900 29px ${FONT_FAMILY}`;
 const NUMBER_FONT = `900 38px ${FONT_FAMILY}`;
 const TIMESTAMP_FONT = `900 30px ${FONT_FAMILY}`;
+const SHARE_HINT_FONT = `900 24px ${FONT_FAMILY}`;
 const DEEP_GREEN = '#0B3D24';
 const YELLOW = '#F6BE19';
 const WHITE = '#FFFFFF';
@@ -44,6 +45,7 @@ const INTRO_BOX = { x: 145, y: 1210, width: 480, lineHeight: 52, maxLines: 3 };
 const QR_BOX = { x: 736, y: 1179, size: 196 };
 const QR_BACKGROUND_BOX = { x: 724, y: 1167, size: 220, radius: 8 };
 const TIMESTAMP_BOX = { x: 162, y: 1418, width: 345, height: 78 };
+const SHARE_HINT_BOX = { x: 681, y: 1396, width: 310, height: 50, radius: 25 };
 
 const speciesIntroById: Record<string, string> = {
   dog: '家犬与人类共同生活时间很长，常在院子、街角和店门口活动，是城市日常里最容易遇见的伙伴。',
@@ -204,6 +206,32 @@ const drawNumberPill = (
     NUMBER_BOX.height,
     NUMBER_FONT,
     BLACK
+  );
+};
+
+const drawShareHintPill = (context: CanvasRenderingContext2D) => {
+  context.save();
+  drawRoundRect(
+    context,
+    SHARE_HINT_BOX.x,
+    SHARE_HINT_BOX.y,
+    SHARE_HINT_BOX.width,
+    SHARE_HINT_BOX.height,
+    SHARE_HINT_BOX.radius
+  );
+  context.fillStyle = DEEP_GREEN;
+  context.fill();
+  context.restore();
+
+  drawCenteredText(
+    context,
+    '长按保存 发朋友圈',
+    SHARE_HINT_BOX.x,
+    SHARE_HINT_BOX.y,
+    SHARE_HINT_BOX.width,
+    SHARE_HINT_BOX.height,
+    SHARE_HINT_FONT,
+    WHITE
   );
 };
 
@@ -370,6 +398,7 @@ export const createCmiWildAnimalShareCard = async ({
   );
   context.fill();
   context.drawImage(qrImage, QR_BOX.x, QR_BOX.y, QR_BOX.size, QR_BOX.size);
+  drawShareHintPill(context);
 
   const blob = await canvasToBlob(canvas);
 

@@ -34,11 +34,17 @@ test('网页相机拍照输出正方形并使用取景框双指缩放', () => {
   assert.match(source, /canvas\.width = crop\.outputSize/);
   assert.match(source, /canvas\.height = crop\.outputSize/);
   assert.match(source, /DEFAULT_CAMERA_CAPTURE_QUALITY/);
+  assert.match(source, /requestBestAvailableCameraStream/);
+  assert.match(source, /CAMERA_REQUEST_CONSTRAINTS/);
+  assert.match(source, /if \(authLoading \|\| !user\) \{/);
+  assert.match(source, /capture="environment"/);
+  assert.match(source, /handleCameraShutterClick/);
   assert.match(source, /getTouchDistance/);
   assert.match(source, /onTouchStart=\{handleCameraTouchStart\}/);
   assert.match(source, /onTouchMove=\{handleCameraTouchMove\}/);
   assert.match(source, /style=\{\{ touchAction: 'none' \}\}/);
   assert.match(source, /setCameraZoomValue/);
+  assert.match(source, /可以缩放/);
   assert.doesNotMatch(source, /type="range"/);
   assert.doesNotMatch(source, /handleCameraZoomChange/);
   assert.doesNotMatch(source, /aria-label="调整焦距"/);
@@ -79,6 +85,8 @@ test('清迈客栈标签打卡后进入动态页而不是旧客栈页', () => {
 
 test('打卡只保留活动关联，不再写主题投稿关系', () => {
   assert.match(source, /const initialEventId = searchParams\.get\('event'\)/);
+  assert.match(source, /useLocation/);
+  assert.match(source, /state: \{ from: `\$\{location\.pathname\}\$\{location\.search\}` \}/);
   assert.match(source, /isCmiMapCheckinActivityEvent\(event\)/);
   assert.match(source, /prioritizeCheckinActivityEvent\(sortedEvents\)\.slice\(0, 8\)/);
   assert.match(source, /return leftIsCheckinActivity \? -1 : 1/);
@@ -116,10 +124,11 @@ test('神奇动物打卡会调用生物识别并预选彩蛋', () => {
   assert.match(source, /分享图鉴卡/);
   assert.match(source, /保存到相册/);
   assert.match(source, /小红书/);
+  assert.match(source, /setIsWildAnimalSharePanelOpen\(true\)/);
   assert.match(source, /shareWildAnimalCardWithSystem/);
   assert.match(source, /downloadCmiWildAnimalShareCard/);
   assert.match(source, /saveWildAnimalCardToDevice/);
-  assert.match(source, /安卓里分享打不开时，长按上面的图鉴卡保存/);
+  assert.match(source, /长按保存图片，再发朋友圈/);
   assert.match(source, /new File\(\[card\.blob\], card\.fileName/);
   assert.match(source, /navigatorWithFileShare\.share/);
   assert.match(source, /navigatorWithFileShare\.canShare/);

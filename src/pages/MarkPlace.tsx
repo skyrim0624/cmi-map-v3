@@ -1,6 +1,6 @@
 import { ArrowLeft, Check, Image as ImageIcon, Loader2, MapPin, Mic, MicOff, PawPrint, PencilLine, Search, Send, Share2, ThumbsUp, X } from 'lucide-react';
 import { type TouchEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { getCmiEventCardImageUrl } from '@/components/intent/event-card-presentation';
 import { LeafletMap } from '@/components/map/LeafletMap';
@@ -120,6 +120,11 @@ const DEFAULT_MARK_PLACE_CATEGORY: Category = '景点';
 const MARK_PLACE_EVENT_PAST_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
 const MARK_PLACE_EVENT_FUTURE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 const CAMERA_ZOOM_FEEDBACK_TIMEOUT_MS = 900;
+const CAMERA_REQUEST_CONSTRAINTS: MediaStreamConstraints[] = [
+  { video: MARK_PLACE_VIDEO_CONSTRAINTS },
+  { video: { facingMode: { ideal: 'environment' } } },
+  { video: true },
+];
 
 const getTouchDistance = (touches: CameraTouchList) => {
   const firstTouch = touches.item(0);
@@ -418,6 +423,26 @@ const queryMicrophonePermission = async (): Promise<SpeechPermissionStatus> => {
   }
 };
 
+const requestBestAvailableCameraStream = async () => {
+  let lastError: unknown = null;
+
+  for (const constraints of CAMERA_REQUEST_CONSTRAINTS) {
+    try {
+      return await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (error) {
+      const errorName = error instanceof DOMException ? error.name : '';
+      if (errorName === 'NotAllowedError' || errorName === 'PermissionDeniedError') {
+        throw error;
+      }
+
+      lastError = error;
+      console.warn('网页相机约束不可用，尝试下一档:', error);
+    }
+  }
+
+  throw lastError ?? new Error('网页相机不可用');
+};
+
 const getVoiceErrorHint = (error?: string) => {
   if (error === 'not-allowed') {
     return '浏览器没有给 cmimap.com 麦克风权限。打开地址栏权限设置，允许麦克风后再试；也可以先打字。';
@@ -530,6 +555,7 @@ const MarkPlaceSuccessBadge = ({ className = '' }: { className?: string }) => (
 
 export default function MarkPlace() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { user, profile, loading: authLoading } = useAuth();
   const initialPlaceName = searchParams.get('place')?.trim() || '';
@@ -622,6 +648,7 @@ export default function MarkPlace() {
   ];
 
   const uploadInputRef = useRef<HTMLInputElement>(null);
+  const cameraCaptureInputRef = useRef<HTMLInputElement>(null);
   const routeRootRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<InstanceType<SpeechRecognitionConstructor> | null>(null);
   const animalIdentificationRequestRef = useRef(0);
@@ -639,7 +666,7 @@ export default function MarkPlace() {
     ? 'min(100vw, calc(100dvh - 13.5rem))'
     : 'min(100vw, 55dvh)';
   const voiceButtonDisabled = !speechSupported || speechPermission === 'checking';
-  const cameraButtonDisabled = cameraStatus !== 'ready';
+  const cameraButtonDisabled = cameraStatus === 'starting';
   const cameraDigitalZoom = cameraZoomRange.isHardwareSupported ? 1 : cameraZoom;
   const cameraZoomLabel = `${cameraZoom.toFixed(cameraZoom % 1 === 0 ? 0 : 1)}x`;
 
@@ -957,22 +984,34 @@ export default function MarkPlace() {
 
   // 初始化 WebRTC 相机
   useEffect(() => {
+    if (authLoading || !user) {
+      stopCameraStream();
+      return () => {
+        stopCameraStream();
+      };
+    }
+
     if (stage === 'camera') {
       let alive = true;
       const startCamera = async () => {
         setCameraStatus('starting');
         setCameraHint('正在打开网页相机...');
         try {
-          if (!navigator.mediaDevices?.getUserMedia) {
+          if (!window.isSecureContext) {
             if (!alive) return;
             setCameraStatus('unsupported');
-            setCameraHint('当前浏览器不支持网页相机，可以从相册选择，或直接文字推荐。');
+            setCameraHint('当前页面不是安全连接，网页相机不会开放。点中间按钮用系统相机，或从相册选择。');
             return;
           }
 
-          const mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: MARK_PLACE_VIDEO_CONSTRAINTS,
-          });
+          if (!navigator.mediaDevices?.getUserMedia) {
+            if (!alive) return;
+            setCameraStatus('unsupported');
+            setCameraHint('当前浏览器不支持网页相机。点中间按钮用系统相机，或从相册选择。');
+            return;
+          }
+
+          const mediaStream = await requestBestAvailableCameraStream();
           if (!alive) {
             mediaStream.getTracks().forEach(track => track.stop());
             return;
@@ -1009,8 +1048,8 @@ export default function MarkPlace() {
           const blocked = errorName === 'NotAllowedError' || errorName === 'PermissionDeniedError';
           setCameraStatus(blocked ? 'blocked' : 'error');
           setCameraHint(blocked
-            ? '浏览器没有给相机权限。可以在地址栏权限里允许相机，或直接文字推荐。'
-            : '网页相机暂时打不开，可以从相册选择，或直接文字推荐。');
+            ? '浏览器没有给网页相机权限。点中间按钮用系统相机，或从相册选择。'
+            : '网页相机暂时打不开。点中间按钮用系统相机，或从相册选择。');
         }
       };
       startCamera();
@@ -1024,7 +1063,7 @@ export default function MarkPlace() {
     return () => {
       stopCameraStream();
     };
-  }, [stage]);
+  }, [authLoading, stage, user?.id]);
 
   const captureFromPreview = () => {
     if (
@@ -1090,6 +1129,20 @@ export default function MarkPlace() {
     captureFromPreview();
   };
 
+  const handleCameraShutterClick = () => {
+    if (cameraStatus === 'ready') {
+      capturePhoto();
+      return;
+    }
+
+    if (cameraStatus === 'starting') {
+      toast(cameraHint);
+      return;
+    }
+
+    cameraCaptureInputRef.current?.click();
+  };
+
   const enableWildAnimalIdentification = () => {
     const wildAnimalEvent = getCmiEventById(CMI_MAP_WILD_CHIANG_MAI_EVENT_ID);
 
@@ -1108,9 +1161,9 @@ export default function MarkPlace() {
     if (authLoading) return;
     if (!user) {
       toast.error('只有社区成员可以留下痕迹，请先登录');
-      navigate('/login', { state: { from: '/mark' }, replace: true });
+      navigate('/login', { state: { from: `${location.pathname}${location.search}` }, replace: true });
     }
-  }, [authLoading, user, navigate]);
+  }, [authLoading, location.pathname, location.search, navigate, user]);
 
   const applyCapturedCoordinates = (coordinates: CapturedCoordinates, label: string) => {
     const nextCenter = {
@@ -1497,6 +1550,7 @@ export default function MarkPlace() {
               });
               generatedWildAnimalShareCard = shareCard;
               setWildAnimalShareCard(shareCard);
+              setIsWildAnimalSharePanelOpen(true);
             } catch (error) {
               console.error('动物分享卡生成失败:', error);
               toast.error('分享卡片暂时没生成，动态已经发布');
@@ -1659,10 +1713,11 @@ export default function MarkPlace() {
               LIVE
             </div>
             <div className="absolute right-7 top-7 rounded-full border border-stone-300/70 bg-white/55 px-2.5 py-1 text-[10px] font-black tracking-[0.18em] text-stone-500 shadow-inner">
-              SQ
+              可以缩放
             </div>
             <div className="flex items-center gap-7 mt-7 z-10 w-full justify-center px-8">
               <input type="file" accept="image/*" className="hidden" onChange={(e) => handleCapture(e, 'exif')} ref={uploadInputRef} />
+              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleCapture(e, 'live')} ref={cameraCaptureInputRef} />
               <button
                 type="button"
                 onClick={startQuickTextFlow}
@@ -1673,12 +1728,12 @@ export default function MarkPlace() {
               </button>
               <button
                 type="button"
-                onClick={capturePhoto}
+                onClick={handleCameraShutterClick}
                 disabled={cameraButtonDisabled}
                 className={`relative w-[88px] h-[88px] sm:w-[96px] sm:h-[96px] rounded-full flex flex-col items-center justify-center group transition-transform duration-200 outline-none shrink-0 ${
                   cameraButtonDisabled ? 'cursor-not-allowed opacity-55' : 'active:scale-[0.92]'
                 }`}
-                aria-label={cameraButtonDisabled ? cameraHint : '拍下当前画面'}
+                aria-label={cameraStatus === 'ready' ? '拍下当前画面' : '打开系统相机拍照'}
               >
                 <div className="absolute inset-0 rounded-full border-[5px] border-[#f9f4eb] shadow-[0_10px_24px_rgba(0,0,0,0.12),inset_0_4px_8px_rgba(255,255,255,0.86)] transition-shadow bg-[#fdfdfc]"></div>
                 <div className={`w-[76%] h-[76%] rounded-full transition-all flex items-center justify-center ${
@@ -1825,7 +1880,7 @@ export default function MarkPlace() {
                           />
                         </a>
                         <p className="mb-2 text-[10px] font-black leading-snug text-[#0b3d24]/75">
-                          安卓里分享打不开时，长按上面的图鉴卡保存，再发微信或小红书。
+                          长按保存图片，再发朋友圈。网页一键朋友圈不稳定，保存后手动发更稳。
                         </p>
                         <div className="grid grid-cols-3 gap-2">
                           <button

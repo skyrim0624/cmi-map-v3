@@ -11,3 +11,9 @@ test('地点详情页不直接展示纯坐标地点名和分类标签', () => {
   assert.doesNotMatch(source, /import \{ Badge \} from '@\/components\/ui\/badge';/);
   assert.doesNotMatch(source, /inlineDetailTags/);
 });
+
+test('地点详情页顶部照片完整等比展示，不再裁切主体', () => {
+  assert.match(source, /CarouselContent className="items-center"/);
+  assert.match(source, /className="block h-auto max-h-\[72dvh\] w-auto max-w-full object-contain"/);
+  assert.doesNotMatch(source, /className="absolute inset-0 w-full h-full object-cover"/);
+});

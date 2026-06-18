@@ -1210,11 +1210,11 @@ export default function CmiMapV3Prototype() {
 
   const handleBottomAdd = useCallback((screen: PrimaryScreenId) => {
     if (screen === 'events') {
-      navigate(getMarkPlacePath());
+      navigate(getMarkPlacePath({ eventId: CMI_MAP_WILD_CHIANG_MAI_EVENT_ID }));
       return;
     }
 
-    navigate(getMarkPlacePath());
+    navigate(getMarkPlacePath({ eventId: CMI_MAP_WILD_CHIANG_MAI_EVENT_ID }));
   }, [navigate]);
 
   const handleRecommendationCardClick = useCallback(async (

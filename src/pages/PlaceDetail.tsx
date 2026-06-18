@@ -872,17 +872,17 @@ export default function PlaceDetail() {
         <div className="pb-32">
           {/* 照片轮播 */}
           {allImages.length > 0 ? (
-            <div className="h-[32dvh] min-h-[230px] max-h-[310px] w-full bg-muted">
-              <Carousel className="w-full h-full">
-                <CarouselContent>
+            <div className="w-full bg-muted">
+              <Carousel className="w-full">
+                <CarouselContent className="items-center">
                   {allImages.map((img, idx) => (
-                    <CarouselItem key={idx} className="relative h-[32dvh] min-h-[230px] max-h-[310px]">
+                    <CarouselItem key={idx} className="flex min-h-[230px] items-center justify-center bg-muted">
                       <img
                         src={img}
                         alt=""
                         loading={idx === 0 ? 'eager' : 'lazy'}
                         decoding="async"
-                        className="absolute inset-0 w-full h-full object-cover"
+                        className="block h-auto max-h-[72dvh] w-auto max-w-full object-contain"
                       />
                     </CarouselItem>
                   ))}

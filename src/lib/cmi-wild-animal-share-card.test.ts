@@ -45,15 +45,18 @@ test('神奇动物分享卡使用干净二维码区域', () => {
   assert.doesNotMatch(source, /QR_SLOGAN_TEXT|QR_SLOGAN_BOX|drawPanelCover|PAW_STAMP_COVER|drawQuietPawMagnifier|drawQuietStampPatch|PAW_STAMP_ICON/);
 });
 
-test('神奇动物分享卡底部只叠加动物名、介绍和时间戳', () => {
+test('神奇动物分享卡底部叠加动物信息、时间戳和保存提示', () => {
   assert.match(source, /const SPECIES_NAME_BOX = \{ x: 250, y: 1116, width: 340, height: 54 \}/);
   assert.match(source, /const INTRO_BOX = \{ x: 145, y: 1210, width: 480, lineHeight: 52, maxLines: 3 \}/);
   assert.match(source, /const TIMESTAMP_BOX = \{ x: 162, y: 1418, width: 345, height: 78 \}/);
+  assert.match(source, /const SHARE_HINT_BOX = \{ x: 681, y: 1396, width: 310, height: 50, radius: 25 \}/);
   assert.match(source, /candidate\.introZh\?\.trim\(\) \|\|/);
   assert.match(source, /speciesIntroById\[candidate\.id\] \|\|/);
   assert.match(source, /getAnimalIntro\(candidate\) \|\|/);
   assert.match(source, /drawWrappedText\(\s+context,\s+getIntro\(candidate\),/);
   assert.match(source, /drawCenteredText\(\s+context,\s+timestamp,/);
+  assert.match(source, /drawShareHintPill\(context\)/);
+  assert.match(source, /长按保存 发朋友圈/);
   assert.doesNotMatch(source, /drawInfoRow\(context, '发现者'|drawInfoRow\(context, '时间'|drawInfoRow\(context, '地点'|drawInfoRow\(context, '介绍'/);
   assert.doesNotMatch(source, /COLLECTION_PROGRESS_BOX|collectionProgress|COLLECTION_PROGRESS_FONT|PHOTO_DECORATION_PATCHES|drawTemplateDecorationPatches|BOTTOM_LEFT_COVER|BOTTOM_CENTER_COVER|BOTTOM_RIGHT_COVER/);
 });

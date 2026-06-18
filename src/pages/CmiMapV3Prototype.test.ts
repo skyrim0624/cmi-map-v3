@@ -32,6 +32,7 @@ test('主地图固定活动入口打开活动说明页而不是相机', () => {
 
 test('底部拍照入口使用神奇动物主题放大镜而不是加号', () => {
   assert.match(source, /src="\/map-icons\/cmi-flat-v2\/wild-magnifier-checkin\.png"/);
+  assert.match(source, /navigate\(getMarkPlacePath\(\{ eventId: CMI_MAP_WILD_CHIANG_MAI_EVENT_ID \}\)\)/);
   assert.doesNotMatch(source, /function WildMagnifierIcon\(\)/);
   assert.doesNotMatch(source, /<Plus size=\{36\}/);
 });

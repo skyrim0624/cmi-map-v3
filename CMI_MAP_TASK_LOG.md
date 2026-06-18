@@ -2964,3 +2964,19 @@
 - 验证结果：
   - `node --test src/pages/MarkPlace.test.ts` 通过，12 项测试通过。
   - `pnpm run lint` 通过，包含 TypeScript 检查、Biome、Tailwind 语法检查和 Vite build。
+
+### 2026-06-18 线下扫码使用反馈修正
+
+- 背景：线下使用后反馈 H5 打卡流程在安卓相机、放大镜入口预期、缩放提示、分享卡片等待和详情图裁切上仍有明显摩擦；小程序化暂不进入本轮。
+- 本轮实现：
+  - `/mark` 网页相机启动失败时自动降级约束，并提供系统相机拍照兜底，避免安卓机因 WebRTC 或高规格约束失败后无路可走。
+  - V3 底部放大镜入口直接带入神奇生物活动，进入相机后默认开启生物识别。
+  - 相机底部右上提示从短标签改成“可以缩放”。
+  - 神奇生物发布生成图鉴卡后自动展开分享卡片面板，并在面板和卡片图片上明确提示“长按保存 / 发朋友圈”。
+  - 地点详情页顶部照片改为完整等比展示，不再用 `cover` 裁切主体。
+- 验证结果：
+  - `node --test src/pages/MarkPlace.test.ts src/pages/PlaceDetail.test.ts src/pages/CmiMapV3Prototype.test.ts src/lib/cmi-wild-animal-share-card.test.ts` 通过，27 项测试通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome lint src/pages/MarkPlace.tsx src/pages/CmiMapV3Prototype.tsx src/pages/PlaceDetail.tsx src/lib/cmi-wild-animal-share-card.ts src/pages/MarkPlace.test.ts src/pages/CmiMapV3Prototype.test.ts src/pages/PlaceDetail.test.ts src/lib/cmi-wild-animal-share-card.test.ts` 通过。
+  - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
+  - 本地应用内浏览器 `http://127.0.0.1:5183/` 390×844 复查：首页非空，底部打卡入口可进入登录页；地点详情页顶部图片为 `object-fit: contain`，400×400 原图显示为 390×390，无裁切；当前端口无新的业务 warn/error。
