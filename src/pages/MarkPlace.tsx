@@ -7,13 +7,13 @@ import { LeafletMap } from '@/components/map/LeafletMap';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   CMI_EVENTS,
-  type CmiEvent,
   CMI_MAP_WILD_CHIANG_MAI_EVENT_ID,
+  type CmiEvent,
   formatCmiEventTime,
   getCmiEventById,
   getCmiEventSortTime,
-  isCmiMapCheckinActivityEvent,
   isCmiInnEvent,
+  isCmiMapCheckinActivityEvent,
 } from '@/data/cmi-events';
 import { getCmiInputCategoryOptionById, getCmiInputCategoryOptions } from '@/data/cmi-taxonomy';
 import { assignCmiEventCaptureNumber, createRecommendation, getAllRecommendations, uploadImages } from '@/db/api';
@@ -37,6 +37,7 @@ import { useDebounce } from '@/hooks/use-debounce';
 import {
   type CmiWildAnimalShareCardResult,
   createCmiWildAnimalShareCard,
+  downloadCmiWildAnimalShareCard,
 } from '@/lib/cmi-wild-animal-share-card';
 import {
   DEFAULT_CMI_EASTER_ICON_ID,
@@ -106,6 +107,7 @@ type NavigatorWithFileShare = Navigator & {
 };
 type WildAnimalShareTarget = 'album' | 'wechat' | 'xiaohongshu';
 type WildAnimalShareResult = 'shared' | 'unsupported' | 'cancelled' | 'failed';
+type WildAnimalSaveResult = 'downloaded' | 'failed';
 
 const MARK_PLACE_VIDEO_CONSTRAINTS: MediaTrackConstraints = {
   facingMode: { ideal: 'environment' },
@@ -391,6 +393,16 @@ const shareWildAnimalCardWithSystem = async (
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled';
     console.error('Failed to share CMI wild animal card:', error);
+    return 'failed';
+  }
+};
+
+const saveWildAnimalCardToDevice = (card: CmiWildAnimalShareCardResult): WildAnimalSaveResult => {
+  try {
+    downloadCmiWildAnimalShareCard(card);
+    return 'downloaded';
+  } catch (error) {
+    console.error('Failed to download CMI wild animal card:', error);
     return 'failed';
   }
 };
@@ -1370,19 +1382,31 @@ export default function MarkPlace() {
   const handleWildAnimalShareAction = async (target: WildAnimalShareTarget) => {
     if (!wildAnimalShareCard) return;
 
+    if (target === 'album') {
+      const saveResult = saveWildAnimalCardToDevice(wildAnimalShareCard);
+      if (saveResult === 'downloaded') {
+        toast.success('已生成图片；安卓里如果没进相册，长按上面的图鉴卡保存');
+        return;
+      }
+      toast.error('保存没有打开，长按上面的图鉴卡保存');
+      return;
+    }
+
     const result = await shareWildAnimalCardWithSystem(wildAnimalShareCard, target);
     if (result === 'cancelled') return;
     if (result === 'shared') {
-      toast.success(target === 'album' ? '已打开系统保存菜单' : '已打开系统分享菜单');
+      toast.success('已打开系统分享菜单');
       return;
     }
 
-    if (result === 'unsupported') {
-      toast.error('这个浏览器不能直接存相册，换 Safari/微信内打开再试');
+    const saveResult = saveWildAnimalCardToDevice(wildAnimalShareCard);
+    if (saveResult === 'downloaded') {
+      const targetName = target === 'wechat' ? '微信' : '小红书';
+      toast.success(`已生成图片；如果没有弹出${targetName}，长按上面的图鉴卡保存后再发`);
       return;
     }
 
-    toast.error('系统分享没有打开，请再试一次');
+    toast.error('系统分享没有打开，长按上面的图鉴卡保存后再发');
   };
 
   // 4. 用户提交逻辑
@@ -1779,37 +1803,56 @@ export default function MarkPlace() {
                       <Share2 className="relative h-4 w-4 text-[#fff4d8]/85" strokeWidth={3} />
                     </button>
                     {isWildAnimalSharePanelOpen && (
-                      <div className="relative grid w-full grid-cols-3 gap-2 rounded-[1.4rem] border-2 border-[#0b1724] bg-[#fff4d8] p-2 shadow-[7px_7px_0_rgba(11,23,36,0.18)]">
+                      <div className="relative w-full rounded-[1.4rem] border-2 border-[#0b1724] bg-[#fff4d8] p-2 shadow-[7px_7px_0_rgba(11,23,36,0.18)]">
                         <img
                           src="/map-icons/cmi-flat-v2/wild-magnifier-checkin.png"
                           alt=""
                           aria-hidden="true"
                           className="pointer-events-none absolute -right-3 -top-4 h-12 w-12 rotate-[8deg] object-contain drop-shadow-[0_5px_0_rgba(11,23,36,0.16)]"
                         />
-                        <button
-                          type="button"
-                          onClick={() => void handleWildAnimalShareAction('album')}
-                          className="relative flex min-h-16 flex-col items-center justify-center gap-1 rounded-[1.1rem] border-2 border-[#0b1724] bg-[#dff5e7] px-2 py-2 text-[11px] font-black leading-tight text-[#0b3d24] shadow-[3px_3px_0_rgba(11,23,36,0.22)] active:translate-y-0.5 active:shadow-[1px_1px_0_rgba(11,23,36,0.2)]"
+                        <a
+                          href={wildAnimalShareCard.dataUrl}
+                          download={wildAnimalShareCard.fileName}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mb-2 block overflow-hidden rounded-[1rem] border-2 border-[#0b1724] bg-white shadow-[3px_3px_0_rgba(11,23,36,0.16)]"
+                          aria-label="打开图鉴卡图片"
                         >
-                          <ImageIcon className="h-4 w-4" strokeWidth={3} />
-                          保存到相册
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleWildAnimalShareAction('wechat')}
-                          className="relative flex min-h-16 flex-col items-center justify-center gap-1 rounded-[1.1rem] border-2 border-[#0b1724] bg-[#7bd36a] px-2 py-2 text-[11px] font-black leading-tight text-[#0b3d24] shadow-[3px_3px_0_rgba(11,23,36,0.22)] active:translate-y-0.5 active:shadow-[1px_1px_0_rgba(11,23,36,0.2)]"
-                        >
-                          <Share2 className="h-4 w-4" strokeWidth={3} />
-                          微信
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleWildAnimalShareAction('xiaohongshu')}
-                          className="relative flex min-h-16 flex-col items-center justify-center gap-1 rounded-[1.1rem] border-2 border-[#0b1724] bg-[#2ea85f] px-2 py-2 text-[11px] font-black leading-tight text-[#fff4d8] shadow-[3px_3px_0_rgba(11,23,36,0.22)] active:translate-y-0.5 active:shadow-[1px_1px_0_rgba(11,23,36,0.2)]"
-                        >
-                          <Send className="h-4 w-4" strokeWidth={3} />
-                          小红书
-                        </button>
+                          <img
+                            src={wildAnimalShareCard.dataUrl}
+                            alt="图鉴卡预览"
+                            className="h-28 w-full object-contain"
+                          />
+                        </a>
+                        <p className="mb-2 text-[10px] font-black leading-snug text-[#0b3d24]/75">
+                          安卓里分享打不开时，长按上面的图鉴卡保存，再发微信或小红书。
+                        </p>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void handleWildAnimalShareAction('album')}
+                            className="relative flex min-h-16 flex-col items-center justify-center gap-1 rounded-[1.1rem] border-2 border-[#0b1724] bg-[#dff5e7] px-2 py-2 text-[11px] font-black leading-tight text-[#0b3d24] shadow-[3px_3px_0_rgba(11,23,36,0.22)] active:translate-y-0.5 active:shadow-[1px_1px_0_rgba(11,23,36,0.2)]"
+                          >
+                            <ImageIcon className="h-4 w-4" strokeWidth={3} />
+                            保存到相册
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleWildAnimalShareAction('wechat')}
+                            className="relative flex min-h-16 flex-col items-center justify-center gap-1 rounded-[1.1rem] border-2 border-[#0b1724] bg-[#7bd36a] px-2 py-2 text-[11px] font-black leading-tight text-[#0b3d24] shadow-[3px_3px_0_rgba(11,23,36,0.22)] active:translate-y-0.5 active:shadow-[1px_1px_0_rgba(11,23,36,0.2)]"
+                          >
+                            <Share2 className="h-4 w-4" strokeWidth={3} />
+                            微信
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleWildAnimalShareAction('xiaohongshu')}
+                            className="relative flex min-h-16 flex-col items-center justify-center gap-1 rounded-[1.1rem] border-2 border-[#0b1724] bg-[#2ea85f] px-2 py-2 text-[11px] font-black leading-tight text-[#fff4d8] shadow-[3px_3px_0_rgba(11,23,36,0.22)] active:translate-y-0.5 active:shadow-[1px_1px_0_rgba(11,23,36,0.2)]"
+                          >
+                            <Send className="h-4 w-4" strokeWidth={3} />
+                            小红书
+                          </button>
+                        </div>
                       </div>
                     )}
                   </>
@@ -1950,7 +1993,7 @@ export default function MarkPlace() {
                             ? '正在识别生物主体。'
                             : animalIdentificationStatus === 'idle'
                               ? '拍下动植物后会自动识别。'
-                              : '这张没识别清楚，换张近一点的照片或直接写名称。'}
+                              : animalIdentification?.message ?? '这张没识别清楚，换张近一点的照片或直接写名称。'}
                         </p>
                       )}
                     </div>

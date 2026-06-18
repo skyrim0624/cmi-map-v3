@@ -51,8 +51,29 @@
 36. [完成] 修复旧 Production 再次覆盖与 `/registerSW.js` 残留注册
 37. [完成] 禁用旧 v1 定时部署入口，防止旧包再次覆盖 Production
 38. [完成] 地点详情页隐藏纯坐标标题和分类标签
+39. [完成] 修复安卓神奇动物图鉴卡保存 / 分享兜底与识别服务备用链路
 
 ## 执行记录
+
+### 2026-06-18 安卓神奇动物图鉴卡保存 / 分享与识别服务兜底
+
+- 背景：安卓用户反馈神奇动物识别完成后，“保存到相册 / 微信 / 小红书”三个按钮都打不开；另有安卓用户反馈拍照后识别一直失败或卡住。
+- 根因：
+  - 图鉴卡三个按钮都依赖 `navigator.share({ files })`，安卓内置浏览器、微信壳、夸克等环境经常不支持文件分享；“保存到相册”也没有真正走下载 / 长按兜底。
+  - 线上 `/api/animal-identify` 日志显示 Gemini 2.5 Flash 返回 429 quota exceeded；同时自托管 `species.cmimap.com` 模型服务仍可用，但当前 Pages Function 没有把它作为 Gemini 失败后的兜底。
+  - 识别链路只接受物种 / 亚种级别高置信度结果，连“鸟类 / 蜥蜴类 / 昆虫 / 植物”这种保守大类结果也会被丢掉，导致用户感觉一直识别不出来。
+- 本轮修复：
+  - 图鉴卡分享面板加入真实图片预览链接，安卓分享打不开时可以直接长按图片保存；“保存到相册”按钮改为先触发图片下载，不再走系统分享接口。
+  - “微信 / 小红书”按钮仍优先尝试系统分享；如果系统分享打不开，自动生成下载图并提示用户长按上方图鉴卡保存后再发。
+  - `/api/animal-identify` 恢复自托管物种模型兜底：Gemini 配额 / 临时失败时改走 `CMI_MAP_SPECIES_MODEL_URL`，并带上 token。
+  - 保留严格物种识别门槛，同时新增保守大类兜底，只在有动植物主体且置信度足够时返回“鸟类 / 蜥蜴类 / 蛇类 / 蛙类 / 昆虫 / 蜘蛛类 / 鱼类 / 植物”，不硬猜具体物种。
+  - 前端识别请求加入超时控制和更清楚的不可用文案；超时拉长到覆盖安卓慢网和自托管模型冷响应。
+- 验证结果：
+  - `node --test functions/api/animal-identify.test.ts src/services/animal-identification.test.ts src/pages/MarkPlace.test.ts src/lib/cmi-wild-animal-share-card.test.ts` 通过，38 项测试全部通过。
+  - `pnpm exec tsgo -p tsconfig.check.json --pretty false` 通过。
+  - `pnpm exec biome check functions/api/animal-identify.ts functions/api/animal-identify.test.ts src/services/animal-identification.ts src/services/animal-identification.test.ts src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts` 通过。
+  - `pnpm build` 通过，PWA precache 检查通过。
+  - 本地应用内浏览器 414x695 视口打开 `/mark?event=cmi-wild-chiang-mai-2026-06`：未登录时正常跳转登录页，无前端 error / warn；分享面板分支由源码测试覆盖。
 
 ### 2026-06-18 地点详情页隐藏纯坐标标题和分类标签
 

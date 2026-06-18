@@ -8,6 +8,8 @@ test('生物识别上传前压缩到轻量图片', () => {
   assert.match(source, /maxWidthOrHeight: 768/);
   assert.match(source, /maxSizeMB: 0\.9/);
   assert.match(source, /outputType: 'image\/jpeg'/);
+  assert.match(source, /const ANIMAL_IDENTIFICATION_TIMEOUT_MS = 65000/);
+  assert.match(source, /controller\.abort\(\)/);
 });
 
 test('生物识别通过同源 Pages Function 调用', () => {

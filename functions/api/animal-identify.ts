@@ -1,10 +1,14 @@
 const GEMINI_SPECIES_MODEL_ID = 'gemini-2.5-flash';
+const SELF_HOSTED_SPECIES_MODEL_ID = 'self-hosted-species-model';
 const GEMINI_GENERATE_CONTENT_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_SPECIES_MODEL_ID}:generateContent`;
 const GBIF_SPECIES_MATCH_URL = 'https://api.gbif.org/v1/species/match';
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const MIN_VISION_SPECIES_CONFIDENCE = 0.68;
+const MIN_VISION_BROAD_CONFIDENCE = 0.35;
 const MIN_GBIF_SPECIES_CONFIDENCE = 82;
 const GEMINI_MAX_ATTEMPTS = 2;
+const GEMINI_MODEL_TIMEOUT_MS = 12000;
+const SELF_HOSTED_MODEL_TIMEOUT_MS = 55000;
 const TAXON_RANK_SPECIES = 'SPECIES';
 const TAXON_RANK_SUBSPECIES = 'SUBSPECIES';
 const TAXON_KINGDOM_ANIMALIA = 'Animalia';
@@ -23,6 +27,8 @@ type PagesContext = {
   request: Request;
   env: {
     GOOGLE_AI_STUDIO_API_KEY?: string;
+    CMI_MAP_SPECIES_MODEL_URL?: string;
+    CMI_MAP_SPECIES_MODEL_TOKEN?: string;
   };
 };
 
@@ -61,6 +67,7 @@ type VisionSpeciesResult = {
   taxonRank?: string;
   confidence?: number;
   introZh?: string;
+  provider?: string;
   subjectBox?: SubjectBox;
   subjectPolygon?: SubjectPoint[];
 };
@@ -126,6 +133,89 @@ const chineseNameByScientificName = new Map<string, string>([
   ['Canna indica', '美人蕉'],
 ]);
 
+const broadTaxonFallbacks = [
+  {
+    id: 'bird',
+    nameZh: '鸟类',
+    nameEn: 'Bird',
+    scientificName: 'Aves',
+    kingdom: TAXON_KINGDOM_ANIMALIA,
+    taxonRank: 'CLASS',
+    introZh: '鸟类识别可以先看体型、喙形、羽色和活动环境；远距离照片通常先定到大类，再用近照确认物种。',
+    keywords: ['aves', 'bird', 'birds', 'avian', 'flamingo', 'kingfisher', 'myna', 'sparrow', 'pigeon', 'dove', '鸟', '鸟类', '火烈鸟'],
+  },
+  {
+    id: 'lizard',
+    nameZh: '蜥蜴类',
+    nameEn: 'Lizard',
+    scientificName: 'Sauria',
+    kingdom: TAXON_KINGDOM_ANIMALIA,
+    taxonRank: 'SUBORDER',
+    introZh: '蜥蜴类常在树干、墙面和灌木附近活动，体色、头部形态和尾巴长度是后续确认物种的关键。',
+    keywords: ['sauria', 'lizard', 'gecko', 'calotes', 'agamid', 'reptile', '蜥蜴', '壁虎', '树蜥', '爬行动物'],
+  },
+  {
+    id: 'snake',
+    nameZh: '蛇类',
+    nameEn: 'Snake',
+    scientificName: 'Serpentes',
+    kingdom: TAXON_KINGDOM_ANIMALIA,
+    taxonRank: 'SUBORDER',
+    introZh: '蛇类需要结合头型、体色、斑纹和环境继续确认；现场观察时保持距离，不要徒手接近。',
+    keywords: ['serpentes', 'snake', 'snakes', '蛇', '蛇类'],
+  },
+  {
+    id: 'frog',
+    nameZh: '蛙类',
+    nameEn: 'Frog',
+    scientificName: 'Anura',
+    kingdom: TAXON_KINGDOM_ANIMALIA,
+    taxonRank: 'ORDER',
+    introZh: '蛙类常和潮湿环境有关，体型、背纹、趾端和叫声能帮助进一步确认。',
+    keywords: ['anura', 'frog', 'toad', '蛙', '蛙类', '蟾蜍'],
+  },
+  {
+    id: 'insect',
+    nameZh: '昆虫',
+    nameEn: 'Insect',
+    scientificName: 'Insecta',
+    kingdom: TAXON_KINGDOM_ANIMALIA,
+    taxonRank: 'CLASS',
+    introZh: '昆虫种类很多，触角、翅膀、足和身体分节是关键特征；清晰近照会显著提高识别准确度。',
+    keywords: ['insecta', 'insect', 'butterfly', 'lepidoptera', 'dragonfly', 'bee', 'ant', 'mantis', '昆虫', '蝴蝶', '蜻蜓', '蜂', '蚂蚁'],
+  },
+  {
+    id: 'spider',
+    nameZh: '蜘蛛类',
+    nameEn: 'Spider',
+    scientificName: 'Araneae',
+    kingdom: TAXON_KINGDOM_ANIMALIA,
+    taxonRank: 'ORDER',
+    introZh: '蜘蛛类可以通过体型、足的姿态、腹部斑纹和蛛网形态继续确认，近照会更稳。',
+    keywords: ['araneae', 'spider', 'spiders', '蜘蛛', '蜘蛛类'],
+  },
+  {
+    id: 'fish',
+    nameZh: '鱼类',
+    nameEn: 'Fish',
+    scientificName: 'Actinopterygii',
+    kingdom: TAXON_KINGDOM_ANIMALIA,
+    taxonRank: 'CLASS',
+    introZh: '鱼类需要结合水体环境、体色、体型和游动方式识别，远距离照片通常只能先判断到大类。',
+    keywords: ['actinopterygii', 'fish', '鱼', '鱼类'],
+  },
+  {
+    id: 'plant',
+    nameZh: '植物',
+    nameEn: 'Plant',
+    scientificName: 'Plantae',
+    kingdom: TAXON_KINGDOM_PLANTAE,
+    taxonRank: 'KINGDOM',
+    introZh: '植物识别要看花、叶、果实、树皮和生长环境；先定到植物大类后，可以用近照继续确认。',
+    keywords: ['plantae', 'plant', 'flower', 'angiosperms', 'orchid', 'orchidaceae', 'palm', 'arecaceae', '植物', '花', '兰花', '棕榈'],
+  },
+] as const;
+
 const jsonResponse = (body: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(body), {
     ...init,
@@ -144,6 +234,24 @@ const extractJsonObject = (text: string) => {
     return JSON.parse(text.slice(start, end + 1)) as Record<string, unknown>;
   } catch {
     return null;
+  }
+};
+
+const fetchWithTimeout = async (
+  input: RequestInfo | URL,
+  init: RequestInit,
+  timeoutMs: number
+) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
   }
 };
 
@@ -223,6 +331,7 @@ const toVisionSpeciesResult = (text: string): VisionSpeciesResult | null => {
     taxonRank: typeof parsed.taxonRank === 'string' ? parsed.taxonRank.trim().toUpperCase() : '',
     confidence: toConfidence(parsed.confidence),
     introZh: typeof parsed.introZh === 'string' ? parsed.introZh.trim() : '',
+    provider: typeof parsed.provider === 'string' ? parsed.provider.trim() : '',
     subjectBox: normalizeSubjectBox(parsed.subjectBox),
     subjectPolygon: normalizeSubjectPolygon(parsed.subjectPolygon),
   };
@@ -282,7 +391,7 @@ const runGeminiSpeciesModel = async (
   mimeType: string
 ) => {
   for (let attempt = 1; attempt <= GEMINI_MAX_ATTEMPTS; attempt += 1) {
-    const response = await fetch(GEMINI_GENERATE_CONTENT_URL, {
+    const response = await fetchWithTimeout(GEMINI_GENERATE_CONTENT_URL, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -309,7 +418,7 @@ const runGeminiSpeciesModel = async (
           maxOutputTokens: 512,
         },
       }),
-    });
+    }, GEMINI_MODEL_TIMEOUT_MS);
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => '');
@@ -360,6 +469,55 @@ const isSpeciesLevelRank = (rank: string | undefined) => (
   rank === TAXON_RANK_SPECIES || rank === TAXON_RANK_SUBSPECIES
 );
 
+const normalizeTaxonSearchText = (value: string) =>
+  value.toLocaleLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g, ' ').trim();
+
+const findBroadTaxonFallback = (vision: VisionSpeciesResult) => {
+  const haystack = normalizeTaxonSearchText([
+    vision.scientificName,
+    vision.commonNameEn,
+    vision.commonNameZh,
+    vision.taxonRank,
+  ].filter(Boolean).join(' '));
+
+  if (!haystack) return null;
+
+  return broadTaxonFallbacks.find(taxon =>
+    taxon.keywords.some(keyword => haystack.includes(normalizeTaxonSearchText(keyword)))
+  ) ?? null;
+};
+
+const toBroadVisionCandidate = (
+  vision: VisionSpeciesResult,
+  modelId: string
+): AnimalCandidate | null => {
+  if (
+    !vision.organismPresent ||
+    vision.confidence === undefined ||
+    vision.confidence < MIN_VISION_BROAD_CONFIDENCE
+  ) {
+    return null;
+  }
+
+  const taxon = findBroadTaxonFallback(vision);
+  if (!taxon) return null;
+
+  return {
+    id: taxon.id,
+    nameZh: taxon.nameZh,
+    nameEn: taxon.nameEn,
+    scientificName: taxon.scientificName,
+    kingdom: taxon.kingdom,
+    introZh: vision.introZh || taxon.introZh,
+    score: Math.min(0.67, Math.max(MIN_VISION_BROAD_CONFIDENCE, vision.confidence)),
+    rawLabel: `${modelId}: ${vision.scientificName || vision.commonNameEn || taxon.scientificName}`,
+    source: 'vision',
+    taxonRank: taxon.taxonRank,
+    subjectBox: vision.subjectBox,
+    subjectPolygon: vision.subjectPolygon,
+  };
+};
+
 const toVisionSpeciesCandidate = (
   vision: VisionSpeciesResult,
   gbif: GbifSpeciesMatch,
@@ -401,10 +559,117 @@ const toVisionSpeciesCandidate = (
   };
 };
 
+const toTrustedSpeciesCandidate = (
+  vision: VisionSpeciesResult,
+  modelId: string
+): AnimalCandidate | null => {
+  const scientificName = normalizeScientificName(vision.scientificName);
+  const taxonRank = (vision.taxonRank || '').toUpperCase();
+  const confidence = vision.confidence ?? 0;
+
+  if (
+    !vision.organismPresent ||
+    !scientificName ||
+    confidence <= 0 ||
+    REJECTED_SCIENTIFIC_NAMES.has(scientificName)
+  ) {
+    return null;
+  }
+
+  return {
+    id: `species-${scientificName.toLocaleLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    nameZh: vision.commonNameZh || chineseNameByScientificName.get(scientificName) || vision.commonNameEn || scientificName,
+    nameEn: vision.commonNameEn || scientificName,
+    scientificName,
+    kingdom: vision.scientificName === 'Plantae' ? TAXON_KINGDOM_PLANTAE : undefined,
+    introZh: vision.introZh,
+    score: Math.min(0.99, confidence),
+    rawLabel: `${modelId}: ${scientificName}`,
+    source: 'vision',
+    taxonRank,
+    subjectBox: vision.subjectBox,
+    subjectPolygon: vision.subjectPolygon,
+  };
+};
+
 type SpeciesIdentificationResult = {
   candidate: AnimalCandidate | null;
   provider: string;
   unavailable?: boolean;
+};
+
+const getSelfHostedSpeciesModelUrl = (env: PagesContext['env']) =>
+  env.CMI_MAP_SPECIES_MODEL_URL?.trim() || '';
+
+const getSelfHostedSpeciesModelToken = (env: PagesContext['env']) =>
+  env.CMI_MAP_SPECIES_MODEL_TOKEN?.trim() || '';
+
+const runSelfHostedSpeciesModel = async (
+  env: PagesContext['env'],
+  imageBytes: number[],
+  mimeType: string,
+  coarseCandidates: AnimalCandidate[]
+): Promise<VisionSpeciesResult | null> => {
+  const speciesModelUrl = getSelfHostedSpeciesModelUrl(env);
+  if (!speciesModelUrl) return null;
+
+  const formData = new FormData();
+  formData.append('image', new File([Uint8Array.from(imageBytes)], 'animal-checkin.jpg', { type: mimeType || 'image/jpeg' }));
+  if (coarseCandidates.length > 0) {
+    formData.append('coarseCandidates', JSON.stringify(coarseCandidates.map(candidate => ({
+      id: candidate.id,
+      nameZh: candidate.nameZh,
+      nameEn: candidate.nameEn,
+      scientificName: candidate.scientificName,
+      taxonRank: candidate.taxonRank,
+      score: candidate.score,
+    }))));
+  }
+
+  const headers = new Headers({ accept: 'application/json' });
+  const token = getSelfHostedSpeciesModelToken(env);
+  if (token) headers.set('authorization', `Bearer ${token}`);
+
+  try {
+    const response = await fetchWithTimeout(speciesModelUrl, {
+      method: 'POST',
+      headers,
+      body: formData,
+    }, SELF_HOSTED_MODEL_TIMEOUT_MS);
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      console.warn('自托管物种识别失败:', response.status, errorText.slice(0, 160));
+      return null;
+    }
+
+    const data = await response.json().catch(() => null);
+    return data ? toVisionSpeciesResult(JSON.stringify(data)) : null;
+  } catch (error) {
+    console.warn('自托管物种识别不可用:', error);
+    return null;
+  }
+};
+
+const identifyWithSelfHostedSpeciesModel = async (
+  env: PagesContext['env'],
+  imageBytes: number[],
+  mimeType: string,
+  coarseCandidates: AnimalCandidate[]
+): Promise<SpeciesIdentificationResult | null> => {
+  const vision = await runSelfHostedSpeciesModel(env, imageBytes, mimeType, coarseCandidates);
+  if (!vision) return getSelfHostedSpeciesModelUrl(env)
+    ? { candidate: null, provider: SELF_HOSTED_SPECIES_MODEL_ID }
+    : null;
+
+  const provider = vision.provider || SELF_HOSTED_SPECIES_MODEL_ID;
+  const speciesCandidate = toTrustedSpeciesCandidate(vision, provider);
+  if (speciesCandidate) return { candidate: speciesCandidate, provider };
+
+  const broadCandidate = toBroadVisionCandidate(vision, provider);
+  if (broadCandidate) return { candidate: broadCandidate, provider };
+
+  return { candidate: null, provider };
 };
 
 const identifySpeciesCandidate = async (
@@ -412,34 +677,53 @@ const identifySpeciesCandidate = async (
   imageBytes: number[],
   mimeType: string
 ): Promise<SpeciesIdentificationResult> => {
-  if (!env.GOOGLE_AI_STUDIO_API_KEY) {
-    return { candidate: null, provider: GEMINI_SPECIES_MODEL_ID };
+  let geminiUnavailable = false;
+  let geminiBroadCandidate: AnimalCandidate | null = null;
+
+  if (env.GOOGLE_AI_STUDIO_API_KEY) {
+    try {
+      const vision = await runGeminiSpeciesModel(env.GOOGLE_AI_STUDIO_API_KEY, imageBytes, mimeType);
+      if (vision?.scientificName) {
+        const gbif = await validateScientificNameWithGbif(vision.scientificName);
+        const candidate = gbif ? toVisionSpeciesCandidate(vision, gbif, GEMINI_SPECIES_MODEL_ID) : null;
+        if (candidate) return { candidate, provider: GEMINI_SPECIES_MODEL_ID };
+      }
+      if (vision) {
+        geminiBroadCandidate = toBroadVisionCandidate(vision, GEMINI_SPECIES_MODEL_ID);
+      }
+    } catch (error) {
+      if (error instanceof GeminiSpeciesModelUnavailableError) {
+        geminiUnavailable = true;
+      } else {
+        console.warn('Gemini 生物物种识别失败:', error);
+      }
+    }
   }
 
-  try {
-    const vision = await runGeminiSpeciesModel(env.GOOGLE_AI_STUDIO_API_KEY, imageBytes, mimeType);
-    if (vision?.scientificName) {
-      const gbif = await validateScientificNameWithGbif(vision.scientificName);
-      const candidate = gbif ? toVisionSpeciesCandidate(vision, gbif, GEMINI_SPECIES_MODEL_ID) : null;
-      if (candidate) return { candidate, provider: GEMINI_SPECIES_MODEL_ID };
-    }
-  } catch (error) {
-    if (error instanceof GeminiSpeciesModelUnavailableError) {
-      return { candidate: null, provider: GEMINI_SPECIES_MODEL_ID, unavailable: true };
-    }
-    console.warn('Gemini 生物物种识别失败:', error);
-  }
+  const selfHostedResult = await identifyWithSelfHostedSpeciesModel(
+    env,
+    imageBytes,
+    mimeType,
+    geminiBroadCandidate ? [geminiBroadCandidate] : []
+  );
+  if (selfHostedResult?.candidate) return selfHostedResult;
+  if (geminiBroadCandidate) return { candidate: geminiBroadCandidate, provider: GEMINI_SPECIES_MODEL_ID };
+  if (selfHostedResult) return selfHostedResult;
 
-  return { candidate: null, provider: GEMINI_SPECIES_MODEL_ID };
+  return {
+    candidate: null,
+    provider: env.GOOGLE_AI_STUDIO_API_KEY ? GEMINI_SPECIES_MODEL_ID : SELF_HOSTED_SPECIES_MODEL_ID,
+    unavailable: geminiUnavailable || (!env.GOOGLE_AI_STUDIO_API_KEY && !getSelfHostedSpeciesModelUrl(env)),
+  };
 };
 
 export const onRequestPost = async ({ request, env }: PagesContext) => {
   const startedAt = Date.now();
 
-  if (!env.GOOGLE_AI_STUDIO_API_KEY) {
+  if (!env.GOOGLE_AI_STUDIO_API_KEY && !getSelfHostedSpeciesModelUrl(env)) {
     return jsonResponse({
       status: 'unavailable',
-      provider: GEMINI_SPECIES_MODEL_ID,
+      provider: SELF_HOSTED_SPECIES_MODEL_ID,
       candidates: [],
       message: '识别服务暂时不可用',
     }, { status: 503 });

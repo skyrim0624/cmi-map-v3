@@ -117,14 +117,17 @@ test('神奇动物打卡会调用生物识别并预选彩蛋', () => {
   assert.match(source, /保存到相册/);
   assert.match(source, /小红书/);
   assert.match(source, /shareWildAnimalCardWithSystem/);
+  assert.match(source, /downloadCmiWildAnimalShareCard/);
+  assert.match(source, /saveWildAnimalCardToDevice/);
+  assert.match(source, /安卓里分享打不开时，长按上面的图鉴卡保存/);
   assert.match(source, /new File\(\[card\.blob\], card\.fileName/);
   assert.match(source, /navigatorWithFileShare\.share/);
   assert.match(source, /navigatorWithFileShare\.canShare/);
   assert.match(source, /wild-magnifier-checkin\.png/);
-  assert.doesNotMatch(source, /downloadCmiWildAnimalShareCard\(wildAnimalShareCard\)/);
   assert.match(source, /识别生物/);
   assert.match(source, /生物识别/);
   assert.match(source, /正在识别生物主体。/);
+  assert.match(source, /animalIdentification\?\.message/);
   assert.match(source, /这张没识别清楚，换张近一点的照片或直接写名称。/);
   assert.doesNotMatch(source, /拍照后会先给出可能候选。/);
   assert.doesNotMatch(source, /BioCLIP/);

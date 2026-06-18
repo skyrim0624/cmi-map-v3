@@ -26,6 +26,7 @@ export interface AnimalIdentificationResult {
 }
 
 const ANIMAL_IDENTIFICATION_ENDPOINT = '/api/animal-identify';
+const ANIMAL_IDENTIFICATION_TIMEOUT_MS = 65000;
 
 const fallbackScientificNames: Record<string, string> = {
   dog: 'Canis lupus familiaris',
@@ -164,10 +165,27 @@ export const identifyAnimalPhoto = async (file: File): Promise<AnimalIdentificat
   const formData = new FormData();
   formData.append('image', uploadFile, 'animal-checkin.jpg');
 
-  const response = await fetch(ANIMAL_IDENTIFICATION_ENDPOINT, {
-    method: 'POST',
-    body: formData,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ANIMAL_IDENTIFICATION_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(ANIMAL_IDENTIFICATION_ENDPOINT, {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    return {
+      status: 'unavailable',
+      candidates: [],
+      message: error instanceof DOMException && error.name === 'AbortError'
+        ? '识别超时了，先发布文字，稍后再试'
+        : '识别服务暂时连不上',
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 
   const data = await response.json().catch(() => null) as AnimalIdentificationResult | null;
 
