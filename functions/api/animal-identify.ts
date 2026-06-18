@@ -472,6 +472,18 @@ const isSpeciesLevelRank = (rank: string | undefined) => (
 const normalizeTaxonSearchText = (value: string) =>
   value.toLocaleLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g, ' ').trim();
 
+const matchesTaxonKeyword = (haystack: string, keyword: string) => {
+  const normalizedKeyword = normalizeTaxonSearchText(keyword);
+  if (!normalizedKeyword) return false;
+
+  const haystackTokens = new Set(haystack.split(/\s+/).filter(Boolean));
+  if (!normalizedKeyword.includes(' ')) {
+    return haystackTokens.has(normalizedKeyword);
+  }
+
+  return haystack.includes(normalizedKeyword);
+};
+
 const findBroadTaxonFallback = (vision: VisionSpeciesResult) => {
   const haystack = normalizeTaxonSearchText([
     vision.scientificName,
@@ -483,7 +495,7 @@ const findBroadTaxonFallback = (vision: VisionSpeciesResult) => {
   if (!haystack) return null;
 
   return broadTaxonFallbacks.find(taxon =>
-    taxon.keywords.some(keyword => haystack.includes(normalizeTaxonSearchText(keyword)))
+    taxon.keywords.some(keyword => matchesTaxonKeyword(haystack, keyword))
   ) ?? null;
 };
 

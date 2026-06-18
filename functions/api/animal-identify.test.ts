@@ -19,6 +19,8 @@ test('Gemini 低置信度不再硬猜具体物种', () => {
   assert.match(source, /const MIN_VISION_BROAD_CONFIDENCE = 0\.35/);
   assert.match(source, /vision\.confidence < MIN_VISION_SPECIES_CONFIDENCE/);
   assert.match(source, /toBroadVisionCandidate/);
+  assert.match(source, /matchesTaxonKeyword/);
+  assert.match(source, /haystackTokens\.has\(normalizedKeyword\)/);
   assert.match(source, /status: candidates\.length > 0 \? 'ready' : 'no-match'/);
 });
 
