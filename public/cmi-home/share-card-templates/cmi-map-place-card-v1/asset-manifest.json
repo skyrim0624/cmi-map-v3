@@ -1,0 +1,74 @@
+{
+  "source": "/Users/andreas/.codex/generated_images/019eefd1-d4fe-7d20-8caf-857284aea731/ig_04cfcaa375648c27016a3957b9060c819193b7e3db0c29bda8.png",
+  "canvas": {
+    "width": 841,
+    "height": 1870
+  },
+  "base": "fixed-background-empty-slots.png",
+  "fixedTextKeptInBase": [
+    "CMI Map",
+    "清迈地点收藏卡",
+    "扫码打开",
+    "CMI Map"
+  ],
+  "variableSlots": {
+    "photo": {
+      "x": 47,
+      "y": 250,
+      "width": 749,
+      "height": 796,
+      "radius": 35
+    },
+    "placeName": {
+      "x": 54,
+      "y": 1085,
+      "width": 560,
+      "height": 118
+    },
+    "categoryText": {
+      "x": 118,
+      "y": 1279,
+      "width": 105,
+      "height": 43
+    },
+    "recommenderText": {
+      "x": 365,
+      "y": 1279,
+      "width": 150,
+      "height": 43
+    },
+    "recommendationText": {
+      "x": 92,
+      "y": 1398,
+      "width": 610,
+      "height": 127
+    },
+    "qrCode": {
+      "x": 586,
+      "y": 1625,
+      "width": 170,
+      "height": 170,
+      "radius": 12
+    }
+  },
+  "assets": [
+    "source-generated-card.png",
+    "fixed-background-empty-slots.png",
+    "variable-slots-guide.png",
+    "outer-border-overlay.png",
+    "photo-sample-rounded.png",
+    "photo-sample-raw.png",
+    "photo-slot-mask.png",
+    "qr-slot-mask.png",
+    "qr-frame-empty.png",
+    "bottom-scan-panel-empty-qr.png",
+    "pill-category-empty.png",
+    "pill-recommender-empty.png",
+    "recommendation-box-empty.png",
+    "deco-top-left-pin-badge.png",
+    "deco-top-right-map-stamp.png",
+    "deco-mini-map.png",
+    "deco-bottom-pin-badge.png"
+  ],
+  "notes": "Variable slots intentionally remove place photo, place name, category text, recommender text, recommendation copy, and QR code. Coordinates are image pixel coordinates from top-left."
+}
