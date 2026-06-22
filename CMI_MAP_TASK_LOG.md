@@ -2996,16 +2996,16 @@
   - `pnpm exec vite build --config vite.config.prod.ts && node scripts/check-pwa-precache.mjs` 通过。
   - 本地应用内浏览器 `http://127.0.0.1:5183/` 390×844 复查：首页非空，底部打卡入口可进入登录页；地点详情页顶部图片为 `object-fit: contain`，400×400 原图显示为 390×390，无裁切；当前端口无新的业务 warn/error。
 
-### 2026-06-22 地图打卡卡片进入完整详情页
+### 2026-06-22 地图打卡 marker 直接进入完整详情页
 
 - 背景：用户反馈从动态进入打卡有完整详情和行动入口，但从地图 marker 进入只看到图片和描述；地图入口也应该承接收藏、评论、导航、叫车等行动需求。
 - 本轮实现：
-  - V3 地图里普通打卡 marker 打开的底部卡片主体改为地点详情入口，点击后进入同一套 `/place/:placeName` 详情页。
-  - 卡片键盘语义从展开按钮调整为详情链接，关闭按钮仍不会误触跳转。
-  - 桌面光标从拖拽反馈调整为链接点击反馈。
+  - V3 地图里普通打卡 marker 改为直接进入同一套 `/place/:placeName` 详情页，不再先停留在底部预览卡片。
+  - 动态列表或底部动态里的推荐点击也同样进入地点详情页，避免地图链路和动态链路割裂。
+  - 保留活动 marker 的活动详情链路，不把活动点误导到地点详情。
 - 验证结果：
   - `node --test --experimental-strip-types src/pages/CmiMapV3Prototype.test.ts` 通过，8 项测试通过。
   - `pnpm exec tsc --noEmit -p tsconfig.check.json` 通过。
   - `pnpm exec biome check src/pages/CmiMapV3Prototype.tsx src/pages/CmiMapV3Prototype.test.ts src/pages/cmi-map-v3-prototype.css` 通过。
   - `pnpm run build` 通过。
-  - 本地应用内浏览器 `http://localhost:5187/map` 复查：点击“林可”地图 marker 后出现底栏，点击底栏主体进入 `/place/%E5%9C%B0%E5%9B%BE%E5%9D%90%E6%A0%87%20%C2%B7%2018.78128%2C%2098.98743`；详情页显示盖戳、想去、补一句、发活动、导航、叫车等入口，console 无 warn/error。本轮未部署、未推送线上。
+  - 本地应用内浏览器 `http://127.0.0.1:5187/` 复查：点击“林可”地图 marker 后直接进入 `/place/%E5%9C%B0%E5%9B%BE%E5%9D%90%E6%A0%87%20%C2%B7%2018.78128%2C%2098.98743`，没有出现底部预览卡片；详情页显示盖戳、想去、补一句、发活动、导航、叫车等入口，console 无 warn/error。本轮未部署、未推送线上。

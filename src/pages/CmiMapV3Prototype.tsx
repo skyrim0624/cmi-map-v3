@@ -1393,9 +1393,8 @@ export default function CmiMapV3Prototype() {
   }, []);
 
   const handleMapRecommendationSelect = useCallback((recommendation: Recommendation) => {
-    setSelectedMarker(getUserShareMarker(recommendation, profilesByAuthorKey));
-    setSelectedEventId(null);
-  }, [profilesByAuthorKey]);
+    navigate(getPlacePath(recommendation.place_name));
+  }, [navigate]);
 
   const handleBottomAdd = useCallback((screen: PrimaryScreenId) => {
     if (screen === 'events') {
@@ -1505,6 +1504,12 @@ export default function CmiMapV3Prototype() {
                 const event = events.find(item => item.id === marker.eventId);
                 setSelectedEventId(event?.id ?? marker.eventId);
                 setSelectedMarker(null);
+                return;
+              }
+
+              const recommendation = marker.recommendations[0];
+              if (recommendation) {
+                navigate(getPlacePath(recommendation.place_name));
                 return;
               }
 

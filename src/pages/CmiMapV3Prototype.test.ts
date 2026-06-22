@@ -21,14 +21,15 @@ test('地图活动底栏主体链接到正式活动详情页', () => {
   assert.match(source, /onClick=\{handleDetailLinkClick\}/);
 });
 
-test('地图打卡底栏主体链接到地点详情页', () => {
-  assert.match(source, /onOpenDetails=\{\(\) => onOpenPath\(getPlacePath\(selectedRecommendation\.place_name\)\)\}/);
-  assert.match(source, /const handleSheetClick = \(event: ReactMouseEvent<HTMLElement>\) => \{[\s\S]*onOpenDetails\(\);[\s\S]*\};/);
-  assert.match(source, /role="link"/);
-  assert.match(source, /aria-label=\{`打开\$\{panelLabel\}详情`\}/);
-  assert.match(source, /onKeyDown=\{handlePanelKeyDown\}/);
-  assert.match(styles, /\.cmi-v3-place-post-panel \{[\s\S]*?cursor: pointer;/);
-  assert.doesNotMatch(source, /aria-expanded=\{isExpanded\}[\s\S]*onKeyDown=\{handlePanelKeyDown\}/);
+test('地图打卡 marker 直接打开地点详情页', () => {
+  assert.match(
+    source,
+    /const handleMapRecommendationSelect = useCallback\(\(recommendation: Recommendation\) => \{[\s\S]*navigate\(getPlacePath\(recommendation\.place_name\)\);[\s\S]*\}, \[navigate\]\);/
+  );
+  assert.match(
+    source,
+    /const recommendation = marker\.recommendations\[0\];[\s\S]*if \(recommendation\) \{[\s\S]*navigate\(getPlacePath\(recommendation\.place_name\)\);[\s\S]*return;[\s\S]*\}[\s\S]*setSelectedMarker\(marker\);/
+  );
 });
 
 test('主地图固定活动入口打开活动说明页而不是相机', () => {
