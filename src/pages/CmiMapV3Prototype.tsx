@@ -22,8 +22,8 @@ import {
   type FormEvent,
   type KeyboardEvent,
   type MouseEvent as ReactMouseEvent,
-  type PointerEvent as ReactPointerEvent,
   type ReactNode,
+  type PointerEvent as ReactPointerEvent,
   type TouchEvent as ReactTouchEvent,
   useCallback,
   useEffect,
@@ -34,21 +34,21 @@ import {
 import { flushSync } from 'react-dom';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { LeafletMap } from '@/components/map/LeafletMap';
 import {
   getCmiEventCardImageUrl,
   getCmiEventRegistrationPreviewLabel,
 } from '@/components/intent/event-card-presentation';
+import { LeafletMap } from '@/components/map/LeafletMap';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   CMI_EVENTS,
   CMI_MAP_WILD_CHIANG_MAI_EVENT_ID,
+  type CmiEvent,
   formatCmiEventTime,
   getCmiEventSortTime,
-  isCmiMapCheckinActivityEvent,
-  isCmiInnEvent,
   isCmiEventExpired,
-  type CmiEvent,
+  isCmiInnEvent,
+  isCmiMapCheckinActivityEvent,
 } from '@/data/cmi-events';
 import { isCommunityCuratedRecommendation } from '@/data/place-guides';
 import {
@@ -58,33 +58,30 @@ import {
   type PublicProfile,
 } from '@/db/api';
 import {
+  type BlackboardAnnouncementRecord,
+  type BlackboardPostRecord,
+  getBlackboardAnnouncements,
+  getBlackboardPosts,
+} from '@/db/blackboard-posts';
+import {
   getCurrentUserCmiEventRegistrations,
   getPublishedCmiEvents,
   registerForCmiEvent,
 } from '@/db/cmi-events';
 import {
-  getBlackboardAnnouncements,
-  getBlackboardPosts,
-  type BlackboardAnnouncementRecord,
-  type BlackboardPostRecord,
-} from '@/db/blackboard-posts';
-import {
+  type CmiInboxMessageRecord,
   createCmiInboxMessage,
   getCmiInboxMessages,
   markCmiInboxMessagesRead,
-  type CmiInboxMessageRecord,
 } from '@/db/cmi-inbox';
 import {
-  appendStickerPlacement,
-  applyWishlistState,
-  createOptimisticStickerPlacement,
-  getRecommendationStickerPlacements,
-  mergeStickerPlacementMaps,
-  removeStickerPlacement,
-  replaceStickerPlacement,
-  type PlacedStickerMap,
-  type WishlistStateMap,
-} from '@/features/interactions/recommendation-card-interactions';
+  type EventListRegistrationButtonState,
+  getEventListRegistrationButtonState,
+  isCapacityFullRegistrationError,
+  isEventRegistrationPastCutoff,
+} from '@/features/cmi-events/event-list-registration-state';
+import { CMI_EVENT_REGISTRATION_SUCCESS_DESCRIPTION } from '@/features/cmi-events/event-rsvp-utils';
+import { formatBlackboardCreatedLabel } from '@/features/home/blackboard/blackboard-model';
 import {
   loadAvailableStickers,
   loadRecommendationStickerPlacements,
@@ -92,12 +89,17 @@ import {
   toggleRecommendationWishlist,
 } from '@/features/interactions/interaction-service';
 import {
-  getEventListRegistrationButtonState,
-  isEventRegistrationPastCutoff,
-  isCapacityFullRegistrationError,
-  type EventListRegistrationButtonState,
-} from '@/features/cmi-events/event-list-registration-state';
-import { CMI_EVENT_REGISTRATION_SUCCESS_DESCRIPTION } from '@/features/cmi-events/event-rsvp-utils';
+  appendStickerPlacement,
+  applyWishlistState,
+  createOptimisticStickerPlacement,
+  getRecommendationStickerPlacements,
+  mergeStickerPlacementMaps,
+  type PlacedStickerMap,
+  removeStickerPlacement,
+  replaceStickerPlacement,
+  type WishlistStateMap,
+} from '@/features/interactions/recommendation-card-interactions';
+import { createCmiEventShareCard } from '@/lib/cmi-event-share-card';
 import { getRecommendationLinkedEvent } from '@/lib/cmi-recommendation-events';
 import { getRecommendationReasonText } from '@/lib/easter-icons';
 import {
@@ -110,16 +112,14 @@ import {
   getProfilePath,
   getPublicCmiEventUrl,
 } from '@/lib/paths';
-import { createCmiEventShareCard } from '@/lib/cmi-event-share-card';
 import { getDisplayPlaceName, getRecommendationMetaParts } from '@/lib/recommendation-display';
-import { formatBlackboardCreatedLabel } from '@/features/home/blackboard/blackboard-model';
 import {
+  type Category,
   CMI_INN_PLACE_NAME,
   getCategoryConfig,
   isPublicMapRecommendation,
-  normalizeCategory,
-  type Category,
   type MapMarker,
+  normalizeCategory,
   type PlacedSticker,
   type Recommendation,
   type Sticker,
@@ -1793,6 +1793,7 @@ function MapMode({
           itemId={`recommendation:${selectedRecommendation.id}`}
           authorProfile={selectedRecommendationAuthorProfile}
           recommendation={selectedRecommendation}
+          onOpenDetails={() => onOpenPath(getPlacePath(selectedRecommendation.place_name))}
           onDismiss={onClearSelection}
         />
       ) : selectedEvent ? (
@@ -1950,14 +1951,16 @@ function PlacePostSheet({
   authorProfile,
   itemId,
   recommendation,
+  onOpenDetails,
   onDismiss,
 }: {
   authorProfile: PublicProfile | null;
   itemId: string;
   recommendation: Recommendation;
+  onOpenDetails: () => void;
   onDismiss?: () => void;
 }) {
-  const { dragHandlers, dragOffset, isDragging, setSnap, snap } = useBottomSheetDrag(itemId);
+  const { dragHandlers, dragOffset, isDragging, snap } = useBottomSheetDrag(itemId);
   const isExpanded = snap === 'expanded';
   const categoryConfig = getCategoryConfig(recommendation.category);
   const imageUrl = recommendation.images[0] || categoryConfig.iconUrl;
@@ -1976,15 +1979,20 @@ function PlacePostSheet({
     isDragging ? 'is-dragging' : '',
   ].filter(Boolean).join(' ');
 
+  const handleSheetClick = (event: ReactMouseEvent<HTMLElement>) => {
+    if (event.defaultPrevented || (event.target instanceof Element && event.target.closest('a, button'))) return;
+    onOpenDetails();
+  };
+
   const handlePanelKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
 
     event.preventDefault();
-    setSnap(isExpanded ? 'collapsed' : 'expanded');
+    onOpenDetails();
   };
 
   return (
-    <article className={sheetClassName} data-sheet-state={snap} style={sheetStyle}>
+    <article className={sheetClassName} data-sheet-state={snap} style={sheetStyle} onClick={handleSheetClick}>
       {onDismiss && (
         <button type="button" className="cmi-v3-selected-note-close" onClick={onDismiss} aria-label="关闭详情">
           <X size={18} strokeWidth={3} />
@@ -1993,10 +2001,9 @@ function PlacePostSheet({
       <div className="cmi-v3-selected-note-grabber" aria-hidden="true" />
       <div
         className="cmi-v3-place-post-panel"
-        role="button"
+        role="link"
         tabIndex={0}
-        aria-expanded={isExpanded}
-        aria-label={panelLabel}
+        aria-label={`打开${panelLabel}详情`}
         onKeyDown={handlePanelKeyDown}
         {...dragHandlers}
       >
