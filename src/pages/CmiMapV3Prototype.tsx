@@ -3,7 +3,6 @@ import {
   Calendar,
   CalendarPlus,
   Camera,
-  Layers,
   List,
   Map as MapIcon,
   MapPin,
@@ -12,6 +11,7 @@ import {
   MessageCircle,
   Navigation,
   Search,
+  Send,
   Share2,
   Sticker as StickerIcon,
   Users,
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import {
   type CSSProperties,
+  type FormEvent,
   type KeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
@@ -62,9 +63,17 @@ import {
   registerForCmiEvent,
 } from '@/db/cmi-events';
 import {
+  getBlackboardAnnouncements,
   getBlackboardPosts,
+  type BlackboardAnnouncementRecord,
   type BlackboardPostRecord,
 } from '@/db/blackboard-posts';
+import {
+  createCmiInboxMessage,
+  getCmiInboxMessages,
+  markCmiInboxMessagesRead,
+  type CmiInboxMessageRecord,
+} from '@/db/cmi-inbox';
 import {
   appendStickerPlacement,
   applyWishlistState,
@@ -126,6 +135,23 @@ type EventTabId = 'ongoing' | 'upcoming' | 'ended' | 'joined';
 type SheetSnap = 'minimized' | 'collapsed' | 'expanded';
 type SheetDragSource = 'pointer' | 'mouse' | 'touch';
 type ProfileLookup = Record<string, PublicProfile>;
+type InboxDisplayItemKind = 'comment' | 'reply' | 'system';
+type InboxDisplayItem = {
+  id: string;
+  kind: InboxDisplayItemKind;
+  title: string;
+  body: string;
+  meta: string;
+  createdAt: string;
+  isUnread: boolean;
+};
+type RecommendationReplyTarget = {
+  recommendationId: string;
+  recipientId: string;
+  recipientName: string;
+  placeName: string;
+  summary: string;
+};
 type FileShareData = {
   files?: File[];
   title?: string;
@@ -335,6 +361,25 @@ function formatTraceTime(value: string) {
     month: 'numeric',
     day: 'numeric',
   });
+}
+
+function compareInboxItems(left: InboxDisplayItem, right: InboxDisplayItem) {
+  return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+}
+
+function getInboxMessageTitle(message: CmiInboxMessageRecord) {
+  const title = message.title.trim();
+  if (title) return title;
+  return message.kind === 'reply'
+    ? `${message.sender_name} 回复了你的动态`
+    : `${message.sender_name} 评论了你的动态`;
+}
+
+function getInboxMessageMeta(message: CmiInboxMessageRecord) {
+  const sourceLabel = message.source_label.trim();
+  const parts = [formatTraceTime(message.created_at)];
+  if (sourceLabel) parts.push(sourceLabel);
+  return parts.join(' · ');
 }
 
 function getRecommendationSummary(recommendation: Recommendation) {
@@ -852,12 +897,15 @@ export default function CmiMapV3Prototype() {
   const [locationRequestKey, setLocationRequestKey] = useState(0);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [blackboardPosts, setBlackboardPosts] = useState<BlackboardPostRecord[]>([]);
+  const [blackboardAnnouncements, setBlackboardAnnouncements] = useState<BlackboardAnnouncementRecord[]>([]);
+  const [inboxMessages, setInboxMessages] = useState<CmiInboxMessageRecord[]>([]);
   const [profilesByAuthorKey, setProfilesByAuthorKey] = useState<ProfileLookup>({});
   const [events, setEvents] = useState<CmiEvent[]>(CMI_EVENTS);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(() => searchParams.get('event'));
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
   const [isLoadingBlackboardPosts, setIsLoadingBlackboardPosts] = useState(true);
+  const [isLoadingInboxMessages, setIsLoadingInboxMessages] = useState(false);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
   const [blackboardPostsError, setBlackboardPostsError] = useState<string | null>(null);
@@ -867,6 +915,10 @@ export default function CmiMapV3Prototype() {
   const [activeStickerId, setActiveStickerId] = useState<string | null>(null);
   const [activeRecIdForSticker, setActiveRecIdForSticker] = useState<string | null>(null);
   const [showStickerDrawer, setShowStickerDrawer] = useState(false);
+  const [isInboxOpen, setIsInboxOpen] = useState(false);
+  const [replyTarget, setReplyTarget] = useState<RecommendationReplyTarget | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [isReplySubmitting, setIsReplySubmitting] = useState(false);
 
   const handleNavigate = (screen: ScreenId, input?: { eventId?: string | null }) => {
     const currentPrimaryScreen = getPrimaryScreen(activeScreen);
@@ -957,6 +1009,42 @@ export default function CmiMapV3Prototype() {
       isActive = false;
     };
   }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    getBlackboardAnnouncements()
+      .then(data => {
+        if (isActive) setBlackboardAnnouncements(data);
+      })
+      .catch(error => {
+        console.warn('CMI Map 3.0 系统消息加载失败:', error);
+        if (isActive) setBlackboardAnnouncements([]);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const refreshInboxMessages = useCallback(async () => {
+    if (!user?.id) {
+      setInboxMessages([]);
+      setIsLoadingInboxMessages(false);
+      return;
+    }
+
+    setIsLoadingInboxMessages(true);
+    try {
+      setInboxMessages(await getCmiInboxMessages(user.id));
+    } finally {
+      setIsLoadingInboxMessages(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    void refreshInboxMessages();
+  }, [refreshInboxMessages]);
 
   useEffect(() => {
     let isActive = true;
@@ -1156,6 +1244,33 @@ export default function CmiMapV3Prototype() {
     () => upcomingCommunityEvents.find(event => event.id === CMI_MAP_WILD_CHIANG_MAI_EVENT_ID) ?? null,
     [upcomingCommunityEvents]
   );
+  const inboxItems = useMemo<InboxDisplayItem[]>(
+    () => [
+      ...inboxMessages.map(message => ({
+        id: `message:${message.id}`,
+        kind: message.kind,
+        title: getInboxMessageTitle(message),
+        body: message.body,
+        meta: getInboxMessageMeta(message),
+        createdAt: message.created_at,
+        isUnread: !message.read_at,
+      })),
+      ...blackboardAnnouncements.map(announcement => ({
+        id: `system:${announcement.id}`,
+        kind: 'system' as const,
+        title: announcement.title,
+        body: announcement.body,
+        meta: `系统消息 · ${formatTraceTime(announcement.created_at)}`,
+        createdAt: announcement.created_at,
+        isUnread: false,
+      })),
+    ].sort(compareInboxItems),
+    [blackboardAnnouncements, inboxMessages]
+  );
+  const hasUnreadInboxMessages = useMemo(
+    () => inboxMessages.some(message => !message.read_at),
+    [inboxMessages]
+  );
 
   const getCurrentV3Path = useCallback(() => {
     const queryString = searchParams.toString();
@@ -1169,6 +1284,80 @@ export default function CmiMapV3Prototype() {
     navigate('/login', { state: { from: getCurrentV3Path() } });
     return false;
   }, [getCurrentV3Path, navigate, user]);
+
+  const handleOpenInbox = useCallback(() => {
+    if (!requireLoggedInUser('查看收件箱') || !user?.id) return;
+
+    setIsInboxOpen(true);
+    if (!hasUnreadInboxMessages) return;
+
+    const readAt = new Date().toISOString();
+    setInboxMessages(currentMessages =>
+      currentMessages.map(message => message.read_at ? message : { ...message, read_at: readAt })
+    );
+
+    markCmiInboxMessagesRead(user.id, readAt)
+      .catch(() => {
+        void refreshInboxMessages();
+      });
+  }, [hasUnreadInboxMessages, refreshInboxMessages, requireLoggedInUser, user?.id]);
+
+  const handleOpenRecommendationReply = useCallback((recommendation: Recommendation) => {
+    if (!requireLoggedInUser('回复') || !user) return;
+
+    if (!recommendation.user_id) {
+      toast.error('这条动态暂时不能回复');
+      return;
+    }
+
+    if (recommendation.user_id === user.id) {
+      toast('这是你自己的动态');
+      return;
+    }
+
+    const authorProfile = getRecommendationAuthorProfile(recommendation, profilesByAuthorKey);
+    const authorName = recommendation.user_name || authorProfile?.user_name || 'CMI 朋友';
+    setReplyTarget({
+      recommendationId: recommendation.id,
+      recipientId: recommendation.user_id,
+      recipientName: authorName,
+      placeName: getDisplayPlaceName(recommendation.place_name) || recommendation.place_name,
+      summary: getRecommendationSummary(recommendation),
+    });
+    setReplyText('');
+  }, [profilesByAuthorKey, requireLoggedInUser, user]);
+
+  const handleSubmitRecommendationReply = useCallback(async () => {
+    if (!user || !replyTarget) return;
+
+    const body = replyText.trim();
+    if (!body) return;
+
+    const senderName = profile?.user_name?.trim() || user.email?.split('@')[0] || 'CMI 朋友';
+    setIsReplySubmitting(true);
+
+    try {
+      await createCmiInboxMessage({
+        recipientId: replyTarget.recipientId,
+        senderId: user.id,
+        senderName,
+        kind: 'comment',
+        title: `${senderName} 评论了你的动态`,
+        body,
+        sourceType: 'recommendation',
+        sourceId: replyTarget.recommendationId,
+        sourceLabel: replyTarget.placeName,
+      });
+      toast.success('已发到对方收件箱');
+      setReplyTarget(null);
+      setReplyText('');
+    } catch (error) {
+      console.error('CMI Map 3.0 回复发送失败:', error);
+      toast.error('发送失败，请稍后再试');
+    } finally {
+      setIsReplySubmitting(false);
+    }
+  }, [profile?.user_name, replyTarget, replyText, user]);
 
   const handleStartStamp = useCallback((recommendationId: string) => {
     if (!requireLoggedInUser('盖戳')) return;
@@ -1296,15 +1485,18 @@ export default function CmiMapV3Prototype() {
             selectedMarker={selectedMarker}
             selectedEvent={selectedEventId ? selectedEvent : null}
             primaryActivityEvent={primaryActivityEvent}
+            hasUnreadInboxMessages={hasUnreadInboxMessages}
             onClearSelection={() => {
               setSelectedMarker(null);
               setSelectedEventId(null);
             }}
             onFilterChange={setActiveFilter}
             onLocateUser={() => setLocationRequestKey(current => current + 1)}
+            onOpenInbox={handleOpenInbox}
             onOpenProfile={() => navigate(getProfilePath())}
             onSearchChange={handleMapSearchChange}
             onRecommendationSelect={handleMapRecommendationSelect}
+            onReplyToRecommendation={handleOpenRecommendationReply}
             onPlaceStamp={handleRecommendationCardClick}
             onStartStamp={handleStartStamp}
             onToggleWishlist={handleToggleWishlist}
@@ -1338,6 +1530,7 @@ export default function CmiMapV3Prototype() {
             onNavigate={handleNavigate}
             onPlaceStamp={handleRecommendationCardClick}
             onOpenPath={navigate}
+            onReplyToRecommendation={handleOpenRecommendationReply}
             onStartStamp={handleStartStamp}
             onToggleWishlist={handleToggleWishlist}
           />
@@ -1363,6 +1556,27 @@ export default function CmiMapV3Prototype() {
           activeScreen={activePrimaryScreen}
           onAdd={() => handleBottomAdd(activePrimaryScreen)}
           onNavigate={handleNavigate}
+        />
+      )}
+      {isInboxOpen && (
+        <CmiInboxSheet
+          items={inboxItems}
+          isLoading={isLoadingInboxMessages}
+          onClose={() => setIsInboxOpen(false)}
+        />
+      )}
+      {replyTarget && (
+        <RecommendationReplySheet
+          target={replyTarget}
+          value={replyText}
+          submitting={isReplySubmitting}
+          onChange={setReplyText}
+          onClose={() => {
+            if (isReplySubmitting) return;
+            setReplyTarget(null);
+            setReplyText('');
+          }}
+          onSubmit={handleSubmitRecommendationReply}
         />
       )}
       <StickerDrawer
@@ -1402,15 +1616,18 @@ function MapMode({
   searchQuery,
   profileAvatarUrl,
   profileName,
+  hasUnreadInboxMessages,
   onClearSelection,
   onFilterChange,
   onLocateUser,
   onMarkerSelect,
   onNavigate,
+  onOpenInbox,
   onOpenPath,
   onOpenProfile,
   onSearchChange,
   onRecommendationSelect,
+  onReplyToRecommendation,
   onPlaceStamp,
   onStartStamp,
   onToggleWishlist,
@@ -1434,15 +1651,18 @@ function MapMode({
   searchQuery: string;
   profileAvatarUrl: string;
   profileName: string;
+  hasUnreadInboxMessages: boolean;
   onClearSelection: () => void;
   onFilterChange: (filterId: MapFilterId) => void;
   onLocateUser: () => void;
   onMarkerSelect: (marker: MapMarker) => void;
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
+  onOpenInbox: () => void;
   onOpenPath: (path: string) => void;
   onOpenProfile: () => void;
   onSearchChange: (query: string) => void;
   onRecommendationSelect: (recommendation: Recommendation) => void;
+  onReplyToRecommendation: (recommendation: Recommendation) => void;
   onPlaceStamp: (event: ReactMouseEvent<HTMLElement>, recommendationId: string) => void;
   onStartStamp: (recommendationId: string) => void;
   onToggleWishlist: (recommendation: Recommendation) => void;
@@ -1532,9 +1752,14 @@ function MapMode({
         </button>
       )}
 
-      <div className="cmi-v3-map-layer-control" aria-label="地图图层">
-        <button type="button" aria-label="切换地图图层">
-          <Layers size={22} strokeWidth={2.8} />
+      <div className="cmi-v3-map-layer-control" aria-label="消息收件箱">
+        <button
+          type="button"
+          className={`cmi-v3-map-inbox-button ${hasUnreadInboxMessages ? 'has-unread' : ''}`}
+          onClick={onOpenInbox}
+          aria-label={hasUnreadInboxMessages ? '打开消息收件箱，有新消息' : '打开消息收件箱'}
+        >
+          <Megaphone size={22} strokeWidth={2.8} />
         </button>
       </div>
 
@@ -1603,12 +1828,121 @@ function MapMode({
           onOpenPath={onOpenPath}
           onPlaceStamp={onPlaceStamp}
           onRecommendationSelect={handleRecommendationSelect}
+          onReplyToRecommendation={onReplyToRecommendation}
           onStartStamp={onStartStamp}
           onToggleWishlist={onToggleWishlist}
         />
       )}
 
     </section>
+  );
+}
+
+function CmiInboxSheet({
+  items,
+  isLoading,
+  onClose,
+}: {
+  items: InboxDisplayItem[];
+  isLoading: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <div className="cmi-v3-inbox-overlay" role="presentation">
+      <button type="button" className="cmi-v3-inbox-backdrop" aria-label="关闭收件箱" onClick={onClose} />
+      <section className="cmi-v3-inbox-panel" role="dialog" aria-modal="true" aria-label="消息收件箱">
+        <header className="cmi-v3-inbox-head">
+          <h2>收件箱</h2>
+          <button type="button" onClick={onClose} aria-label="关闭收件箱">
+            <X size={20} strokeWidth={2.7} />
+          </button>
+        </header>
+
+        <div className="cmi-v3-inbox-list">
+          {isLoading ? (
+            <p className="cmi-v3-inbox-state">正在同步消息</p>
+          ) : items.length > 0 ? (
+            items.map(item => (
+              <article
+                key={item.id}
+                className={`cmi-v3-inbox-item cmi-v3-inbox-item--${item.kind} ${item.isUnread ? 'is-unread' : ''}`}
+              >
+                <span className="cmi-v3-inbox-item-icon" aria-hidden="true">
+                  {item.kind === 'system' ? <Megaphone size={18} strokeWidth={2.6} /> : <MessageCircle size={18} strokeWidth={2.6} />}
+                </span>
+                <div>
+                  <div className="cmi-v3-inbox-item-title">
+                    <strong>{item.title}</strong>
+                    {item.isUnread && <i aria-label="新消息" />}
+                  </div>
+                  <p>{item.body}</p>
+                  <span>{item.meta}</span>
+                </div>
+              </article>
+            ))
+          ) : (
+            <p className="cmi-v3-inbox-state">暂无消息</p>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function RecommendationReplySheet({
+  target,
+  value,
+  submitting,
+  onChange,
+  onClose,
+  onSubmit,
+}: {
+  target: RecommendationReplyTarget;
+  value: string;
+  submitting: boolean;
+  onChange: (value: string) => void;
+  onClose: () => void;
+  onSubmit: () => Promise<void>;
+}) {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!value.trim() || submitting) return;
+    void onSubmit();
+  };
+
+  return (
+    <div className="cmi-v3-reply-overlay" role="presentation">
+      <button type="button" className="cmi-v3-reply-backdrop" aria-label="关闭回复" onClick={onClose} />
+      <form className="cmi-v3-reply-panel" aria-label={`回复 ${target.recipientName}`} onSubmit={handleSubmit}>
+        <header className="cmi-v3-reply-head">
+          <div>
+            <h2>回复动态</h2>
+            <p>{target.recipientName}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="关闭回复" disabled={submitting}>
+            <X size={20} strokeWidth={2.7} />
+          </button>
+        </header>
+
+        <article className="cmi-v3-reply-target">
+          <strong>{target.placeName}</strong>
+          <p>{target.summary}</p>
+        </article>
+
+        <textarea
+          value={value}
+          onChange={event => onChange(event.target.value)}
+          maxLength={240}
+          placeholder="写回复"
+          autoFocus
+        />
+
+        <button type="submit" disabled={!value.trim() || submitting}>
+          <Send size={18} strokeWidth={2.8} />
+          {submitting ? '发送中' : '发送'}
+        </button>
+      </form>
+    </div>
   );
 }
 
@@ -1831,6 +2165,7 @@ function MapPulseSheet({
   onOpenPath,
   onPlaceStamp,
   onRecommendationSelect,
+  onReplyToRecommendation,
   onStartStamp,
   onToggleWishlist,
 }: {
@@ -1847,6 +2182,7 @@ function MapPulseSheet({
   onOpenPath: (path: string) => void;
   onPlaceStamp: (event: ReactMouseEvent<HTMLElement>, recommendationId: string) => void;
   onRecommendationSelect: (recommendation: Recommendation) => void;
+  onReplyToRecommendation: (recommendation: Recommendation) => void;
   onStartStamp: (recommendationId: string) => void;
   onToggleWishlist: (recommendation: Recommendation) => void;
 }) {
@@ -1969,7 +2305,7 @@ function MapPulseSheet({
                       <span>{traceMetaLabel}</span>
                       <RecommendationActionButtons
                         isWishlisted={localWishlists[recommendation.id] ?? false}
-                        onComment={() => onOpenPath(getAddTracePath(recommendation.place_name))}
+                        onComment={() => onReplyToRecommendation(recommendation)}
                         onStamp={() => onStartStamp(recommendation.id)}
                         onWishlist={() => onToggleWishlist(recommendation)}
                         variant="pulse"
@@ -2029,6 +2365,7 @@ function FeedMode({
   onNavigate,
   onPlaceStamp,
   onOpenPath,
+  onReplyToRecommendation,
   onStartStamp,
   onToggleWishlist,
 }: {
@@ -2045,6 +2382,7 @@ function FeedMode({
   onNavigate: (screen: ScreenId, input?: { eventId?: string | null }) => void;
   onPlaceStamp: (event: ReactMouseEvent<HTMLElement>, recommendationId: string) => void;
   onOpenPath: (path: string) => void;
+  onReplyToRecommendation: (recommendation: Recommendation) => void;
   onStartStamp: (recommendationId: string) => void;
   onToggleWishlist: (recommendation: Recommendation) => void;
 }) {
@@ -2111,7 +2449,7 @@ function FeedMode({
               isWishlisted={localWishlists[feedItem.recommendation.id] ?? false}
               placedStickers={placedStickers[feedItem.recommendation.id] ?? []}
               recommendation={feedItem.recommendation}
-              onComment={() => onOpenPath(getAddTracePath(feedItem.recommendation.place_name))}
+              onComment={() => onReplyToRecommendation(feedItem.recommendation)}
               onPlaceStamp={onPlaceStamp}
               onSelect={() => onOpenPath(getPlacePath(feedItem.recommendation.place_name))}
               onStartStamp={() => onStartStamp(feedItem.recommendation.id)}

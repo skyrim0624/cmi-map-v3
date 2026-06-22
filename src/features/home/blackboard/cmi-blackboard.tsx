@@ -46,6 +46,7 @@ import {
   updateBlackboardPost,
   uploadBlackboardImages,
 } from '@/db/blackboard-posts';
+import { createCmiInboxMessage } from '@/db/cmi-inbox';
 import { supabase } from '@/db/supabase';
 import {
   buildEventPlaceCandidates,
@@ -2255,6 +2256,23 @@ export function CmiBlackboard({
         authorId: user.id,
         authorName,
       });
+
+      if (post.authorId !== user.id) {
+        await createCmiInboxMessage({
+          recipientId: post.authorId,
+          senderId: user.id,
+          senderName: authorName,
+          kind: 'reply',
+          title: `${authorName} 回复了你的动态`,
+          body,
+          sourceType: 'blackboard_post',
+          sourceId: post.id,
+          sourceLabel: post.title || post.body.slice(0, 24),
+        }).catch(error => {
+          console.warn('论坛评论收件箱通知发送失败:', error);
+        });
+      }
+
       const [currentAuthorStats] = await getBlackboardActivityStats([user.id]);
       const currentActivityTitle = currentAuthorStats
         ? getBlackboardActivityTitle({

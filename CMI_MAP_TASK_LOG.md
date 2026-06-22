@@ -54,8 +54,16 @@
 39. [完成] 修复安卓神奇动物图鉴卡保存 / 分享兜底与识别服务备用链路
 40. [完成] 修复清楚植物照片被判“识别不清楚”与绿叶误判动物问题
 41. [完成] 地图动态面板标题改为“CMI社区新动态！”
+42. [完成] 地图右侧入口改为收件箱，并将评论 / 回复收敛为私有消息
 
 ## 执行记录
+
+### 2026-06-22 地图收件箱与评论回复收敛
+
+- 背景：用户在 `cmimap.com` 地图右侧“切换地图图层”按钮评论，要求改成消息收件箱；别人对自己的评论、回复和系统消息在这里看；回复评论不要再出现在地图新动态或动态列表里。
+- 改动：新增 `cmi_inbox_messages` 收件箱表和 RLS；地图右侧原图层按钮改为小喇叭收件箱入口；未读消息时才显示黄点；动态卡片里的评论动作改为写入被评论者收件箱，不再跳到“补一句”公开发布；生活板评论会给帖子作者写入收件箱通知；系统消息复用生活板公告展示。
+- 验证：`pnpm exec tsc --noEmit -p tsconfig.check.json`、`pnpm exec biome lint src/pages/CmiMapV3Prototype.tsx src/pages/cmi-map-v3-prototype.css src/features/home/blackboard/cmi-blackboard.tsx src/db/cmi-inbox.ts`、`git diff --check`、`pnpm run build` 均通过；Supabase 迁移 `20260622150728` 已直接执行到 linked 远端并 repair 为 applied；本地 `http://127.0.0.1:5187/` 414x695 视口复查通过，旧“切换地图图层”按钮不存在，右侧原位置显示小喇叭收件箱入口，无未读时无黄点，console 无 warn/error。
+- 注意：由于远端还有历史 pending migration，本轮没有使用 `db push` 批量推送，避免带上无关迁移；并发远端只读验证查询触发 Supabase pooler 临时连接保护，已中断，迁移执行和 migration history 已确认。
 
 ### 2026-06-22 地图动态面板标题文案调整
 
