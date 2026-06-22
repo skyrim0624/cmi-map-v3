@@ -61,7 +61,7 @@
 
 - 背景：用户在 `cmimap.com` 地图底部面板指出“清迈客栈新动态”应改为“CMI社区新动态！”。
 - 改动：将地图动态面板的可见标题和对应 `aria-label` 同步更新为“CMI社区新动态！”。
-- 验证：本轮 `pnpm run build` 通过；本地 `http://127.0.0.1:5187/` 按 599x695 视口复查通过，标题显示为“CMI社区新动态！”，旧标题无残留，console 无 warn/error。
+- 验证：本轮 `pnpm run build` 通过；本地 `http://127.0.0.1:5187/` 按 599x695 视口复查通过，标题显示为“CMI社区新动态！”，旧标题无残留，console 无 warn/error。已部署正式站 `https://40a6ee69.cmi-map.pages.dev`；`https://cmimap.com/?verify=c9e3861-heading-copy` 线上复查通过，标题和 `aria-label` 均为“CMI社区新动态！”，旧标题无残留，console 无 warn/error。
 
 ### 2026-06-18 清楚植物照片识别准确性修正
 
