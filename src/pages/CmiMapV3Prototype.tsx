@@ -1874,7 +1874,7 @@ function MapPulseSheet({
       className={`cmi-v3-map-pulse-sheet ${isExpanded ? 'is-expanded' : ''} ${isDragging ? 'is-dragging' : ''}`}
       data-sheet-state={snap}
       style={sheetStyle}
-      aria-label="清迈客栈新动态"
+      aria-label="CMI社区新动态！"
     >
       <div
         className="cmi-v3-map-pulse-handle-zone"
@@ -1890,7 +1890,7 @@ function MapPulseSheet({
       <div className="cmi-v3-map-pulse-body">
         <div className="cmi-v3-map-pulse-head" {...dragHandlers}>
           <div>
-            <h2>{isSearching ? `搜索：${trimmedSearchQuery}` : '清迈客栈新动态'}</h2>
+            <h2>{isSearching ? `搜索：${trimmedSearchQuery}` : 'CMI社区新动态！'}</h2>
             <p>{isSearching ? `找到 ${visibleEvents.length + visibleRecommendations.length} 条相关内容` : '附近的人刚留下的新鲜事'}</p>
           </div>
         </div>
