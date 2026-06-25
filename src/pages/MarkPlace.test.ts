@@ -103,12 +103,20 @@ test('打卡只保留活动关联，不再写主题投稿关系', () => {
   assert.doesNotMatch(source, /排行榜/);
 });
 
-test('神奇动物打卡会调用生物识别并预选彩蛋', () => {
+test('相机生物识别默认关闭，点按钮后才启动', () => {
   assert.match(source, /CMI_MAP_WILD_CHIANG_MAI_EVENT_ID/);
+  assert.match(source, /const \[isAnimalIdentificationEnabled, setIsAnimalIdentificationEnabled\] = useState\(false\)/);
   assert.match(source, /const enableWildAnimalIdentification = \(\) => \{/);
+  assert.match(source, /setIsAnimalIdentificationEnabled\(true\)/);
   assert.match(source, /setSelectedEventId\(CMI_MAP_WILD_CHIANG_MAI_EVENT_ID\)/);
-  assert.match(source, /aria-pressed=\{isWildAnimalCheckin\}/);
+  assert.match(source, /aria-pressed=\{isAnimalIdentificationEnabled\}/);
+  assert.match(source, /\{isAnimalIdentificationEnabled \? '生物识别已开启' : '识别生物'\}/);
+  assert.match(source, /if \(isAnimalIdentificationEnabled && images\[0\]\) \{/);
   assert.match(source, /identifyAnimalPhoto\(images\[0\]\)/);
+  assert.match(source, /\{isAnimalIdentificationEnabled && \(/);
+  assert.doesNotMatch(source, /if \(isWildAnimalCheckin && images\[0\]\) \{/);
+  assert.doesNotMatch(source, /aria-pressed=\{isWildAnimalCheckin\}/);
+  assert.doesNotMatch(source, /\{isWildAnimalCheckin \? '生物识别已开启' : '识别生物'\}/);
   assert.doesNotMatch(source, /createAnimalStickerFromPhoto/);
   assert.doesNotMatch(source, /createAnimalStickerPreview/);
   assert.doesNotMatch(source, /animalStickerPreviewUrl/);

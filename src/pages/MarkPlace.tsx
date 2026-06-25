@@ -598,6 +598,7 @@ export default function MarkPlace() {
   const [isCameraZoomFeedbackVisible, setIsCameraZoomFeedbackVisible] = useState(false);
   const [animalIdentification, setAnimalIdentification] = useState<AnimalIdentificationResult | null>(null);
   const [animalIdentificationStatus, setAnimalIdentificationStatus] = useState<AnimalIdentificationStatus>('idle');
+  const [isAnimalIdentificationEnabled, setIsAnimalIdentificationEnabled] = useState(false);
   const [selectedAnimalCandidateId, setSelectedAnimalCandidateId] = useState<string>('');
   const [wildAnimalShareCard, setWildAnimalShareCard] = useState<CmiWildAnimalShareCardResult | null>(null);
   const [isWildAnimalSharePanelOpen, setIsWildAnimalSharePanelOpen] = useState(false);
@@ -1146,6 +1147,7 @@ export default function MarkPlace() {
   const enableWildAnimalIdentification = () => {
     const wildAnimalEvent = getCmiEventById(CMI_MAP_WILD_CHIANG_MAI_EVENT_ID);
 
+    setIsAnimalIdentificationEnabled(true);
     setSelectedEventId(CMI_MAP_WILD_CHIANG_MAI_EVENT_ID);
     if (wildAnimalEvent) {
       setEventOptions(current =>
@@ -1341,9 +1343,9 @@ export default function MarkPlace() {
   // 2. 定位分析动画
   useEffect(() => {
     if (stage === 'analyzing') {
-      const timer1 = setTimeout(() => setScanned(true), isWildAnimalCheckin ? 700 : 1500);
+      const timer1 = setTimeout(() => setScanned(true), isAnimalIdentificationEnabled ? 700 : 1500);
 
-      if (isWildAnimalCheckin && images[0]) {
+      if (isAnimalIdentificationEnabled && images[0]) {
         const requestId = animalIdentificationRequestRef.current + 1;
         animalIdentificationRequestRef.current = requestId;
         setAnimalIdentificationStatus('running');
@@ -1391,7 +1393,7 @@ export default function MarkPlace() {
       }, 3000);
       return () => { clearTimeout(timer1); clearTimeout(timer2); };
     }
-  }, [stage, isWildAnimalCheckin, images]);
+  }, [stage, isAnimalIdentificationEnabled, images]);
 
   // 3. 语音对话控制
   const handleVoiceInput = async () => {
@@ -1756,15 +1758,15 @@ export default function MarkPlace() {
             <button
               type="button"
               onClick={enableWildAnimalIdentification}
-              aria-pressed={isWildAnimalCheckin}
+              aria-pressed={isAnimalIdentificationEnabled}
               className={`mt-3 inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-black shadow-sm active:scale-95 ${
-                isWildAnimalCheckin
+                isAnimalIdentificationEnabled
                   ? 'border-[#0b8d45]/45 bg-[#eaf8ef] text-[#0b5f37]'
                   : 'border-stone-300/75 bg-white/70 text-stone-700 hover:bg-white'
               }`}
             >
               <PawPrint className="h-4 w-4" />
-              {isWildAnimalCheckin ? '生物识别已开启' : '识别生物'}
+              {isAnimalIdentificationEnabled ? '生物识别已开启' : '识别生物'}
             </button>
             <button
               onClick={startQuickTextFlow}
@@ -1792,7 +1794,7 @@ export default function MarkPlace() {
                     <div className="flex flex-col items-center text-white/90 drop-shadow-md">
                       <Loader2 className="w-8 h-8 animate-spin mb-2" />
                       <span className="font-medium tracking-wide">
-                        {isWildAnimalCheckin
+                        {isAnimalIdentificationEnabled
                           ? '正在识别这只小生命...'
                           : sourceType === 'live' ? '获取当前实时坐标...' : '解析旧照空间记忆...'}
                       </span>
@@ -2015,7 +2017,7 @@ export default function MarkPlace() {
             {stage === 'voice' && (
               <div className="w-full flex flex-col items-center gap-3 px-4 pt-2 pb-3 animate-in slide-in-from-bottom-10 fade-in duration-500">
                 <div className="w-full max-w-sm">
-                  {isWildAnimalCheckin && (
+                  {isAnimalIdentificationEnabled && (
                     <div className="mb-2 rounded-3xl border border-stone-200 bg-white/90 p-2.5 text-left shadow-sm">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-black text-stone-800">生物识别</p>
@@ -2047,7 +2049,7 @@ export default function MarkPlace() {
                           {animalIdentificationStatus === 'running'
                             ? '正在识别生物主体。'
                             : animalIdentificationStatus === 'idle'
-                              ? '拍下动植物后会自动识别。'
+                              ? '已开启，拍下动植物后会识别。'
                               : animalIdentification?.message ?? '这张没有识别到可靠物种，可以直接写名称继续发布。'}
                         </p>
                       )}
