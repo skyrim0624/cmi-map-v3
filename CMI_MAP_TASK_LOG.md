@@ -64,6 +64,7 @@
 - 背景：用户反馈相机页进入后不应默认开启生物识别，希望关闭自动识别，改为需要时手动点开。
 - 改动：`/mark` 相机页新增独立的生物识别开关状态；关联“神奇动物在哪里”活动不再等于自动识别，只有点击“识别生物”后才会在拍照后调用识别接口、显示识别扫描文案和候选面板。活动关联、彩蛋分类和图鉴卡发布逻辑保持不变。
 - 验证：`node --test --experimental-strip-types src/pages/MarkPlace.test.ts`、`pnpm exec biome check src/pages/MarkPlace.tsx src/pages/MarkPlace.test.ts CMI_MAP_TASK_LOG.md`、`git diff --check`、`pnpm exec tsgo -p tsconfig.check.json`、`pnpm run build` 均通过；新增断言覆盖“默认关闭、点按钮后才启动”。
+- 部署：已部署到 Cloudflare Pages Production：`https://12f01edf.cmi-map.pages.dev`，Source 为 `a8498e4`；正式域名 `https://cmimap.com/` 已切到入口包 `index-D2KqDqX6.js` 和相机包 `MarkPlace-Cf6Vewh7.js`，线上相机包包含“已开启，拍下动植物后会识别。”，未包含旧文案“拍下动植物后会自动识别。”。
 
 ### 2026-06-22 地图收件箱与评论回复收敛
 
