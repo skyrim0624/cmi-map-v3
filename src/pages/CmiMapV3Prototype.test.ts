@@ -126,3 +126,10 @@ test('动态流和底部动态列表不展示纯经纬度地点名', () => {
   assert.doesNotMatch(source, /return placeName \? \{ kind: 'place', label: placeName \} : null;/);
   assert.doesNotMatch(source, /\$\{formatTraceTime\(recommendation\.created_at\)\} · \$\{recommendation\.place_name\}/);
 });
+
+test('动态页保留完整历史动态，不做固定条数截断', () => {
+  const feedModeSource = source.slice(source.indexOf('function FeedMode'), source.indexOf('function PublishMode'));
+
+  assert.match(feedModeSource, /sortCmiV3FeedItems\(/);
+  assert.doesNotMatch(feedModeSource, /sortCmiV3FeedItems\([\s\S]*?\)\.slice\(0,\s*60\)/);
+});

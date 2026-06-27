@@ -2412,7 +2412,7 @@ function FeedMode({
         createdAt: recommendation.created_at,
         recommendation,
       })),
-    ]).slice(0, 60),
+    ]),
     [blackboardPosts, recommendations]
   );
   const featuredFeedItem = useMemo(
