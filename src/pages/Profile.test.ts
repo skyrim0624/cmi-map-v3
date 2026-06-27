@@ -14,6 +14,12 @@ test('个人主页提供主题版神奇生物照片图鉴', () => {
   assert.match(source, /神奇生物图鉴/);
 });
 
+test('个人主页默认打开我的痕迹，避免旧打卡被空图鉴遮住', () => {
+  assert.match(source, /const DEFAULT_PROFILE_TAB: ProfileTab = 'my_pins';/);
+  assert.match(source, /useState<ProfileTab>\(DEFAULT_PROFILE_TAB\)/);
+  assert.doesNotMatch(source, /const DEFAULT_PROFILE_TAB: ProfileTab = WILD_CHIANG_MAI_PROFILE_THEME_ENABLED \? 'animals' : 'my_pins';/);
+});
+
 test('个人主页记录不直接展示纯经纬度地点名', () => {
   assert.match(source, /getRecommendationMetaParts/);
   assert.doesNotMatch(source, /<span>\{rec\.place_name\}<\/span>/);

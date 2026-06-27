@@ -5,21 +5,21 @@ import { toast } from 'sonner';
 import AnimalStickerAlbum from '@/components/AnimalStickerAlbum';
 import BadgeUnlockOverlay from '@/components/BadgeUnlockOverlay';
 import BadgeWall from '@/components/BadgeWall';
-import WildAnimalPhotoAlbum from '@/components/WildAnimalPhotoAlbum';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import WildAnimalPhotoAlbum from '@/components/WildAnimalPhotoAlbum';
 import { useAuth } from '@/contexts/AuthContext';
+import { CMI_MAP_WILD_CHIANG_MAI_EVENT_ID } from '@/data/cmi-events';
 import {
   checkUserNameAvailability,
   getAllRecommendations,
   normalizeProfileUserName,
+  USER_NAME_TAKEN_ERROR_MESSAGE,
   updateUserAvatar,
   updateUserName,
   uploadAvatar,
-  USER_NAME_TAKEN_ERROR_MESSAGE,
 } from '@/db/api';
 import { syncAchievementProgress } from '@/features/achievements/achievement-service';
-import { CMI_MAP_WILD_CHIANG_MAI_EVENT_ID } from '@/data/cmi-events';
 import { getWildAnimalStickerEntries } from '@/lib/cmi-wild-animal-stickers';
 import { getCmiEasterIconUrl, getRecommendationEasterIconId, getRecommendationReasonText } from '@/lib/easter-icons';
 import { getDisplayPlaceName, getRecommendationMetaParts } from '@/lib/recommendation-display';
@@ -31,7 +31,7 @@ import './profile-theme.css';
 type ProfileTab = 'my_pins' | 'animals' | 'wishlist' | 'badges';
 
 const WILD_CHIANG_MAI_PROFILE_THEME_ENABLED = true;
-const DEFAULT_PROFILE_TAB: ProfileTab = WILD_CHIANG_MAI_PROFILE_THEME_ENABLED ? 'animals' : 'my_pins';
+const DEFAULT_PROFILE_TAB: ProfileTab = 'my_pins';
 const WILD_PROFILE_THEME_ASSETS = [
   ['top-left-monkey', '/cmi-home/profile-theme-wild-chiang-mai/top-left-monkey-vines.png'],
   ['top-left-leaves', '/cmi-home/profile-theme-wild-chiang-mai/top-left-edge-leaves.png'],
