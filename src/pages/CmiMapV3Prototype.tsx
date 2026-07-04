@@ -231,8 +231,6 @@ const SHEET_MINIMIZE_THRESHOLD = 96;
 const SHEET_DRAG_LIMIT = 160;
 const SHEET_TAP_SLOP = 8;
 const SHEET_FLING_VELOCITY = 0.42;
-const MAP_MARKER_VISIBLE_DAYS = 7;
-const MAP_MARKER_VISIBLE_WINDOW_MS = MAP_MARKER_VISIBLE_DAYS * 24 * 60 * 60 * 1000;
 const USER_AVATAR_FALLBACK_COLORS = ['#f6c85f', '#f28c6b', '#70b7a7', '#6f9fd8', '#b58ad9', '#ef9eb3'];
 
 const foodCategories = new Set<Category>(['吃饭', '咖啡', '市集']);
@@ -523,14 +521,6 @@ function isWishlistedByUser(recommendation: Recommendation, userId: string | nul
 // NOTE: 默认地图只显示真实用户留下的分享，运营精选和历史底库继续留给搜索、专题和地点页承载。
 function isUserSharedRecommendation(recommendation: Recommendation) {
   return Boolean(recommendation.user_id) && !isCommunityCuratedRecommendation(recommendation);
-}
-
-// NOTE: 地图 marker 是近期现场感，不是永久地点档案；历史动态仍保留在搜索、信息流和个人页。
-function isRecentMapMarkerRecommendation(recommendation: Recommendation, referenceDate = new Date()) {
-  const createdAt = Date.parse(recommendation.created_at);
-  if (!Number.isFinite(createdAt)) return false;
-
-  return referenceDate.getTime() - createdAt <= MAP_MARKER_VISIBLE_WINDOW_MS;
 }
 
 function clampRatio(value: number) {
@@ -1130,16 +1120,6 @@ export default function CmiMapV3Prototype() {
     [activeFilter, normalizedMapSearchQuery, userSharedRecommendations]
   );
 
-  const mapMarkerRecommendations = useMemo(
-    () => {
-      const referenceDate = new Date();
-      return filteredMapRecommendations.filter(recommendation =>
-        isRecentMapMarkerRecommendation(recommendation, referenceDate)
-      );
-    },
-    [filteredMapRecommendations]
-  );
-
   const communityEvents = useMemo(
     () => {
       const referenceDate = new Date();
@@ -1173,10 +1153,10 @@ export default function CmiMapV3Prototype() {
 
   const mapMarkers = useMemo(
     () => [
-      ...getUserShareMarkers(mapMarkerRecommendations, profilesByAuthorKey),
+      ...getUserShareMarkers(filteredMapRecommendations, profilesByAuthorKey),
       ...getEventMarkers(visibleEvents),
     ],
-    [mapMarkerRecommendations, profilesByAuthorKey, visibleEvents]
+    [filteredMapRecommendations, profilesByAuthorKey, visibleEvents]
   );
 
   const feedRecommendations = useMemo(
