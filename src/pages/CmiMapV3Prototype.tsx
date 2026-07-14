@@ -2182,7 +2182,7 @@ function MapPulseSheet({
   const isExpanded = snap === 'expanded';
   const sheetStyle = { '--cmi-v3-sheet-drag-y': `${dragOffset}px` } as CSSProperties;
   const visibleRecommendations = recommendations.slice(0, 8);
-  const visibleEvents = events.filter(isCuratedCommunityEvent).slice(0, 4);
+  const visibleEvents = events.filter(isCuratedCommunityEvent);
   const trimmedSearchQuery = searchQuery.trim();
   const isSearching = trimmedSearchQuery.length > 0;
 

@@ -81,7 +81,9 @@
 
 Time Out 的本周末专题可以作为及时线索源；如果只用 Time Out，`reliabilityNote` 必须写明“出发前仍建议复核场地方动态”。Citylife、主办方官网、场地方页面和 CMI 自有公告优先级更高。
 
-最新一次维护：2026-06-17 23:23 ICT，本轮从 `/Users/andreas/CMI/活动宣传内容/六月活动/6.21 水果朋友大派对` 新增并发布 1 条 CMI / 清迈客栈活动：`cmi-fruit-friends-ai-3d-workshop-2026-06-21`；同时归档已结束的 `cmi-machine-learning-intro-2026-06-17`。
+最新一次维护：2026-07-14 12:00 ICT，恢复此前已上架的全部 31 条 CMI / 清迈客栈社区活动为 `published`，报名统一关闭；活动页“已结束”分组与首页“CMI 社区新动态”均可查看这些活动。
+
+上一轮维护：2026-06-17 23:23 ICT，本轮从 `/Users/andreas/CMI/活动宣传内容/六月活动/6.21 水果朋友大派对` 新增并发布 1 条 CMI / 清迈客栈活动：`cmi-fruit-friends-ai-3d-workshop-2026-06-21`；同时归档已结束的 `cmi-machine-learning-intro-2026-06-17`。
 
 上一轮维护：2026-06-17 14:48 ICT，从 `/Users/andreas/CMI/活动宣传内容/六月活动` 新增并发布 6 条 CMI / 清迈客栈活动：`cmi-machine-learning-intro-2026-06-17`、`cmi-wild-chiang-mai-nature-quest-2026-06-18`、`cmi-kongxiang-canteen-zongzi-2026-06-19`、`cmi-ai-open-mic-community-ai-2026-06-19`、`cmi-swap-skills-market-2026-06-20`、`cmi-fantastic-fungi-screening-2026-06-20`。
 

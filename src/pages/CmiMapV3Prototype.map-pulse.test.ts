@@ -4,11 +4,12 @@ import test from 'node:test';
 
 const source = readFileSync(new URL('./CmiMapV3Prototype.tsx', import.meta.url), 'utf8');
 
-test('地图新动态和活动 marker 不展示已结束活动', () => {
+test('地图活动 marker 不展示已结束活动，但首页新动态保留活动历史', () => {
   assert.match(source, /const upcomingCommunityEvents = useMemo/);
   assert.match(source, /communityEvents\.filter\(event => !isCmiEventExpired\(event, referenceDate\)\)/);
   assert.match(source, /return upcomingCommunityEvents\.slice\(0, 12\)/);
   assert.match(source, /listEvents=\{normalizedMapSearchQuery \? visibleEvents : upcomingCommunityEvents\}/);
+  assert.match(source, /const visibleEvents = events\.filter\(isCuratedCommunityEvent\);/);
 });
 
 test('地图动态 marker 展示当前筛选下的所有用户打卡', () => {

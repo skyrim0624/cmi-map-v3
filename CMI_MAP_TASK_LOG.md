@@ -3042,3 +3042,15 @@
   - `pnpm run build` 通过。
   - 本地应用内浏览器 `http://127.0.0.1:5187/` 复查：点击“林可”地图 marker 后直接进入 `/place/%E5%9C%B0%E5%9B%BE%E5%9D%90%E6%A0%87%20%C2%B7%2018.78128%2C%2098.98743`，没有出现底部预览卡片；详情页显示盖戳、想去、补一句、发活动、导航、叫车等入口，console 无 warn/error。
   - 正式站已部署到 Cloudflare Pages 项目 `cmi-map`，部署地址 `https://42985266.cmi-map.pages.dev`，绑定域名 `https://cmimap.com/`。线上用手机视口点击带 `♥ 1` 的普通打卡 marker 后，URL 直接进入 `/place/%E5%9C%B0%E5%9B%BE%E5%9D%90%E6%A0%87%20%C2%B7%2018.78128%2C%2098.98743`，旧的 `.cmi-v3-selected-note.cmi-v3-place-post-sheet` 不存在，详情页显示盖戳、想去、补一句、发活动、导航、叫车。
+
+### 2026-07-14 恢复社区活动历史可见
+
+- 背景：用户要求此前在 CMI Map 上架过的社区活动全部恢复可见，并同时出现在活动页和首页“CMI 社区新动态”。
+- 本轮实现：
+  - 远程核对确认 31 条 CMI / 清迈客栈历史活动记录仍在库中；将其中归档的活动恢复为 `published`，所有历史活动统一关闭报名。
+  - 新增审计迁移 `20260714090000_restore_all_cmi_community_event_history.sql`，记录恢复原因与时间。
+  - 首页“CMI 社区新动态”不再只截取 4 条活动，保留全部历史活动；地图活动 marker 继续只显示未结束活动，避免旧活动塞满地图。
+- 验证结果：
+  - 远程复查：31 条 CMI / 清迈客栈活动均为 `published`，报名状态均为 `closed`。
+  - `pnpm exec tsc -p tsconfig.check.json --noEmit` 通过。
+  - `node --experimental-strip-types --test src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/CmiMapV3Prototype.test.ts src/data/cmi-events.test.ts` 通过，19 项测试通过。
