@@ -8,7 +8,7 @@ test('地图活动 marker 不展示已结束活动，但首页新动态保留活
   assert.match(source, /const upcomingCommunityEvents = useMemo/);
   assert.match(source, /communityEvents\.filter\(event => !isCmiEventExpired\(event, referenceDate\)\)/);
   assert.match(source, /return upcomingCommunityEvents\.slice\(0, 12\)/);
-  assert.match(source, /listEvents=\{normalizedMapSearchQuery \? visibleEvents : upcomingCommunityEvents\}/);
+  assert.match(source, /listEvents=\{normalizedMapSearchQuery \? visibleEvents : communityEvents\}/);
   assert.match(source, /const visibleEvents = events\.filter\(isCuratedCommunityEvent\);/);
   assert.match(source, /const \[activeEventTab, setActiveEventTab\] = useState<EventTabId>\('ended'\);/);
   assert.match(source, /\{ id: 'ended', label: '历史活动' \}/);

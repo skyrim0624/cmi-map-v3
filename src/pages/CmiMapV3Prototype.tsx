@@ -1453,7 +1453,7 @@ export default function CmiMapV3Prototype() {
             searchQuery={mapSearchQuery}
             profileAvatarUrl={profileAvatarUrl}
             profileName={profileName}
-            listEvents={normalizedMapSearchQuery ? visibleEvents : upcomingCommunityEvents}
+            listEvents={normalizedMapSearchQuery ? visibleEvents : communityEvents}
             listRecommendations={filteredMapRecommendations}
             localWishlists={localWishlists}
             placedStickers={placedStickers}

@@ -3064,3 +3064,10 @@
 - 验证结果：
   - 浏览器同权限的 Supabase REST 请求返回 31 条 `published` 活动。
   - `pnpm exec tsc -p tsconfig.check.json --noEmit`、相关 12 项源码测试及 `pnpm build` 均通过。
+
+### 2026-07-14 首页动态历史活动数据源修复
+
+- 背景：默认入口和折叠高度修正后，首页动态仍为空；进一步排查发现地图首页将仅包含未结束活动的 `upcomingCommunityEvents` 传给了动态抽屉。
+- 本轮实现：
+  - 地图活动 marker 继续只使用未结束活动，避免历史活动占据地图。
+  - 首页“CMI社区新动态！”改为直接接收完整的 `communityEvents`，确保此前上架的历史活动会渲染成卡片。
