@@ -10,6 +10,8 @@ test('地图活动 marker 不展示已结束活动，但首页新动态保留活
   assert.match(source, /return upcomingCommunityEvents\.slice\(0, 12\)/);
   assert.match(source, /listEvents=\{normalizedMapSearchQuery \? visibleEvents : upcomingCommunityEvents\}/);
   assert.match(source, /const visibleEvents = events\.filter\(isCuratedCommunityEvent\);/);
+  assert.match(source, /const \[activeEventTab, setActiveEventTab\] = useState<EventTabId>\('ended'\);/);
+  assert.match(source, /\{ id: 'ended', label: '历史活动' \}/);
 });
 
 test('地图动态 marker 展示当前筛选下的所有用户打卡', () => {

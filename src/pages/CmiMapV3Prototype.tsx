@@ -213,7 +213,7 @@ const mapFilters: FilterItem[] = [
 const eventTabs: Array<{ id: EventTabId; label: string }> = [
   { id: 'ongoing', label: '正在发生' },
   { id: 'upcoming', label: '即将开始' },
-  { id: 'ended', label: '刚结束' },
+  { id: 'ended', label: '历史活动' },
   { id: 'joined', label: '我参加的' },
 ];
 
@@ -2538,7 +2538,7 @@ function EventsMode({
   const navigate = useNavigate();
   const location = useLocation();
   const { user, profile } = useAuth();
-  const [activeEventTab, setActiveEventTab] = useState<EventTabId>('upcoming');
+  const [activeEventTab, setActiveEventTab] = useState<EventTabId>('ended');
   const [sharingEventIds, setSharingEventIds] = useState<Record<string, boolean>>({});
   const [shareSheetEvent, setShareSheetEvent] = useState<CmiEvent | null>(null);
   const [registeredEventIds, setRegisteredEventIds] = useState<Record<string, boolean>>({});
@@ -2586,7 +2586,7 @@ function EventsMode({
   const emptyEventMessage: Record<EventTabId, string> = {
     ongoing: '现在没有正在发生的活动。',
     upcoming: '暂时没有未开始活动。',
-    ended: '暂时没有刚结束的活动。',
+    ended: '暂时没有历史活动。',
     joined: '你参加的活动之后会放在这里。',
   };
 

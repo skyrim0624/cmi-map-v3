@@ -3054,3 +3054,13 @@
   - 远程复查：31 条 CMI / 清迈客栈活动均为 `published`，报名状态均为 `closed`。
   - `pnpm exec tsc -p tsconfig.check.json --noEmit` 通过。
   - `node --experimental-strip-types --test src/pages/CmiMapV3Prototype.map-pulse.test.ts src/pages/CmiMapV3Prototype.test.ts src/data/cmi-events.test.ts` 通过，19 项测试通过。
+
+### 2026-07-14 历史活动入口默认可见修复
+
+- 背景：远程公开接口已返回 31 条历史活动，但用户截图显示活动页默认“即将开始”为空，首页地图底部“CMI社区新动态！”的折叠高度也把活动卡片裁掉。
+- 本轮实现：
+  - 活动页默认切换为“历史活动”，并将原“刚结束”标签改为准确的“历史活动”。
+  - 提高首页地图底部动态抽屉的折叠高度，保证默认状态可见至少一张历史活动卡；展开后仍可横向浏览全部活动。
+- 验证结果：
+  - 浏览器同权限的 Supabase REST 请求返回 31 条 `published` 活动。
+  - `pnpm exec tsc -p tsconfig.check.json --noEmit`、相关 12 项源码测试及 `pnpm build` 均通过。
