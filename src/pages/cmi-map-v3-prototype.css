@@ -31,7 +31,7 @@
   --cmi-v3-map-bottom-add-size: 76px;
   --cmi-v3-map-bottom-add-lift: -31px;
   --cmi-v3-map-nav-height: calc(var(--cmi-v3-map-bottom-inset) + var(--cmi-v3-map-bottom-base-height));
-  --cmi-v3-map-pulse-peek-height: clamp(152px, 18vh, 170px);
+  --cmi-v3-map-pulse-peek-height: clamp(96px, 12vh, 104px);
   --cmi-v3-map-pulse-expanded-clearance: 80px;
   --cmi-v3-map-pulse-expanded-max-height: 670px;
   --cmi-v3-map-pulse-inline: 18px;
@@ -55,7 +55,7 @@
 @supports (height: 100svh) {
   .cmi-v3-screen {
     --cmi-v3-viewport-height: 100svh;
-    --cmi-v3-map-pulse-peek-height: clamp(152px, 18svh, 170px);
+    --cmi-v3-map-pulse-peek-height: clamp(96px, 12svh, 104px);
     --cmi-v3-map-pulse-card-expanded-image-height: min(30svh, 224px);
   }
 }
@@ -63,7 +63,7 @@
 @supports (height: 100dvh) {
   .cmi-v3-screen {
     --cmi-v3-viewport-height: 100dvh;
-    --cmi-v3-map-pulse-peek-height: clamp(152px, 18dvh, 170px);
+    --cmi-v3-map-pulse-peek-height: clamp(96px, 12dvh, 104px);
     --cmi-v3-map-pulse-card-expanded-image-height: min(30dvh, 224px);
   }
 }
