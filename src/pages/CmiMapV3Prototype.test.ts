@@ -35,6 +35,14 @@ test('地图打卡 marker 直接打开地点详情页', () => {
 test('主地图固定活动入口打开活动说明页而不是相机', () => {
   assert.match(source, /CMI_MAP_WILD_CHIANG_MAI_EVENT_ID/);
   assert.match(source, /const primaryActivityEvent = useMemo/);
+  assert.match(
+    source,
+    /communityEvents\.find\(event => event\.id === CMI_MAP_WILD_CHIANG_MAI_EVENT_ID\)[\s\S]*CMI_EVENTS\.find\(event => event\.id === CMI_MAP_WILD_CHIANG_MAI_EVENT_ID\)/,
+  );
+  assert.doesNotMatch(
+    source,
+    /upcomingCommunityEvents\.find\(event => event\.id === CMI_MAP_WILD_CHIANG_MAI_EVENT_ID\)/,
+  );
   assert.match(source, /className="cmi-v3-map-activity-entry"/);
   assert.match(source, /onClick=\{\(\) => onOpenPath\(getCmiEventPath\(primaryActivityEvent\.id\)\)\}/);
   assert.match(source, /aria-label=\{`打开\$\{primaryActivityEvent\.title\}活动说明`\}/);

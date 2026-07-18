@@ -1221,8 +1221,11 @@ export default function CmiMapV3Prototype() {
     [communityEvents, selectedEventId]
   );
   const primaryActivityEvent = useMemo(
-    () => upcomingCommunityEvents.find(event => event.id === CMI_MAP_WILD_CHIANG_MAI_EVENT_ID) ?? null,
-    [upcomingCommunityEvents]
+    () =>
+      communityEvents.find(event => event.id === CMI_MAP_WILD_CHIANG_MAI_EVENT_ID) ??
+      CMI_EVENTS.find(event => event.id === CMI_MAP_WILD_CHIANG_MAI_EVENT_ID) ??
+      null,
+    [communityEvents]
   );
   const inboxItems = useMemo<InboxDisplayItem[]>(
     () => [
